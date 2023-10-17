@@ -24,21 +24,35 @@ find_package(PkgConfig REQUIRED)
 FetchContent_Declare(
         fmt
         GIT_REPOSITORY https://github.com/fmtlib/fmt
-        GIT_TAG 9.1.0
+        GIT_TAG 10.1.1
 )
 FetchContent_MakeAvailable(fmt)
 set(FMT_HEADER_ONLY ON)
 set(FMT_LOCALE ON)
+
+
+# spdlog
+FetchContent_Declare(
+        spdlog
+        GIT_REPOSITORY https://github.com/gabime/spdlog
+        GIT_TAG v1.12.0
+)
+FetchContent_MakeAvailable(spdlog)
+
 
 find_package(BCM2835)
 
 # Our source files
 file(GLOB controllerFiles
         src/*
+        src/device/*
 )
 
 
-include_directories(${BCM2835_INCLUDE_DIRS})
+include_directories(
+        src/
+        ${BCM2835_INCLUDE_DIRS}
+)
 
 add_executable(creature-controller
         ${controllerFiles}
@@ -47,6 +61,7 @@ add_executable(creature-controller
 target_link_libraries(creature-controller
         PUBLIC
         fmt::fmt
+        spdlog::spdlog $<$<BOOL:${MINGW}>:ws2_32>
         ${BCM2835_LIBRARIES}
 )
 
