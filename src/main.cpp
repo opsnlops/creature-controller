@@ -25,6 +25,7 @@ int main(int argc, char **argv) {
     // Leave some version info to be found
     debug("spdlog version {}.{}.{}", SPDLOG_VER_MAJOR, SPDLOG_VER_MINOR, SPDLOG_VER_PATCH);
     debug("fmt version {}", FMT_VERSION);
+    debug("bcm2835 lib version {}", BCM2835_VERSION);
 
     if (geteuid() != 0) {
         critical("This must be run as root!");
@@ -36,7 +37,7 @@ int main(int argc, char **argv) {
 
     char buf[] = {0xE7};
 
-    debug("%d", errno);
+    debug("{}", errno);
 
     bcm2835_i2c_begin();
 
