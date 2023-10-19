@@ -14,8 +14,14 @@
 
 int main(int argc, char **argv) {
 
-    // Set up our locale. If this vomits, install `locales-all`
-    std::locale::global(std::locale("en_US.UTF-8"));
+    try {
+        // Set up our locale. If this vomits, install `locales-all`
+        std::locale::global(std::locale("en_US.UTF-8"));
+    }
+    catch(const std::runtime_error& e) {
+        critical("Unable to set the locale: '{}' (Hint: Make sure package locales-all is installed!)", e.what());
+        return EXIT_FAILURE;
+    }
 
     // Console logger
     spdlog::set_level(spdlog::level::trace);
