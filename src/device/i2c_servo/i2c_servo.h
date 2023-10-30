@@ -19,7 +19,7 @@ public:
     void setPWMFrequency(float frequency);
 
     void setOscillatorFrequency(u32 freq);
-    u32 getOscillatorFrequency();
+    u32 getOscillatorFrequency() const;
 
 private:
     u32 _oscillator_freq;

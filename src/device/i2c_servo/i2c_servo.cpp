@@ -110,7 +110,7 @@ void I2CServoController::setPWMFrequency(float frequency) {
  *  @returns The frequency the PCA9685 thinks it is running at (it cannot
  * introspect)
  */
-u32 I2CServoController::getOscillatorFrequency(void) {
+[[maybe_unused]] u32 I2CServoController::getOscillatorFrequency(void) const {
     return this->_oscillator_freq;
 }
 
