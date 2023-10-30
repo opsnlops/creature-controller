@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdio>
+#include <mutex>
 
 #include "controller-config.h"
 
@@ -22,5 +23,8 @@ public:
 
 private:
     u32 _oscillator_freq;
+
+    // Make sure only one thread can change our state at once
+    std::mutex servo_mutex;
 
 };

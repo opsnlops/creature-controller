@@ -2,13 +2,23 @@
 #include "controller-config.h"
 #include "namespace-stuffs.h"
 
+#include <mutex>
+
 #include <bcm2835.h>
+
 
 #include "i2c_device.h"
 
+
+// Initialize the mutex
+std::mutex I2CDevice::i2c_bus_mutex;
+
 void I2CDevice::write8(u8 addr, u8 data) {
 
-    trace("write8 called with address {}, data {}", addr, data);
+    trace("write8 called with address 0x{0:x}, data 0x{0:x}", addr, data);
+
+    std::lock_guard<std::mutex> lock(i2c_bus_mutex);
+    trace("mutex acquired");
 
     char buffer[] = {addr, data};
     bcm2835_i2c_setSlaveAddress(this->i2cAddress);
@@ -22,6 +32,9 @@ void I2CDevice::write8(u8 addr, u8 data) {
 u8 I2CDevice::read8(uint8_t addr) {
 
     trace("read8 called for address {}", addr);
+
+    std::lock_guard<std::mutex> lock(i2c_bus_mutex);
+    trace("mutex acquired");
 
     char buffer[] = {addr};
     bcm2835_i2c_setSlaveAddress(this->i2cAddress);

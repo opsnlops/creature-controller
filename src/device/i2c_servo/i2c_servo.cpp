@@ -34,6 +34,10 @@ u8 I2CServoController::begin() {
 
 void I2CServoController::reset() {
     debug("resetting the servoController on address 0x{0:x}", i2cAddress);
+
+    // Make sure we're the only ones touching the servo controller
+    std::lock_guard<std::mutex> lock(servo_mutex);
+
     write8(PCA9685_MODE1, MODE1_RESTART);
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
     trace("done with reset");
@@ -41,6 +45,8 @@ void I2CServoController::reset() {
 
 void I2CServoController::sleep() {
     debug("telling the PCA9685 on servoController at address 0x{0:x} to go to sleep 💤", i2cAddress);
+
+    std::lock_guard<std::mutex> lock(servo_mutex);
     u8 awake = read8(PCA9685_MODE1);
     u8 sleep = awake | MODE1_SLEEP; // set sleep bit high
     write8(PCA9685_MODE1, sleep);
@@ -49,7 +55,9 @@ void I2CServoController::sleep() {
 }
 
 void I2CServoController::wakeup() {
-    debug("waking the PCA9685 on the servoController at address 0x{0:x} to wake up ☀️", i2cAddress);
+    debug("waking up the PCA9685 on the servoController at address 0x{0:x} ☀️", i2cAddress);
+
+    std::lock_guard<std::mutex> lock(servo_mutex);
     u8 sleep = read8(PCA9685_MODE1);
     u8 wakeup = sleep & ~MODE1_SLEEP; // set sleep bit low
     write8(PCA9685_MODE1, wakeup);
@@ -62,6 +70,8 @@ void I2CServoController::wakeup() {
 void I2CServoController::setPWMFrequency(float frequency) {
 
     debug("Attempting to set the frequency to {}", frequency);
+
+    std::lock_guard<std::mutex> lock(servo_mutex);
 
     // Range output modulation frequency is dependant on oscillator
     if (frequency < 1)
