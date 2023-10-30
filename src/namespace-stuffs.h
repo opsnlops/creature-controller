@@ -1,7 +1,9 @@
 
 // This file is included everywhere, don't declare things in it!
 
+
 #include "spdlog/spdlog.h"
+
 
 using spdlog::trace;
 using spdlog::debug;

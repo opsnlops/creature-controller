@@ -2,15 +2,21 @@
 #include <cstdio>
 #include <cstdlib>
 #include <locale>
+#include <cstring>
 
 #include <bcm2835.h>
 
+
 #include "controller-config.h"
 #include "namespace-stuffs.h"
+#include "pca9685/pca9685.h"
 
 // spdlog
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
+
+
+#include "device/i2c_servo/i2c_servo.h"
 
 int main(int argc, char **argv) {
 
@@ -18,7 +24,7 @@ int main(int argc, char **argv) {
         // Set up our locale. If this vomits, install `locales-all`
         std::locale::global(std::locale("en_US.UTF-8"));
     }
-    catch(const std::runtime_error& e) {
+    catch (const std::runtime_error &e) {
         critical("Unable to set the locale: '{}' (Hint: Make sure package locales-all is installed!)", e.what());
         return EXIT_FAILURE;
     }
@@ -38,24 +44,44 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
-    if (!bcm2835_init())
+    // Start up the bcm2835 driver
+    if (!bcm2835_init()) {
+        critical("unable to start the bcm2835 driver");
         return EXIT_FAILURE;
+    }
+    debug("started the bcm2835 driver");
 
-    char buf[] = {0xE7};
 
-    debug("{}", errno);
+    // Tell the bcm2835 driver we wish to use i2c
+    debug("opening i2c");
+    if(!bcm2835_i2c_begin()) {
+        error("unable to open i2c; are you root?");
+        return EXIT_FAILURE;
+    }
 
-    bcm2835_i2c_begin();
+    // The datasheet says that the PCA9685 runs at 1Mhz max
+    bcm2835_i2c_setClockDivider(BCM2835_I2C_CLOCK_DIVIDER_626); // TODO: Can this go faster than 399.3610 kHz?
 
-    bcm2835_i2c_setClockDivider(BCM2835_I2C_CLOCK_DIVIDER_148);
-    bcm2835_i2c_setSlaveAddress(0x40);
 
-    bcm2835_i2c_write(buf, 1);
-    bcm2835_i2c_read(buf, 1);
+    auto servoController = std::make_shared<I2CServoController>(PCA9685_I2C_ADDRESS);
+    servoController->begin();
+    trace("done with controller startup");
 
-    debug("User Register = %X", buf[0]);
 
+    info("testing sleep...");
+    servoController->sleep();
+
+    info("and now testing wakeup!");
+    servoController->wakeup();
+
+    // Clean up i2c
     bcm2835_i2c_end();
+    debug("cleaned up i2c");
 
+    // Stop the bcm2835 driver
+    bcm2835_close();
+    debug("stopped the bcm2835 driver");
+
+    info("bye!");
     return EXIT_SUCCESS;
 }

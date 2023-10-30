@@ -46,6 +46,8 @@ find_package(BCM2835)
 file(GLOB controllerFiles
         src/*
         src/device/*
+        src/device/i2c_servo/*
+        src/pca9685/*
 )
 
 
