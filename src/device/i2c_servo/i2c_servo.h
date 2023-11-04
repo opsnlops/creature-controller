@@ -21,6 +21,13 @@ public:
     void setOscillatorFrequency(u32 freq);
     u32 getOscillatorFrequency() const;
 
+    u8 readPrescale();
+
+    u16 getPWM(u8 num, bool off);
+    u8 setPWM(u8 num, u16 on, u16 off);
+    void setPin(u8 num, u16 val, bool invert);
+
+
 private:
     u32 _oscillator_freq;
 

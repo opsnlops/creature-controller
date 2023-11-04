@@ -4,6 +4,9 @@
 #include <locale>
 #include <cstring>
 
+#include <thread>
+#include <chrono>
+
 #include <bcm2835.h>
 
 
@@ -62,17 +65,37 @@ int main(int argc, char **argv) {
     // The datasheet says that the PCA9685 runs at 1Mhz max
     bcm2835_i2c_setClockDivider(BCM2835_I2C_CLOCK_DIVIDER_626); // TODO: Can this go faster than 399.3610 kHz?
 
-
     auto servoController = std::make_shared<I2CServoController>(PCA9685_I2C_ADDRESS);
     servoController->begin();
     trace("done with controller startup");
 
+    u8 current_pre_scale = servoController->readPrescale();
+    info("pre-scale is {}", current_pre_scale);
+
+    // Set a signal on pin 0 for testing
+    for(u16 i = 4000; i > 200; i = i - 20) {
+        info("setting pin 0 to start: 0, stop: {}", i);
+        servoController->setPin(0, i, false);
+        servoController->setPin(15, i, true);
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    }
+    servoController->setPWM(0, 0, 1000);
+    servoController->setPWM(15, 0, 3000);
+
+    trace("sleeping for 2 seconds");
+    std::this_thread::sleep_for(std::chrono::seconds(2));
 
     info("testing sleep...");
     servoController->sleep();
 
+    trace("sleeping for 2 more seconds");
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+
     info("and now testing wakeup!");
     servoController->wakeup();
+
+    trace("sleeping for 2 MORE MORE seconds");
+    std::this_thread::sleep_for(std::chrono::seconds(2));
 
     // Clean up i2c
     bcm2835_i2c_end();
