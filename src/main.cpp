@@ -12,6 +12,7 @@
 
 #include "config/command-line.h"
 #include "config/config.h"
+#include "device/i2c_mock.h"
 
 // spdlog
 #include "spdlog/spdlog.h"
@@ -49,11 +50,18 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
-
+    /*
     auto i2cBus = std::make_shared<SMBusI2C>();
     i2cBus->setDeviceNode("/dev/i2c-8");
     if(!i2cBus->start()) {
         critical("unable to open i2c device");
+        return EXIT_FAILURE;
+    }
+    */
+
+    auto i2cBus = std::make_shared<creatures::MockI2C>();
+    if(!i2cBus->start()) {
+        critical("unable to start the mock logger? The world doesn't make sense.");
         return EXIT_FAILURE;
     }
 
