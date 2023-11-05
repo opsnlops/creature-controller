@@ -83,13 +83,7 @@ int main(int argc, char **argv) {
     trace("sleeping for 2 MORE MORE seconds");
     std::this_thread::sleep_for(std::chrono::seconds(2));
 
-    // Clean up i2c
-    bcm2835_i2c_end();
-    debug("cleaned up i2c");
-
-    // Stop the bcm2835 driver
-    bcm2835_close();
-    debug("stopped the bcm2835 driver");
+    i2cBus->close();
 
     info("bye!");
     return EXIT_SUCCESS;

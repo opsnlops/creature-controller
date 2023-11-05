@@ -23,6 +23,7 @@ public:
 
     // Give the device a chance to get running
     virtual u8 start() = 0;
+    virtual u8 close() = 0;
 
     virtual std::string getDeviceType() = 0;
 

@@ -112,3 +112,19 @@ u8 BCM2835I2C::write(u8 deviceAddress, const char * buffer, u32 len) const {
     return result;
 
 }
+
+u8 BCM2835I2C::close() {
+
+    info("shutting down the bcm2835 i2c bus");
+
+    // Clean up i2c
+    bcm2835_i2c_end();
+    debug("cleaned up i2c");
+
+    // Stop the bcm2835 driver
+    bcm2835_close();
+    debug("stopped the bcm2835 driver");
+
+    return 1;
+
+}

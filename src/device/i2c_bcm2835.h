@@ -21,6 +21,7 @@ public:
     u8 write(u8 deviceAddress, const char * buffer, u32 len) const override;
 
     u8 start() override;
+    u8 close() override;
 
     std::string getDeviceType() override;
 
