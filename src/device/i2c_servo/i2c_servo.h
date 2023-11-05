@@ -3,14 +3,16 @@
 #include <cstdio>
 #include <mutex>
 
+#include "device/i2c.h"
+
 #include "controller-config.h"
 
-#include "device/i2c_device.h"
+#include "device/i2c_bcm2835.h"
 
-class I2CServoController : public I2CDevice {
+class I2CServoController {
 
 public:
-    I2CServoController(u8 i2cAddress);
+    I2CServoController(std::shared_ptr<I2CDevice> i2c, u8 i2cAddress);
     void reset();
     void sleep();
     void wakeup();
@@ -27,9 +29,17 @@ public:
     u8 setPWM(u8 num, u16 on, u16 off);
     void setPin(u8 num, u16 val, bool invert);
 
+    u8 getDeviceAddress();
+
+
 
 private:
     u32 _oscillator_freq;
+
+    std::shared_ptr<I2CDevice> i2c;
+
+    // The address of this controller
+    u8 i2cAddress;
 
     // Make sure only one thread can change our state at once
     std::mutex servo_mutex;

@@ -47,25 +47,11 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
-    // Start up the bcm2835 driver
-    if (!bcm2835_init()) {
-        critical("unable to start the bcm2835 driver");
-        return EXIT_FAILURE;
-    }
-    debug("started the bcm2835 driver");
 
+    auto i2cBus = std::make_shared<BCM2835I2C>();
+    i2cBus->start();
 
-    // Tell the bcm2835 driver we wish to use i2c
-    debug("opening i2c");
-    if(!bcm2835_i2c_begin()) {
-        error("unable to open i2c; are you root?");
-        return EXIT_FAILURE;
-    }
-
-    // The datasheet says that the PCA9685 runs at 1Mhz max
-    bcm2835_i2c_setClockDivider(BCM2835_I2C_CLOCK_DIVIDER_626); // TODO: Can this go faster than 399.3610 kHz?
-
-    auto servoController = std::make_shared<I2CServoController>(PCA9685_I2C_ADDRESS);
+    auto servoController = std::make_shared<I2CServoController>(i2cBus, PCA9685_I2C_ADDRESS);
     servoController->begin();
     trace("done with controller startup");
 

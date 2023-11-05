@@ -11,10 +11,15 @@
 
 #include "i2c_servo.h"
 
-I2CServoController::I2CServoController(u8 i2cAddress) : I2CDevice() {
+I2CServoController::I2CServoController(std::shared_ptr<I2CDevice> i2c, u8 i2cAddress)  {
     trace("starting up a new I2CServoController on address 0x{0:x}", i2cAddress);
 
+    this->i2c = i2c;
     this->i2cAddress = i2cAddress;
+}
+
+u8 I2CServoController::getDeviceAddress() {
+    return i2cAddress;
 }
 
 u8 I2CServoController::begin() {
@@ -39,7 +44,7 @@ void I2CServoController::reset() {
     std::lock_guard<std::mutex> lock(servo_mutex);
     trace("mutex lock for servo controller on address 0x{0:x} acquired", i2cAddress);
 
-    write8(PCA9685_MODE1, MODE1_RESTART);
+    i2c->write8(i2cAddress, PCA9685_MODE1, MODE1_RESTART);
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
     trace("done with reset");
 }
@@ -50,9 +55,9 @@ void I2CServoController::sleep() {
     std::lock_guard<std::mutex> lock(servo_mutex);
     trace("mutex lock for servo controller on address 0x{0:x} acquired", i2cAddress);
 
-    u8 awake = read8(PCA9685_MODE1);
+    u8 awake = i2c->read8(i2cAddress, PCA9685_MODE1);
     u8 sleep = awake | MODE1_SLEEP; // set sleep bit high
-    write8(PCA9685_MODE1, sleep);
+    i2c->write8(i2cAddress, PCA9685_MODE1, sleep);
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
     trace("PCA9685 should now be taking a nap");
 }
@@ -63,9 +68,9 @@ void I2CServoController::wakeup() {
     std::lock_guard<std::mutex> lock(servo_mutex);
     trace("mutex lock for servo controller on address 0x{0:x} acquired", i2cAddress);
 
-    u8 sleep = read8(PCA9685_MODE1);
+    u8 sleep = i2c->read8(i2cAddress, PCA9685_MODE1);
     u8 wakeup = sleep & ~MODE1_SLEEP; // set sleep bit low
-    write8(PCA9685_MODE1, wakeup);
+    i2c->write8(i2cAddress, PCA9685_MODE1, wakeup);
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
     trace("should be awake now!");
 }
@@ -95,18 +100,18 @@ void I2CServoController::setPWMFrequency(float frequency) {
     debug("Final pre-scale: {}", prescale);
 
 
-    uint8_t oldmode = read8(PCA9685_MODE1);
+    uint8_t oldmode = i2c->read8(i2cAddress, PCA9685_MODE1);
     uint8_t newmode = (oldmode & ~MODE1_RESTART) | MODE1_SLEEP; // sleep
-    write8(PCA9685_MODE1, newmode);                             // go to sleep
-    write8(PCA9685_PRESCALE, prescale); // set the prescaler
-    write8(PCA9685_MODE1, oldmode);
+    i2c->write8(i2cAddress, PCA9685_MODE1, newmode);                             // go to sleep
+    i2c->write8(i2cAddress, PCA9685_PRESCALE, prescale); // set the prescaler
+    i2c->write8(i2cAddress, PCA9685_MODE1, oldmode);
 
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
 
     // This sets the MODE1 register to turn on auto increment.
-    write8(PCA9685_MODE1, oldmode | MODE1_RESTART | MODE1_AI);
+    i2c->write8(i2cAddress, PCA9685_MODE1, oldmode | MODE1_RESTART | MODE1_AI);
 
-    debug("Mode now is 0x{0:x}", read8(PCA9685_MODE1));
+    debug("Mode now is 0x{0:x}", i2c->read8(i2cAddress, PCA9685_MODE1));
 
 }
 
@@ -133,7 +138,7 @@ void I2CServoController::setOscillatorFrequency(u32 freq) {
 
 u8 I2CServoController::readPrescale() {
 
-    u8 preScale = read8(PCA9685_PRESCALE);
+    u8 preScale = i2c->read8(i2cAddress, PCA9685_PRESCALE);
     trace("Pre-scale is currently {}", preScale);
 
     return preScale;
@@ -151,10 +156,10 @@ u16 I2CServoController::getPWM(u8 num, bool off) {
 
     debug("getting PWM value on {}", num);
 
-    char buffer[2] = {uint8_t(PCA9685_LED0_ON_L + 4 * num), 0};
+    char buffer[2] = {static_cast<char>(u8(PCA9685_LED0_ON_L + 4 * num)), 0};
     if (off)
         buffer[0] += 2;
-    write_then_read(buffer, 1, buffer, 2);
+    i2c->write_then_read(i2cAddress, buffer, 1, buffer, 2);
     u16 result = u16(buffer[0]) | (u16(buffer[1]) << 8);
 
     debug("determined that {} is on value {}", num, result);
@@ -185,7 +190,7 @@ u8 I2CServoController::setPWM(u8 num, u16 on, u16 off) {
     buffer[3] = off;
     buffer[4] = off >> 8;
 
-    if (write(buffer, 5)) {
+    if (i2c->write(i2cAddress, buffer, 5)) {
         return 0;
     } else {
         return 1;
