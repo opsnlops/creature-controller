@@ -39,12 +39,20 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(spdlog)
 
+# argparse
+FetchContent_Declare(
+        argparse
+        GIT_REPOSITORY https://github.com/p-ranav/argparse.git
+)
+FetchContent_MakeAvailable(argparse)
+
 
 find_package(BCM2835)
 
 # Our source files
 file(GLOB controllerFiles
         src/*
+        src/config/*
         src/device/*
         src/device/i2c_servo/*
         src/pca9685/*
@@ -64,6 +72,7 @@ target_link_libraries(creature-controller
         PUBLIC
         i2c
         fmt::fmt
+        argparse
         spdlog::spdlog $<$<BOOL:${MINGW}>:ws2_32>
         ${BCM2835_LIBRARIES}
 )

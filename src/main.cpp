@@ -10,6 +10,9 @@
 #include "namespace-stuffs.h"
 #include "pca9685/pca9685.h"
 
+#include "config/command-line.h"
+#include "config/config.h"
+
 // spdlog
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
@@ -38,6 +41,8 @@ int main(int argc, char **argv) {
     debug("spdlog version {}.{}.{}", SPDLOG_VER_MAJOR, SPDLOG_VER_MINOR, SPDLOG_VER_PATCH);
     debug("fmt version {}", FMT_VERSION);
     debug("bcm2835 lib version {}", BCM2835_VERSION);
+
+    creatures::CommandLine::parseCommandLine(argc, argv);
 
     if (geteuid() != 0) {
         critical("This must be run as root!");

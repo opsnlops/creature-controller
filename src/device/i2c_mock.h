@@ -7,34 +7,37 @@
 #include "namespace-stuffs.h"
 #include "i2c.h"
 
+namespace creatures {
 
-class SMBusI2C : public I2CDevice {
+    /**
+     * This literally does nothing other than log to the system logger. It's to allow
+     * working on the controller when there's not really a need to send i2c messages.
+     */
+    class MockI2C : public I2CDevice {
 
-public:
+    public:
 
-    SMBusI2C();
-    void setDeviceNode(std::string deviceNode);
+        MockI2C();
 
-    [[nodiscard]] u8 read8(u8 deviceAddress, u8 addr) override;
-    void write8(u8 deviceAddress,  u8 addr, u8 data) override;
-    u8 write_then_read(u8 deviceAddress, char* commands, u32 commands_length, char* buffer, u32 buffer_length) override;
+        [[nodiscard]] u8 read8(u8 deviceAddress, u8 addr) override;
 
-    u8 write(u8 deviceAddress, const char * buffer, u32 len) override;
+        void write8(u8 deviceAddress, u8 addr, u8 data) override;
 
-    u8 start() override;
-    u8 close() override;
+        u8 write_then_read(u8 deviceAddress, char *commands, u32 commands_length, char *buffer,
+                           u32 buffer_length) override;
 
-    std::string getDeviceType() override;
+        u8 write(u8 deviceAddress, const char *buffer, u32 len) override;
 
-private:
+        u8 start() override;
 
-    // Make sure only one thread can touch the bus at a time
-    static std::mutex i2c_bus_mutex;
+        u8 close() override;
 
-    std::string deviceNode;
-    int fd;
+        std::string getDeviceType() override;
 
-    void ensureDevice(u8 deviceAddress);
-    u8 currentDeviceAddress;
+    private:
 
-};
+        // Make sure only one thread can touch the bus at a time
+        static std::mutex i2c_bus_mutex;
+
+    };
+}
