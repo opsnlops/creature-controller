@@ -48,7 +48,7 @@ u8 BCM2835I2C::start() {
 
 }
 
-void BCM2835I2C::write8(u8 deviceAddress, u8 addr, u8 data) const {
+void BCM2835I2C::write8(u8 deviceAddress, u8 addr, u8 data) {
 
     debug("write8 called with address 0x{0:x}, data 0x{0:x}", addr, data);
 
@@ -64,7 +64,7 @@ void BCM2835I2C::write8(u8 deviceAddress, u8 addr, u8 data) const {
 }
 
 
-u8 BCM2835I2C::read8(u8 deviceAddress, u8 addr) const {
+u8 BCM2835I2C::read8(u8 deviceAddress, u8 addr) {
 
     debug("read8 called for address {}", addr);
 
@@ -82,7 +82,7 @@ u8 BCM2835I2C::read8(u8 deviceAddress, u8 addr) const {
 }
 
 
-u8 BCM2835I2C::write_then_read(u8 deviceAddress, char* commands, u32 commands_length, char* buffer, u32 buffer_length) const {
+u8 BCM2835I2C::write_then_read(u8 deviceAddress, char* commands, u32 commands_length, char* buffer, u32 buffer_length) {
 
     debug("write_then_read called with command length {} and buffer length {}", commands_length, buffer_length);
 
@@ -97,7 +97,7 @@ u8 BCM2835I2C::write_then_read(u8 deviceAddress, char* commands, u32 commands_le
     return result;
 }
 
-u8 BCM2835I2C::write(u8 deviceAddress, const char * buffer, u32 len) const {
+u8 BCM2835I2C::write(u8 deviceAddress, const char * buffer, u32 len) {
 
     debug("writing a buffer of {} length", len);
 

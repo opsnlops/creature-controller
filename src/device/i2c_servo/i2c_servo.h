@@ -29,7 +29,7 @@ public:
     u8 setPWM(u8 num, u16 on, u16 off);
     void setPin(u8 num, u16 val, bool invert);
 
-    u8 getDeviceAddress();
+    u8 getDeviceAddress() const;
 
 
 

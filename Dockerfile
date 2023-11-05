@@ -2,7 +2,7 @@ FROM debian:bookworm AS build
 
 RUN apt update -y && apt upgrade -y
 
-RUN apt install -y clang locales-all ninja-build cmake pkgconf git file
+RUN apt install -y clang locales-all ninja-build cmake pkgconf git file libi2c-dev
 
 # Build the bcm2835 library that we depend on
 WORKDIR /build/bcm2835

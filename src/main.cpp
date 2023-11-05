@@ -1,11 +1,7 @@
-#include <cerrno>
-#include <cstdio>
+#include <chrono>
 #include <cstdlib>
 #include <locale>
-#include <cstring>
-
 #include <thread>
-#include <chrono>
 
 #include <bcm2835.h>
 
@@ -20,6 +16,7 @@
 
 
 #include "device/i2c_servo/i2c_servo.h"
+#include "device/i2c_smbus.h"
 
 int main(int argc, char **argv) {
 
@@ -48,8 +45,12 @@ int main(int argc, char **argv) {
     }
 
 
-    auto i2cBus = std::make_shared<BCM2835I2C>();
-    i2cBus->start();
+    auto i2cBus = std::make_shared<SMBusI2C>();
+    i2cBus->setDeviceNode("/dev/i2c-8");
+    if(!i2cBus->start()) {
+        critical("unable to open i2c device");
+        return EXIT_FAILURE;
+    }
 
     auto servoController = std::make_shared<I2CServoController>(i2cBus, PCA9685_I2C_ADDRESS);
     servoController->begin();
@@ -57,6 +58,7 @@ int main(int argc, char **argv) {
 
     u8 current_pre_scale = servoController->readPrescale();
     info("pre-scale is {}", current_pre_scale);
+
 
     // Set a signal on pin 0 for testing
     for(u16 i = 4000; i > 200; i = i - 20) {
@@ -66,7 +68,9 @@ int main(int argc, char **argv) {
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
     servoController->setPWM(0, 0, 1000);
-    servoController->setPWM(15, 0, 3000);
+    servoController->setPWM(15, 0, 2000);
+
+    info("pin 15 PWM is on: {}, off: {}", servoController->getPWM(15, false), servoController->getPWM(15, true));
 
     trace("sleeping for 2 seconds");
     std::this_thread::sleep_for(std::chrono::seconds(2));
@@ -85,6 +89,6 @@ int main(int argc, char **argv) {
 
     i2cBus->close();
 
-    info("bye!");
+    info("bye! 👋🏻");
     return EXIT_SUCCESS;
 }

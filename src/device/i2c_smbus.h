@@ -8,11 +8,12 @@
 #include "i2c.h"
 
 
-class BCM2835I2C : public I2CDevice {
+class SMBusI2C : public I2CDevice {
 
 public:
 
-    BCM2835I2C();
+    SMBusI2C();
+    void setDeviceNode(std::string deviceNode);
 
     [[nodiscard]] u8 read8(u8 deviceAddress, u8 addr) override;
     void write8(u8 deviceAddress,  u8 addr, u8 data) override;
@@ -25,7 +26,15 @@ public:
 
     std::string getDeviceType() override;
 
+private:
+
     // Make sure only one thread can touch the bus at a time
     static std::mutex i2c_bus_mutex;
+
+    std::string deviceNode;
+    int fd;
+
+    void ensureDevice(u8 deviceAddress);
+    u8 currentDeviceAddress;
 
 };

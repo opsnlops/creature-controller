@@ -1,7 +1,7 @@
 
-#include <cstdint>
-#include <thread>
 #include <chrono>
+#include <thread>
+#include <utility>
 
 
 #include "controller-config.h"
@@ -14,11 +14,13 @@
 I2CServoController::I2CServoController(std::shared_ptr<I2CDevice> i2c, u8 i2cAddress)  {
     trace("starting up a new I2CServoController on address 0x{0:x}", i2cAddress);
 
-    this->i2c = i2c;
+    this->i2c = std::move(i2c);
     this->i2cAddress = i2cAddress;
+
+    debug("using a controller type of {}", this->i2c->getDeviceType());
 }
 
-u8 I2CServoController::getDeviceAddress() {
+u8 I2CServoController::getDeviceAddress() const {
     return i2cAddress;
 }
 
@@ -121,7 +123,7 @@ void I2CServoController::setPWMFrequency(float frequency) {
  *  @returns The frequency the PCA9685 thinks it is running at (it cannot
  * introspect)
  */
-[[maybe_unused]] u32 I2CServoController::getOscillatorFrequency(void) const {
+[[maybe_unused]] u32 I2CServoController::getOscillatorFrequency() const {
     return this->_oscillator_freq;
 }
 
@@ -178,10 +180,8 @@ u8 I2CServoController::setPWM(u8 num, u16 on, u16 off) {
 
     debug("setting PWM number {} to on: {}, off: {}", num, on, off);
 
-
     std::lock_guard<std::mutex> lock(servo_mutex);
     trace("mutex lock for servo controller on address 0x{0:x} acquired", i2cAddress);
-
 
     char buffer[5];
     buffer[0] = PCA9685_LED0_ON_L + 4 * num;

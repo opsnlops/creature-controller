@@ -62,6 +62,7 @@ add_executable(creature-controller
 
 target_link_libraries(creature-controller
         PUBLIC
+        i2c
         fmt::fmt
         spdlog::spdlog $<$<BOOL:${MINGW}>:ws2_32>
         ${BCM2835_LIBRARIES}
