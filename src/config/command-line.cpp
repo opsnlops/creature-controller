@@ -29,6 +29,7 @@ namespace creatures {
                 .default_value(false)
                 .implicit_value(true);
 
+#ifdef __linux__
         i2c_group.add_argument("-s", "--smbus")
                 .help("use the Linux SMBus for i2c on the given device node")
                 .nargs(1)
@@ -38,6 +39,7 @@ namespace creatures {
                 .help("use the bcm2835 driver on a Pi")
                 .implicit_value(true)
                 .default_value(false);
+#endif
 
         program.add_description("This application is the Linux version of the Creature Controller that's part\n"
                                 "of April's Creature Workshop! 🐰");
@@ -57,6 +59,12 @@ namespace creatures {
 
         // Parse out the i2c bus type. Only one of these can/will be valid because of the
         // mutually exclusive group above.
+        if(program.get<bool>("-m")) {
+            config->setI2CBusType(Configuration::I2CBusType::mock);
+            info("using the mock i2c bus");
+        }
+
+#ifdef __linux__
         if(program.is_used("-s")) {
             auto smbus = program.get<std::string>("-s");
             if (smbus.length() > 0) {
@@ -66,16 +74,11 @@ namespace creatures {
             }
         }
 
-        if(program.get<bool>("-m")) {
-            config->setI2CBusType(Configuration::I2CBusType::mock);
-            info("using the mock i2c bus");
-        }
-
         if(program.get<bool>("-b")) {
             config->setI2CBusType(Configuration::I2CBusType::bcm2835);
             info("using the bcm2835 i2c bus");
         }
-
+#endif
 
         return config;
     }
