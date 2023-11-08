@@ -3,7 +3,10 @@
 #include <locale>
 #include <thread>
 
+// This only exists on Linux
+#ifdef __linux__
 #include <bcm2835.h>
+#endif
 
 
 #include "controller-config.h"
@@ -47,16 +50,20 @@ int main(int argc, char **argv) {
     // Leave some version info to be found
     debug("spdlog version {}.{}.{}", SPDLOG_VER_MAJOR, SPDLOG_VER_MINOR, SPDLOG_VER_PATCH);
     debug("fmt version {}", FMT_VERSION);
+
+#ifdef __linux__
     debug("bcm2835 lib version {}", BCM2835_VERSION);
+#endif
 
     // Parse out the command line options
     config = creatures::CommandLine::parseCommandLine(argc, argv);
 
+#ifdef __linux__
     if (geteuid() != 0) {
         critical("This must be run as root!");
         return EXIT_FAILURE;
     }
-
+#endif
 
     std::shared_ptr<I2CDevice> i2cBus;
 
@@ -66,20 +73,26 @@ int main(int argc, char **argv) {
         case creatures::Configuration::I2CBusType::mock:
             i2cBus = std::make_shared<creatures::MockI2C>();
             break;
+#ifdef __linux__
         case creatures::Configuration::I2CBusType::bcm2835:
            i2cBus = std::make_shared<BCM2835I2C>();
            break;
         case creatures::Configuration::I2CBusType::smbus:
            i2cBus = std::make_shared<SMBusI2C>();
            break;
-
+#endif
+        default:
+            critical("Unknown i2c bus type?");
+            return EXIT_FAILURE;
     }
 
+#ifdef __linux__
     // If this is an SMBus type, add the device node info
     if (auto smbusPtr = std::dynamic_pointer_cast<SMBusI2C>(i2cBus)) {
         smbusPtr->setDeviceNode(config->getSMBusDeviceNode());
         debug("set the device node to {}", config->getSMBusDeviceNode());
     }
+#endif
 
     // Start the i2c bus
     debug("starting the i2c bus");

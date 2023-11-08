@@ -6,7 +6,6 @@
 
 #include <bcm2835.h>
 
-
 #include "i2c_bcm2835.h"
 
 
