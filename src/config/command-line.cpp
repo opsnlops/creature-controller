@@ -7,27 +7,75 @@
 #include "config.h"
 #include "command-line.h"
 
+/*
+ * This is using argparse:
+ *   https://github.com/p-ranav/argparse
+ */
+
+
 namespace creatures {
 
     std::shared_ptr<Configuration> CommandLine::parseCommandLine(int argc, char **argv) {
 
         auto config = std::make_shared<Configuration>();
 
-        argparse::ArgumentParser program(argv[0]);
+        argparse::ArgumentParser program("creature-controller");
 
+        // Only allow one i2c bus arg
         auto &i2c_group = program.add_mutually_exclusive_group(true);
-        i2c_group.add_argument("--mock");
-        i2c_group.add_argument("--smbus");
-        i2c_group.add_argument("--bcm2835");
 
-        program.add_argument("-i", "--i2c")
-                .default_value(std::string("mock"))
-                .required()
-                .help("which i2c bus to use (mock, smbus, bcm2835)");
+        i2c_group.add_argument("-m", "--mock")
+                .help("use the mock i2c bus")
+                .default_value(false)
+                .implicit_value(true);
 
+        i2c_group.add_argument("-s", "--smbus")
+                .help("use the Linux SMBus for i2c on the given device node")
+                .nargs(1)
+                .metavar("DEVICE_NODE");
+
+        i2c_group.add_argument("-b", "--bcm2835")
+                .help("use the bcm2835 driver on a Pi")
+                .implicit_value(true)
+                .default_value(false);
+
+        program.add_description("This application is the Linux version of the Creature Controller that's part\n"
+                                "of April's Creature Workshop! 🐰");
         program.add_epilog("🦜 Bawk!");
 
-        std::cout << program;
+        try {
+            program.parse_args(argc, argv);
+        }
+        catch (const std::exception &err) {
+
+            critical(err.what());
+
+            std::cerr << "\n" << program;
+            std::exit(1);
+        }
+
+
+        // Parse out the i2c bus type. Only one of these can/will be valid because of the
+        // mutually exclusive group above.
+        if(program.is_used("-s")) {
+            auto smbus = program.get<std::string>("-s");
+            if (smbus.length() > 0) {
+                config->setI2CBusType(Configuration::I2CBusType::smbus);
+                config->setSMBusDeviceNode(smbus);
+                info("using the Linux smbus i2c on {}", smbus);
+            }
+        }
+
+        if(program.get<bool>("-m")) {
+            config->setI2CBusType(Configuration::I2CBusType::mock);
+            info("using the mock i2c bus");
+        }
+
+        if(program.get<bool>("-b")) {
+            config->setI2CBusType(Configuration::I2CBusType::bcm2835);
+            info("using the bcm2835 i2c bus");
+        }
+
 
         return config;
     }

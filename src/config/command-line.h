@@ -12,6 +12,12 @@ namespace creatures {
 
     public:
         static std::shared_ptr<Configuration> parseCommandLine(int argc, char **argv);
+
+
+    private:
+
+
+
     };
 
 

@@ -12,7 +12,10 @@
 
 #include "config/command-line.h"
 #include "config/config.h"
+#include "device/i2c_bcm2835.h"
 #include "device/i2c_mock.h"
+#include "device/i2c_smbus.h"
+
 
 // spdlog
 #include "spdlog/spdlog.h"
@@ -21,6 +24,9 @@
 
 #include "device/i2c_servo/i2c_servo.h"
 #include "device/i2c_smbus.h"
+
+// Declare the configuration globally
+std::shared_ptr<creatures::Configuration> config;
 
 int main(int argc, char **argv) {
 
@@ -43,27 +49,45 @@ int main(int argc, char **argv) {
     debug("fmt version {}", FMT_VERSION);
     debug("bcm2835 lib version {}", BCM2835_VERSION);
 
-    creatures::CommandLine::parseCommandLine(argc, argv);
+    // Parse out the command line options
+    config = creatures::CommandLine::parseCommandLine(argc, argv);
 
     if (geteuid() != 0) {
         critical("This must be run as root!");
         return EXIT_FAILURE;
     }
 
-    /*
-    auto i2cBus = std::make_shared<SMBusI2C>();
-    i2cBus->setDeviceNode("/dev/i2c-8");
+
+    std::shared_ptr<I2CDevice> i2cBus;
+
+    // Create the correct i2c bus
+    switch(config->getI2CBusType()) {
+
+        case creatures::Configuration::I2CBusType::mock:
+            i2cBus = std::make_shared<creatures::MockI2C>();
+            break;
+        case creatures::Configuration::I2CBusType::bcm2835:
+           i2cBus = std::make_shared<BCM2835I2C>();
+           break;
+        case creatures::Configuration::I2CBusType::smbus:
+           i2cBus = std::make_shared<SMBusI2C>();
+           break;
+
+    }
+
+    // If this is an SMBus type, add the device node info
+    if (auto smbusPtr = std::dynamic_pointer_cast<SMBusI2C>(i2cBus)) {
+        smbusPtr->setDeviceNode(config->getSMBusDeviceNode());
+        debug("set the device node to {}", config->getSMBusDeviceNode());
+    }
+
+    // Start the i2c bus
+    debug("starting the i2c bus");
     if(!i2cBus->start()) {
         critical("unable to open i2c device");
         return EXIT_FAILURE;
     }
-    */
 
-    auto i2cBus = std::make_shared<creatures::MockI2C>();
-    if(!i2cBus->start()) {
-        critical("unable to start the mock logger? The world doesn't make sense.");
-        return EXIT_FAILURE;
-    }
 
     auto servoController = std::make_shared<I2CServoController>(i2cBus, PCA9685_I2C_ADDRESS);
     servoController->begin();
