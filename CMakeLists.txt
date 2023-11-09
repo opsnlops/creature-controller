@@ -51,7 +51,6 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 endif()
 
 # Set up lib131 as an external library
-set_source_files_properties(lib/libe131/src/e131.c PROPERTIES LANGUAGE CXX)
 add_library(libe131 STATIC
         lib/libe131/src/e131.c
 )
