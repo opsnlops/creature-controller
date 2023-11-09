@@ -1,4 +1,4 @@
-name: ARM64 Build
+name: AMD64 Build
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    runs-on: buildjet-8vcpu-ubuntu-2204-arm
+    runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -27,4 +27,4 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ secrets.DOCKER_LOGIN_USERNAME }}/creature-controller:arm64
+          tags: ${{ secrets.DOCKER_LOGIN_USERNAME }}/creature-controller:amd64

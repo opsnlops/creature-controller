@@ -50,12 +50,27 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     find_package(BCM2835)
 endif()
 
+# Set up lib131 as an external library
+set_source_files_properties(lib/libe131/src/e131.c PROPERTIES LANGUAGE CXX)
+add_library(libe131 STATIC
+        lib/libe131/src/e131.c
+)
+
+target_include_directories(libe131
+        PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/libe131/src/
+)
+
+
+
+
 # Our source files on all platforms
 file(GLOB controllerFiles
         src/*
         src/config/*
         src/device/i2c_mock.cpp
         src/device/i2c_servo/*
+        src/dmx/*
         src/pca9685/*
 )
 
@@ -80,6 +95,7 @@ add_executable(creature-controller
 
 target_link_libraries(creature-controller
         PUBLIC
+        libe131
         $<$<PLATFORM_ID:Linux>:i2c>
         fmt::fmt
         argparse

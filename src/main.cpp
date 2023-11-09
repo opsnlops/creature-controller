@@ -16,6 +16,7 @@
 #include "config/command-line.h"
 #include "config/config.h"
 #include "device/i2c_mock.h"
+#include "dmx/e131_server.h"
 
 #ifdef __linux__
 #include "device/i2c_bcm2835.h"
@@ -32,6 +33,7 @@
 
 // Declare the configuration globally
 std::shared_ptr<creatures::Configuration> config;
+std::shared_ptr<creatures::E131Server> e131Server;
 
 int main(int argc, char **argv) {
 
@@ -95,6 +97,10 @@ int main(int argc, char **argv) {
         debug("set the device node to {}", config->getSMBusDeviceNode());
     }
 #endif
+
+    // Create and start the e1.13 server
+    e131Server = std::make_shared<creatures::E131Server>();
+    e131Server->start();
 
     // Start the i2c bus
     debug("starting the i2c bus");
