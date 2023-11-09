@@ -50,7 +50,7 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     find_package(BCM2835)
 endif()
 
-# Our source files
+# Our source files on all platforms
 file(GLOB controllerFiles
         src/*
         src/config/*
@@ -58,6 +58,15 @@ file(GLOB controllerFiles
         src/device/i2c_servo/*
         src/pca9685/*
 )
+
+# Include the non-mock i2c files on non-Apple platforms
+if(UNIX AND NOT APPLE)
+    file(GLOB realI2CDeviceFiles
+            src/device/i2c_bcm2835.cpp
+            src/device/i2c_smbus.cpp
+    )
+    list(APPEND controllerFiles ${realI2CDeviceFiles})
+endif()
 
 
 include_directories(
@@ -71,7 +80,7 @@ add_executable(creature-controller
 
 target_link_libraries(creature-controller
         PUBLIC
-        #i2c
+        $<$<PLATFORM_ID:Linux>:i2c>
         fmt::fmt
         argparse
         spdlog::spdlog $<$<BOOL:${MINGW}>:ws2_32>

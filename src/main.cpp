@@ -15,10 +15,12 @@
 
 #include "config/command-line.h"
 #include "config/config.h"
-#include "device/i2c_bcm2835.h"
 #include "device/i2c_mock.h"
-#include "device/i2c_smbus.h"
 
+#ifdef __linux__
+#include "device/i2c_bcm2835.h"
+#include "device/i2c_smbus.h"
+#endif
 
 // spdlog
 #include "spdlog/spdlog.h"
