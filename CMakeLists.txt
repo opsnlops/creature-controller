@@ -67,10 +67,13 @@ target_include_directories(libe131
 file(GLOB controllerFiles
         src/*
         src/config/*
+        src/controller/*
+        src/creature/*
         src/device/i2c_mock.cpp
         src/device/i2c_servo/*
         src/dmx/*
         src/pca9685/*
+        src/util/*
 )
 
 # Include the non-mock i2c files on non-Apple platforms
