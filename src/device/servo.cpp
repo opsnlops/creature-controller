@@ -2,15 +2,14 @@
 #include <cassert>
 #include <cmath>
 
+#include "namespace-stuffs.h"
 #include "controller-config.h"
 
 // This module
 #include "servo.h"
 
 // Our modules
-#include "hardware/gpio.h"
-#include "hardware/pwm.h"
-#include "logging/logging.h"
+
 
 
 extern uint32_t number_of_moves;
@@ -37,18 +36,19 @@ extern uint32_t number_of_moves;
  * @param inverted are this servo's movements inverted?
  * @param frequency PWM frequency
  */
-Servo::Servo(uint gpio, const char* name, uint16_t min_pulse_us, uint16_t max_pulse_us,
+Servo::Servo(u8 gpio, const char* name, uint16_t min_pulse_us, uint16_t max_pulse_us,
              float smoothingValue, bool inverted, uint32_t frequency) {
 
-    gpio_set_function(gpio, GPIO_FUNC_PWM);
+    // TODO: Convert to the new servo controller
+    //gpio_set_function(gpio, GPIO_FUNC_PWM);
     this->gpio = gpio;
     this->name = name;
     this->min_pulse_us = min_pulse_us;
     this->max_pulse_us = max_pulse_us;
     this->smoothingValue = smoothingValue;
     this->frame_length_us = 1000000 / frequency;   // Number of microseconds in each frame (frequency)
-    this->slice = pwm_gpio_to_slice_num(gpio);
-    this->channel = pwm_gpio_to_channel(gpio);
+    //this->slice = pwm_gpio_to_slice_num(gpio);
+    //this->channel = pwm_gpio_to_channel(gpio);
     this->resolution = pwm_set_freq_duty(this->slice,
                                          this->channel,
                                          frequency,
@@ -62,12 +62,12 @@ Servo::Servo(uint gpio, const char* name, uint16_t min_pulse_us, uint16_t max_pu
     calculateNextTick();
 
     // Turn the servo on by default
-    pwm_set_enabled(this->slice, true);
+    //pwm_set_enabled(this->slice, true);
     this->on = false;
 
     // TODO: What's a good default to set the servo to on power on?
 
-    info("set up servo on pin %d: name: %s, min_pulse: %d, max_pulse: %d, inverted: %s",
+    info("set up servo on pin {}: name: {}, min_pulse: {}, max_pulse: {}, inverted: {}",
          gpio, name, min_pulse_us, max_pulse_us, inverted ? "yes" : "no");
 }
 
@@ -78,10 +78,10 @@ Servo::Servo(uint gpio, const char* name, uint16_t min_pulse_us, uint16_t max_pu
  * outputs).
  */
 void Servo::turnOn() {
-    pwm_set_enabled(slice, true);
+    //pwm_set_enabled(slice, true);
     on = true;
 
-    info("Enabled servo on pin %d (slice %d)", gpio, slice);
+    info("Enabled servo on pin {} (slice {})", gpio, slice);
 }
 
 
@@ -92,10 +92,10 @@ void Servo::turnOn() {
  * outputs).
  */
 void Servo::turnOff() {
-    pwm_set_enabled(slice, false);
+    //pwm_set_enabled(slice, false);
     on = false;
 
-    info("Disabled servo on pin %d (slice %d)", gpio, slice);
+    info("Disabled servo on pin {} (slice {})", gpio, slice);
 }
 
 /**
@@ -147,7 +147,7 @@ void Servo::move(uint16_t position) {
     desired_ticks = (float)resolution * frame_active;
     current_position = position;
 
-    verbose("requesting servo GPIO %d be set to position %d (%d ticks)",
+    trace("requesting servo GPIO {} be set to position {} ({} ticks)",
             gpio,
             current_position,
             desired_ticks);
@@ -169,11 +169,11 @@ uint16_t Servo::getPosition() const {
     }
 }
 
-uint Servo::getSlice() const {
+u8 Servo::getSlice() const {
     return slice;
 }
 
-uint Servo::getChannel() const {
+u8 Servo::getChannel() const {
     return channel;
 }
 
@@ -193,7 +193,7 @@ void Servo::calculateNextTick() {
     uint32_t last_tick = current_ticks;
 
     current_ticks =  lround(((double)desired_ticks * (1.0 - smoothingValue)) + ((double)last_tick * smoothingValue));
-    //debug("-- set current_ticks to %ul", current_ticks);
+    //debug("-- set current_ticks to {}", current_ticks);
 }
 
 /**
@@ -216,13 +216,14 @@ void Servo::calculateNextTick() {
  * @param d speed (currently unused)
  * @return the wrap counter wrap value for this slice an channel (aka the resolution)
  */
-uint32_t Servo::pwm_set_freq_duty(uint slice_num, uint chan, uint32_t frequency, int d) {
+ // TODO: Use the new servo controller
+uint32_t Servo::pwm_set_freq_duty(u8 slice_num, u8 chan, uint32_t frequency, int d) {
     uint32_t clock = 125000000;
     uint32_t divider16 = clock / frequency / 4096 + (clock % (frequency * 4096) != 0);
     if (divider16 / 16 == 0) divider16 = 16;
     uint32_t wrap = clock * 16 / divider16 / frequency - 1;
-    pwm_set_clkdiv_int_frac(slice_num, divider16 / 16, divider16 & 0xF);
-    pwm_set_wrap(slice_num, wrap);
-    pwm_set_chan_level(slice_num, chan, wrap * d / 100);
+    //pwm_set_clkdiv_int_frac(slice_num, divider16 / 16, divider16 & 0xF);
+    //pwm_set_wrap(slice_num, wrap);
+    //pwm_set_chan_level(slice_num, chan, wrap * d / 100);
     return wrap;
 }

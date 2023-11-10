@@ -2,10 +2,10 @@
 
 #include <climits>
 
-#include <FreeRTOS.h>
+#include "namespace-stuffs.h"
+#include "controller-config.h"
 
 #include "device/servo.h"
-#include "logging/logging.h"
 
 #include "controller/stepper_handler.h"
 #include "controller.h"
@@ -13,9 +13,10 @@
 
 uint32_t number_of_moves = 0;
 
-extern TaskHandle_t controllerHousekeeperTaskHandle;
-extern TaskHandle_t controller_motor_setup_task_handle;
-BaseType_t isrPriorityTaskWoken = pdFALSE;
+// TODO: Threads now
+//extern TaskHandle_t controllerHousekeeperTaskHandle;
+//extern TaskHandle_t controller_motor_setup_task_handle;
+//BaseType_t isrPriorityTaskWoken = pdFALSE;
 
 // Initialize the static members
 Servo *Controller::servos[MAX_NUMBER_OF_SERVOS] = {};
@@ -26,7 +27,7 @@ uint32_t Controller::numberOfPWMWraps = 0;
 
 Stepper *Controller::steppers[MAX_NUMBER_OF_STEPPERS] = {};
 uint8_t Controller::numberOfSteppersInUse = 0;
-struct repeating_timer stepper_timer;
+//struct repeating_timer stepper_timer;
 
 #endif
 
@@ -34,7 +35,7 @@ Controller::Controller() {
 
     debug("setting up the controller");
 
-    creatureWorkerTaskHandle = nullptr;
+    //creatureWorkerTaskHandle = nullptr;
     poweredOn = false;
     powerRelay = new Relay(E_STOP_PIN, poweredOn);
     online = true;
@@ -77,7 +78,7 @@ void Controller::init(CreatureConfig* incomingConfig) {
 #endif
 
     // Declare some space on the heap for our current frame buffer
-    currentFrame = (uint8_t *) pvPortMalloc(sizeof(uint8_t) * numberOfChannels);
+    currentFrame = (uint8_t *) malloc(sizeof(uint8_t) * numberOfChannels);
 
     // Set the currentFrame buffer to the middle value as a safe-ish default
     for (int i = 0; i < numberOfChannels; i++) {
@@ -103,10 +104,11 @@ void Controller::init(CreatureConfig* incomingConfig) {
     //configureGPIO(STEPPER_END_S_LOW_PIN, false, false);
     //configureGPIO(STEPPER_END_S_HIGH_PIN, false, false);
 
-    gpio_set_function(STEPPER_END_S_LOW_PIN, GPIO_FUNC_SIO);
-    gpio_set_function(STEPPER_END_S_LOW_PIN, GPIO_FUNC_SIO);
-    gpio_set_dir(STEPPER_END_S_LOW_PIN, false);
-    gpio_set_dir(STEPPER_END_S_HIGH_PIN, false);
+    // TODO: Make these use the Pi pins
+    //gpio_set_function(STEPPER_END_S_LOW_PIN, GPIO_FUNC_SIO);
+    //gpio_set_function(STEPPER_END_S_LOW_PIN, GPIO_FUNC_SIO);
+    //gpio_set_dir(STEPPER_END_S_LOW_PIN, false);
+    //gpio_set_dir(STEPPER_END_S_HIGH_PIN, false);
 
     debug("done setting up the stepper pins");
 #endif
@@ -116,24 +118,29 @@ void Controller::init(CreatureConfig* incomingConfig) {
 
 void Controller::configureGPIO(uint8_t pin, bool out, bool initialValue) {
 
-    verbose("setting up stepper pin %d: direction: %s, initialValue: %s",
+    trace("setting up stepper pin {}: direction: {}, initialValue: {}",
             pin,
             out ? "out" : "in",
             initialValue ? "on" : "off");
-    gpio_init(pin);
-    gpio_set_dir(pin, out);
-    gpio_put(pin, initialValue);
+    // TODO: Pi pins
+    //gpio_init(pin);
+    //gpio_set_dir(pin, out);
+    //gpio_put(pin, initialValue);
 
 }
 
+/*
 void Controller::setCreatureWorkerTaskHandle(TaskHandle_t taskHandle) {
     this->creatureWorkerTaskHandle = taskHandle;
 }
+ */
 
 void Controller::start() {
     info("starting controller!");
 
+    // TODO: Thread these
 
+    /*
     // Fire off the housekeeper
     xTaskCreate(controller_housekeeper_task,
                 "controller_housekeeper_task",
@@ -149,6 +156,7 @@ void Controller::start() {
                 (void *) this,
                 1,
                 &controller_motor_setup_task_handle);
+    */
 
 }
 
@@ -171,14 +179,15 @@ bool Controller::acceptInput(uint8_t *input) {
     /**
      * If there's no worker task, stop here.
      */
-    if (creatureWorkerTaskHandle == nullptr) {
-        return false;
-    }
+    //if (creatureWorkerTaskHandle == nullptr) {
+    //    return false;
+    //}
 
     // Send the processor a message
-    xTaskNotify(creatureWorkerTaskHandle,
-                0,
-                eNoAction);
+    // TODO Use a cv
+    //xTaskNotify(creatureWorkerTaskHandle,
+    //            0,
+    //            eNoAction);
 
     return true;
 }
@@ -201,7 +210,7 @@ void Controller::initServo(uint8_t indexNumber, const char *name, uint16_t minPu
 
     numberOfServosInUse++;
 
-    info("controller servo init: index: %d, pin: %d, name: %s", indexNumber, gpioPin, name);
+    info("controller servo init: index: {}, pin: {}, name: {}", indexNumber, gpioPin, name);
 
 }
 
@@ -213,7 +222,7 @@ void Controller::initStepper(uint8_t slot, const char *name, uint32_t maxSteps, 
                                  sleepAfterUs, inverted);
     numberOfSteppersInUse++;
 
-    info("controller stepper init: slot: %d, name: %s, max_steps: %d", slot, name, maxSteps);
+    info("controller stepper init: slot: {}, name: {}, max_steps: {}", slot, name, maxSteps);
 
 }
 #endif
@@ -241,7 +250,7 @@ uint16_t Controller::getServoPosition(uint8_t indexNumber) {
 void Controller::requestServoPosition(uint8_t servoIndexNumber, uint16_t requestedPosition) {
 
     if (servos[servoIndexNumber]->getPosition() != requestedPosition) {
-        debug("requested to move servo %d from %d to position %d", servoIndexNumber,
+        debug("requested to move servo {} from {} to position {}", servoIndexNumber,
               servos[servoIndexNumber]->getPosition(), requestedPosition);
         servos[servoIndexNumber]->move(requestedPosition);
 
@@ -265,7 +274,7 @@ void Controller::requestStepperPosition(uint8_t stepperIndexNumber, uint32_t req
 
     if (steppers[stepperIndexNumber]->state->requestedSteps != requestedPosition) {
 
-        debug("requested to move stepper %d from %d to position %d", stepperIndexNumber,
+        debug("requested to move stepper {} from {} to position {}", stepperIndexNumber,
               steppers[stepperIndexNumber]->state->requestedSteps, requestedPosition);
 
         steppers[stepperIndexNumber]->state->requestedSteps = requestedPosition;
@@ -274,6 +283,7 @@ void Controller::requestStepperPosition(uint8_t stepperIndexNumber, uint32_t req
 }
 #endif
 
+/*
 void __isr Controller::on_pwm_wrap_handler() {
 
     for (int i = 0; i < numberOfServosInUse; i++)
@@ -286,9 +296,8 @@ void __isr Controller::on_pwm_wrap_handler() {
 
     Controller::numberOfPWMWraps++;
 
-    /**
-    * If there's no worker task, stop here.
-    */
+
+    //If there's no worker task, stop here.
     if (controllerHousekeeperTaskHandle != nullptr) {
 
         // Tell the housekeeper to go when it can
@@ -298,6 +307,7 @@ void __isr Controller::on_pwm_wrap_handler() {
                            &isrPriorityTaskWoken);
     }
 }
+*/
 
 uint32_t Controller::getNumberOfPWMWraps() {
     return numberOfPWMWraps;
@@ -347,7 +357,7 @@ uint16_t Controller::getNumberOfDMXChannels() {
 }
 
 void Controller::setOnline(bool onlineValue) {
-    info("setting online to %s", onlineValue ? "true" : "false");
+    info("setting online to{}", onlineValue ? "true" : "false");
     this->online = onlineValue;
 }
 
@@ -369,8 +379,8 @@ Stepper *Controller::getStepper(uint8_t index) {
 }
 #endif
 
+/*
 portTASK_FUNCTION(controller_housekeeper_task, pvParameters) {
-
 auto controller = (Controller *) pvParameters;
 
 uint32_t ulNotifiedValue;
@@ -394,7 +404,7 @@ controller->getServo(i)->calculateNextTick();
 }
 #pragma clang diagnostic pop
 }
-
+*/
 
 
 /**
@@ -408,6 +418,7 @@ controller->getServo(i)->calculateNextTick();
  *
  * @param pvParameters
  */
+/*
 portTASK_FUNCTION(controller_motor_setup_task, pvParameters) {
 
 auto controller = (Controller *) pvParameters;
@@ -430,3 +441,4 @@ info("stopping the motor setup task");
 vTaskDelete(nullptr);
 
 }
+ */

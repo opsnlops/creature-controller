@@ -2,20 +2,21 @@
 #include <climits>
 #include <cmath>
 
+#include "namespace-stuffs.h"
 #include "controller-config.h"
+
 #include "creature/config.h"
 #include "util/ranges.h"
 
 #include "parrot.h"
 #include "creature.h"
-#include "tasks.h"
 
 Parrot::Parrot()
         : Creature() {
 
     // Calculate the head offset max
     this->headOffsetMax = lround((double) (MAX_POSITION - MIN_POSITION) * (double) HEAD_OFFSET_MAX);
-    debug("the head offset max is %d", this->headOffsetMax);
+    debug("the head offset max is {}", this->headOffsetMax);
 
     this->numberOfServos = 6;
     //this->numberOfSteppers = 3;
@@ -100,7 +101,7 @@ void Parrot::init(Controller* controller) {
     this->numberOfJoints = 7;
 
     // Initialize the array on for the joints on the heap
-    this->joints = (uint16_t *) pvPortMalloc(sizeof(uint16_t) * numberOfJoints);
+    this->joints = (uint16_t *) malloc(sizeof(uint16_t) * numberOfJoints);
 }
 
 void Parrot::start() {
@@ -109,17 +110,20 @@ void Parrot::start() {
     assert(this->controller != nullptr);
 
     // Declare this on the heap, so it lasts once start() goes out of scope
-    auto info = (ParrotInfo *) pvPortMalloc(sizeof(ParrotInfo));
+    auto info = (ParrotInfo *) malloc(sizeof(ParrotInfo));
     info->controller = this->controller;
     info->parrot = this;
 
     // Fire off our worker task
+    // TODO: Thread
+    /*
     xTaskCreate(creature_worker_task,
                 "creature_worker_task",
                 2048,
                 (void *) info,
                 1,
                 &workerTaskHandle);
+    */
 
     debug("parrot started!");
 }
@@ -153,7 +157,7 @@ head_position_t Parrot::calculateHeadPosition(uint16_t height, int32_t offset) {
     headPosition.left = left;
     headPosition.right = right;
 
-    verbose("calculated head position: height: %d, offset: %d -> %d, %d", height, offset, right, left);
+    trace("calculated head position: height: {}, offset: {} -> {}, {}", height, offset, right, left);
 
     return headPosition;
 
@@ -168,6 +172,8 @@ head_position_t Parrot::calculateHeadPosition(uint16_t height, int32_t offset) {
  *
  * @param pvParameters
  */
+ // TODO: This is an imporant thing that should be a Thread
+ /*
 portTASK_FUNCTION(creature_worker_task, pvParameters) {
 
 auto info = (ParrotInfo *) pvParameters;
@@ -197,7 +203,7 @@ runningConfig = parrot->getRunningConfig();
 
 #if DEBUG_CREATURE_POSITIONING
 
-debug("Raw: %u", currentFrame[5]);
+debug("Raw: {}", currentFrame[5]);
 
 #endif
 
@@ -209,7 +215,7 @@ uint8_t tilt = currentFrame[INPUT_HEAD_TILT];
 uint16_t headHeight = parrot->convertToHeadHeight(Parrot::convertInputValueToServoValue(height));
 int32_t headTilt = parrot->configToHeadTilt(Parrot::convertInputValueToServoValue(tilt));
 
-verbose("head height: %d, head tilt: %d", headHeight, headTilt);
+verbose("head height: {}, head tilt: {}", headHeight, headTilt);
 
 head_position_t headPosition = parrot->calculateHeadPosition(headHeight, headTilt);
 
@@ -220,7 +226,7 @@ parrot->joints[JOINT_BODY_LEAN] = Parrot::convertInputValueToServoValue(currentF
 parrot->joints[JOINT_BEAK] = Parrot::convertInputValueToServoValue(currentFrame[INPUT_BEAK]);
 parrot->joints[JOINT_CHEST] = Parrot::convertInputValueToServoValue(currentFrame[INPUT_CHEST]);
 
-/*
+/ *
 parrot->joints[JOINT_NECK_ROTATE] = Parrot::convertRange(currentFrame[INPUT_NECK_ROTATE],
                                                          0,
                                                          UCHAR_MAX,
@@ -238,7 +244,7 @@ parrot->joints[JOINT_STAND_ROTATE] = Parrot::convertRange(currentFrame[INPUT_STA
                                                          UCHAR_MAX,
                                                          0,
                                                          runningConfig->getStepperConfig(STEPPER_STAND_ROTATE)->maxSteps);
-*/
+* /
 
 // Request these positions from the controller
 controller->requestServoPosition(SERVO_NECK_LEFT, parrot->joints[JOINT_NECK_LEFT]);
@@ -254,3 +260,4 @@ controller->requestServoPosition(SERVO_CHEST, parrot->joints[JOINT_CHEST]);
 }
 #pragma clang diagnostic pop
 }
+*/

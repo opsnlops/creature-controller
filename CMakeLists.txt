@@ -71,13 +71,16 @@ file(GLOB controllerFiles
         src/creature/*
         src/device/i2c_mock.cpp
         src/device/i2c_servo/*
+        src/device/relay.cpp
+        src/device/servo.cpp
+        src/device/stepper.cpp
         src/dmx/*
         src/pca9685/*
         src/util/*
 )
 
-# Include the non-mock i2c files on non-Apple platforms
-if(UNIX AND NOT APPLE)
+# Include the non-mock i2c files on Linux only
+if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     file(GLOB realI2CDeviceFiles
             src/device/i2c_bcm2835.cpp
             src/device/i2c_smbus.cpp

@@ -1,11 +1,13 @@
 
 #pragma once
 
+#include "controller-config.h"
+#include "namespace-stuffs.h"
+
 #include <climits>
 #include <memory>
 #include <unistd.h>
 
-#include <tasks.h>
 
 #include "creature/config.h"
 #include "controller/controller.h"
@@ -52,7 +54,8 @@ public:
      *
      * @return a `TaskHandle_t` pointing to the task
      */
-    TaskHandle_t getWorkerTaskHandle();
+     // TODO This is a thread now
+    //TaskHandle_t getWorkerTaskHandle();
 
     /**
      * Converts a value that input handlers speaks (0-255) to one the servo controller
@@ -79,7 +82,8 @@ public:
 protected:
 
     Controller* controller;
-    TaskHandle_t workerTaskHandle;
+    // TODO: Thread
+    //TaskHandle_t workerTaskHandle;
 
     uint8_t numberOfServos;
     uint8_t numberOfJoints;

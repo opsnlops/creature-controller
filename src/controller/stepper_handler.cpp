@@ -1,7 +1,7 @@
 
 #include "controller-config.h"
+#include "namespace-stuffs.h"
 
-#include "logging/logging.h"
 #include "controller/controller.h"
 
 #if USE_STEPPERS
@@ -37,7 +37,8 @@ static bool stepperAddressMapping[MAX_NUMBER_OF_STEPPERS][STEPPER_MUX_BITS] = {
 
 void inline toggle_latch() {
     // Enable the latch
-    gpio_put(STEPPER_LATCH_PIN, false);     // It's active low
+    // TODO: Switch these gpios
+    //gpio_put(STEPPER_LATCH_PIN, false);     // It's active low
 
     // Stall long enough to let the latch go! This about 380ns. The datasheet says it
     // needs 220ns to latch at 2v. (We run at 3.3v) The uint32_t executes faster than an
@@ -46,7 +47,7 @@ void inline toggle_latch() {
     for(j = 0; j < 3; j++) {}
 
     // Now that we've toggled everything, turn the latch back off
-    gpio_put(STEPPER_LATCH_PIN, true);     // It's active low
+    //gpio_put(STEPPER_LATCH_PIN, true);     // It's active low
 }
 
 
@@ -78,7 +79,9 @@ void inline toggle_latch() {
 bool stepper_timer_handler(struct repeating_timer *t) {
 
     // Let's keep some metrics of how long this takes
-    uint64_t start_time = time_us_64();
+    // TODO: Chrono action time
+    uint64_t start_time = 0;
+    //uint64_t start_time = time_us_64();
 
     // Keep track of which frame we're in
     stepper_frame_count++;
@@ -100,14 +103,14 @@ bool stepper_timer_handler(struct repeating_timer *t) {
 
         // TODO: This isn't a great way to handle this
         if(state->lowEndstop) {
-            error("Low endstop hit on stepper %u", slot);
+            error("Low endstop hit on stepper {}", slot);
             state->isAwake = false;
             state->startedSleepingAt = stepper_frame_count;
             goto transmit;
         }
 
         if(state->highEndstop) {
-            error("High endstop hit on stepper %u", slot);
+            error("High endstop hit on stepper {}", slot);
             state->isAwake = false;
             state->startedSleepingAt = stepper_frame_count;
             goto transmit;
@@ -128,7 +131,7 @@ bool stepper_timer_handler(struct repeating_timer *t) {
         if(state->isAwake && state->updatedFrame + state->sleepAfterIdleFrames < stepper_frame_count) {
             state->isAwake = false;
             state->startedSleepingAt = stepper_frame_count;
-            debug("sleeping stepper %d at frame %u", slot, stepper_frame_count);
+            debug("sleeping stepper {} at frame {}", slot, stepper_frame_count);
             goto transmit;
 
         }
@@ -142,7 +145,7 @@ bool stepper_timer_handler(struct repeating_timer *t) {
         if(!state->isAwake) {
             state->isAwake = true;
             state->awakeAt = stepper_frame_count + state->framesRequiredToWakeUp;
-            debug("waking up stepper %d at frame %u", slot, stepper_frame_count);
+            debug("waking up stepper {} at frame {}", slot, stepper_frame_count);
             goto transmit;
         }
 
@@ -195,15 +198,16 @@ bool stepper_timer_handler(struct repeating_timer *t) {
         transmit:
 
         // Configure the address lines
-        gpio_put(STEPPER_A0_PIN, stepperAddressMapping[slot][2]);
-        gpio_put(STEPPER_A1_PIN, stepperAddressMapping[slot][1]);
-        gpio_put(STEPPER_A2_PIN, stepperAddressMapping[slot][0]);
+        // TODO: Pi GPIOs, please
+        //gpio_put(STEPPER_A0_PIN, stepperAddressMapping[slot][2]);
+        //gpio_put(STEPPER_A1_PIN, stepperAddressMapping[slot][1]);
+        //gpio_put(STEPPER_A2_PIN, stepperAddressMapping[slot][0]);
 
-        gpio_put(STEPPER_DIR_PIN, state->currentDirection);
-        gpio_put(STEPPER_STEP_PIN, state->isHigh);
-        gpio_put(STEPPER_MS1_PIN, state->ms1State);
-        gpio_put(STEPPER_MS2_PIN, state->ms2State);
-        gpio_put(STEPPER_SLEEP_PIN, state->isAwake);        // Sleep is active low
+        //gpio_put(STEPPER_DIR_PIN, state->currentDirection);
+        //gpio_put(STEPPER_STEP_PIN, state->isHigh);
+        //gpio_put(STEPPER_MS1_PIN, state->ms1State);
+        //gpio_put(STEPPER_MS2_PIN, state->ms2State);
+        //gpio_put(STEPPER_SLEEP_PIN, state->isAwake);        // Sleep is active low
 
         // Toggle the latch so we make this go
         toggle_latch();
@@ -212,8 +216,8 @@ bool stepper_timer_handler(struct repeating_timer *t) {
         state->updatedFrame = stepper_frame_count;
 
         // Check the endstops
-        state->lowEndstop = gpio_get(STEPPER_END_S_LOW_PIN);
-        state->highEndstop = gpio_get(STEPPER_END_S_HIGH_PIN);
+        //state->lowEndstop = gpio_get(STEPPER_END_S_LOW_PIN);
+        //state->highEndstop = gpio_get(STEPPER_END_S_HIGH_PIN);
 
         end:
         (void*)nullptr;
@@ -221,7 +225,8 @@ bool stepper_timer_handler(struct repeating_timer *t) {
     }
 
     // Account for the time spent in here
-    time_spent_in_stepper_handler += time_us_64() - start_time;
+    // TODO: Chorns time
+    //time_spent_in_stepper_handler += time_us_64() - start_time;
 
     return true;
 }
@@ -290,38 +295,41 @@ uint32_t set_ms1_ms2_and_get_steps(StepperState* state) {
 */
 bool home_stepper(uint8_t slot) {
 
-    info("attempting to home stepper %u", slot);
+    info("attempting to home stepper {}", slot);
 
     // Set up the address lines for the stepper we're looking at
-    gpio_put(STEPPER_A0_PIN, stepperAddressMapping[slot][2]);
-    gpio_put(STEPPER_A1_PIN, stepperAddressMapping[slot][1]);
-    gpio_put(STEPPER_A2_PIN, stepperAddressMapping[slot][0]);
+    // TODO: GPIO
+    //gpio_put(STEPPER_A0_PIN, stepperAddressMapping[slot][2]);
+    //gpio_put(STEPPER_A1_PIN, stepperAddressMapping[slot][1]);
+    //gpio_put(STEPPER_A2_PIN, stepperAddressMapping[slot][0]);
 
 
-    gpio_put(STEPPER_STEP_PIN, false);
-    gpio_put(STEPPER_DIR_PIN, false);
-    gpio_put(STEPPER_MS1_PIN, true);
-    gpio_put(STEPPER_MS2_PIN, true);
-    gpio_put(STEPPER_SLEEP_PIN, true);
+    //gpio_put(STEPPER_STEP_PIN, false);
+    //gpio_put(STEPPER_DIR_PIN, false);
+    //gpio_put(STEPPER_MS1_PIN, true);
+    //gpio_put(STEPPER_MS2_PIN, true);
+    //gpio_put(STEPPER_SLEEP_PIN, true);
 
 
-    debug("waking up stepper %u", slot);
+    debug("waking up stepper {}", slot);
 
     // Set this on the latches
     toggle_latch();
 
     // This is way longer than we actually need, but let's be safe!
-    vTaskDelay(pdMS_TO_TICKS(500));
+    // TODO: Thread.sleep
+    //vTaskDelay(pdMS_TO_TICKS(500));
 
 
     uint32_t steps_moved = 0;
 
+    /*
     bool high = false;
     bool home_reached = gpio_get(STEPPER_END_S_LOW_PIN);
     while(!home_reached) {
 
         if(++steps_moved % 100 == 0) {
-            debug("moved stepper %u %u microsteps", slot, steps_moved);
+            debug("moved stepper {} {} microsteps", slot, steps_moved);
         }
 
         // Let's slowly walk backwards
@@ -335,7 +343,7 @@ bool home_stepper(uint8_t slot) {
         home_reached = gpio_get(STEPPER_END_S_LOW_PIN);
 
         if(home_reached)
-            info("stepper %u home reached", slot);
+            info("stepper {} home reached", slot);
     }
 
     // Pause to set all movement settle
@@ -360,9 +368,11 @@ bool home_stepper(uint8_t slot) {
 
     // We're done, pause for a moment before going on
     vTaskDelay(pdMS_TO_TICKS(2000));
-    debug("done with stepper %u", slot);
+    debug("done with stepper {}", slot);
 
     return home_reached;
+     */
+    return true;
 
 }
 

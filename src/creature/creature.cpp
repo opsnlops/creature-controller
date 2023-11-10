@@ -1,16 +1,18 @@
 
-
 #include <cmath>
+
+#include "namespace-stuffs.h"
+#include "controller-config.h"
+
 
 #include "creature.h"
 
-#include "logging/logging.h"
 
 
 Creature::Creature() {
 
     this->controller = nullptr;
-    this->workerTaskHandle = nullptr;
+    //this->workerTaskHandle = nullptr;
     this->numberOfJoints = 0;
     this->numberOfServos = 0;
 
@@ -21,9 +23,10 @@ Creature::Creature() {
     debug("Creature() called!");
 }
 
-TaskHandle_t Creature::getWorkerTaskHandle() {
-    return workerTaskHandle;
-}
+// TODO: Thread time
+//TaskHandle_t Creature::getWorkerTaskHandle() {
+//    return workerTaskHandle;
+//}
 
 void Creature::init(Controller* c) {
     this->controller = c;
@@ -40,7 +43,7 @@ uint16_t Creature::convertInputValueToServoValue(uint8_t inputValue) {
     double movementPercentage = (double)inputValue / (double)UCHAR_MAX;
     auto servoValue = (uint16_t)(round((double)servoRange * movementPercentage) + MIN_POSITION);
 
-    verbose("mapped %d -> %d", inputValue, servoValue);
+    trace("mapped {} -> {}", inputValue, servoValue);
 
     return servoValue;
 }

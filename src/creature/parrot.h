@@ -3,9 +3,11 @@
 
 #include <memory>
 
+#include "namespace-stuffs.h"
+#include "controller-config.h"
+
 #include "creature.h"
 
-#include "logging/logging.h"
 
 #include "creature/config.h"
 #include "device/relay.h"

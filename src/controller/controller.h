@@ -3,10 +3,9 @@
 
 #include <memory>
 
-#include <FreeRTOS.h>
-#include <tasks.h>
-
+#include "namespace-stuffs.h"
 #include "controller-config.h"
+
 #include "creature/config.h"
 #include "device/relay.h"
 #include "device/servo.h"
@@ -30,7 +29,7 @@ public:
     void init(CreatureConfig* incomingConfig);
     void start();
 
-    void setCreatureWorkerTaskHandle(TaskHandle_t creatureWorkerTaskHandle);
+    //void setCreatureWorkerTaskHandle(TaskHandle_t creatureWorkerTaskHandle);
 
     void powerOn();
     void powerOff();
@@ -65,7 +64,7 @@ public:
 #endif
 
     // ISR, called when the PWM wraps
-    static void __isr on_pwm_wrap_handler();
+    //static void __isr on_pwm_wrap_handler();
 
 private:
     bool poweredOn = false;
@@ -111,8 +110,10 @@ private:
     /**
      * A handle to our creature's working task. Used to signal that a new
      * frame has been received off the wire.
+     *
+     * TODO: Thread this
      */
-    TaskHandle_t creatureWorkerTaskHandle;
+    //TaskHandle_t creatureWorkerTaskHandle;
 
     // The ISR needs access to these values
     static uint8_t numberOfServosInUse;

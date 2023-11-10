@@ -22,13 +22,13 @@
 class Servo {
 
 public:
-    Servo(uint gpio, const char* name, u16 min_pulse_us, u16 max_pulse_us,
+    Servo(u8 gpio, const char* name, u16 min_pulse_us, u16 max_pulse_us,
           float smoothingValue, bool inverted, u32 frequency);
     void turnOn();
     void turnOff();
     [[nodiscard]] u16 getPosition() const;
-    [[nodiscard]] uint getSlice() const;
-    [[nodiscard]] uint getChannel() const;
+    [[nodiscard]] u8 getSlice() const;
+    [[nodiscard]] u8 getChannel() const;
 
     // These are PWM values
     [[nodiscard]] u32 getDesiredTick() const;   // Where we want it to go
@@ -56,5 +56,5 @@ private:
     const char* name;           // This servo's name
     float smoothingValue;       // The constant to use when smoothing the input
 
-    static u32 pwm_set_freq_duty(uint slice_num, uint chan, u32 frequency, int d);
+    static u32 pwm_set_freq_duty(u8 slice_num, u8 chan, u32 frequency, int d);
 };

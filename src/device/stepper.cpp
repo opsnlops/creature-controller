@@ -2,10 +2,8 @@
 #include <cmath>
 
 #include "controller-config.h"
+#include "namespace-stuffs.h"
 
-#include "pico/time.h"
-
-#include "logging/logging.h"
 
 #if USE_STEPPERS
 
@@ -44,7 +42,7 @@ StepperState::StepperState() {
 Stepper::Stepper(uint8_t slot, const char* name, uint32_t maxSteps, uint16_t decelerationAggressiveness,
                  uint32_t sleepWakeupPauseTimeUs, uint32_t sleepAfterUs, bool inverted) {
 
-    verbose("setting up a new stepper");
+    trace("setting up a new stepper");
 
     this->state = new StepperState();
     this->slot = slot;
@@ -68,7 +66,7 @@ Stepper::Stepper(uint8_t slot, const char* name, uint32_t maxSteps, uint16_t dec
     this->state->framesRequiredToWakeUp = this->sleepWakeupFrames;
     this->state->sleepAfterIdleFrames = this->sleepAfterIdleFrames;
 
-    info("set up stepper on slot %u: name: %s, max_steps: %u, deceleration: %u, wake frames: %u, idle after: %u, inverted: %s",
+    info("set up stepper on slot {}: name: {}, max_steps: {}, deceleration: {}, wake frames: {}, idle after: {}, inverted: {}",
          slot, name, maxSteps, decelerationAggressiveness, this->sleepWakeupFrames, this->sleepAfterIdleFrames, inverted ? "yes" : "no");
 
 }

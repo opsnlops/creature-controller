@@ -4,7 +4,7 @@
 #include "controller-config.h"
 
 #include <cstdio>
-#include "pico/stdlib.h"
+
 
 #if USE_STEPPERS
 
