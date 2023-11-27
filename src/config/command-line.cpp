@@ -41,6 +41,11 @@ namespace creatures {
                 .default_value(false);
 #endif
 
+        program.add_argument("-c", "--creature-config")
+                .help("JSON file for this creature")
+                .default_value(false)
+                .required();
+
         program.add_description("This application is the Linux version of the Creature Controller that's part\n"
                                 "of April's Creature Workshop! 🐰");
         program.add_epilog("🦜 Bawk!");

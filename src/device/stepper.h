@@ -19,7 +19,7 @@ public:
      *
      * Zero means disable.
      */
-    u16 decelerationAggressiveness;
+    u16 decelerationAggressiveness{};
 
     u64 updatedFrame;
 
@@ -64,12 +64,12 @@ public:
     /**
      * At which frame can we resume motion after wakeup?
      */
-    u64 awakeAt;
+    u64 awakeAt{};
 
     /**
      * How many frames do we have to wait to wake up?
      */
-    u32 framesRequiredToWakeUp;
+    u32 framesRequiredToWakeUp{};
 
 
 };
@@ -111,13 +111,13 @@ public:
 
     [[nodiscard]] u8 getSlot() const;
 
-    bool isInverted();
+    bool isInverted() const;
 
     [[nodiscard]] const char* getName() const;
 
-    u16 getDecelerationAggressiveness();
-    u32 getSleepWakeupPauseTimeUs();
-    u32 getSleepAfterUs();
+    [[nodiscard]] u16 getDecelerationAggressiveness() const;
+    [[nodiscard]] u32 getSleepWakeupPauseTimeUs() const;
+    [[nodiscard]] u32 getSleepAfterUs() const;
     u32 getSleepWakeupFrames();
     u32 getSleepAfterIdleFrames();
 

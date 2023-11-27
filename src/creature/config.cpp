@@ -19,20 +19,12 @@ CreatureConfig::CreatureConfig(const char* name, uint32_t servoFrequencyHz,
     this->dmxBaseChannel = dmxBaseChannel;
 
     // Zero out the servo and stepper arrays
-    memset(this->servoConfigs, '\0', sizeof(ServoConfig*) * MAX_NUMBER_OF_SERVOS);
+    //memset(this->servoConfigs, '\0', sizeof(ServoConfig*) * MAX_NUMBER_OF_SERVOS);
 
 #if USE_STEPPERS
     this->numberOfSteppers = numberOfSteppers;
     memset(this->stepperConfigs, '\0', sizeof(StepperConfig*) * MAX_NUMBER_OF_STEPPERS);
 #endif
-}
-
-void CreatureConfig::setServoConfig(uint8_t index, ServoConfig* config) {
-    this->servoConfigs[index] = config;
-}
-
-ServoConfig* CreatureConfig::getServoConfig(uint8_t servoNumber) {
-    return this->servoConfigs[servoNumber];
 }
 
 uint32_t CreatureConfig::getServoFrequencyHz() {
@@ -65,35 +57,6 @@ uint8_t CreatureConfig::getNumberOfSteppers() {
 }
 #endif
 
-
-ServoConfig::ServoConfig() {
-
-    // Initialize the name
-    memset(this->name, '\0', CREATURE_CONFIG_NAME_MAX_SIZE + 1);
-    strncpy(this->name, "???", CREATURE_CONFIG_NAME_MAX_SIZE);
-
-    this->minPulseUs = 0;
-    this->maxPulseUs = 0;
-    this->defaultPosition = DEFAULT_POSITION;
-    this->smoothingValue = 0.0f;
-    this->inverted = false;
-}
-
-
-ServoConfig::ServoConfig(const char* name, uint16_t minPulseUs, uint16_t maxPulseUs,
-                         float smoothingValue, uint16_t defaultPosition, bool inverted) {
-
-    // Initialize the name
-    memset(this->name, '\0', CREATURE_CONFIG_NAME_MAX_SIZE + 1);
-    strncpy(this->name, name, CREATURE_CONFIG_NAME_MAX_SIZE);
-
-    this->minPulseUs = minPulseUs;
-    this->maxPulseUs = maxPulseUs;
-    this->smoothingValue = smoothingValue;
-    this->defaultPosition = defaultPosition;
-    this->inverted = inverted;
-
-}
 
 #if USE_STEPPERS
 StepperConfig::StepperConfig() {

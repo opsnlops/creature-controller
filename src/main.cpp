@@ -16,6 +16,7 @@
 #include "config/command-line.h"
 #include "config/config.h"
 #include "device/i2c_mock.h"
+#include "device/servo.h"
 #include "dmx/e131_server.h"
 
 #ifdef __linux__
@@ -34,6 +35,8 @@
 // Declare the configuration globally
 std::shared_ptr<creatures::Configuration> config;
 std::shared_ptr<creatures::E131Server> e131Server;
+std::shared_ptr<std::unordered_map<u8,Servo>> servos;
+std::mutex servoUpdateMutex;
 
 int main(int argc, char **argv) {
 

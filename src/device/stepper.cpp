@@ -89,19 +89,19 @@ uint8_t Stepper::getSlot() const {
     return this->slot;
 }
 
-bool Stepper::isInverted() {
+bool Stepper::isInverted() const {
     return this->inverted;
 }
 
-uint16_t Stepper::getDecelerationAggressiveness() {
+uint16_t Stepper::getDecelerationAggressiveness() const {
     return this->decelerationAggressiveness;
 }
 
-uint32_t Stepper::getSleepWakeupPauseTimeUs() {
+uint32_t Stepper::getSleepWakeupPauseTimeUs() const {
     return this->sleepWakeupPauseTimeUs;
 }
 
-uint32_t Stepper::getSleepAfterUs() {
+uint32_t Stepper::getSleepAfterUs() const {
     return this->sleepAfterUs;
 }
 

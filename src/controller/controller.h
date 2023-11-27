@@ -19,12 +19,10 @@ class Controller {
 public:
     Controller();
 
-    CreatureConfig* getRunningConfig();
-
     static uint32_t getNumberOfPWMWraps();
-    uint16_t getServoPosition(uint8_t indexNumber);
+    uint16_t getServoPosition(u8 outputPin);
 
-    void requestServoPosition(uint8_t servoIndexNumber, uint16_t requestedPosition);
+    void requestServoPosition(u8 outputPin, u16 requestedPosition);
 
     void init(CreatureConfig* incomingConfig);
     void start();
@@ -39,28 +37,27 @@ public:
     [[nodiscard]] bool hasReceivedFirstFrame();
     void confirmFirstFrameReceived();
 
-    uint8_t* getCurrentFrame();
+    u8* getCurrentFrame();
 
-    uint8_t getPinMapping(uint8_t servoNumber);
+    u8 getPinMapping(u8 servoNumber);
 
-    bool acceptInput(uint8_t* input);
+    bool acceptInput(u8* input);
 
-    static uint8_t getNumberOfServosInUse();
+    static u8 getNumberOfServosInUse();
 
-    [[nodiscard]] uint16_t getNumberOfDMXChannels();
+    [[nodiscard]] u16 getNumberOfDMXChannels();
 
     [[nodiscard]] bool isOnline();
     void setOnline(bool onlineValue);
 
-
     // Get the servo, used for debugging
-    static Servo* getServo(uint8_t index);
+    static Servo* getServo(u8 outputPin);
 
 #if USE_STEPPERS
-    static Stepper* getStepper(uint8_t index);
+    static Stepper* getStepper(u8 index);
     static uint8_t getNumberOfSteppersInUse();
-    uint32_t getStepperPosition(uint8_t indexNumber);
-    static void requestStepperPosition(uint8_t stepperIndexNumber, uint32_t requestedPosition);
+    uint32_t getStepperPosition(u8 indexNumber);
+    static void requestStepperPosition(u8 stepperIndexNumber, u32 requestedPosition);
 #endif
 
     // ISR, called when the PWM wraps

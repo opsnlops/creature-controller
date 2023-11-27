@@ -48,9 +48,6 @@ uint16_t Creature::convertInputValueToServoValue(uint8_t inputValue) {
     return servoValue;
 }
 
-CreatureConfig* Creature::getRunningConfig() {
-    return runningConfig;
-}
 
 uint8_t Creature::getNumberOfJoints() const {
     return numberOfJoints;

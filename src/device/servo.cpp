@@ -30,18 +30,18 @@ extern uint32_t number_of_moves;
  * The servo's PWM controller will be off by default to make sure it's not turned
  * on before we're ready to go.
  *
- * @param gpio The GPIO pin this servo is connected to
+ * @param outputPin The GPIO pin this servo is connected to
  * @param min_pulse_us Min pulse length in microseconds
  * @param max_pulse_us Max pulse length in microseconds
  * @param inverted are this servo's movements inverted?
  * @param frequency PWM frequency
  */
-Servo::Servo(u8 gpio, const char* name, uint16_t min_pulse_us, uint16_t max_pulse_us,
+Servo::Servo(u8 outputPin, std::string name, uint16_t min_pulse_us, uint16_t max_pulse_us,
              float smoothingValue, bool inverted, uint32_t frequency) {
 
     // TODO: Convert to the new servo controller
     //gpio_set_function(gpio, GPIO_FUNC_PWM);
-    this->gpio = gpio;
+    this->outputPin = outputPin;
     this->name = name;
     this->min_pulse_us = min_pulse_us;
     this->max_pulse_us = max_pulse_us;
@@ -68,7 +68,7 @@ Servo::Servo(u8 gpio, const char* name, uint16_t min_pulse_us, uint16_t max_puls
     // TODO: What's a good default to set the servo to on power on?
 
     info("set up servo on pin {}: name: {}, min_pulse: {}, max_pulse: {}, inverted: {}",
-         gpio, name, min_pulse_us, max_pulse_us, inverted ? "yes" : "no");
+         outputPin, name, min_pulse_us, max_pulse_us, inverted ? "yes" : "no");
 }
 
 /**
@@ -81,7 +81,7 @@ void Servo::turnOn() {
     //pwm_set_enabled(slice, true);
     on = true;
 
-    info("Enabled servo on pin {} (slice {})", gpio, slice);
+    info("Enabled servo on pin {} (slice {})", outputPin, slice);
 }
 
 
@@ -95,7 +95,7 @@ void Servo::turnOff() {
     //pwm_set_enabled(slice, false);
     on = false;
 
-    info("Disabled servo on pin {} (slice {})", gpio, slice);
+    info("Disabled servo on pin {} (slice {})", outputPin, slice);
 }
 
 /**
@@ -147,15 +147,15 @@ void Servo::move(uint16_t position) {
     desired_ticks = (float)resolution * frame_active;
     current_position = position;
 
-    trace("requesting servo GPIO {} be set to position {} ({} ticks)",
-            gpio,
-            current_position,
-            desired_ticks);
+    trace("requesting servo on output pin {} be set to position {} ({} ticks)",
+          outputPin,
+          current_position,
+          desired_ticks);
 
     number_of_moves++;
 }
 
-const char* Servo::getName() const {
+std::string Servo::getName() const {
     return name;
 }
 

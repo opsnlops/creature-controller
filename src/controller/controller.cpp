@@ -60,11 +60,14 @@ void Controller::init(CreatureConfig* incomingConfig) {
 #endif
 
     // Set up the servos
+    //
+    // TODO: This is easier now that we have actual STL objects
+    //
     debug("building servo objects");
     for (int i = 0; i < this->config->getNumberOfServos(); i++) {
-        ServoConfig *servo = this->config->getServoConfig(i);
-        initServo(i, servo->name, servo->minPulseUs, servo->maxPulseUs,
-                  servo->smoothingValue, servo->defaultPosition, servo->inverted);
+        //ServoConfig *servo = this->config->getServoConfig(i);
+        //initServo(i, servo->name, servo->minPulseUs, servo->maxPulseUs,
+        //          servo->smoothingValue, servo->defaultPosition, servo->inverted);
     }
 
 #if USE_STEPPERS
@@ -227,17 +230,6 @@ void Controller::initStepper(uint8_t slot, const char *name, uint32_t maxSteps, 
 }
 #endif
 
-/**
- * Get the configuration that's currently running on the controller
- *
- * This might be different than the startup config, if it was tweaked
- * via the debug shell.
- *
- * @return a pointer to our configuration
- */
-CreatureConfig* Controller::getRunningConfig() {
-    return config;
-}
 
 uint8_t Controller::getPinMapping(uint8_t servoNumber) {
     return pinMappings[servoNumber];

@@ -18,14 +18,20 @@ Parrot::Parrot()
     this->headOffsetMax = lround((double) (MAX_POSITION - MIN_POSITION) * (double) HEAD_OFFSET_MAX);
     debug("the head offset max is {}", this->headOffsetMax);
 
-    this->numberOfServos = 6;
-    //this->numberOfSteppers = 3;
+    // These are set when the config file is read in
+    this->numberOfServos = 0;
+    this->numberOfSteppers = 0;
 
     info("Bawk!");
 }
 
-CreatureConfig* Parrot::getDefaultConfig() {
+/**
+ * This is all legacy code from the pre-Linux version. Commented out just for reference
+ * in case I need it later. (opsnlops)
+ */
+ void wasImportantGetDefaultConfig() {
 
+    /*
     auto defaultConfig = new CreatureConfig(CREATURE_NAME, 50, 6, 1, 1);
 
     defaultConfig->setServoConfig(SERVO_NECK_LEFT,
@@ -46,6 +52,8 @@ CreatureConfig* Parrot::getDefaultConfig() {
     defaultConfig->setServoConfig(SERVO_CHEST,
                                   new ServoConfig("Chest", 250, 2500,
                                                   0.99, DEFAULT_POSITION, false));
+
+     */
 
     // "Max Steps" is in full steps (use the datasheet from the stepper to know how big that is)
 
@@ -88,9 +96,9 @@ CreatureConfig* Parrot::getDefaultConfig() {
                                                       false));
     */
     // Make our running defaultConfig point to this
-    this->runningConfig = defaultConfig;
+    //this->runningConfig = defaultConfig;
 
-    return defaultConfig;
+    //return defaultConfig;
 
 }
 

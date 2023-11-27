@@ -63,7 +63,6 @@ public:
 
     explicit Parrot();
 
-    CreatureConfig* getDefaultConfig() override;
     void init(Controller* controller) override;
     void start() override;
 

@@ -7,6 +7,7 @@
 #include <climits>
 #include <memory>
 #include <unistd.h>
+#include <thread>
 
 
 #include "creature/config.h"
@@ -16,6 +17,13 @@ class Creature {
 
 public:
 
+    // Valid creature types
+    enum types {
+        parrot,
+        wled_light,
+        skunk
+    };
+
     explicit Creature();
 
     /**
@@ -23,7 +31,7 @@ public:
      *
      * Initialize it to the size of the joints.
      */
-    uint16_t* joints;
+    u16* joints;
 
     /**
      * Set up the controller
@@ -36,26 +44,12 @@ public:
     virtual void start() = 0;
 
     /**
-     * Create the default config for this creature
-     *
-     * @return a non-customized configuration for this creature
-     */
-    virtual CreatureConfig* getDefaultConfig() = 0;
-
-    /**
-     * Get the "running" config in the Cisco IOS sense
-     *
-     * @return a pointer to our running config
-     */
-    CreatureConfig* getRunningConfig();
-
-    /**
      * Returns a task to be notified when there is a new frame to process
      *
      * @return a `TaskHandle_t` pointing to the task
      */
      // TODO This is a thread now
-    //TaskHandle_t getWorkerTaskHandle();
+    std::thread getWorkerTaskHandle();
 
     /**
      * Converts a value that input handlers speaks (0-255) to one the servo controller
@@ -64,32 +58,29 @@ public:
      * @param inputValue a `uint8_t` to convert to the servo mappings
      * @return a value between MIN_POSITION and MAX_POSITION
      */
-    static uint16_t convertInputValueToServoValue(uint8_t inputValue);
+    static u16 convertInputValueToServoValue(u8 inputValue);
 
     /**
      * Gets the number of joints that this creature has
      *
      * @return the number of joints
      */
-    [[nodiscard]] uint8_t getNumberOfJoints() const;
+    [[nodiscard]] u8 getNumberOfJoints() const;
 
-    [[nodiscard]] uint8_t getNumberOfServos() const;
+    [[nodiscard]] u8 getNumberOfServos() const;
 
 #if USE_STEPPERS
-    [[nodiscard]] uint8_t getNumberOfSteppers() const;
+    [[nodiscard]] u8 getNumberOfSteppers() const;
 #endif
 
 protected:
 
     Controller* controller;
     // TODO: Thread
-    //TaskHandle_t workerTaskHandle;
+    std::thread workerTaskHandle;
 
     uint8_t numberOfServos;
     uint8_t numberOfJoints;
-
-    // This is the config that we're currently using. "Running" in the Cisco sense.
-    CreatureConfig* runningConfig;
 
 #if USE_STEPPERS
     uint8_t numberOfSteppers;
