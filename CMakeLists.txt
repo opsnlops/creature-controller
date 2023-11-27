@@ -60,7 +60,10 @@ target_include_directories(libe131
         ${CMAKE_CURRENT_SOURCE_DIR}/lib/libe131/src/
 )
 
-
+FetchContent_Declare(
+        json
+        URL https://github.com/nlohmann/json/releases/download/v3.11.2/json.tar.xz)
+FetchContent_MakeAvailable(json)
 
 
 # Our source files on all platforms
@@ -106,5 +109,6 @@ target_link_libraries(creature-controller
         argparse
         spdlog::spdlog $<$<BOOL:${MINGW}>:ws2_32>
         ${BCM2835_LIBRARIES}
+        nlohmann_json::nlohmann_json
 )
 

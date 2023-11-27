@@ -98,9 +98,6 @@ int main(int argc, char **argv) {
     }
 #endif
 
-    // Create and start the e1.13 server
-    e131Server = std::make_shared<creatures::E131Server>();
-    e131Server->start();
 
     // Start the i2c bus
     debug("starting the i2c bus");
@@ -109,7 +106,12 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
+    // Create and start the e1.13 server
+    debug("starting the e1.13 server");
+    e131Server = std::make_shared<creatures::E131Server>();
+    e131Server->start();
 
+    // Create the servo controller
     auto servoController = std::make_shared<I2CServoController>(i2cBus, PCA9685_I2C_ADDRESS);
     servoController->begin();
     trace("done with controller startup");
@@ -147,6 +149,6 @@ int main(int argc, char **argv) {
 
     i2cBus->close();
 
-    info("bye! 👋🏻");
+    info("the main thread says bye! good luck little threads! 👋🏻");
     return EXIT_SUCCESS;
 }
