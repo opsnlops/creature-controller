@@ -1,0 +1,57 @@
+{
+  "name": "beaky",
+  "version": "0.1.0",
+  "description": "The lead at April's Creature Workshop!",
+  "motors": [
+    {
+      "type": "servo",
+      "name": "Neck Left",
+      "number": 1,
+      "min_pulse_us": 1250,
+      "max_pulse_us": 2250,
+      "smoothing_value": 0.90,
+      "inverted": false,
+      "default_position": "default"
+    },
+    {
+      "type": "servo",
+      "name": "Neck Right",
+      "number": 2,
+      "min_pulse_us": 800,
+      "max_pulse_us": 1800,
+      "smoothing_value": 0.90,
+      "inverted": true,
+      "default_position": "default"
+    },
+    {
+      "type": "servo",
+      "name": "Neck Rotate",
+      "number": 3,
+      "min_pulse_us": 1400,
+      "max_pulse_us": 1900,
+      "smoothing_value": 0.95,
+      "inverted": false,
+      "default_position": "default"
+    },
+    {
+      "type": "servo",
+      "name": "Body Lean",
+      "number": 4,
+      "min_pulse_us": 1475,
+      "max_pulse_us": 1950,
+      "smoothing_value": 0.96,
+      "inverted": true,
+      "default_position": "min"
+    },
+    {
+      "type": "servo",
+      "name": "Beak",
+      "number": 5,
+      "min_pulse_us": 1600,
+      "max_pulse_us": 2350,
+      "smoothing_value": 0.4,
+      "inverted": true,
+      "default_position": "min"
+    }
+  ]
+}
