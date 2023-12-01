@@ -48,7 +48,6 @@ namespace creatures {
 
         program.add_argument("-c", "--creature-config")
                 .help("JSON file for this creature")
-                .default_value(false)
                 .required();
 
         program.add_description("This application is the Linux version of the Creature Controller that's part\n"
@@ -92,6 +91,7 @@ namespace creatures {
 
         // Parse out the creature config file
         auto creatureFile = program.get<std::string>("-c");
+        debug("read creature file {} from command line", creatureFile);
         if(creatureFile.length() > 0) {
             parseConfigFile(creatureFile);
         }
