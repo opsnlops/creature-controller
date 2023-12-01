@@ -34,6 +34,7 @@ namespace creatures {
 
     private:
         std::string configFile;
+        std::vector<std::string> requiredFields;
 
         // Make sure the file is both readable and accessible
         static bool isFileAccessible(const std::string& filename);

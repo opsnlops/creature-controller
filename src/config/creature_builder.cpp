@@ -30,6 +30,13 @@ namespace creatures {
             throw CreatureBuilderException(fmt::format("file {} is not accessible", filename));
         }
 
+        // Define the required config file fields
+        requiredFields = {
+                "type", "name", "version", "starting_dmx_channel",
+                "head_offset_max", "servo_frequency", "position_min", "position_max",
+        };
+
+
         this->configFile = filename;
         info("set file name to {}",this->configFile);
     }
@@ -43,10 +50,6 @@ namespace creatures {
         json j = json::parse(f);
         debug("file was parsed!");
 
-        // Track the expected fields
-        std::vector<std::string> requiredFields = {
-                "type", "name", "version", "starting_dmx_channel",
-        };
 
         // Make sure the fields we need are present
         for (const auto& fieldName : requiredFields) {
