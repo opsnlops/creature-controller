@@ -105,6 +105,7 @@ namespace creatures {
         try {
             CreatureBuilder builder(std::move(configFilename));
             builder.parseConfig();
+
         }
         catch (const CreatureBuilderException &err) {
             critical(err.what());

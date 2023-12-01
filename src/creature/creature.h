@@ -74,7 +74,7 @@ public:
     [[nodiscard]] u8 getNumberOfSteppers() const;
 #endif
 
-    creature_type stringToType(const std::string& typeStr);
+   static creature_type stringToType(const std::string& typeStr);
 
 protected:
 

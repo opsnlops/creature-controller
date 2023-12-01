@@ -7,6 +7,9 @@
 
 #include <string>
 
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
+
 #include "creature/creature.h"
 
 namespace creatures {
@@ -34,6 +37,9 @@ namespace creatures {
 
         // Make sure the file is both readable and accessible
         static bool isFileAccessible(const std::string& filename);
+
+        // Make sure a JSON field is present
+        static void checkJsonField(const json& jsonObj, const std::string& fieldName);
     };
 
 } // creatures

@@ -40,12 +40,27 @@ namespace creatures {
         info("about to try to parse the config file");
 
         std::ifstream f(this->configFile);
-        json data = json::parse(f);
+        json j = json::parse(f);
         debug("file was parsed!");
 
-        info("creature name is {} (version {})", data["name"], data["version"]);
+        // Track the expected fields
+        std::vector<std::string> requiredFields = {
+                "type", "name", "version", "starting_dmx_channel",
+        };
+
+        // Make sure the fields we need are present
+        for (const auto& fieldName : requiredFields) {
+            checkJsonField(j, fieldName);
+        }
 
 
+        info("creature name is {} (version {})", j["name"], j["version"]);
+
+        Creature::creature_type type = Creature::stringToType(j["type"]);
+        if(type == Creature::invalid_type) {
+            error("invalid creature type: {}", j["type"]);
+            throw CreatureBuilderException(fmt::format("invalid creature type: {}", j["type"]));
+        }
 
 
         return true;
@@ -72,6 +87,19 @@ namespace creatures {
         // Try to open the file for reading
         std::ifstream file(filename);
         return file.good();
+    }
+
+    /**
+     * Checks to make sure that a field is defined in a JSON file. Will throw
+     * a `CreatureBuilderException` if it's not there.
+     *
+     * @param jsonObj the json object to check
+     * @param fieldName the field name we're looking for
+     */
+    void CreatureBuilder::checkJsonField(const nlohmann::json& jsonObj, const std::string& fieldName) {
+        if (!jsonObj.contains(fieldName)) {
+            throw CreatureBuilderException("Missing required field: " + fieldName);
+        }
     }
 
 } // creatures
