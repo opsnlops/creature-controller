@@ -5,7 +5,6 @@
 #include "namespace-stuffs.h"
 #include "controller-config.h"
 
-#include "creature/config.h"
 #include "util/ranges.h"
 
 #include "parrot.h"
@@ -102,7 +101,7 @@ Parrot::Parrot()
 
 }
 
-void Parrot::init(Controller* controller) {
+void Parrot::init(std::shared_ptr<Controller> controller) {
     debug("starting creature init");
 
     this->controller = controller;

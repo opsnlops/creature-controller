@@ -123,7 +123,9 @@ int main(int argc, char **argv) {
     info("pre-scale is {}", current_pre_scale);
 
 
+
     // Set a signal on pin 0 for testing
+    /*
     for(u16 i = 4000; i > 200; i = i - 20) {
         info("setting pin 0 to start: 0, stop: {}", i);
         servoController->setPin(0, i, false);
@@ -137,6 +139,7 @@ int main(int argc, char **argv) {
 
     trace("sleeping for 2 seconds");
     std::this_thread::sleep_for(std::chrono::seconds(2));
+     */
 
     info("testing sleep...");
     servoController->sleep();

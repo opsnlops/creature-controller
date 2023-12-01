@@ -3,6 +3,7 @@
 #include <string>
 
 #include <argparse/argparse.hpp>
+#include <utility>
 
 #include "config.h"
 #include "command-line.h"
@@ -12,6 +13,10 @@
  *   https://github.com/p-ranav/argparse
  */
 
+
+#include "creature/parrot.h"
+#include "creature_builder.h"
+#include "CreatureBuilderException.h"
 
 namespace creatures {
 
@@ -85,7 +90,31 @@ namespace creatures {
         }
 #endif
 
+        // Parse out the creature config file
+        auto creatureFile = program.get<std::string>("-c");
+        if(creatureFile.length() > 0) {
+            parseConfigFile(creatureFile);
+        }
+
+
         return config;
+    }
+
+    std::shared_ptr<Creature> CommandLine::parseConfigFile(std::string configFilename) {
+
+        try {
+            CreatureBuilder builder(std::move(configFilename));
+            builder.parseConfig();
+        }
+        catch (const CreatureBuilderException &err) {
+            critical(err.what());
+            std::exit(1);
+        }
+
+
+
+        // TODO: This is just junk
+        return std::make_shared<Parrot>();
     }
 
 };

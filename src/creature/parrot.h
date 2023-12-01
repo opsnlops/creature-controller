@@ -8,8 +8,6 @@
 
 #include "creature.h"
 
-
-#include "creature/config.h"
 #include "device/relay.h"
 #include "device/servo.h"
 
@@ -63,7 +61,7 @@ public:
 
     explicit Parrot();
 
-    void init(Controller* controller) override;
+    void init(std::shared_ptr<Controller> controller) override;
     void start() override;
 
     /**
@@ -93,7 +91,7 @@ private:
  * Used for passing information into our task
  */
 typedef struct {
-    Controller* controller;
+    std::shared_ptr<Controller> controller;
     uint16_t* joints;
     Parrot* parrot;
 } ParrotInfo;

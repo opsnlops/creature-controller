@@ -39,7 +39,7 @@ StepperState::StepperState() {
 }
 
 
-Stepper::Stepper(uint8_t slot, const char* name, uint32_t maxSteps, uint16_t decelerationAggressiveness,
+Stepper::Stepper(uint8_t slot, std::string name, uint32_t maxSteps, uint16_t decelerationAggressiveness,
                  uint32_t sleepWakeupPauseTimeUs, uint32_t sleepAfterUs, bool inverted) {
 
     trace("setting up a new stepper");
@@ -81,7 +81,7 @@ int Stepper::start() {
 }
 
 
-const char* Stepper::getName() const {
+std::string Stepper::getName() const {
     return this->name;
 }
 

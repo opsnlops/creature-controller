@@ -5,7 +5,7 @@
 #include "controller-config.h"
 
 
-#include "creature.h"
+#include "creature/creature.h"
 
 
 
@@ -28,7 +28,7 @@ Creature::Creature() {
 //    return workerTaskHandle;
 //}
 
-void Creature::init(Controller* c) {
+void Creature::init(std::shared_ptr<Controller> c) {
     this->controller = c;
 
     debug("init done, controller exists");
@@ -62,3 +62,10 @@ uint8_t Creature::getNumberOfSteppers() const {
     return numberOfSteppers;
 }
 #endif
+
+Creature::creature_type Creature::stringToType(const std::string& typeStr) {
+    if (typeStr == "parrot") return parrot;
+    if (typeStr == "wled_light") return wled_light;
+    if (typeStr == "skunk") return skunk;
+    return invalid_type;
+}

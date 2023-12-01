@@ -14,6 +14,9 @@ public:
 
     StepperState();
 
+
+
+
     /**
      * Used to determine how aggressive when we should switch to microsteps.
      *
@@ -77,7 +80,7 @@ public:
 class Stepper {
 
 public:
-    Stepper(u8 slot, const char* name, u32 maxSteps, u16 decelerationAggressiveness,
+    Stepper(u8 slot, std::string name, u32 maxSteps, u16 decelerationAggressiveness,
             u32 sleepWakeupPauseTimeUs, u32 sleepAfterUs, bool inverted);
     int init();
     int start();
@@ -87,7 +90,7 @@ public:
      */
     u8 slot;
 
-    const char* name;
+    std::string name;
     bool inverted;
 
     StepperState* state;
@@ -113,7 +116,7 @@ public:
 
     bool isInverted() const;
 
-    [[nodiscard]] const char* getName() const;
+    [[nodiscard]] std::string getName() const;
 
     [[nodiscard]] u16 getDecelerationAggressiveness() const;
     [[nodiscard]] u32 getSleepWakeupPauseTimeUs() const;

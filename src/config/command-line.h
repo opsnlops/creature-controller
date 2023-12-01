@@ -5,6 +5,7 @@
 #include "config.h"
 #include "namespace-stuffs.h"
 
+#include "creature/creature.h"
 
 namespace creatures {
 
@@ -16,7 +17,7 @@ namespace creatures {
 
     private:
 
-
+        static std::shared_ptr<Creature> parseConfigFile(std::string configFilename);
 
     };
 

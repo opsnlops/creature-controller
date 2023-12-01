@@ -6,13 +6,17 @@
 #include "namespace-stuffs.h"
 #include "controller-config.h"
 
-#include "creature/config.h"
+
 #include "device/relay.h"
 #include "device/servo.h"
 
 #if USE_STEPPERS
 #include "device/stepper.h"
 #endif
+
+// I've got a dependency loop. Let's use forward declaration to
+// break it.
+class Creature; // Forward declaration
 
 class Controller {
 
@@ -24,7 +28,7 @@ public:
 
     void requestServoPosition(u8 outputPin, u16 requestedPosition);
 
-    void init(CreatureConfig* incomingConfig);
+    void init(std::shared_ptr<Creature> creature);
     void start();
 
     //void setCreatureWorkerTaskHandle(TaskHandle_t creatureWorkerTaskHandle);
@@ -64,11 +68,12 @@ public:
     //static void __isr on_pwm_wrap_handler();
 
 private:
+
+    std::shared_ptr<Creature> creature;
+
     bool poweredOn = false;
     Relay* powerRelay;
 
-    // The configuration to use
-    CreatureConfig* config;
 
     /**
      * An array of all of the servos we have. Set to the max number possible,

@@ -7,7 +7,7 @@
   "position_max": 1023,
   "position_default": 512,
   "head_offset_max": 0.4,
-  "frequency": 50,
+  "servo_frequency": 50,
   "type": "parrot",
   "motors": [
     {

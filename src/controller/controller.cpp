@@ -1,6 +1,7 @@
 
 
 #include <climits>
+#include <utility>
 
 #include "namespace-stuffs.h"
 #include "controller-config.h"
@@ -10,6 +11,7 @@
 #include "controller/stepper_handler.h"
 #include "controller.h"
 
+#include "creature/creature.h"
 
 uint32_t number_of_moves = 0;
 
@@ -43,9 +45,9 @@ Controller::Controller() {
 
 }
 
-void Controller::init(CreatureConfig* incomingConfig) {
+void Controller::init(std::shared_ptr<Creature> _creature) {
 
-    this->config = incomingConfig;
+    this->creature = std::move(_creature);
     this->numberOfChannels = DMX_NUMBER_OF_CHANNELS;
 
     // Initialize all the slots in the controller
@@ -64,7 +66,7 @@ void Controller::init(CreatureConfig* incomingConfig) {
     // TODO: This is easier now that we have actual STL objects
     //
     debug("building servo objects");
-    for (int i = 0; i < this->config->getNumberOfServos(); i++) {
+    for (int i = 0; i < this->creature->getNumberOfServos(); i++) {
         //ServoConfig *servo = this->config->getServoConfig(i);
         //initServo(i, servo->name, servo->minPulseUs, servo->maxPulseUs,
         //          servo->smoothingValue, servo->defaultPosition, servo->inverted);
@@ -73,10 +75,12 @@ void Controller::init(CreatureConfig* incomingConfig) {
 #if USE_STEPPERS
     // Set up the steppers
     debug("building stepper objects");
-    for (int i = 0; i < this->config->getNumberOfSteppers(); i++) {
-        StepperConfig *stepper = this->config->getStepperConfig(i);
+    for (int i = 0; i < this->creature->getNumberOfSteppers(); i++) {
+        /*
+        StepperConfig *stepper = this->creature->getStepperConfig(i);
         initStepper(i, stepper->name, stepper->maxSteps, stepper->decelerationAggressiveness,
                     stepper->sleepWakeupPauseTimeUs, stepper->sleepAfterUs, stepper->inverted);
+        */
     }
 #endif
 
@@ -204,9 +208,11 @@ void Controller::initServo(uint8_t indexNumber, const char *name, uint16_t minPu
 
     uint8_t gpioPin = getPinMapping(indexNumber);
 
+    /*
     servos[indexNumber] = new Servo(gpioPin, name, minPulseUs,
                                     maxPulseUs, smoothingValue, inverted,
                                     this->config->getServoFrequencyHz());
+    */
 
     // Set it to its default position
     servos[indexNumber]->move(defaultPosition);

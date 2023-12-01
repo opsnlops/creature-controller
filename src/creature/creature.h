@@ -9,8 +9,8 @@
 #include <unistd.h>
 #include <thread>
 
+#include "creature/creature.h"
 
-#include "creature/config.h"
 #include "controller/controller.h"
 
 class Creature {
@@ -18,10 +18,11 @@ class Creature {
 public:
 
     // Valid creature types
-    enum types {
+    enum creature_type {
         parrot,
         wled_light,
-        skunk
+        skunk,
+        invalid_type
     };
 
     explicit Creature();
@@ -36,7 +37,7 @@ public:
     /**
      * Set up the controller
      */
-    virtual void init(Controller* controller) = 0;
+    virtual void init(std::shared_ptr<Controller> controller) = 0;
 
     /**
      * Start running!
@@ -73,17 +74,28 @@ public:
     [[nodiscard]] u8 getNumberOfSteppers() const;
 #endif
 
+    creature_type stringToType(const std::string& typeStr);
+
 protected:
 
-    Controller* controller;
+    std::string name;
+    std::string version;
+    std::string description;
+    creature_type type;
+    u8 startingDmxChannel;
+    u16 positionMin;
+    u16 positionMax;
+    u16 positionDefault;
+    float headOffsetMax;
+    u16 servoFrequency;
+
+    std::shared_ptr<Controller> controller;
+
     // TODO: Thread
     std::thread workerTaskHandle;
 
-    uint8_t numberOfServos;
-    uint8_t numberOfJoints;
-
-#if USE_STEPPERS
-    uint8_t numberOfSteppers;
-#endif
+    u8 numberOfServos;
+    u8 numberOfJoints;
+    u8 numberOfSteppers;
 
 };

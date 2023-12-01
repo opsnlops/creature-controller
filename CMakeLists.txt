@@ -99,6 +99,9 @@ include_directories(
 
 add_executable(creature-controller
         ${controllerFiles}
+        src/config/creature_builder.cpp
+        src/config/creature_builder.h
+        src/config/CreatureBuilderException.h
 )
 
 target_link_libraries(creature-controller
