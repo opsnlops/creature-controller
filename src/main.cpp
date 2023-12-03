@@ -15,6 +15,8 @@
 
 #include "config/command-line.h"
 #include "config/config.h"
+#include "config/creature_builder.h"
+#include "creature/creature.h"
 #include "device/i2c_mock.h"
 #include "device/servo.h"
 #include "dmx/e131_server.h"
@@ -33,9 +35,9 @@
 #include "device/i2c_smbus.h"
 
 // Declare the configuration globally
+std::shared_ptr<Creature> creature;
 std::shared_ptr<creatures::Configuration> config;
 std::shared_ptr<creatures::E131Server> e131Server;
-std::shared_ptr<std::unordered_map<u8,Servo>> servos;
 std::mutex servoUpdateMutex;
 
 int main(int argc, char **argv) {
@@ -64,6 +66,13 @@ int main(int argc, char **argv) {
 
     // Parse out the command line options
     config = creatures::CommandLine::parseCommandLine(argc, argv);
+    creature = creatures::CreatureBuilder(config->getConfigFileName()).build();
+
+    // Hooray, we did it!
+    info("working with {}! ({})", creature->getName(), creature->getDescription());
+    debug("{} has {} servos and {} steppers", creature->getName(),
+          creature->getNumberOfServos(), creature->getNumberOfSteppers());
+
 
 #ifdef __linux__
     if (geteuid() != 0) {

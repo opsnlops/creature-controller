@@ -22,11 +22,13 @@
 class Servo {
 
 public:
-    Servo(u8 outputPin, std::string name, u16 min_pulse_us, u16 max_pulse_us,
-          float smoothingValue, bool inverted, u32 frequency);
+    Servo(std::string id, u8 outputPin, std::string name, u16 min_pulse_us, u16 max_pulse_us,
+          float smoothingValue, bool inverted, u16 default_position);
     void turnOn();
     void turnOff();
+    std::string getId() const;
     [[nodiscard]] u16 getPosition() const;
+    [[nodiscard]] u16 getDefaultPosition() const;
     [[nodiscard]] u8 getSlice() const;
     [[nodiscard]] u8 getChannel() const;
 
@@ -41,6 +43,7 @@ public:
     void calculateNextTick();
 
 private:
+    std::string id;               // This servo's id
     u8 outputPin;                  // Pin on the board the servo is connected to
     u16 min_pulse_us;      // Lower bound on the servo's pulse size in microseconds
     u16 max_pulse_us;      // Upper bound on the servo's pulse size in microseconds
@@ -49,6 +52,7 @@ private:
     u32 resolution;        // The resolution for this servo
     u32 frame_length_us;   // How many microseconds are in each frame
     u16 current_position;  // Where we think the servo currently is in our position
+    u16 default_position;   // The position to go to when there's nothing else
     bool on;                    // Is the servo active?
     bool inverted;              // Should the movements be inverted?
     u32 desired_ticks;     // The number of ticks we should be set to on the next cycle
@@ -56,5 +60,4 @@ private:
     std::string name;           // This servo's name
     float smoothingValue;       // The constant to use when smoothing the input
 
-    static u32 pwm_set_freq_duty(u8 slice_num, u8 chan, u32 frequency, int d);
 };

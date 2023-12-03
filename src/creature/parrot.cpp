@@ -17,10 +17,6 @@ Parrot::Parrot()
     this->headOffsetMax = lround((double) (MAX_POSITION - MIN_POSITION) * (double) HEAD_OFFSET_MAX);
     debug("the head offset max is {}", this->headOffsetMax);
 
-    // These are set when the config file is read in
-    this->numberOfServos = 0;
-    this->numberOfSteppers = 0;
-
     info("Bawk!");
 }
 

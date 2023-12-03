@@ -15,9 +15,6 @@ namespace creatures {
         this->smbusDeviceNode = "";
     }
 
-
-
-
     Configuration::I2CBusType Configuration::getI2CBusType() const {
         return this->i2CBusType;
     }
@@ -27,8 +24,6 @@ namespace creatures {
 
         debug("set the i2c bus type");
     }
-
-
 
 
     std::string Configuration::getSMBusDeviceNode() const {
@@ -41,6 +36,14 @@ namespace creatures {
         debug("set smbBusNode to {}", this->smbusDeviceNode);
     }
 
+    std::string Configuration::getConfigFileName() const {
+        return this->configFileName;
+    }
 
+    void Configuration::setConfigFileName(std::string _configFileName) {
+        this->configFileName = std::move(_configFileName);
+
+        debug("set configFileName to {}", this->configFileName);
+    }
 
 }

@@ -93,29 +93,12 @@ namespace creatures {
         auto creatureFile = program.get<std::string>("-c");
         debug("read creature file {} from command line", creatureFile);
         if(creatureFile.length() > 0) {
-            parseConfigFile(creatureFile);
+            config->setConfigFileName(creatureFile);
+            info("set our creature config file to {}", creatureFile);
         }
 
 
         return config;
-    }
-
-    std::shared_ptr<Creature> CommandLine::parseConfigFile(std::string configFilename) {
-
-        try {
-            CreatureBuilder builder(std::move(configFilename));
-            builder.parseConfig();
-
-        }
-        catch (const CreatureBuilderException &err) {
-            critical(err.what());
-            std::exit(1);
-        }
-
-
-
-        // TODO: This is just junk
-        return std::make_shared<Parrot>();
     }
 
 };

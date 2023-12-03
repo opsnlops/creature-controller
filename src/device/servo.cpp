@@ -1,6 +1,7 @@
 
 #include <cassert>
 #include <cmath>
+#include <utility>
 
 #include "namespace-stuffs.h"
 #include "controller-config.h"
@@ -12,7 +13,7 @@
 
 
 
-extern uint32_t number_of_moves;
+extern u32 number_of_moves;
 
 /**
  * @brief Initializes a servo and gets it ready for use
@@ -34,25 +35,21 @@ extern uint32_t number_of_moves;
  * @param min_pulse_us Min pulse length in microseconds
  * @param max_pulse_us Max pulse length in microseconds
  * @param inverted are this servo's movements inverted?
- * @param frequency PWM frequency
+ * @param default_position the default position to set the servo to at start
  */
-Servo::Servo(u8 outputPin, std::string name, uint16_t min_pulse_us, uint16_t max_pulse_us,
-             float smoothingValue, bool inverted, uint32_t frequency) {
+Servo::Servo(std::string id, u8 outputPin, std::string name, u16 min_pulse_us, u16 max_pulse_us,
+             float smoothingValue, bool inverted, u16 default_position) {
 
     // TODO: Convert to the new servo controller
     //gpio_set_function(gpio, GPIO_FUNC_PWM);
+    this->id = id;
     this->outputPin = outputPin;
     this->name = name;
     this->min_pulse_us = min_pulse_us;
     this->max_pulse_us = max_pulse_us;
     this->smoothingValue = smoothingValue;
-    this->frame_length_us = 1000000 / frequency;   // Number of microseconds in each frame (frequency)
-    //this->slice = pwm_gpio_to_slice_num(gpio);
-    //this->channel = pwm_gpio_to_channel(gpio);
-    this->resolution = pwm_set_freq_duty(this->slice,
-                                         this->channel,
-                                         frequency,
-                                         0);
+    this->default_position = default_position;
+
     this->inverted = inverted;
     this->desired_ticks = 0;
     this->current_ticks = 0;
@@ -62,13 +59,12 @@ Servo::Servo(u8 outputPin, std::string name, uint16_t min_pulse_us, uint16_t max
     calculateNextTick();
 
     // Turn the servo on by default
-    //pwm_set_enabled(this->slice, true);
     this->on = false;
 
     // TODO: What's a good default to set the servo to on power on?
 
-    info("set up servo on pin {}: name: {}, min_pulse: {}, max_pulse: {}, inverted: {}",
-         outputPin, name, min_pulse_us, max_pulse_us, inverted ? "yes" : "no");
+    info("set up servo on pin {}: name: {}, min_pulse: {}, max_pulse: {}, default: {}, inverted: {}",
+         outputPin, name, min_pulse_us, max_pulse_us, default_position, inverted ? "yes" : "no");
 }
 
 /**
@@ -159,7 +155,11 @@ std::string Servo::getName() const {
     return name;
 }
 
-uint16_t Servo::getPosition() const {
+std::string Servo::getId() const {
+    return id;
+}
+
+u16 Servo::getPosition() const {
 
     // If this is an inverted servo, show the inverted value
     if(inverted) {
@@ -167,6 +167,10 @@ uint16_t Servo::getPosition() const {
     } else {
         return current_position;
     }
+}
+
+u16 Servo::getDefaultPosition() const {
+    return this->default_position;
 }
 
 u8 Servo::getSlice() const {
@@ -177,11 +181,11 @@ u8 Servo::getChannel() const {
     return channel;
 }
 
-uint32_t Servo::getDesiredTick() const {
+u32 Servo::getDesiredTick() const {
     return desired_ticks;
 }
 
-uint32_t Servo::getCurrentTick() const {
+u32 Servo::getCurrentTick() const {
     return current_ticks;
 }
 
@@ -190,40 +194,8 @@ float Servo::getSmoothingValue() const {
 }
 
 void Servo::calculateNextTick() {
-    uint32_t last_tick = current_ticks;
+    u32 last_tick = current_ticks;
 
     current_ticks =  lround(((double)desired_ticks * (1.0 - smoothingValue)) + ((double)last_tick * smoothingValue));
     //debug("-- set current_ticks to {}", current_ticks);
-}
-
-/**
- * @brief Sets the frequency on a PWM channel. Returns the resolution of the slice.
- *
- * The Pi Pico has a 125Mhz clock on the PWM pins. This is far too fast for a servo
- * to work with (most run at 50Hz). This function figures out the correct dividers to
- * use to drop it down to the given frequency.
- *
- * It will return the wrap value for the counter, which can be thought of as the resolution
- * of the channel. (ie, wrap / 2 = 50% duty cycle)
- *
- *
- * This bit of code was taken from the book:
- *    Fairhead, Harry. Programming The Raspberry Pi Pico In C (p. 122). I/O Press. Kindle Edition.
- *
- * @param slice_num The PWM slice number
- * @param chan The PWM channel number
- * @param frequency The frequency of updates (50Hz is normal)
- * @param d speed (currently unused)
- * @return the wrap counter wrap value for this slice an channel (aka the resolution)
- */
- // TODO: Use the new servo controller
-uint32_t Servo::pwm_set_freq_duty(u8 slice_num, u8 chan, uint32_t frequency, int d) {
-    uint32_t clock = 125000000;
-    uint32_t divider16 = clock / frequency / 4096 + (clock % (frequency * 4096) != 0);
-    if (divider16 / 16 == 0) divider16 = 16;
-    uint32_t wrap = clock * 16 / divider16 / frequency - 1;
-    //pwm_set_clkdiv_int_frac(slice_num, divider16 / 16, divider16 & 0xF);
-    //pwm_set_wrap(slice_num, wrap);
-    //pwm_set_chan_level(slice_num, chan, wrap * d / 100);
-    return wrap;
 }

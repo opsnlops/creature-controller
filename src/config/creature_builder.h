@@ -28,13 +28,20 @@ namespace creatures {
         CreatureBuilder(std::string filename);
         ~CreatureBuilder() = default;
 
-        bool parseConfig();
+        /**
+         * Parses out the creature configuration from the JSON file
+         *
+         * @return a shared_ptr to our prize
+         */
+        std::shared_ptr<Creature> build();
 
-        Creature getCreature();
 
     private:
         std::string configFile;
-        std::vector<std::string> requiredFields;
+        std::vector<std::string> requiredTopLevelFields;
+        std::vector<std::string> requiredServoFields;
+
+        static std::shared_ptr<Servo> createServo(const json& j);
 
         // Make sure the file is both readable and accessible
         static bool isFileAccessible(const std::string& filename);
