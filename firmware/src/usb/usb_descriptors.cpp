@@ -25,6 +25,8 @@
 
 #include "controller-config.h"
 
+#include <FreeRTOS.h>
+
 #include "tusb.h"
 
 #include "pico/stdlib.h"

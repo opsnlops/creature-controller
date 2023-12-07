@@ -1,5 +1,7 @@
 .idea/
 build/
-lib/
+firmware/lib/
 cmake-*/
-fimrware/build/
+firmware/build/
+controller/lib/
+

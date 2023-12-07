@@ -1,0 +1,3 @@
+[submodule "controller/lib/libe131"]
+	path = controller/lib/libe131
+	url = git@github.com:hhromic/libe131.git

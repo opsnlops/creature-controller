@@ -8,7 +8,7 @@ include($ENV{FREERTOS_KERNEL_PATH}/portable/ThirdParty/GCC/RP2040/FreeRTOS_Kerne
 
 project(firmware C CXX ASM)
 set(CMAKE_C_STANDARD 11)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 
 # Initialize the SDK
 pico_sdk_init()
@@ -54,8 +54,6 @@ target_include_directories(firmware PRIVATE
 
 # pull in common dependencies
 target_link_libraries(firmware
-        FreeRTOS-Kernel
-        FreeRTOS-Kernel-Heap4
         hardware_dma
         hardware_gpio
         hardware_pio
@@ -64,9 +62,10 @@ target_link_libraries(firmware
         tinyusb_device
         tinyusb_board
         pico_stdlib
-        pico_ssd1306
         pico_unique_id
-        picodmx
+        pico_multicore
+        FreeRTOS-Kernel
+        FreeRTOS-Kernel-Heap4
 )
 
 # Enable the shell over UART (which is the picoprobe!)
