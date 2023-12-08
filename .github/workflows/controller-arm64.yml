@@ -1,4 +1,4 @@
-name: ARM64 Build
+name: Controller ARM64 Build
 
 on:
   push:
@@ -25,6 +25,6 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: .
-          file: ./Dockerfile
+          file: ./controller/Dockerfile
           push: true
           tags: ${{ secrets.DOCKER_LOGIN_USERNAME }}/creature-controller:arm64
