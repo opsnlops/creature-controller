@@ -3,11 +3,6 @@
 #include <locale>
 #include <thread>
 
-// This only exists on Linux
-#ifdef __linux__
-#include <bcm2835.h>
-#endif
-
 
 #include "controller-config.h"
 #include "namespace-stuffs.h"
@@ -21,10 +16,6 @@
 #include "device/servo.h"
 #include "dmx/e131_server.h"
 
-#ifdef __linux__
-#include "device/i2c_bcm2835.h"
-#include "device/i2c_smbus.h"
-#endif
 
 // spdlog
 #include "spdlog/spdlog.h"
@@ -90,9 +81,6 @@ int main(int argc, char **argv) {
             i2cBus = std::make_shared<creatures::MockI2C>();
             break;
 #ifdef __linux__
-        case creatures::Configuration::I2CBusType::bcm2835:
-           i2cBus = std::make_shared<BCM2835I2C>();
-           break;
         case creatures::Configuration::I2CBusType::smbus:
            i2cBus = std::make_shared<SMBusI2C>();
            break;
@@ -102,13 +90,6 @@ int main(int argc, char **argv) {
             return EXIT_FAILURE;
     }
 
-#ifdef __linux__
-    // If this is an SMBus type, add the device node info
-    if (auto smbusPtr = std::dynamic_pointer_cast<SMBusI2C>(i2cBus)) {
-        smbusPtr->setDeviceNode(config->getSMBusDeviceNode());
-        debug("set the device node to {}", config->getSMBusDeviceNode());
-    }
-#endif
 
 
     // Start the i2c bus

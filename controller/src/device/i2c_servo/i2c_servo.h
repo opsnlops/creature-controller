@@ -7,8 +7,6 @@
 
 #include "controller-config.h"
 
-#include "device/i2c_bcm2835.h"
-
 class I2CServoController {
 
 public:

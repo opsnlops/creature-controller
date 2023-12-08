@@ -11,7 +11,7 @@ namespace creatures {
     Configuration::Configuration() {
         debug("creating a new Configuration");
 
-        this->i2CBusType = Configuration::I2CBusType::bcm2835;
+        this->i2CBusType = Configuration::I2CBusType::mock;
         this->smbusDeviceNode = "";
     }
 

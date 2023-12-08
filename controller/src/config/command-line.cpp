@@ -39,11 +39,6 @@ namespace creatures {
                 .help("use the Linux SMBus for i2c on the given device node")
                 .nargs(1)
                 .metavar("DEVICE_NODE");
-
-        i2c_group.add_argument("-b", "--bcm2835")
-                .help("use the bcm2835 driver on a Pi")
-                .implicit_value(true)
-                .default_value(false);
 #endif
 
         program.add_argument("-c", "--creature-config")
@@ -81,11 +76,6 @@ namespace creatures {
                 config->setSMBusDeviceNode(smbus);
                 info("using the Linux smbus i2c on {}", smbus);
             }
-        }
-
-        if(program.get<bool>("-b")) {
-            config->setI2CBusType(Configuration::I2CBusType::bcm2835);
-            info("using the bcm2835 i2c bus");
         }
 #endif
 

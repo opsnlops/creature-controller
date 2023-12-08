@@ -46,10 +46,6 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(argparse)
 
-if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-    find_package(BCM2835)
-endif()
-
 # Set up lib131 as an external library
 add_library(libe131 STATIC
         lib/libe131/src/e131.c
@@ -82,19 +78,9 @@ file(GLOB controllerFiles
         src/util/*
 )
 
-# Include the non-mock i2c files on Linux only
-if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-    file(GLOB realI2CDeviceFiles
-            src/device/i2c_bcm2835.cpp
-            src/device/i2c_smbus.cpp
-    )
-    list(APPEND controllerFiles ${realI2CDeviceFiles})
-endif()
-
 
 include_directories(
         src/
-        ${BCM2835_INCLUDE_DIRS}
 )
 
 add_executable(creature-controller

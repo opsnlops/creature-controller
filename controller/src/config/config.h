@@ -11,7 +11,7 @@ namespace creatures {
         friend class CommandLine;
 
         // Define the bus type we're using
-        enum class I2CBusType { mock, smbus, bcm2835 };
+        enum class I2CBusType { mock, smbus };
 
 
         [[nodiscard]] I2CBusType getI2CBusType() const;
