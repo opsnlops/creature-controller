@@ -51,10 +51,7 @@ int main(int argc, char **argv) {
     debug("spdlog version {}.{}.{}", SPDLOG_VER_MAJOR, SPDLOG_VER_MINOR, SPDLOG_VER_PATCH);
     debug("fmt version {}", FMT_VERSION);
 
-#ifdef __linux__
-    debug("bcm2835 lib version {}", BCM2835_VERSION);
-#endif
-
+    
     // Parse out the command line options
     config = creatures::CommandLine::parseCommandLine(argc, argv);
     creature = creatures::CreatureBuilder(config->getConfigFileName()).build();
