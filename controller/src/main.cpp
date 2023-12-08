@@ -51,7 +51,7 @@ int main(int argc, char **argv) {
     debug("spdlog version {}.{}.{}", SPDLOG_VER_MAJOR, SPDLOG_VER_MINOR, SPDLOG_VER_PATCH);
     debug("fmt version {}", FMT_VERSION);
 
-    
+
     // Parse out the command line options
     config = creatures::CommandLine::parseCommandLine(argc, argv);
     creature = creatures::CreatureBuilder(config->getConfigFileName()).build();
@@ -77,11 +77,7 @@ int main(int argc, char **argv) {
         case creatures::Configuration::I2CBusType::mock:
             i2cBus = std::make_shared<creatures::MockI2C>();
             break;
-#ifdef __linux__
-        case creatures::Configuration::I2CBusType::smbus:
-           i2cBus = std::make_shared<SMBusI2C>();
-           break;
-#endif
+            
         default:
             critical("Unknown i2c bus type?");
             return EXIT_FAILURE;
