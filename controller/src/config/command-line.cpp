@@ -87,8 +87,6 @@ namespace creatures {
             info("set our creature config file to {}", creatureFile);
         }
 
-
         return config;
     }
-
 };

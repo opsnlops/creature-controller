@@ -74,7 +74,7 @@ public:
      * Converts a value that input handlers speaks (0-255) to one the servo controller
      * uses (MIN_POSITION to MAX_POSITION).
      *
-     * @param inputValue a `uint8_t` to convert to the servo mappings
+     * @param inputValue a `u8` to convert to the servo mappings
      * @return a value between MIN_POSITION and MAX_POSITION
      */
     static u16 convertInputValueToServoValue(u8 inputValue);
@@ -110,6 +110,9 @@ public:
     u16 getPositionDefault() const;
     float getHeadOffsetMax() const;
     u16 getServoFrequency() const;
+
+    std::shared_ptr<Servo> getServo(const std::string& id);
+    std::shared_ptr<Stepper> getStepper(std::string id);
 
     // Setters for the things
     void setName(const std::string &name);

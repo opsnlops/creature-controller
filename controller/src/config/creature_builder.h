@@ -12,6 +12,7 @@ using json = nlohmann::json;
 
 #include "creature/creature.h"
 
+
 namespace creatures {
 
     /**
@@ -25,7 +26,7 @@ namespace creatures {
     class CreatureBuilder {
 
     public:
-        CreatureBuilder(std::string filename);
+        CreatureBuilder(std::unique_ptr<std::istream> configFile);
         ~CreatureBuilder() = default;
 
         /**
@@ -35,9 +36,11 @@ namespace creatures {
          */
         std::shared_ptr<Creature> build();
 
+        // Convert a file to an istream
+        static std::unique_ptr<std::istream> fileToStream(std::string filename);
 
     private:
-        std::string configFile;
+        std::unique_ptr<std::istream> configFile;
         std::vector<std::string> requiredTopLevelFields;
         std::vector<std::string> requiredServoFields;
 
@@ -48,6 +51,7 @@ namespace creatures {
 
         // Make sure a JSON field is present
         static void checkJsonField(const json& jsonObj, const std::string& fieldName);
+
     };
 
 } // creatures

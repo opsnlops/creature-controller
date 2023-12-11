@@ -90,6 +90,8 @@ add_library(creature_lib
         src/dmx/e131_server.cpp
         src/util/fast_hsv2rgb_32bit.cpp
         src/util/ranges.cpp
+        src/device/ServoException.h
+        src/creature/CreatureException.h
 )
 target_include_directories(creature_lib PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/src
@@ -124,6 +126,8 @@ enable_testing()
 
 add_executable(creature-controller-test
         tests/creature_builder_test.cpp
+        tests/creature_test.cpp
+        tests/servo_test.cpp
 )
 
 target_link_libraries(creature-controller-test

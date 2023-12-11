@@ -6,8 +6,7 @@
 
 
 #include "creature/creature.h"
-
-
+#include "creature/CreatureException.h"
 
 Creature::Creature() {
 
@@ -33,7 +32,7 @@ void Creature::init(std::shared_ptr<Controller> c) {
     debug("init done, controller exists");
 }
 
-uint16_t Creature::convertInputValueToServoValue(uint8_t inputValue) {
+uint16_t Creature::convertInputValueToServoValue(u8 inputValue) {
 
     // TODO: Play with the results if we do bit shifts instead (8 -> 10)
 
@@ -47,6 +46,10 @@ uint16_t Creature::convertInputValueToServoValue(uint8_t inputValue) {
     return servoValue;
 }
 
+
+std::shared_ptr<Servo> Creature::getServo(const std::string& id) {
+    return servos[id];
+}
 
 uint8_t Creature::getNumberOfJoints() const {
     return numberOfJoints;
@@ -83,6 +86,13 @@ Creature::default_position_type Creature::stringToDefaultPositionType(const std:
 }
 
 void Creature::addServo(std::string id, const std::shared_ptr<Servo>& servo) {
+
+    // Whoa there, this shouldn't happen
+    if(servos.contains(id)) {
+        std::string errorMessage = fmt::format("Servo with id {} already exists!", id);
+        critical(errorMessage);
+        throw creatures::CreatureException(errorMessage);
+    }
 
     info("adding servo {} ({})", servo->getName(), id);
     servos[id] = servo;

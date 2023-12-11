@@ -42,6 +42,12 @@ public:
 
     void calculateNextTick();
 
+    bool isInverted() const;
+    u8 getOutputPin() const;
+    u16 getMinPulseUs() const;
+    u16 getMaxPulseUs() const;
+
+
 private:
     std::string id;               // This servo's id
     u8 outputPin;                  // Pin on the board the servo is connected to

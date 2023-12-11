@@ -10,7 +10,7 @@
 #include "servo.h"
 
 // Our modules
-
+#include "ServoException.h"
 
 
 extern u32 number_of_moves;
@@ -60,8 +60,6 @@ Servo::Servo(std::string id, u8 outputPin, std::string name, u16 min_pulse_us, u
 
     // Turn the servo on by default
     this->on = false;
-
-    // TODO: What's a good default to set the servo to on power on?
 
     info("set up servo on pin {}: name: {}, min_pulse: {}, max_pulse: {}, default: {}, inverted: {}",
          outputPin, name, min_pulse_us, max_pulse_us, default_position, inverted ? "yes" : "no");
@@ -119,13 +117,15 @@ void Servo::turnOff() {
  */
 void Servo::move(uint16_t position) {
 
-    //
-    // Remember: Float point can be slow on the Pico! 🐢
-    //
 
     // Error checking. This could result in damage to a motor or
     // creature if not met, so this is a hard stop if it's wrong. 😱
-    assert(position >= MIN_POSITION && position <= MAX_POSITION);
+    if(!(position >= MIN_POSITION && position <= MAX_POSITION)) {
+        critical("Servo::move() called with invalid position! min: {}, max: {}, requested: {}",
+                 MIN_POSITION, MAX_POSITION, position);
+        throw creatures::ServoException(fmt::format("Servo::move() called with invalid position! min: {}, max: {}, requested: {}",
+                                                    MIN_POSITION, MAX_POSITION, position));
+    };
 
     // TODO: This assumes that MIN_POSITION is always 0. Is that okay?
 
@@ -198,4 +198,20 @@ void Servo::calculateNextTick() {
 
     current_ticks =  lround(((double)desired_ticks * (1.0 - smoothingValue)) + ((double)last_tick * smoothingValue));
     //debug("-- set current_ticks to {}", current_ticks);
+}
+
+bool Servo::isInverted() const {
+    return inverted;
+};
+
+u8 Servo::getOutputPin() const {
+    return outputPin;
+}
+
+u16 Servo::getMinPulseUs() const {
+    return min_pulse_us;
+}
+
+u16 Servo::getMaxPulseUs() const {
+    return max_pulse_us;
 }

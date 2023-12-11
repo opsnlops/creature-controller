@@ -54,7 +54,8 @@ int main(int argc, char **argv) {
 
     // Parse out the command line options
     config = creatures::CommandLine::parseCommandLine(argc, argv);
-    creature = creatures::CreatureBuilder(config->getConfigFileName()).build();
+    auto builder = creatures::CreatureBuilder(creatures::CreatureBuilder::fileToStream(config->getConfigFileName()));
+    creature = builder.build();
 
     // Hooray, we did it!
     info("working with {}! ({})", creature->getName(), creature->getDescription());
