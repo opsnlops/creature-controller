@@ -77,7 +77,7 @@ int main(int argc, char **argv) {
         case creatures::Configuration::I2CBusType::mock:
             i2cBus = std::make_shared<creatures::MockI2C>();
             break;
-            
+
         default:
             critical("Unknown i2c bus type?");
             return EXIT_FAILURE;
