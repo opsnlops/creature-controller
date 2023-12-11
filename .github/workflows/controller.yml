@@ -33,10 +33,17 @@ jobs:
         run: cmake --build build -- -j $(nproc)
 
       - name: Run tests
-        run: cmake --build build --target test
+        run: cmake --build build --target test > test_output.log 2>&1
 
       - name: Save artifact
         uses: actions/upload-artifact@v3
         with:
           name: creature-controller-${{ matrix.os }}
           path: ${{github.workspace}}/build/creature-controller
+
+      - name: Upload test log
+        uses: actions/upload-artifact@v2
+        with:
+          name: test-logs-${{ matrix.os }}
+          path: test_output.log
+  
