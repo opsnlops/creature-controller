@@ -1,0 +1,42 @@
+name: Controller
+
+on: [push, pull_request]
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - buildjet-4vcpu-ubuntu-2204
+          - buildjet-8vcpu-ubuntu-2204-arm
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang locales-all ninja-build cmake pkgconf git file libi2c-dev
+
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: 'true'
+
+      - name: Configure CMake
+        run: cmake -S controller/ -B build
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Run tests
+        run: cmake --build build --target test
+
+      - name: Save artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: creature-controller
+          path: ${{github.workspace}}/build/creature-controller
