@@ -5,7 +5,6 @@
   "starting_dmx_channel": 1,
   "position_min": 0,
   "position_max": 1023,
-  "position_default": 512,
   "head_offset_max": 0.4,
   "servo_frequency": 50,
   "type": "parrot",
