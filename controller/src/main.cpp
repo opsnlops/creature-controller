@@ -15,6 +15,7 @@
 #include "device/i2c_mock.h"
 #include "device/servo.h"
 #include "dmx/e131_server.h"
+#include "io/SerialOutput.h"
 
 
 // spdlog
@@ -30,6 +31,10 @@ std::shared_ptr<Creature> creature;
 std::shared_ptr<creatures::Configuration> config;
 std::shared_ptr<creatures::E131Server> e131Server;
 std::mutex servoUpdateMutex;
+
+// Do we really want these in the global scope? 🤔
+std::shared_ptr<creatures::MessageQueue<std::string>> outgoingQueue;
+std::shared_ptr<creatures::MessageQueue<std::string>> incomingQueue;
 
 int main(int argc, char **argv) {
 
@@ -62,13 +67,13 @@ int main(int argc, char **argv) {
     debug("{} has {} servos and {} steppers", creature->getName(),
           creature->getNumberOfServos(), creature->getNumberOfSteppers());
 
+    // Start up the SerialReader
+    outgoingQueue = std::make_shared<creatures::MessageQueue<std::string>>();
+    incomingQueue = std::make_shared<creatures::MessageQueue<std::string>>();
+    auto SerialReader = std::make_shared<creatures::SerialOutput>("/dev/null", outgoingQueue, incomingQueue);
+    SerialReader->start();
 
-#ifdef __linux__
-    if (geteuid() != 0) {
-        critical("This must be run as root!");
-        return EXIT_FAILURE;
-    }
-#endif
+
 
     std::shared_ptr<I2CDevice> i2cBus;
 

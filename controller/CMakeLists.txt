@@ -20,7 +20,6 @@ set(FETCHCONTENT_QUIET OFF)
 
 find_package(PkgConfig REQUIRED)
 
-
 # fmt
 FetchContent_Declare(
         fmt
@@ -92,7 +91,12 @@ add_library(creature_lib
         src/util/ranges.cpp
         src/device/ServoException.h
         src/creature/CreatureException.h
+        src/io/SerialOutput.cpp
+        src/io/SerialOutput.h
+        src/util/MessageQueue.h
+        src/io/SerialException.h
 )
+
 target_include_directories(creature_lib PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/src
         ${argparse_SOURCE_DIR}/include
@@ -101,7 +105,6 @@ target_include_directories(creature_lib PUBLIC
         ${nlohmann_json_SOURCE_DIR}/include
         ${spdlog_SOURCE_DIR}/include
 )
-
 
 add_executable(creature-controller
         src/main.cpp
@@ -128,6 +131,8 @@ add_executable(creature-controller-test
         tests/creature_builder_test.cpp
         tests/creature_test.cpp
         tests/servo_test.cpp
+        tests/MessageQueue_test.cpp
+        tests/SerialOutput_test.cpp
 )
 
 target_link_libraries(creature-controller-test
