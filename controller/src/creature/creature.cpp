@@ -170,11 +170,11 @@ void Creature::setHeadOffsetMax(float headOffsetMax) {
     Creature::headOffsetMax = headOffsetMax;
 }
 
-u16 Creature::getServoFrequency() const {
-    return servoFrequency;
+u16 Creature::getFrameTimeMs() const {
+    return frameTimeMs;
 }
 
-void Creature::setServoFrequency(u16 servoFrequency) {
-    Creature::servoFrequency = servoFrequency;
+void Creature::setFrameTimeMs(u16 frameTimeMs) {
+    Creature::frameTimeMs = frameTimeMs;
 }
 

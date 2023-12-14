@@ -18,7 +18,7 @@ TEST(CreatureBuilder, BuildsCorrectlyWithValidData) {
       "position_min": 0,
       "position_max": 1023,
       "head_offset_max": 0.4,
-      "servo_frequency": 50,
+      "frame_time_ms": 20,
       "type": "parrot",
       "motors": [
         {
@@ -54,7 +54,7 @@ TEST(CreatureBuilder, BuildsCorrectlyWithValidData) {
     EXPECT_EQ(0, creature->getPositionMin());
     EXPECT_EQ(1023, creature->getPositionMax());
     EXPECT_NEAR(expectedHeadOffsetMax, creature->getHeadOffsetMax(), tolerance);
-    EXPECT_EQ(50, creature->getServoFrequency());
+    EXPECT_EQ(20, creature->getFrameTimeMs());
     EXPECT_EQ(1, creature->getNumberOfServos());
     EXPECT_EQ("neck_left", creature->getServo("neck_left")->getId());
     EXPECT_EQ("Neck Left", creature->getServo("neck_left")->getName());
@@ -121,7 +121,7 @@ TEST(CreatureBuilder, BuildFails_MissingMotors) {
       "position_min": 0,
       "position_max": 666,
       "head_offset_max": 0.4,
-      "servo_frequency": 50,
+      "frame_time_ms": 20,
       "type": "parrot"
       }
     )";

@@ -39,7 +39,7 @@ namespace creatures {
         // Define the required config file fields
         requiredTopLevelFields = {
                 "type", "name", "version", "starting_dmx_channel", "motors",
-                "head_offset_max", "servo_frequency", "position_min", "position_max",
+                "head_offset_max", "frame_time_ms", "position_min", "position_max",
                 "description",
         };
 
@@ -104,7 +104,7 @@ namespace creatures {
         creature->setPositionMin(j["position_min"]);
         creature->setPositionMax(j["position_max"]);
         creature->setHeadOffsetMax(j["head_offset_max"]);
-        creature->setServoFrequency(j["servo_frequency"]);
+        creature->setFrameTimeMs(j["frame_time_ms"]);
         creature->setType(type);
 
         // Log that we've gotten this far

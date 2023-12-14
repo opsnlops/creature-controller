@@ -109,7 +109,7 @@ public:
     u16 getPositionMax() const;
     u16 getPositionDefault() const;
     float getHeadOffsetMax() const;
-    u16 getServoFrequency() const;
+    u16 getFrameTimeMs() const;
 
     std::shared_ptr<Servo> getServo(const std::string& id);
     std::shared_ptr<Stepper> getStepper(std::string id);
@@ -124,7 +124,7 @@ public:
     void setPositionMax(u16 positionMax);
     void setPositionDefault(u16 positionDefault);
     void setHeadOffsetMax(float headOffsetMax);
-    void setServoFrequency(u16 servoFrequency);
+    void setFrameTimeMs(u16 frameTimeMs);
 
 
 protected:
@@ -137,7 +137,7 @@ protected:
     u16 positionMax;
     u16 positionDefault;
     float headOffsetMax;
-    u16 servoFrequency;
+    u16 frameTimeMs;
 
     std::shared_ptr<Controller> controller;
     std::unordered_map<std::string, std::shared_ptr<Servo>> servos;
