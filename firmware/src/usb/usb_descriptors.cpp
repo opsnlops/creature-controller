@@ -36,7 +36,7 @@
 
 
 #define USB_VID                     0x0666
-#define USB_PID                     0x0002
+#define USB_PID                     0x0010
 #define USB_BCD                     0x0200
 
 #define USB_MANUFACTURER_INDEX      0x01
@@ -70,11 +70,11 @@ tusb_desc_device_t const desc_device =
 
 // Invoked when received GET DEVICE DESCRIPTOR
 // Application return pointer to descriptor
-uint8_t const *tud_descriptor_device_cb(void) {
+u8 const *tud_descriptor_device_cb(void) {
 
     debug("tud_descriptor_device_cb");
 
-    return (uint8_t const *) &desc_device;
+    return (u8 const *) &desc_device;
 }
 
 
@@ -95,7 +95,7 @@ enum {
 #define EPNUM_CDC_OUT       0x02
 #define EPNUM_CDC_IN        0x84
 
-uint8_t const desc_configuration[] =
+u8 const desc_configuration[] =
         {
                 // Config number, interface count, string index, total length, attribute, power in mA
                 TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, 0, CONFIG_TOTAL_LEN, 0x00, 200),
@@ -105,58 +105,11 @@ uint8_t const desc_configuration[] =
 
         };
 
-// No point in doing high speed on a simple CDC connection
-#if TUD_OPT_HIGH_SPEED
-// Per USB specs: high speed capable device must report device_qualifier and other_speed_configuration
-
-// other speed configuration
-uint8_t desc_other_speed_config[CONFIG_TOTAL_LEN];
-
-// device qualifier is mostly similar to device descriptor since we don't change configuration based on speed
-tusb_desc_device_qualifier_t const desc_device_qualifier =
-{
-  .bLength            = sizeof(tusb_desc_device_qualifier_t),
-  .bDescriptorType    = TUSB_DESC_DEVICE_QUALIFIER,
-  .bcdUSB             = USB_BCD,
-
-  .bDeviceClass       = TUSB_CLASS_MISC,
-  .bDeviceSubClass    = MISC_SUBCLASS_COMMON,
-  .bDeviceProtocol    = MISC_PROTOCOL_IAD,
-
-  .bMaxPacketSize0    = CFG_TUD_ENDPOINT0_SIZE,
-  .bNumConfigurations = 0x01,
-  .bReserved          = 0x00
-};
-
-// Invoked when received GET DEVICE QUALIFIER DESCRIPTOR request
-// Application return pointer to descriptor, whose contents must exist long enough for transfer to complete.
-// device_qualifier descriptor describes information about a high-speed capable device that would
-// change if the device were operating at the other speed. If not highspeed capable stall this request.
-uint8_t const* tud_descriptor_device_qualifier_cb(void)
-{
-  return (uint8_t const*) &desc_device_qualifier;
-}
-
-// Invoked when received GET OTHER SEED CONFIGURATION DESCRIPTOR request
-// Application return pointer to descriptor, whose contents must exist long enough for transfer to complete
-// Configuration descriptor in the other speed e.g if high speed then this is for full speed and vice versa
-uint8_t const* tud_descriptor_other_speed_configuration_cb(uint8_t index)
-{
-  (void) index; // for multiple configurations
-
-  // other speed config is basically configuration with type = OHER_SPEED_CONFIG
-  memcpy(desc_other_speed_config, desc_configuration, CONFIG_TOTAL_LEN);
-  desc_other_speed_config[1] = TUSB_DESC_OTHER_SPEED_CONFIG;
-
-  // this example use the same configuration for both high and full speed mode
-  return desc_other_speed_config;
-}
-#endif // highspeed
 
 // Invoked when received GET CONFIGURATION DESCRIPTOR
 // Application return pointer to descriptor
 // Descriptor contents must exist long enough for transfer to complete
-uint8_t const *tud_descriptor_configuration_cb(uint8_t index) {
+u8 const *tud_descriptor_configuration_cb(uint8_t index) {
     debug("tud_descriptor_configuration_cb: %d", index);
 
     // This example use the same configuration for both high and full speed mode
@@ -172,19 +125,19 @@ char const *string_desc_arr[] =
         {
                 (const char[]) {0x09, 0x04}, // 0: is supported language is English (0x0409)
                 "April's Creature Workshop",                     // 1: Manufacturer
-                CREATURE_NAME,              // 2: Product
+                "Creature Controller",              // 2: Product
                 nullptr,                           // Figured out at runtime (serial number)
                 "Debug Console"
         };
 
-static uint16_t _desc_str[32];
+static u16 _desc_str[32];
 
 // Invoked when received GET STRING DESCRIPTOR request
 // Application return pointer to descriptor, whose contents must exist long enough for transfer to complete
-uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid) {
+u16 const *tud_descriptor_string_cb(u8 index, u16 langid) {
     (void) langid;
 
-    uint8_t chr_count;
+    u8 chr_count;
 
     // Null out the description string
     memset(_desc_str, '\0', 32);
@@ -204,7 +157,7 @@ uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid) {
         chr_count = strlen(pico_board_id);
 
         // Shove this into the array
-        for (uint8_t i = 0; i < chr_count; i++) {
+        for (u8 i = 0; i < chr_count; i++) {
             _desc_str[1 + i] = pico_board_id[i];
         }
 
@@ -214,7 +167,7 @@ uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid) {
         // Note: the 0xEE index string is a Microsoft OS 1.0 Descriptors.
         // https://docs.microsoft.com/en-us/windows-hardware/drivers/usbcon/microsoft-defined-usb-descriptors
 
-        if ( !(index < sizeof(string_desc_arr)/sizeof(string_desc_arr[0])) ) return NULL;
+        if (index >= sizeof(string_desc_arr) / sizeof(string_desc_arr[0])) return nullptr;
 
         const char *str = string_desc_arr[index];
 
@@ -223,13 +176,13 @@ uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid) {
         if (chr_count > 31) chr_count = 31;
 
         // Convert ASCII string into UTF-16
-        for (uint8_t i = 0; i < chr_count; i++) {
+        for (u8 i = 0; i < chr_count; i++) {
             _desc_str[1 + i] = str[i];
         }
     }
 
     // first byte is length (including header), second byte is string type
-    _desc_str[0] = (uint16_t) ((TUSB_DESC_STRING << 8 ) | (2*chr_count + 2));
+    _desc_str[0] = (u16) ((TUSB_DESC_STRING << 8 ) | (2*chr_count + 2));
 
     return _desc_str;
 }

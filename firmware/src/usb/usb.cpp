@@ -1,7 +1,7 @@
 
 #include "controller-config.h"
 
-#include <sys/cdefs.h>
+#include <string>
 
 #include <FreeRTOS.h>
 #include <task.h>
@@ -9,10 +9,10 @@
 #include "logging/logging.h"
 #include "usb/usb.h"
 
-uint32_t reports_sent = 0;
+u32 reports_sent = 0;
 bool usb_bus_active = false;
 bool device_mounted = false;
-uint32_t events_processed = 0;
+u32 events_processed = 0;
 
 
 TaskHandle_t usb_device_task_handle;
@@ -73,11 +73,11 @@ void tud_resume_cb(void)
  * CDC Stuff
  */
 
-void cdc_send(char* buf) {
+void cdc_send(const std::string& line) {
 
     if (tud_cdc_connected()) {
 
-        tud_cdc_n_write_str(0, buf);
+        tud_cdc_n_write_str(0, line.c_str());
         tud_cdc_n_write_flush(0);
     }
     else {

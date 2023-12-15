@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <cstdarg>
 #include <cstring>
+#include <string>
 
 #include <FreeRTOS.h>
 #include <queue.h>
@@ -9,6 +10,8 @@
 
 #include "tasks.h"
 #include "logging.h"
+#include "io/usb_serial.h"
+#include "usb/usb.h"
 
 
 extern TaskHandle_t log_queue_reader_task_handle;   // in main.cpp
@@ -17,7 +20,6 @@ QueueHandle_t creature_log_message_queue_handle;
 
 
 bool logging_queue_exists = false;
-extern bool volatile log_to_shell;
 
 
 void logger_init() {
@@ -207,15 +209,14 @@ portTASK_FUNCTION(log_queue_reader_task, pvParameters) {
             uint32_t time = to_ms_since_boot(get_absolute_time());
             printf("[%lu]%s %s\n", time, levelBuffer, lm.message);
 
-#if 0
-            if(log_to_shell) {
-                auto message = (char*)pvPortMalloc(strlen(lm.message) + 33);
-                memset(message, '\0', strlen(lm.message) + 33);
-                snprintf(message, strlen(lm.message) + 32, "[%lu]%s %s\n\r", time, levelBuffer, lm.message);
-                print_log_to_shell(message);
-                vPortFree(message);
-            }
-#endif
+            // TODO: Look at using std::string for this?
+            auto message = (char*)pvPortMalloc(strlen(lm.message) + 33);
+            memset(message, '\0', strlen(lm.message) + 33);
+            snprintf(message, strlen(lm.message) + 32, "[%lu]%s %s\n\r", time, levelBuffer, lm.message);
+
+#warning "Debug output isn't sending"
+            //cdc_send(std::string(message));
+            vPortFree(message);
 
             // Wipe the buffer for next time
             memset(&levelBuffer, '\0', 4);

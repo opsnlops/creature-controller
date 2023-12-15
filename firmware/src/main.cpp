@@ -13,6 +13,7 @@
 #include "pico/stdlib.h"
 
 #include "logging/logging.h"
+#include "usb/usb.h"
 
 int main() {
 
@@ -27,7 +28,7 @@ int main() {
 
 
     board_init();
-    //start_usb_tasks();
+    start_usb_tasks();
 
     // And fire up the tasks!
     vTaskStartScheduler();

@@ -1,12 +1,18 @@
 
 #pragma once
 
+#include <cstdint>
+
 /**
 * Main configuration for the controller
 */
 
 #define CREATURE_NAME                       "Beaky"
 
+using u8 = std::uint8_t;
+using u16 = std::uint16_t;
+using u32 = std::uint32_t;
+using u64 = std::uint64_t;
 
 // Just because it's funny
 #define EVER ;;

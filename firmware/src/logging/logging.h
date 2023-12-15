@@ -6,6 +6,7 @@
 #include <cstring>
 #include <cstdio>
 #include <cstdint>
+#include <string>
 
 #define LOG_LEVEL_VERBOSE 5
 #define LOG_LEVEL_DEBUG 4

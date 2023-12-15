@@ -1,8 +1,9 @@
+
+#pragma once
+
 #include <sys/select.h>
 #include <sys/cdefs.h>
-
-#ifndef CREATURES_USB_H_
-#define CREATURES_USB_H_
+#include <string>
 
 // Mark this as being in C to C++ apps
 #ifdef __cplusplus
@@ -27,10 +28,12 @@ _Noreturn
 portTASK_FUNCTION_PROTO(usb_device_task, pvParameters);
 
 void start_usb_tasks();
-void cdc_send(char* buf);
+
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* CREATURES_USB_H_ */
+// Back to C++!
+void cdc_send(std::string line);
+
