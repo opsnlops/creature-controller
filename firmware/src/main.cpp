@@ -10,6 +10,9 @@
 #include "bsp/board.h"
 #include "tusb.h"
 
+
+#include "freertos_extra.h"
+
 #include "pico/stdlib.h"
 
 #include "logging/logging.h"

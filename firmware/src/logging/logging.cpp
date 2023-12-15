@@ -10,7 +10,6 @@
 
 #include "tasks.h"
 #include "logging.h"
-#include "io/usb_serial.h"
 #include "usb/usb.h"
 
 
@@ -214,8 +213,7 @@ portTASK_FUNCTION(log_queue_reader_task, pvParameters) {
             memset(message, '\0', strlen(lm.message) + 33);
             snprintf(message, strlen(lm.message) + 32, "[%lu]%s %s\n\r", time, levelBuffer, lm.message);
 
-#warning "Debug output isn't sending"
-            //cdc_send(std::string(message));
+            cdc_send(std::string(message));
             vPortFree(message);
 
             // Wipe the buffer for next time
