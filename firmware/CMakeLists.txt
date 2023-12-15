@@ -10,6 +10,9 @@ project(firmware C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 20)
 
+include(FetchContent)
+set(FETCHCONTENT_QUIET OFF)
+
 # Initialize the SDK
 pico_sdk_init()
 
@@ -36,6 +39,7 @@ file(GLOB sourceFiles
 add_executable(firmware
         ${sourceFiles}
         FreeRTOSConfig.h
+        src/freertos_extra.cpp
 )
 
 # PIO-based UART from the Pico examples

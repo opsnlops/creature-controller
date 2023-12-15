@@ -1,5 +1,5 @@
 /*
- * FreeRTOS V202107.00
+ * FreeRTOS V202212.00
  * Copyright (C) 2020 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -19,10 +19,9 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
- * http://www.FreeRTOS.org
- * http://aws.amazon.com/freertos
+ * https://www.FreeRTOS.org
+ * https://github.com/FreeRTOS
  *
- * 1 tab == 4 spaces!
  */
 
 #ifndef FREERTOS_CONFIG_H
@@ -44,7 +43,7 @@
 #define configUSE_PREEMPTION                    1
 #define configUSE_TICKLESS_IDLE                 0
 #define configUSE_IDLE_HOOK                     0
-#define configUSE_TICK_HOOK                     0
+#define configUSE_TICK_HOOK                     1
 #define configTICK_RATE_HZ                      ( ( TickType_t ) 1000 )
 #define configMAX_PRIORITIES                    32
 #define configMINIMAL_STACK_SIZE                ( configSTACK_DEPTH_TYPE ) 256
@@ -72,21 +71,17 @@
 #define configSUPPORT_STATIC_ALLOCATION         0
 #define configSUPPORT_DYNAMIC_ALLOCATION        1
 #define configTOTAL_HEAP_SIZE                   (128*1024)
-#define configAPPLICATION_ALLOCATED_HEAP        4
+#define configAPPLICATION_ALLOCATED_HEAP        0
 
 /* Hook function related definitions. */
-#define configCHECK_FOR_STACK_OVERFLOW          0
-#define configUSE_MALLOC_FAILED_HOOK            0
+#define configCHECK_FOR_STACK_OVERFLOW          2
+#define configUSE_MALLOC_FAILED_HOOK            1
 #define configUSE_DAEMON_TASK_STARTUP_HOOK      0
 
 /* Run time and task stats gathering related definitions. */
 #define configGENERATE_RUN_TIME_STATS           0
 #define configUSE_TRACE_FACILITY                1
 #define configUSE_STATS_FORMATTING_FUNCTIONS    1
-
-/* Co-routine related definitions. */
-#define configUSE_CO_ROUTINES                   0
-#define configMAX_CO_ROUTINE_PRIORITIES         1
 
 /* Software timer related definitions. */
 #define configUSE_TIMERS                        1
@@ -101,18 +96,10 @@
 #define configMAX_API_CALL_INTERRUPT_PRIORITY   [dependent on processor and application]
 */
 
-/* Local debugging stuff */
-#define configMAX_TASK_NAME_LEN                 100
-#define configRECORD_STACK_HIGH_ADDRESS         1
-//#define portCONFIGURE_TIMER_FOR_RUN_TIME_STATS()     (ulHighFrequencyTimerTicks = 0ul)
-//#define portGET_RUN_TIME_COUNTER_VALUE()             ulHighFrequencyTimerTicks
-
-
 /* SMP port only */
-#define configNUM_CORES                         2
+#define configNUMBER_OF_CORES                   2
 #define configTICK_CORE                         0
-#define configRUN_MULTIPLE_PRIORITIES           1
-#define configUSE_CORE_AFFINITY                 1
+#define configRUN_MULTIPLE_PRIORITIES           0
 
 /* RP2040 specific */
 #define configSUPPORT_PICO_SYNC_INTEROP         1
@@ -142,5 +129,9 @@ to exclude the API function. */
 #define INCLUDE_xQueueGetMutexHolder            1
 
 /* A header file that defines trace macro can be included here. */
+
+/* SMP Related config. */
+#define configUSE_PASSIVE_IDLE_HOOK             0
+#define portSUPPORT_SMP                         1
 
 #endif /* FREERTOS_CONFIG_H */
