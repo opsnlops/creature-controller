@@ -37,13 +37,13 @@ jobs:
 
 
       - name: Save artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: creature-controller-${{ matrix.os }}
           path: ${{github.workspace}}/build/creature-controller
 
       - name: Upload test log
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: test-logs-${{ matrix.os }}
           path: test_output.log

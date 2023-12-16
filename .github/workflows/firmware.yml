@@ -68,7 +68,7 @@ jobs:
         run: PICO_SDK_PATH=$GITHUB_WORKSPACE/pico-sdk FREERTOS_KERNEL_PATH=$GITHUB_WORKSPACE/FreeRTOS-Kernel cmake --build . --config $BUILD_TYPE --parallel 4
 
       - name: Save artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: firmware
           path: ${{github.workspace}}/firmware/build/*.uf2
