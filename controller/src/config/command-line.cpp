@@ -29,7 +29,7 @@ namespace creatures {
 
         program.add_argument("-u", "--usb-device")
                 .help("USB device for this creature")
-                .default_value("/dev/tty.usbmodem1101")
+                .default_value("/dev/tty.usbmodem101")
                 .required();
 
         program.add_description("This application is the Linux version of the Creature Controller that's part\n"
