@@ -1,9 +1,14 @@
 
 
 #include <filesystem>
+#include <iostream>
+#include <unistd.h>   // UNIX standard function definitions
+#include <fcntl.h>    // File control definitions
+#include <termios.h>  // POSIX terminal control definitions
 
 #include "controller-config.h"
 #include "namespace-stuffs.h"
+
 
 
 #include "SerialOutput.h"
@@ -41,17 +46,64 @@ namespace creatures {
         this->incomingQueue = incomingQueue;
 
         this->deviceNode = deviceNode;
+        this->fileDescriptor = -1;
 
         debug("new SerialOutput created");
     }
 
 
+    bool SerialOutput::setupSerialPort() {
+
+        info("attempting to open {}", this->deviceNode);
+        this->fileDescriptor = open(this->deviceNode.c_str(), O_RDWR | O_NOCTTY);
+        debug("serial point is open, fileDescriptor = {}", this->fileDescriptor);
+
+        if (this->fileDescriptor == -1) {
+
+            // Handle error - unable to open serial port
+            critical("Error opening {}: {}", this->deviceNode.c_str(), strerror(errno));
+            std::exit(1);
+
+        } else {
+            struct termios tty;
+            if (tcgetattr(this->fileDescriptor, &tty) != 0) {
+
+                // Handle error in tcgetattr
+                error("Error from tcgetattr: {}", strerror(errno));
+            }
+
+            tty.c_cflag &= ~PARENB;        // No parity bit
+            tty.c_cflag &= ~CSTOPB;        // One stop bit
+            tty.c_cflag &= ~CSIZE;
+            tty.c_cflag |= CS8;            // 8 bits per byte
+            tty.c_cflag &= ~CRTSCTS;       // Disable RTS/CTS hardware flow control
+            tty.c_cflag |= CREAD | CLOCAL; // Enable reading and ignore ctrl lines
+
+            cfsetispeed(&tty, B9600);      // Set in baud rate
+            cfsetospeed(&tty, B9600);      // Set out baud rate
+
+            if (tcsetattr(this->fileDescriptor, TCSANOW, &tty) != 0) {
+                error("Error from tcsetattr: {}", strerror(errno));
+                return false;
+            }
+
+            debug("serial port {} is open", this->deviceNode);
+        }
+
+        return true;
+    }
 
     void SerialOutput::start() {
 
         info("starting SerialOutput for device {}", deviceNode);
 
-        this->writerThread = std::thread(&SerialOutput::writer, this);
+        if( !setupSerialPort() ) {
+            critical("unable to setupSerialPort");
+            throw SerialException("unable to setupSerialPort");
+        }
+        debug("setupSerialPort done");
+
+        this-> writerThread = std::thread(&SerialOutput::writer, this);
         this->readerThread = std::thread(&SerialOutput::reader, this);
 
         this->writerThread.detach();

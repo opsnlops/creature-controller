@@ -8,7 +8,6 @@
 
 #include "creature.h"
 
-#include "device/relay.h"
 #include "device/servo.h"
 
 

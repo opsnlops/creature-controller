@@ -7,7 +7,6 @@
 #include "controller-config.h"
 
 
-#include "device/relay.h"
 #include "device/servo.h"
 
 #if USE_STEPPERS
@@ -70,9 +69,6 @@ public:
 private:
 
     std::shared_ptr<Creature> creature;
-
-    bool poweredOn = false;
-    Relay* powerRelay;
 
 
     /**

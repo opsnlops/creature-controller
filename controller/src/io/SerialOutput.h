@@ -32,6 +32,7 @@ namespace creatures {
 
     private:
         std::string deviceNode;
+        int fileDescriptor;
 
         // A pointer to our shared MessageQueues
         std::shared_ptr<MessageQueue<std::string>> outgoingQueue;
@@ -42,6 +43,8 @@ namespace creatures {
         std::thread writerThread;
 
         static bool isDeviceNodeAccessible(const std::string& deviceNode);
+
+        bool setupSerialPort();
 
         // Our threads
         void reader();

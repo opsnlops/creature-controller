@@ -29,6 +29,8 @@ namespace creatures {
             this->run();
         });
 
+        workerThread.detach();
+
     }
 
     [[noreturn]] void E131Server::run() {

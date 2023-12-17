@@ -15,13 +15,8 @@ using u64 = std::uint64_t;
 * Main configuration for the controller
 */
 
-#define CREATURE_NAME                       "Mango"
-
-
 // Just because it's funny
 #define EVER ;;
-
-#define CDC_ACTIVE_PIN                      17
 
 // The most servos we can control
 #define MAX_NUMBER_OF_SERVOS                8
@@ -29,11 +24,6 @@ using u64 = std::uint64_t;
 // The number of steppers we can control
 #define MAX_NUMBER_OF_STEPPERS              8
 
-// Devices
-#define DMX_PIO                             pio0
-#define DMX_INVERTED                        false
-#define E_STOP_PIN                          28
-#define DMX_GPIO_PIN                        22
 
 // Use the status lights?
 #define USE_STATUS_LIGHTS                   1
@@ -112,29 +102,6 @@ using u64 = std::uint64_t;
 #define DMX_E_STOP_CHANNEL_OFFSET   0
 #define DMX_NUMBER_OF_CHANNELS      13
 
-
-/*
- * Display Stuff
- */
-#define DISPLAY_ENABLED             0
-#define DISPLAY_I2C_BAUD_RATE       1000000
-#define DISPLAY_I2C_CONTROLLER      i2c1
-#define DISPLAY_I2C_DEVICE_ADDRESS  0x3C
-#define DISPLAY_SDA_PIN             2
-#define DISPLAY_SCL_PIN             3
-
-// Update every 33ms (roughly 30Hz)
-#define DISPLAY_UPDATE_TIME_MS      33
-#define DISPLAY_BUFFER_SIZE         256     // This is per line
-#define DISPLAY_NUMBER_OF_LINES     4
-
-
-/*
- * Logging Config
- */
-#define LOGGING_LEVEL               LOG_LEVEL_DEBUG
-#define LOGGING_QUEUE_LENGTH        100
-#define LOGGING_MESSAGE_MAX_LENGTH  256
 
 /*
  * Position bounds

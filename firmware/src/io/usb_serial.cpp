@@ -159,7 +159,7 @@ bool send_to_controller(const char* message) {
 
     // If the queue isn't full, send it
     if(is_safe_to_enqueue_outgoing_usb_serial()) {
-        xQueueSendToBack(usb_serial_outgoing_messages, message, (TickType_t) pdTICKS_TO_MS(10));
+        xQueueSendToBack(usb_serial_outgoing_messages, message, (TickType_t) pdMS_TO_TICKS(10));
         return true;
     }
 

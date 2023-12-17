@@ -38,8 +38,6 @@ Controller::Controller() {
     debug("setting up the controller");
 
     //creatureWorkerTaskHandle = nullptr;
-    poweredOn = false;
-    powerRelay = new Relay(E_STOP_PIN, poweredOn);
     online = true;
     receivedFirstFrame = false;
 
@@ -311,40 +309,11 @@ uint32_t Controller::getNumberOfPWMWraps() {
     return numberOfPWMWraps;
 }
 
-void Controller::powerOn() {
-    powerRelay->turnOn();
-    poweredOn = true;
-    info("turned on the power");
-}
-
-void Controller::powerOff() {
-    powerRelay->turnOff();
-    poweredOn = false;
-    info("turned off the power");
-}
-
-void Controller::powerToggle() {
-    poweredOn ? powerOff() : powerOn();
-}
-
-bool Controller::isPoweredOn() {
-    return poweredOn;
-}
 
 bool Controller::hasReceivedFirstFrame() {
     return receivedFirstFrame;
 }
 
-void Controller::confirmFirstFrameReceived() {
-    info("the I/O handler has signaled that it got the first frame");
-    receivedFirstFrame = true;
-
-    // If we're not already on, now it's safe to do so!
-    if(!poweredOn) {
-        debug("turning on the motors now that we have our first frame");
-        powerOn();
-    }
-}
 
 uint8_t Controller::getNumberOfServosInUse() {
     return numberOfServosInUse;

@@ -83,7 +83,6 @@ add_library(creature_lib
         src/creature/parrot.cpp
         src/device/i2c_servo/i2c_servo.cpp
         src/device/i2c_mock.cpp
-        src/device/relay.cpp
         src/device/servo.cpp
         src/device/stepper.cpp
         src/dmx/e131_server.cpp

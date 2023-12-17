@@ -70,33 +70,10 @@ int main(int argc, char **argv) {
     // Start up the SerialReader
     outgoingQueue = std::make_shared<creatures::MessageQueue<std::string>>();
     incomingQueue = std::make_shared<creatures::MessageQueue<std::string>>();
-    auto SerialReader = std::make_shared<creatures::SerialOutput>("/dev/null", outgoingQueue, incomingQueue);
+    auto SerialReader = std::make_shared<creatures::SerialOutput>(config->getUsbDevice(), outgoingQueue, incomingQueue);
     SerialReader->start();
 
 
-
-    std::shared_ptr<I2CDevice> i2cBus;
-
-    // Create the correct i2c bus
-    switch(config->getI2CBusType()) {
-
-        case creatures::Configuration::I2CBusType::mock:
-            i2cBus = std::make_shared<creatures::MockI2C>();
-            break;
-
-        default:
-            critical("Unknown i2c bus type?");
-            return EXIT_FAILURE;
-    }
-
-
-
-    // Start the i2c bus
-    debug("starting the i2c bus");
-    if(!i2cBus->start()) {
-        critical("unable to open i2c device");
-        return EXIT_FAILURE;
-    }
 
     // Create and start the e1.13 server
     debug("starting the e1.13 server");
@@ -104,12 +81,12 @@ int main(int argc, char **argv) {
     e131Server->start();
 
     // Create the servo controller
-    auto servoController = std::make_shared<I2CServoController>(i2cBus, PCA9685_I2C_ADDRESS);
-    servoController->begin();
-    trace("done with controller startup");
+    //auto servoController = std::make_shared<I2CServoController>(i2cBus, PCA9685_I2C_ADDRESS);
+    //servoController->begin();
+    //trace("done with controller startup");
 
-    u8 current_pre_scale = servoController->readPrescale();
-    info("pre-scale is {}", current_pre_scale);
+    //u8 current_pre_scale = servoController->readPrescale();
+    //info("pre-scale is {}", current_pre_scale);
 
 
 
@@ -130,19 +107,13 @@ int main(int argc, char **argv) {
     std::this_thread::sleep_for(std::chrono::seconds(2));
      */
 
-    info("testing sleep...");
-    servoController->sleep();
 
-    trace("sleeping for 2 more seconds");
-    std::this_thread::sleep_for(std::chrono::seconds(2));
 
-    info("and now testing wakeup!");
-    servoController->wakeup();
+    //i2cBus->close();
 
-    trace("sleeping for 2 MORE MORE seconds");
-    std::this_thread::sleep_for(std::chrono::seconds(2));
-
-    i2cBus->close();
+    while(true){
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
 
     info("the main thread says bye! good luck little threads! 👋🏻");
     return EXIT_SUCCESS;
