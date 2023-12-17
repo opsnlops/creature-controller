@@ -132,6 +132,13 @@ using u64 = std::uint64_t;
 #define LOGGING_QUEUE_LENGTH        100
 #define LOGGING_MESSAGE_MAX_LENGTH  256
 
+
+/*
+ * USB Serial Config
+ */
+#define USB_SERIAL_INCOMING_QUEUE_LENGTH        32
+#define USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH  256
+
 /*
  * Position bounds
  */

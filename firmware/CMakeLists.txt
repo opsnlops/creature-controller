@@ -41,6 +41,8 @@ add_executable(firmware
         FreeRTOSConfig.h
         src/freertos_extra.cpp
         src/freertos_extra.h
+        src/debug/blinker.h
+        src/debug/blinker.cpp
 )
 
 # PIO-based UART from the Pico examples

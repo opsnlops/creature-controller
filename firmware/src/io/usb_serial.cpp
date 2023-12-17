@@ -6,6 +6,8 @@
 #include <queue.h>
 #include <task.h>
 
+#include "controller-config.h"
+
 #include "tusb_config.h"
 
 #include "logging/logging.h"
@@ -15,9 +17,34 @@
 #include "usb/usb.h"
 
 #define DS_TX_BUFFER_SIZE       1024
-#define DS_RX_BUFFER_SIZE       16
+#define DS_RX_BUFFER_SIZE       1024
 
-QueueHandle_t debug_shell_incoming_keys;
+extern TaskHandle_t incoming_serial_reader_task_handle; // in tasks.cpp
+QueueHandle_t usb_serial_incoming_commands;
+
+bool incoming_queue_exists = false;
+
+
+void usb_serial_init() {
+    usb_serial_incoming_commands = xQueueCreate(USB_SERIAL_INCOMING_QUEUE_LENGTH, 20);
+    vQueueAddToRegistry(usb_serial_incoming_commands, "usb_serial_incoming_queue_size");
+    incoming_queue_exists = true;
+}
+
+void start_incoming_usb_serial_reader() {
+
+    info("starting the incoming USB serial reader task");
+    xTaskCreate(incoming_serial_reader_task,
+                "incoming_serial_reader_task",
+                1512,
+                nullptr,
+                1,
+                &incoming_serial_reader_task_handle);
+}
+
+bool inline is_safe_to_enqueue_usb_serial() {
+    return (incoming_queue_exists && !xQueueIsQueueFullFromISR(usb_serial_incoming_commands));
+}
 
 /**
  * Invoked from TUSB when there's data to be read
@@ -26,15 +53,15 @@ QueueHandle_t debug_shell_incoming_keys;
  *
  * @param itf the CDC interface number
  */
-void tud_cdc_rx_cb(uint8_t itf) {
+void tud_cdc_rx_cb(u8 itf) {
     verbose("callback from tusb that there's data there");
     uint8_t ch = tud_cdc_read_char();
 
     // Make sure it's not a control character that accidentally ended up in there
     if(ch >= 30  && ch <= 126)
-        xQueueSendToBackFromISR(debug_shell_incoming_keys, &ch, nullptr);
+        xQueueSendToBackFromISR(usb_serial_incoming_commands, &ch, nullptr);
     else {
-        info("discarding character from shell: 0x%x", ch);
+        error("discarding character from incoming stream: 0x%x", ch);
         tud_cdc_n_read_flush(itf);
     }
 }
@@ -61,12 +88,13 @@ portTASK_FUNCTION(incoming_serial_reader_task, pvParameters) {
     for (EVER) {
 
         uint8_t ch;
-        if (xQueueReceive(debug_shell_incoming_keys, &ch, (TickType_t) portMAX_DELAY) == pdPASS) {
+        if (xQueueReceive(usb_serial_incoming_commands, &ch, (TickType_t) portMAX_DELAY) == pdPASS) {
 
             // Look at just the first keypress
             rx_buffer[0] = ch;
 
-            cdc_send(std::string(rx_buffer[0], 1));
+            debug("we received %c", ch);
+            cdc_send(std::string(1, rx_buffer[0]));
 
             // Wipe out the buffers for next time
             ds_reset_buffers(tx_buffer, rx_buffer);

@@ -7,6 +7,8 @@
  * This is taken from the FreeRTOS Pi Pico demos
  */
 
+extern volatile size_t xFreeHeapSpace;
+
 /*-----------------------------------------------------------*/
 
 void vApplicationMallocFailedHook( void )
@@ -38,7 +40,6 @@ void vApplicationStackOverflowHook( TaskHandle_t pxTask, char *pcTaskName )
 
 void vApplicationIdleHook( void )
 {
-    volatile size_t xFreeHeapSpace;
 
     /* This is just a trivial example of an idle hook.  It is called on each
     cycle of the idle task.  It must *NOT* attempt to block.  In this case the
@@ -56,33 +57,6 @@ void vApplicationIdleHook( void )
 
 void vApplicationTickHook( void )
 {
-#if mainCREATE_SIMPLE_BLINKY_DEMO_ONLY == 0
-    {
-        /* The full demo includes a software timer demo/test that requires
-        prodding periodically from the tick interrupt. */
-#if (mainENABLE_TIMER_DEMO == 1)
-        vTimerPeriodicISRTests();
-#endif
+    // Nothing for now
 
-        /* Call the periodic queue overwrite from ISR demo. */
-#if (mainENABLE_QUEUE_OVERWRITE == 1)
-        vQueueOverwritePeriodicISRDemo();
-#endif
-
-        /* Call the periodic event group from ISR demo. */
-#if (mainENABLE_EVENT_GROUP == 1)
-        vPeriodicEventGroupsProcessing();
-#endif
-
-        /* Call the code that uses a mutex from an ISR. */
-#if (mainENABLE_INTERRUPT_SEMAPHORE == 1)
-        vInterruptSemaphorePeriodicTest();
-#endif
-
-        /* Call the code that 'gives' a task notification from an ISR. */
-#if (mainENABLE_TASK_NOTIFY == 1)
-        xNotifyTaskFromISR();
-#endif
-    }
-#endif
 }

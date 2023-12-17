@@ -15,23 +15,35 @@
 
 #include "pico/stdlib.h"
 
+#include "io/usb_serial.h"
 #include "logging/logging.h"
 #include "usb/usb.h"
+
+#include "debug/blinker.h"
+
+
+volatile size_t xFreeHeapSpace;
 
 int main() {
 
     // All the SDK to bring up the stdio stuff, so we can write to the serial port
     stdio_init_all();
-    gpio_init(PICO_DEFAULT_LED_PIN);
-    gpio_set_dir(PICO_DEFAULT_LED_PIN, 1);
-    gpio_put(PICO_DEFAULT_LED_PIN, !PICO_DEFAULT_LED_PIN_INVERTED);
+
+
+    //printf("started");
 
     logger_init();
     debug("Logging running!");
 
 
+    start_debug_blinker();
+
     board_init();
     start_usb_tasks();
+
+    // Fire up the incoming serial reader
+    usb_serial_init();
+    start_incoming_usb_serial_reader();
 
     // And fire up the tasks!
     vTaskStartScheduler();

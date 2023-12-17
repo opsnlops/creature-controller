@@ -13,7 +13,7 @@
 #include "usb/usb.h"
 
 
-extern TaskHandle_t log_queue_reader_task_handle;   // in main.cpp
+extern TaskHandle_t log_queue_reader_task_handle;   // in tasks.cpp
 
 QueueHandle_t creature_log_message_queue_handle;
 
