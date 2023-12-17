@@ -3,7 +3,7 @@
 #include <gtest/gtest.h>
 
 
-#include "io/SerialOutput.h"
+#include "io/SerialHandler.h"
 #include "io/SerialException.h"
 #include "util/MessageQueue.h"
 
@@ -14,7 +14,7 @@ TEST(SerialOutput, CreateSerialOutput_ValidDevice) {
     auto inputQueue = std::make_shared<creatures::MessageQueue<std::string>>();
 
     EXPECT_NO_THROW({
-        auto serialOutput = creatures::SerialOutput("/dev/null", outputQueue, inputQueue);
+        auto serialOutput = creatures::SerialHandler("/dev/null", outputQueue, inputQueue);
     });
 
 }
@@ -25,7 +25,7 @@ TEST(SerialOutput, CreateSerialOutput_DeviceDoesNotExist) {
     auto inputQueue = std::make_shared<creatures::MessageQueue<std::string>>();
 
     EXPECT_THROW({
-        auto serialOutput = creatures::SerialOutput("", outputQueue, inputQueue);
+        auto serialOutput = creatures::SerialHandler("", outputQueue, inputQueue);
     }, creatures::SerialException);
 }
 
@@ -35,7 +35,7 @@ TEST(SerialOutput, CreateSerialOutput_DeviceNotCharacterDevice) {
     auto inputQueue = std::make_shared<creatures::MessageQueue<std::string>>();
 
     EXPECT_THROW({
-                     auto serialOutput = creatures::SerialOutput("/", outputQueue, inputQueue);
+                     auto serialOutput = creatures::SerialHandler("/", outputQueue, inputQueue);
                  }, creatures::SerialException);
 }
 
@@ -44,7 +44,7 @@ TEST(SerialOutput, CreateSerialOutput_InvalidOutputQueue) {
     auto inputQueue = std::make_shared<creatures::MessageQueue<std::string>>();
 
     EXPECT_THROW({
-                     auto serialOutput = creatures::SerialOutput("/dev/null", nullptr, inputQueue);
+                     auto serialOutput = creatures::SerialHandler("/dev/null", nullptr, inputQueue);
                  }, creatures::SerialException);
 }
 
@@ -53,6 +53,6 @@ TEST(SerialOutput, CreateSerialOutput_InvalidInputQueue) {
     auto outputQueue = std::make_shared<creatures::MessageQueue<std::string>>();
 
     EXPECT_THROW({
-                     auto serialOutput = creatures::SerialOutput("/dev/null", outputQueue, nullptr);
+                     auto serialOutput = creatures::SerialHandler("/dev/null", outputQueue, nullptr);
                  }, creatures::SerialException);
 }

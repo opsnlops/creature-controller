@@ -9,24 +9,24 @@
 #include "controller-config.h"
 #include "namespace-stuffs.h"
 
-
-#include "SerialOutput.h"
+#include "util/thread_name.h"
+#include "SerialHandler.h"
 #include "SerialException.h"
 
 namespace creatures {
 
     /**
-         * Creates a new SerialOutput
+         * Creates a new SerialHandler
          *
          * @param deviceNode the device node to open up
          * @param outgoingQueue A `MessageQueue<std::string>` for outgoing messages TO the remote device
          * @param incomingQueue A `MessageQueue<std::string>` for incoming messages FROM the remote device
          */
-    SerialOutput::SerialOutput(std::string deviceNode,
-                               const std::shared_ptr<MessageQueue<std::string>> &outgoingQueue,
-                               const std::shared_ptr<MessageQueue<std::string>> &incomingQueue) {
+    SerialHandler::SerialHandler(std::string deviceNode,
+                                 const std::shared_ptr<MessageQueue<std::string>> &outgoingQueue,
+                                 const std::shared_ptr<MessageQueue<std::string>> &incomingQueue) {
 
-        info("creating a new SerialOutput for device {}", deviceNode);
+        info("creating a new SerialHandler for device {}", deviceNode);
 
         // Do some error checking
         if (!outgoingQueue) {
@@ -47,11 +47,11 @@ namespace creatures {
         this->deviceNode = deviceNode;
         this->fileDescriptor = -1;
 
-        debug("new SerialOutput created");
+        debug("new SerialHandler created");
     }
 
 
-    bool SerialOutput::setupSerialPort() {
+    bool SerialHandler::setupSerialPort() {
 
         info("attempting to open {}", this->deviceNode);
         this->fileDescriptor = open(this->deviceNode.c_str(), O_RDWR | O_NONBLOCK | O_NOCTTY);
@@ -111,9 +111,9 @@ namespace creatures {
         return true;
     }
 
-    void SerialOutput::start() {
+    void SerialHandler::start() {
 
-        info("starting SerialOutput for device {}", deviceNode);
+        info("starting SerialHandler for device {}", deviceNode);
 
         if (!setupSerialPort()) {
             critical("unable to setupSerialPort");
@@ -121,18 +121,20 @@ namespace creatures {
         }
         debug("setupSerialPort done");
 
-        this->writerThread = std::thread(&SerialOutput::writer, this);
-        this->readerThread = std::thread(&SerialOutput::reader, this);
+        this->writerThread = std::thread(&SerialHandler::writer, this);
+        this->readerThread = std::thread(&SerialHandler::reader, this);
 
         this->writerThread.detach();
         this->readerThread.detach();
 
-        debug("done starting SerialOutput for device {}", deviceNode);
+        debug("done starting SerialHandler for device {}", deviceNode);
     }
 
-    [[noreturn]] void SerialOutput::writer() {
+    [[noreturn]] void SerialHandler::writer() {
 
-        info("hello from the writer thread 🔍");
+        setThreadName("SerialHandler::writer");
+
+        info("hello from the writer thread");
 
         std::string outgoingMessage;
         for (EVER) {
@@ -141,49 +143,52 @@ namespace creatures {
         }
     }
 
-    void SerialOutput::reader() {
+    void SerialHandler::reader() {
+        info("hello from the reader thread 🔍");
 
-        info("hello from the reader thread ✏️");
+        setThreadName("SerialHandler::reader");
 
         fd_set read_fds;
-        struct timeval timeout;
-
-// Set timeout for select (optional)
+        struct timeval timeout{};
         timeout.tv_sec = 15;  // 15 seconds
         timeout.tv_usec = 0;
 
-        while (true) {
+        std::string tempBuffer; // Temporary buffer to store incomplete messages
+
+        for (EVER) {
             FD_ZERO(&read_fds);
             FD_SET(this->fileDescriptor, &read_fds);
 
-            // Wait for data on the serial port
             int selectStatus = select(this->fileDescriptor + 1, &read_fds, nullptr, nullptr, &timeout);
 
             if (selectStatus < 0) {
-                // Error occurred
                 error("Error on select: {}", strerror(errno));
                 break;
             } else if (selectStatus == 0) {
-                // Timeout - no data within specified time
                 debug("Select timeout. No data received.");
                 continue;
             }
 
             if (FD_ISSET(this->fileDescriptor, &read_fds)) {
-                // Data is available to read
                 char readBuf[256];
                 memset(&readBuf, '\0', sizeof(readBuf));
 
-                int numBytes = read(this->fileDescriptor, &readBuf, sizeof(readBuf));
+                int numBytes = read(this->fileDescriptor, &readBuf, sizeof(readBuf) - 1); // Leave space for null terminator
                 if (numBytes < 0) {
                     error("Error reading: {}", strerror(errno));
                     break;
                 } else if (numBytes > 0) {
-                    debug("read {} bytes: {}", numBytes, readBuf);
+                    tempBuffer.append(readBuf, numBytes); // Append new data to tempBuffer
+                    size_t newlinePos;
+                    while ((newlinePos = tempBuffer.find('\n')) != std::string::npos) {
+                        std::string message = tempBuffer.substr(0, newlinePos);
+                        debug("adding message '{}' to the incoming queue", message);
+                        this->incomingQueue->push(message); // Push the message to the queue
+                        tempBuffer.erase(0, newlinePos + 1); // Remove the processed message from tempBuffer
+                    }
                 }
             }
         }
-
     }
 
     /**
@@ -193,7 +198,7 @@ namespace creatures {
      * @return true if all is well
      * @throws SerialException if it's not
      */
-    bool SerialOutput::isDeviceNodeAccessible(const std::string &node) {
+    bool SerialHandler::isDeviceNodeAccessible(const std::string &node) {
         namespace fs = std::filesystem;
 
         // Check if the file exists

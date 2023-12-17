@@ -1,6 +1,9 @@
 
 #include <thread>
 
+
+#include "util/thread_name.h"
+
 #include "controller-config.h"
 #include "namespace-stuffs.h"
 #include "e131_server.h"
@@ -34,6 +37,8 @@ namespace creatures {
     }
 
     [[noreturn]] void E131Server::run() {
+
+        setThreadName("E131Server::run");
 
         info("e1.31 worker thread going");
 

@@ -1,5 +1,4 @@
 
-
 #include <FreeRTOS.h>
 #include <queue.h>
 #include <task.h>
@@ -94,6 +93,7 @@ void tud_cdc_rx_cb(uint8_t itf) {
         for (u32 i = 0; i < readCount; ++i) {
             char ch = tempBuffer[i];
 
+#if LOGGING_LEVEL > 4
             // If it's not alphanumeric print the character in hex
             if (isalnum((unsigned char)ch)) {
                 verbose("character: %c", ch);
@@ -102,6 +102,7 @@ void tud_cdc_rx_cb(uint8_t itf) {
                 snprintf(hexStr, sizeof(hexStr), "0x%02X", (unsigned char)ch);
                 verbose("character: %s", hexStr);
             }
+#endif
 
             // Account for this character
             serial_characters_received += 1;
@@ -109,18 +110,19 @@ void tud_cdc_rx_cb(uint8_t itf) {
             // Check for newline character
             if (ch == 0x0D) {
 
-                //debug("it's the blessed character");
+                verbose("it's the blessed character");
+
+                // If there was a blank line warn the sender
+                if(bufferIndex == 0) {
+                    warning("skipping blank input line from sender");
+                    break;
+                }
 
                 lineBuffer[bufferIndex] = '\0';  // Null-terminate the string
 
-                //debug("queue length: %u", uxQueueMessagesWaitingFromISR(usb_serial_incoming_commands));
-
+                verbose("queue length: %u", uxQueueMessagesWaitingFromISR(usb_serial_incoming_commands));
                 xQueueSendToBackFromISR(usb_serial_incoming_commands, lineBuffer, nullptr);
-
-                //debug("queue length: %u", uxQueueMessagesWaitingFromISR(usb_serial_incoming_commands));
-
-                // Account for the messages we've gotten
-                serial_messages_received += 1;
+                verbose("queue length: %u", uxQueueMessagesWaitingFromISR(usb_serial_incoming_commands));
 
                 bufferIndex = 0;  // Reset buffer index
 
@@ -131,9 +133,6 @@ void tud_cdc_rx_cb(uint8_t itf) {
                 // Buffer overflow handling
                 lineBuffer[USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH - 1] = '\0';  // Ensure null-termination
                 xQueueSendToBackFromISR(usb_serial_incoming_commands, lineBuffer, nullptr);
-
-                // Account for the messages we've gotten
-                serial_messages_received += 1;
 
                 bufferIndex = 0;  // Reset buffer index
 
@@ -212,7 +211,7 @@ portTASK_FUNCTION(outgoing_serial_writer_task, pvParameters) {
         return;
     }
 
-    memset(rx_buffer, '\0', USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH + 3);
+    memset(rx_buffer, '\0', USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH + 2);
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "EndlessLoop"
@@ -227,12 +226,11 @@ portTASK_FUNCTION(outgoing_serial_writer_task, pvParameters) {
 
             // Ensure that the message is null-terminated
             rx_buffer[messageLength] = '\n';
-            rx_buffer[messageLength + 1] = '\r';
-            rx_buffer[USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH + 2] = '\0';
+            rx_buffer[USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH + 1] = '\0';
 
             cdc_send(rx_buffer);
 
-            memset(rx_buffer, '\0', USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH + 3);
+            memset(rx_buffer, '\0', USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH + 2);
 
         }
     }

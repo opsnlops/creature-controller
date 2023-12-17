@@ -90,10 +90,12 @@ add_library(creature_lib
         src/util/ranges.cpp
         src/device/ServoException.h
         src/creature/CreatureException.h
-        src/io/SerialOutput.cpp
-        src/io/SerialOutput.h
+        src/io/SerialHandler.cpp
+        src/io/SerialHandler.h
         src/util/MessageQueue.h
         src/io/SerialException.h
+        src/util/thread_name.h
+        src/util/thread_name.cpp
 )
 
 target_include_directories(creature_lib PUBLIC
@@ -131,7 +133,7 @@ add_executable(creature-controller-test
         tests/creature_test.cpp
         tests/servo_test.cpp
         tests/MessageQueue_test.cpp
-        tests/SerialOutput_test.cpp
+        tests/SerialHandler_test.cpp
 )
 
 target_link_libraries(creature-controller-test

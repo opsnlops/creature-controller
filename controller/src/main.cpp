@@ -15,7 +15,7 @@
 #include "device/i2c_mock.h"
 #include "device/servo.h"
 #include "dmx/e131_server.h"
-#include "io/SerialOutput.h"
+#include "io/SerialHandler.h"
 
 
 // spdlog
@@ -67,11 +67,11 @@ int main(int argc, char **argv) {
     debug("{} has {} servos and {} steppers", creature->getName(),
           creature->getNumberOfServos(), creature->getNumberOfSteppers());
 
-    // Start up the SerialReader
+    // Start up the SerialHandler
     outgoingQueue = std::make_shared<creatures::MessageQueue<std::string>>();
     incomingQueue = std::make_shared<creatures::MessageQueue<std::string>>();
-    auto SerialReader = std::make_shared<creatures::SerialOutput>(config->getUsbDevice(), outgoingQueue, incomingQueue);
-    SerialReader->start();
+    auto serialHandler = std::make_shared<creatures::SerialHandler>(config->getUsbDevice(), outgoingQueue, incomingQueue);
+    serialHandler->start();
 
 
 

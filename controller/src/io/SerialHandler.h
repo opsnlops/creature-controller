@@ -11,21 +11,21 @@
 
 namespace creatures {
 
-    class SerialOutput {
+    class SerialHandler {
 
     public:
         /**
-         * Creates a new SerialOutput
+         * Creates a new SerialHandler
          *
          * @param deviceNode the device node to open up
          * @param outgoingQueue A `MessageQueue<std::string>` for outgoing messages TO the remote device
          * @param incomingQueue A `MessageQueue<std::string>` for incoming messages FROM the remote device
          */
-        SerialOutput(std::string deviceNode,
-                     const std::shared_ptr<MessageQueue<std::string>>& outgoingQueue,
-                     const std::shared_ptr<MessageQueue<std::string>>& incomingQueue);
+        SerialHandler(std::string deviceNode,
+                      const std::shared_ptr<MessageQueue<std::string>>& outgoingQueue,
+                      const std::shared_ptr<MessageQueue<std::string>>& incomingQueue);
 
-        ~SerialOutput() = default;
+        ~SerialHandler() = default;
 
         void start();
         void stop();
