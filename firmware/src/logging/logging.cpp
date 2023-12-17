@@ -10,6 +10,7 @@
 
 #include "tasks.h"
 #include "logging.h"
+#include "io/usb_serial.h"
 #include "usb/usb.h"
 
 
@@ -205,15 +206,14 @@ portTASK_FUNCTION(log_queue_reader_task, pvParameters) {
             }
 
             // Format our message
-            uint32_t time = to_ms_since_boot(get_absolute_time());
-            printf("[%lu]%s %s\n", time, levelBuffer, lm.message);
+            u32 time = to_ms_since_boot(get_absolute_time());
 
-            // TODO: Look at using std::string for this?
             auto message = (char*)pvPortMalloc(strlen(lm.message) + 33);
             memset(message, '\0', strlen(lm.message) + 33);
-            snprintf(message, strlen(lm.message) + 32, "[%lu]%s %s\n\r", time, levelBuffer, lm.message);
+            snprintf(message, strlen(lm.message) + 32, "LOG\t%lu\t%s\t%s", time, levelBuffer, lm.message);
 
-            cdc_send(std::string(message));
+            send_to_controller(message);
+
             vPortFree(message);
 
             // Wipe the buffer for next time

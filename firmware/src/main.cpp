@@ -15,6 +15,7 @@
 
 #include "pico/stdlib.h"
 
+#include "debug/stats_reporter.h"
 #include "io/usb_serial.h"
 #include "logging/logging.h"
 #include "usb/usb.h"
@@ -29,21 +30,19 @@ int main() {
     // All the SDK to bring up the stdio stuff, so we can write to the serial port
     stdio_init_all();
 
-
-    //printf("started");
-
     logger_init();
     debug("Logging running!");
-
 
     start_debug_blinker();
 
     board_init();
     start_usb_tasks();
 
-    // Fire up the incoming serial reader
+    // Fire up the incoming serial tasks
     usb_serial_init();
-    start_incoming_usb_serial_reader();
+    start_serial_tasks();
+
+    start_stats_reporter();
 
     // And fire up the tasks!
     vTaskStartScheduler();

@@ -7,7 +7,6 @@
 * Main configuration for the controller
 */
 
-#define CREATURE_NAME                       "Beaky"
 
 using u8 = std::uint8_t;
 using u16 = std::uint16_t;
@@ -26,10 +25,7 @@ using u64 = std::uint64_t;
 #define MAX_NUMBER_OF_STEPPERS              8
 
 // Devices
-#define DMX_PIO                             pio0
-#define DMX_INVERTED                        false
 #define E_STOP_PIN                          28
-#define DMX_GPIO_PIN                        22
 
 // Use the status lights?
 #define USE_STATUS_LIGHTS                   1
@@ -98,31 +94,6 @@ using u64 = std::uint64_t;
 #define USE_STEPPERS                0
 
 
-/**
- * These allow more than one creature to be controlled on the same
- * DMX universe!
- *
- * Everything is defined as an offset from the base. The values are
- * DMX_BASE_CHANNEL + the offset for the desired value.
- */
-#define DMX_E_STOP_CHANNEL_OFFSET   0
-#define DMX_NUMBER_OF_CHANNELS      13
-
-
-/*
- * Display Stuff
- */
-#define DISPLAY_ENABLED             0
-#define DISPLAY_I2C_BAUD_RATE       1000000
-#define DISPLAY_I2C_CONTROLLER      i2c1
-#define DISPLAY_I2C_DEVICE_ADDRESS  0x3C
-#define DISPLAY_SDA_PIN             2
-#define DISPLAY_SCL_PIN             3
-
-// Update every 33ms (roughly 30Hz)
-#define DISPLAY_UPDATE_TIME_MS      33
-#define DISPLAY_BUFFER_SIZE         256     // This is per line
-#define DISPLAY_NUMBER_OF_LINES     4
 
 
 /*
@@ -136,8 +107,11 @@ using u64 = std::uint64_t;
 /*
  * USB Serial Config
  */
-#define USB_SERIAL_INCOMING_QUEUE_LENGTH        32
-#define USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH  256
+#define USB_SERIAL_INCOMING_QUEUE_LENGTH        5
+#define USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH  512
+
+#define USB_SERIAL_OUTGOING_QUEUE_LENGTH        5
+#define USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH  60
 
 /*
  * Position bounds

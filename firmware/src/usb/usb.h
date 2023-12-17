@@ -35,5 +35,5 @@ void start_usb_tasks();
 #endif
 
 // Back to C++!
-void cdc_send(const std::string& line);
+void cdc_send(char const* line);
 

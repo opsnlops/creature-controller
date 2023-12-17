@@ -1,6 +1,4 @@
 
-#include <string>
-#include <utility>
 
 #include <FreeRTOS.h>
 #include <queue.h>
@@ -8,30 +6,47 @@
 
 #include "controller-config.h"
 
-#include "tusb_config.h"
-
 #include "logging/logging.h"
 #include "io/usb_serial.h"
 
 #include "tasks.h"
 #include "usb/usb.h"
 
-#define DS_TX_BUFFER_SIZE       1024
-#define DS_RX_BUFFER_SIZE       1024
-
+// Incoming commands
 extern TaskHandle_t incoming_serial_reader_task_handle; // in tasks.cpp
 QueueHandle_t usb_serial_incoming_commands;
-
 bool incoming_queue_exists = false;
 
 
+// Outgoing commands
+extern TaskHandle_t outgoing_serial_writer_task_handle; // in tasks.cpp
+QueueHandle_t usb_serial_outgoing_messages;
+bool outgoing_queue_exists = false;
+
+
+// Stats
+volatile u64 serial_messages_received = 0L;
+volatile u64 serial_characters_received = 0L;
+volatile u64 serial_messages_sent = 0L;
+
+
 void usb_serial_init() {
-    usb_serial_incoming_commands = xQueueCreate(USB_SERIAL_INCOMING_QUEUE_LENGTH, 20);
-    vQueueAddToRegistry(usb_serial_incoming_commands, "usb_serial_incoming_queue_size");
+
+    // Create the incoming queue
+    usb_serial_incoming_commands = xQueueCreate(USB_SERIAL_INCOMING_QUEUE_LENGTH, USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH);
+    vQueueAddToRegistry(usb_serial_incoming_commands, "usb_serial_incoming_queue");
     incoming_queue_exists = true;
+
+    // And the outgoing queue
+    usb_serial_outgoing_messages = xQueueCreate(USB_SERIAL_OUTGOING_QUEUE_LENGTH, USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH);
+    vQueueAddToRegistry(usb_serial_outgoing_messages, "usb_serial_outgoing_queue");
+    outgoing_queue_exists = true;
+
+    info("created the serial queues");
+
 }
 
-void start_incoming_usb_serial_reader() {
+void start_serial_tasks() {
 
     info("starting the incoming USB serial reader task");
     xTaskCreate(incoming_serial_reader_task,
@@ -40,10 +55,22 @@ void start_incoming_usb_serial_reader() {
                 nullptr,
                 1,
                 &incoming_serial_reader_task_handle);
+
+    info("starting the outgoing USB serial writer task");
+    xTaskCreate(outgoing_serial_writer_task,
+                "outgoing_serial_writer_task",
+                1512,
+                nullptr,
+                1,
+                &outgoing_serial_writer_task_handle);
 }
 
-bool inline is_safe_to_enqueue_usb_serial() {
+bool inline is_safe_to_enqueue_incoming_usb_serial() {
     return (incoming_queue_exists && !xQueueIsQueueFullFromISR(usb_serial_incoming_commands));
+}
+
+bool inline is_safe_to_enqueue_outgoing_usb_serial() {
+    return (outgoing_queue_exists && !xQueueIsQueueFullFromISR(usb_serial_outgoing_messages));
 }
 
 /**
@@ -53,51 +80,160 @@ bool inline is_safe_to_enqueue_usb_serial() {
  *
  * @param itf the CDC interface number
  */
-void tud_cdc_rx_cb(u8 itf) {
-    verbose("callback from tusb that there's data there");
-    uint8_t ch = tud_cdc_read_char();
+void tud_cdc_rx_cb(uint8_t itf) {
+    static char lineBuffer[USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH];
+    static u32 bufferIndex = 0;
 
-    // Make sure it's not a control character that accidentally ended up in there
-    if(ch >= 30  && ch <= 126)
-        xQueueSendToBackFromISR(usb_serial_incoming_commands, &ch, nullptr);
-    else {
-        error("discarding character from incoming stream: 0x%x", ch);
-        tud_cdc_n_read_flush(itf);
+    // Check how many bytes are available
+    u32 count = tud_cdc_available();
+
+    if (count > 0) {
+        u8 tempBuffer[count];  // Temporary buffer to hold incoming data
+        u32 readCount = tud_cdc_read(tempBuffer, count);
+
+        for (u32 i = 0; i < readCount; ++i) {
+            char ch = tempBuffer[i];
+
+            // If it's not alphanumeric print the character in hex
+            if (isalnum((unsigned char)ch)) {
+                verbose("character: %c", ch);
+            } else {
+                char hexStr[5]; // Enough space for "0xHH\0"
+                snprintf(hexStr, sizeof(hexStr), "0x%02X", (unsigned char)ch);
+                verbose("character: %s", hexStr);
+            }
+
+            // Account for this character
+            serial_characters_received += 1;
+
+            // Check for newline character
+            if (ch == 0x0D) {
+
+                //debug("it's the blessed character");
+
+                lineBuffer[bufferIndex] = '\0';  // Null-terminate the string
+
+                //debug("queue length: %u", uxQueueMessagesWaitingFromISR(usb_serial_incoming_commands));
+
+                xQueueSendToBackFromISR(usb_serial_incoming_commands, lineBuffer, nullptr);
+
+                //debug("queue length: %u", uxQueueMessagesWaitingFromISR(usb_serial_incoming_commands));
+
+                // Account for the messages we've gotten
+                serial_messages_received += 1;
+
+                bufferIndex = 0;  // Reset buffer index
+
+            } else if (bufferIndex < USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH - 1) {
+                lineBuffer[bufferIndex++] = ch;  // Store character and increment index
+
+            } else {
+                // Buffer overflow handling
+                lineBuffer[USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH - 1] = '\0';  // Ensure null-termination
+                xQueueSendToBackFromISR(usb_serial_incoming_commands, lineBuffer, nullptr);
+
+                // Account for the messages we've gotten
+                serial_messages_received += 1;
+
+                bufferIndex = 0;  // Reset buffer index
+
+                warning("buffer overflow on incoming data");
+            }
+        }
     }
+
+    // Additional safety check for null-termination
+    lineBuffer[USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH - 1] = '\0';
 }
 
-void ds_reset_buffers(char *tx_buffer, u8 *rx_buffer) {
-    memset(rx_buffer, '\0', DS_RX_BUFFER_SIZE);
-    memset(tx_buffer, '\0', DS_TX_BUFFER_SIZE);
+
+// 0123456789 0123456789 0123456789 0123456789 0123456789 0123456789 0123456789
+
+bool send_to_controller(const char* message) {
+
+    if(strlen(message) > USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH) {
+        error("not sending message %s because it's %u long and the max length is %u",
+              message, strlen(message), USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH);
+        return false;
+    }
+
+    // If the queue isn't full, send it
+    if(is_safe_to_enqueue_outgoing_usb_serial()) {
+        xQueueSendToBack(usb_serial_outgoing_messages, message, (TickType_t) pdTICKS_TO_MS(10));
+        return true;
+    }
+
+    return false;
 }
 
 
 portTASK_FUNCTION(incoming_serial_reader_task, pvParameters) {
 
-    debug("hello from the debug shell task!");
+    debug("hello from the serial reader!");
 
-
-    auto tx_buffer = (char *) pvPortMalloc(sizeof(char) * DS_TX_BUFFER_SIZE);
-    auto rx_buffer = (u8 *) pvPortMalloc(sizeof(u8) * DS_RX_BUFFER_SIZE);   // The pico SDK wants uint8_t
-
-    ds_reset_buffers(tx_buffer, rx_buffer);
+    // Define our buffer and zero it out
+    auto rx_buffer = (char *)pvPortMalloc(sizeof(char) * USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH);
+    memset(rx_buffer, '\0', USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH);
 
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "EndlessLoop"
     for (EVER) {
 
-        uint8_t ch;
-        if (xQueueReceive(usb_serial_incoming_commands, &ch, (TickType_t) portMAX_DELAY) == pdPASS) {
+        if (xQueueReceive(usb_serial_incoming_commands, rx_buffer, (TickType_t) portMAX_DELAY) == pdPASS) {
 
-            // Look at just the first keypress
-            rx_buffer[0] = ch;
+            serial_messages_received += 1;
 
-            debug("we received %c", ch);
-            cdc_send(std::string(1, rx_buffer[0]));
+            char message[USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH];
+            memset(&message, '\0', USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH);
 
-            // Wipe out the buffers for next time
-            ds_reset_buffers(tx_buffer, rx_buffer);
+            snprintf(message, USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH, "incoming message: %s",
+                     rx_buffer);
+
+            debug(message);
+
+            // Wipe out the buffer for next time
+            memset(rx_buffer, '\0', USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH);
+        }
+    }
+#pragma clang diagnostic pop
+
+}
+
+
+portTASK_FUNCTION(outgoing_serial_writer_task, pvParameters) {
+
+    debug("hello from the serial writer!");
+
+    // Allocate buffer on the heap
+    auto rx_buffer = static_cast<char*>(pvPortMalloc(USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH + 3));
+    if (rx_buffer == nullptr) {
+        configASSERT("stopping the serial writer because of a failure to allocate memory");
+        return;
+    }
+
+    memset(rx_buffer, '\0', USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH + 3);
+
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "EndlessLoop"
+    for (EVER) {
+
+        // Make sure that we aren't writing anything bigger than this on the other side!
+        if (xQueueReceive(usb_serial_outgoing_messages, rx_buffer, (TickType_t) portMAX_DELAY) == pdPASS) {
+
+            serial_messages_sent += 1;
+
+            u16 messageLength = strlen(rx_buffer);
+
+            // Ensure that the message is null-terminated
+            rx_buffer[messageLength] = '\n';
+            rx_buffer[messageLength + 1] = '\r';
+            rx_buffer[USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH + 2] = '\0';
+
+            cdc_send(rx_buffer);
+
+            memset(rx_buffer, '\0', USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH + 3);
+
         }
     }
 #pragma clang diagnostic pop

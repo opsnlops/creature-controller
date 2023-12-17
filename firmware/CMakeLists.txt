@@ -43,6 +43,8 @@ add_executable(firmware
         src/freertos_extra.h
         src/debug/blinker.h
         src/debug/blinker.cpp
+        src/debug/stats_reporter.h
+        src/debug/stats_reporter.cpp
 )
 
 # PIO-based UART from the Pico examples

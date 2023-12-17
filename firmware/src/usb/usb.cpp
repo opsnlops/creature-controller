@@ -1,8 +1,6 @@
 
 #include "controller-config.h"
 
-#include <string>
-
 #include <FreeRTOS.h>
 #include <task.h>
 
@@ -73,15 +71,15 @@ void tud_resume_cb(void)
  * CDC Stuff
  */
 
-void cdc_send(const std::string& line) {
+void cdc_send(char const* message) {
 
     if (tud_cdc_connected()) {
 
-        tud_cdc_n_write_str(0, line.c_str());
+        tud_cdc_n_write_str(0, message);
         tud_cdc_n_write_flush(0);
     }
     else {
-        info("skipped CDC send");
+        verbose("skipped CDC send");
     }
 }
 
@@ -105,6 +103,6 @@ _Noreturn void usb_device_task(void *param) {
         tud_task();
 
         // Give the RTOS a chance to breathe, USB is not the primary thing we do
-        vTaskDelay(pdMS_TO_TICKS(2));
+        vTaskDelay(pdMS_TO_TICKS(1));
     }
 }
