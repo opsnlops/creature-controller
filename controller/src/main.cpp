@@ -44,7 +44,11 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
-    // Console logger
+    // Initialize and register the default logger
+    auto console = spdlog::stdout_color_mt("console");
+    spdlog::set_default_logger(console);
+
+    // Default to trace-level logging
     spdlog::set_level(spdlog::level::trace);
 
     info("Welcome to the Creature Controller! 🦜");

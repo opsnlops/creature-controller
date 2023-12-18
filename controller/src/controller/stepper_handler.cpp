@@ -1,4 +1,6 @@
 
+#include  <atomic>
+
 #include "controller-config.h"
 #include "namespace-stuffs.h"
 
@@ -12,8 +14,8 @@
 // START OF STEPPER TIMER STUFFS
 //
 
-volatile uint64_t stepper_frame_count = 0L;
-volatile uint64_t time_spent_in_stepper_handler = 0L;
+std::atomic<u64> stepper_frame_count = 0L;
+std::atomic<u64> time_spent_in_stepper_handler = 0L;
 
 /**
  * Simple array for setting the address lines of the stepper latches
@@ -43,8 +45,8 @@ void inline toggle_latch() {
     // Stall long enough to let the latch go! This about 380ns. The datasheet says it
     // needs 220ns to latch at 2v. (We run at 3.3v) The uint32_t executes faster than an
     // uint8_t! It surprised me to figure this out. :)
-    volatile uint32_t j;
-    for(j = 0; j < 3; j++) {}
+    u32 j;
+    for(j = 0; j < 3; j += 1) {}
 
     // Now that we've toggled everything, turn the latch back off
     //gpio_put(STEPPER_LATCH_PIN, true);     // It's active low
@@ -84,7 +86,7 @@ bool stepper_timer_handler(struct repeating_timer *t) {
     //uint64_t start_time = time_us_64();
 
     // Keep track of which frame we're in
-    stepper_frame_count++;
+    stepper_frame_count += 1;
 
 
     // Look at each stepper we have and adjust if needed
@@ -220,7 +222,7 @@ bool stepper_timer_handler(struct repeating_timer *t) {
         //state->highEndstop = gpio_get(STEPPER_END_S_HIGH_PIN);
 
         end:
-        (void*)nullptr;
+        (void)nullptr;
 
     }
 
