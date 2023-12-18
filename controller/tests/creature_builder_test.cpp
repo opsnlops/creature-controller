@@ -1,16 +1,21 @@
-//
-// Created by April White on 12/10/23.
-//
+
 
 #include <sstream>
 
 #include <gtest/gtest.h>
+#include <gmock/gmock.h>
+
 
 #include "config/creature_builder.h"
 #include "config/CreatureBuilderException.h"
+#include "logging/Logger.h"
+#include "MockLogger.h"
 
 
 TEST(CreatureBuilder, BuildsCorrectlyWithValidData) {
+
+    std::shared_ptr<creatures::Logger> logger = std::make_shared<creatures::NiceMockLogger>();
+
     const std::string validJsonData = R"({  "name": "Test Creature",
       "version": "0.1.0",
       "description": "This is a fake creature for testing",
@@ -39,13 +44,14 @@ TEST(CreatureBuilder, BuildsCorrectlyWithValidData) {
     )";
     auto jsonStream = std::make_unique<std::istringstream>(validJsonData);
 
-    creatures::CreatureBuilder builder(std::move(jsonStream));
+    creatures::CreatureBuilder builder(logger, std::move(jsonStream));
     auto creature = builder.build();
 
     // 😡 floating point!
     float expectedHeadOffsetMax = 0.4f;
     float expectedSmoothingValue = 0.9f;
     float tolerance = 0.0001f;
+
 
     // Assertions to validate the built creature
     EXPECT_EQ("Test Creature", creature->getName());
@@ -70,50 +76,69 @@ TEST(CreatureBuilder, BuildsCorrectlyWithValidData) {
 }
 
 TEST(CreatureBuilder, BuildFails_EmptyJson) {
+
+    std::shared_ptr<creatures::Logger> logger = std::make_shared<creatures::NiceMockLogger>();
+
     const std::string badJsonData = R"({})";
     auto jsonStream = std::make_unique<std::istringstream>(badJsonData);
 
+
     EXPECT_THROW({
-                     creatures::CreatureBuilder builder(std::move(jsonStream));
+                     creatures::CreatureBuilder builder(logger, std::move(jsonStream));
                      builder.build();
                  }, creatures::CreatureBuilderException);
 
 }
 
 TEST(CreatureBuilder, BuildFails_BrokenJson) {
+
+    std::shared_ptr<creatures::Logger> logger = std::make_shared<creatures::NiceMockLogger>();
+
     const std::string badJsonData = R"({"type: "parrot"})";
     auto jsonStream = std::make_unique<std::istringstream>(badJsonData);
+;
 
     EXPECT_THROW({
-                     creatures::CreatureBuilder builder(std::move(jsonStream));
+                     creatures::CreatureBuilder builder(logger, std::move(jsonStream));
                      builder.build();
                  }, creatures::CreatureBuilderException);
 
 }
 
 TEST(CreatureBuilder, BuildFails_MeaningLessJson) {
+
+    std::shared_ptr<creatures::Logger> logger = std::make_shared<creatures::NiceMockLogger>();
+
     const std::string badJsonData = R"({"type": "parrot", "name": 42})";
     auto jsonStream = std::make_unique<std::istringstream>(badJsonData);
 
+
     EXPECT_THROW({
-                     creatures::CreatureBuilder builder(std::move(jsonStream));
+                     creatures::CreatureBuilder builder(logger, std::move(jsonStream));
                      builder.build();
                  }, creatures::CreatureBuilderException);
 
 }
 
 TEST(CreatureBuilder, BuildFails_InvalidType) {
+
+    std::shared_ptr<creatures::Logger> logger = std::make_shared<creatures::NiceMockLogger>();
+
     const std::string badJsonData = R"({"type": "poop", "name": "Beaky"})";
     auto jsonStream = std::make_unique<std::istringstream>(badJsonData);
 
     EXPECT_THROW({
-                     creatures::CreatureBuilder builder(std::move(jsonStream));
+                     creatures::CreatureBuilder builder(logger, std::move(jsonStream));
                      builder.build();
                  }, creatures::CreatureBuilderException);
 
 }
 
 TEST(CreatureBuilder, BuildFails_MissingMotors) {
+
+    std::shared_ptr<creatures::Logger> logger = std::make_shared<creatures::NiceMockLogger>();
+
+
     const std::string badJsonData = R"({  "name": "Test Creature",
       "version": "0.1.0",
       "description": "This is a fake creature for testing",
@@ -129,7 +154,7 @@ TEST(CreatureBuilder, BuildFails_MissingMotors) {
     auto jsonStream = std::make_unique<std::istringstream>(badJsonData);
 
     EXPECT_THROW({
-                     creatures::CreatureBuilder builder(std::move(jsonStream));
+                     creatures::CreatureBuilder builder(logger, std::move(jsonStream));
                      builder.build();
                  }, creatures::CreatureBuilderException);
 

@@ -7,7 +7,6 @@
 #include <vector>
 
 #include "controller-config.h"
-#include "namespace-stuffs.h"
 
 #include "io/handlers/LogHandler.h"
 #include "io/handlers/StatsHandler.h"
@@ -17,9 +16,11 @@
 
 namespace creatures {
 
-    MessageProcessor::MessageProcessor(std::shared_ptr<SerialHandler> serialHandler) {
+    MessageProcessor::MessageProcessor(std::shared_ptr<Logger> logger,std::shared_ptr<SerialHandler> serialHandler) {
 
-        info("Message Processor created!");
+        this->logger = std::move(logger);
+
+        this->logger->info("Message Processor created!");
 
         this->serialHandler = std::move(serialHandler);
         this->incomingQueue = this->serialHandler->getIncomingQueue();
@@ -32,7 +33,7 @@ namespace creatures {
 
     void MessageProcessor::start() {
 
-        info("Starting the message processor");
+        this->logger->info("Starting the message processor");
 
         this->workerThread = std::thread(&MessageProcessor::processMessages, this);
         this->workerThread.detach(); // Bye bye little thread!
@@ -43,14 +44,14 @@ namespace creatures {
 
         setThreadName("MessageProcessor::processMessages");
 
-        debug("hello from the message processor thread! 👋🏻");
+        this->logger->debug("hello from the message processor thread! 👋🏻");
 
         for(EVER) {
 
             auto incomingMessage = this->incomingQueue->pop();
 
 #if DEBUG_MESSAGE_PROCESSING
-            debug("pulled message off queue: {}", incomingMessage);
+            this->logger->debug("pulled message off queue: {}", incomingMessage);
 #endif
 
             // Tokenize message
@@ -68,7 +69,7 @@ namespace creatures {
                 it->second->handle(tokens);
             } else {
                 // Handler not found, handle this situation (log, ignore, etc.)
-                error("Unknown message type: {}", tokens[0]);
+                this->logger->error("Unknown message type: {}", tokens[0]);
             }
 
         }

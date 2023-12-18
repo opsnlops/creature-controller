@@ -5,8 +5,7 @@
 #include <thread>
 
 #include "controller-config.h"
-#include "namespace-stuffs.h"
-
+#include "logging/Logger.h"
 #include "util/MessageQueue.h"
 
 namespace creatures {
@@ -17,11 +16,13 @@ namespace creatures {
         /**
          * Creates a new SerialHandler
          *
+         * @param logger our logger
          * @param deviceNode the device node to open up
          * @param outgoingQueue A `MessageQueue<std::string>` for outgoing messages TO the remote device
          * @param incomingQueue A `MessageQueue<std::string>` for incoming messages FROM the remote device
          */
-        SerialHandler(std::string deviceNode,
+        SerialHandler(const std::shared_ptr<Logger>& logger,
+                      std::string deviceNode,
                       const std::shared_ptr<MessageQueue<std::string>>& outgoingQueue,
                       const std::shared_ptr<MessageQueue<std::string>>& incomingQueue);
 
@@ -45,7 +46,7 @@ namespace creatures {
         std::thread readerThread;
         std::thread writerThread;
 
-        static bool isDeviceNodeAccessible(const std::string& deviceNode);
+        static bool isDeviceNodeAccessible(std::shared_ptr<Logger> logger, const std::string& deviceNode);
 
         bool setupSerialPort();
 
@@ -53,6 +54,8 @@ namespace creatures {
         void reader();
 
         [[noreturn]] void writer();
+
+        std::shared_ptr<Logger> logger;
 
     };
 

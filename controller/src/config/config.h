@@ -1,12 +1,16 @@
 #pragma once
 
+#include <string>
+
+#include "logging/Logger.h"
+
 namespace creatures {
 
     class Configuration {
 
     public:
 
-        Configuration();
+        Configuration(std::shared_ptr<Logger> logger);
 
         friend class CommandLine;
 
@@ -24,6 +28,8 @@ namespace creatures {
 
         // The location of our JSON config file
         std::string configFileName;
+
+        std::shared_ptr<Logger> logger;
 
     };
 

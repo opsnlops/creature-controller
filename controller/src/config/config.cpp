@@ -1,6 +1,6 @@
 
-#include "controller-config.h"
-#include "namespace-stuffs.h"
+
+#include "logging/Logger.h"
 
 #include "config.h"
 
@@ -8,8 +8,10 @@
 
 namespace creatures {
 
-    Configuration::Configuration() {
-        debug("creating a new Configuration");
+    Configuration::Configuration(std::shared_ptr<Logger> logger) {
+        this->logger = std::move(logger);
+
+        this->logger->debug("creating a new Configuration");
 
     }
 
@@ -24,7 +26,7 @@ namespace creatures {
     void Configuration::setConfigFileName(std::string _configFileName) {
         this->configFileName = std::move(_configFileName);
 
-        debug("set configFileName to {}", this->configFileName);
+        logger->debug("set configFileName to {}", this->configFileName);
     }
 
     void Configuration::setUsbDevice(std::string _usbDevice) {

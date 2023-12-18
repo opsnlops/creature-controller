@@ -16,9 +16,13 @@
 
 namespace creatures {
 
+    CommandLine::CommandLine(std::shared_ptr<Logger> logger) {
+        this->logger = std::move(logger);
+    }
+
     std::shared_ptr<Configuration> CommandLine::parseCommandLine(int argc, char **argv) {
 
-        auto config = std::make_shared<Configuration>();
+        auto config = std::make_shared<Configuration>(logger);
 
         argparse::ArgumentParser program("creature-controller");
 
@@ -41,7 +45,7 @@ namespace creatures {
         }
         catch (const std::exception &err) {
 
-            critical(err.what());
+            logger->critical(err.what());
 
             std::cerr << "\n" << program;
             std::exit(1);
@@ -51,10 +55,10 @@ namespace creatures {
 
         // Parse out the creature config file
         auto creatureFile = program.get<std::string>("-c");
-        debug("read creature file {} from command line", creatureFile);
+        logger->debug("read creature file {} from command line", creatureFile);
         if(!creatureFile.empty()) {
             config->setConfigFileName(creatureFile);
-            info("set our creature config file to {}", creatureFile);
+            logger->info("set our creature config file to {}", creatureFile);
         }
 
         auto usbDevice = program.get<std::string>("-u");
@@ -66,4 +70,4 @@ namespace creatures {
 
         return config;
     }
-};
+}

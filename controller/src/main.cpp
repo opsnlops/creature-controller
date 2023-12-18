@@ -1,11 +1,8 @@
-#include <chrono>
+
 #include <cstdlib>
-#include <locale>
 #include <thread>
 
-
 #include "controller-config.h"
-#include "namespace-stuffs.h"
 #include "pca9685/pca9685.h"
 
 #include "config/command-line.h"
@@ -17,11 +14,10 @@
 #include "dmx/e131_server.h"
 #include "io/SerialHandler.h"
 #include "io/MessageProcessor.h"
+#include "logging/Logger.h"
+#include "logging/SpdlogLogger.h"
 
 
-// spdlog
-#include "spdlog/spdlog.h"
-#include "spdlog/sinks/stdout_color_sinks.h"
 
 
 #include "device/i2c_servo/i2c_servo.h"
@@ -35,53 +31,43 @@ std::mutex servoUpdateMutex;
 
 int main(int argc, char **argv) {
 
-    try {
-        // Set up our locale. If this vomits, install `locales-all`
-        std::locale::global(std::locale("en_US.UTF-8"));
-    }
-    catch (const std::runtime_error &e) {
-        critical("Unable to set the locale: '{}' (Hint: Make sure package locales-all is installed!)", e.what());
-        return EXIT_FAILURE;
-    }
+    // Get the logger up and running ASAP
+    std::shared_ptr<creatures::Logger> logger = std::make_shared<creatures::SpdlogLogger>();
+    logger->init();
 
-    // Initialize and register the default logger
-    auto console = spdlog::stdout_color_mt("console");
-    spdlog::set_default_logger(console);
-
-    // Default to trace-level logging
-    spdlog::set_level(spdlog::level::trace);
-
-    info("Welcome to the Creature Controller! 🦜");
+    logger->info("Welcome to the Creature Controller! 🦜");
 
     // Leave some version info to be found
-    debug("spdlog version {}.{}.{}", SPDLOG_VER_MAJOR, SPDLOG_VER_MINOR, SPDLOG_VER_PATCH);
-    debug("fmt version {}", FMT_VERSION);
+    logger->debug("spdlog version {}.{}.{}", SPDLOG_VER_MAJOR, SPDLOG_VER_MINOR, SPDLOG_VER_PATCH);
+    logger->debug("fmt version {}", FMT_VERSION);
 
 
     // Parse out the command line options
-    config = creatures::CommandLine::parseCommandLine(argc, argv);
-    auto builder = creatures::CreatureBuilder(creatures::CreatureBuilder::fileToStream(config->getConfigFileName()));
+    auto commandLine = std::make_unique<creatures::CommandLine>(logger);
+    config = commandLine->parseCommandLine(argc, argv);
+
+    auto builder = creatures::CreatureBuilder(logger, creatures::CreatureBuilder::fileToStream(logger, config->getConfigFileName()));
     creature = builder.build();
 
     // Hooray, we did it!
-    info("working with {}! ({})", creature->getName(), creature->getDescription());
-    debug("{} has {} servos and {} steppers", creature->getName(),
+    logger->info("working with {}! ({})", creature->getName(), creature->getDescription());
+    logger->debug("{} has {} servos and {} steppers", creature->getName(),
           creature->getNumberOfServos(), creature->getNumberOfSteppers());
 
     // Start up the SerialHandler
     auto outgoingQueue = std::make_shared<creatures::MessageQueue<std::string>>();
     auto incomingQueue = std::make_shared<creatures::MessageQueue<std::string>>();
-    auto serialHandler = std::make_shared<creatures::SerialHandler>(config->getUsbDevice(), outgoingQueue, incomingQueue);
+    auto serialHandler = std::make_shared<creatures::SerialHandler>(logger, config->getUsbDevice(), outgoingQueue, incomingQueue);
     serialHandler->start();
 
     // Fire up the MessageProcessor
-    auto messageProcessor = std::make_shared<creatures::MessageProcessor>(serialHandler);
+    auto messageProcessor = std::make_shared<creatures::MessageProcessor>(logger, serialHandler);
     messageProcessor->start();
 
 
     // Create and start the e1.13 server
-    debug("starting the e1.13 server");
-    e131Server = std::make_shared<creatures::E131Server>();
+    logger->debug("starting the e1.13 server");
+    e131Server = std::make_shared<creatures::E131Server>(logger);
     e131Server->start();
 
     // Create the servo controller

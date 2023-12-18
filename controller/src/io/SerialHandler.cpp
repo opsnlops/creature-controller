@@ -7,7 +7,6 @@
 #include <termios.h>  // POSIX terminal control definitions
 
 #include "controller-config.h"
-#include "namespace-stuffs.h"
 
 #include "util/thread_name.h"
 #include "SerialHandler.h"
@@ -22,24 +21,27 @@ namespace creatures {
          * @param outgoingQueue A `MessageQueue<std::string>` for outgoing messages TO the remote device
          * @param incomingQueue A `MessageQueue<std::string>` for incoming messages FROM the remote device
          */
-    SerialHandler::SerialHandler(std::string deviceNode,
+    SerialHandler::SerialHandler(const std::shared_ptr<Logger>& logger,
+                                 std::string deviceNode,
                                  const std::shared_ptr<MessageQueue<std::string>> &outgoingQueue,
                                  const std::shared_ptr<MessageQueue<std::string>> &incomingQueue) {
 
-        info("creating a new SerialHandler for device {}", deviceNode);
+        this->logger = logger;
+
+        this->logger->info("creating a new SerialHandler for device {}", deviceNode);
 
         // Do some error checking
         if (!outgoingQueue) {
-            critical("outgoingQueue is null");
+            this->logger->critical("outgoingQueue is null");
             throw SerialException("outgoingQueue is null");
         }
 
         if (!incomingQueue) {
-            critical("incomingQueue is null");
+            this->logger->critical("incomingQueue is null");
             throw SerialException("incomingQueue is null");
         }
 
-        isDeviceNodeAccessible(deviceNode);
+        isDeviceNodeAccessible(logger, deviceNode);
 
         this->outgoingQueue = outgoingQueue;
         this->incomingQueue = incomingQueue;
@@ -47,7 +49,7 @@ namespace creatures {
         this->deviceNode = deviceNode;
         this->fileDescriptor = -1;
 
-        debug("new SerialHandler created");
+        this->logger->debug("new SerialHandler created");
     }
 
 
@@ -61,14 +63,14 @@ namespace creatures {
 
     bool SerialHandler::setupSerialPort() {
 
-        info("attempting to open {}", this->deviceNode);
+        this->logger->info("attempting to open {}", this->deviceNode);
         this->fileDescriptor = open(this->deviceNode.c_str(), O_RDWR | O_NONBLOCK | O_NOCTTY);
-        debug("serial point is open, fileDescriptor = {}", this->fileDescriptor);
+        this->logger->debug("serial point is open, fileDescriptor = {}", this->fileDescriptor);
 
         if (this->fileDescriptor == -1) {
 
             // Handle error - unable to open serial port
-            critical("Error opening {}: {}", this->deviceNode.c_str(), strerror(errno));
+            this->logger->critical("Error opening {}: {}", this->deviceNode.c_str(), strerror(errno));
             std::exit(1);
 
         } else {
@@ -76,7 +78,7 @@ namespace creatures {
             if (tcgetattr(this->fileDescriptor, &tty) != 0) {
 
                 // Handle error in tcgetattr
-                error("Error from tcgetattr: {}", strerror(errno));
+                this->logger->error("Error from tcgetattr: {}", strerror(errno));
             }
 
             // 8 bits per byte (most common)
@@ -109,11 +111,11 @@ namespace creatures {
             cfsetospeed(&tty, B115200);      // Set out baud rate
 
             if (tcsetattr(this->fileDescriptor, TCSANOW, &tty) != 0) {
-                error("Error from tcsetattr: {}", strerror(errno));
+                this->logger->error("Error from tcsetattr: {}", strerror(errno));
                 return false;
             }
 
-            debug("serial port {} is open", this->deviceNode);
+            this->logger->debug("serial port {} is open", this->deviceNode);
         }
 
         return true;
@@ -121,13 +123,13 @@ namespace creatures {
 
     void SerialHandler::start() {
 
-        info("starting SerialHandler for device {}", deviceNode);
+        this->logger->info("starting SerialHandler for device {}", deviceNode);
 
         if (!setupSerialPort()) {
-            critical("unable to setupSerialPort");
+            this->logger->critical("unable to setupSerialPort");
             throw SerialException("unable to setupSerialPort");
         }
-        debug("setupSerialPort done");
+        this->logger->debug("setupSerialPort done");
 
         this->writerThread = std::thread(&SerialHandler::writer, this);
         this->readerThread = std::thread(&SerialHandler::reader, this);
@@ -135,24 +137,24 @@ namespace creatures {
         this->writerThread.detach();
         this->readerThread.detach();
 
-        debug("done starting SerialHandler for device {}", deviceNode);
+        this->logger->debug("done starting SerialHandler for device {}", deviceNode);
     }
 
     [[noreturn]] void SerialHandler::writer() {
 
         setThreadName("SerialHandler::writer");
 
-        info("hello from the writer thread");
+        this->logger->info("hello from the writer thread");
 
         std::string outgoingMessage;
         for (EVER) {
             outgoingMessage = outgoingQueue->pop();
-            debug("message to write to {}: {}", deviceNode, outgoingMessage);
+            this->logger->debug("message to write to {}: {}", deviceNode, outgoingMessage);
         }
     }
 
     void SerialHandler::reader() {
-        info("hello from the reader thread 🔍");
+        this->logger->info("hello from the reader thread 🔍");
 
         setThreadName("SerialHandler::reader");
 
@@ -170,10 +172,10 @@ namespace creatures {
             int selectStatus = select(this->fileDescriptor + 1, &read_fds, nullptr, nullptr, &timeout);
 
             if (selectStatus < 0) {
-                error("Error on select: {}", strerror(errno));
+                this->logger->error("Error on select: {}", strerror(errno));
                 break;
             } else if (selectStatus == 0) {
-                debug("Select timeout. No data received.");
+                this->logger->debug("Select timeout. No data received.");
                 continue;
             }
 
@@ -183,14 +185,14 @@ namespace creatures {
 
                 int numBytes = read(this->fileDescriptor, &readBuf, sizeof(readBuf) - 1); // Leave space for null terminator
                 if (numBytes < 0) {
-                    error("Error reading: {}", strerror(errno));
+                    this->logger->error("Error reading: {}", strerror(errno));
                     break;
                 } else if (numBytes > 0) {
                     tempBuffer.append(readBuf, numBytes); // Append new data to tempBuffer
                     size_t newlinePos;
                     while ((newlinePos = tempBuffer.find('\n')) != std::string::npos) {
                         std::string message = tempBuffer.substr(0, newlinePos);
-                        trace("adding message '{}' to the incoming queue", message);
+                        this->logger->trace("adding message '{}' to the incoming queue", message);
                         this->incomingQueue->push(message); // Push the message to the queue
                         tempBuffer.erase(0, newlinePos + 1); // Remove the processed message from tempBuffer
                     }
@@ -206,20 +208,20 @@ namespace creatures {
      * @return true if all is well
      * @throws SerialException if it's not
      */
-    bool SerialHandler::isDeviceNodeAccessible(const std::string &node) {
+    bool SerialHandler::isDeviceNodeAccessible(std::shared_ptr<Logger> _logger, const std::string &node) {
         namespace fs = std::filesystem;
 
         // Check if the file exists
         if (!fs::exists(node)) {
             std::string errorMessage = fmt::format("Device node does not exist: {}", node);
-            critical(errorMessage);
+            _logger->critical(errorMessage);
             throw SerialException(errorMessage);
         }
 
         // Check if it's a character device
         if (!fs::is_character_file(fs::status(node))) {
             std::string errorMessage = fmt::format("Device node is not a character device: {}", node);
-            critical(errorMessage);
+            _logger->critical(errorMessage);
             throw SerialException(errorMessage);
         }
 

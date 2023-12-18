@@ -1,6 +1,4 @@
-//
-// Created by April White on 11/30/23.
-//
+
 
 #include <string>
 #include <filesystem>
@@ -13,18 +11,21 @@ using json = nlohmann::json;
 #include "creature_builder.h"
 #include "CreatureBuilderException.h"
 
-#include "namespace-stuffs.h"
+#include "logging/Logger.h"
 #include "creature/creature.h"
 #include "creature/parrot.h"
 
 
 namespace creatures {
 
-    CreatureBuilder::CreatureBuilder(std::unique_ptr<std::istream> configFile) {
+    CreatureBuilder::CreatureBuilder(std::shared_ptr<Logger> logger,
+                                     std::unique_ptr<std::istream> configFile) {
+
+        this->logger = logger;
 
         // First check if the stream is valid before moving it
         if (!configFile || !(*configFile)) {
-            error("Invalid or empty configuration stream provided");
+            logger->error("Invalid or empty configuration stream provided");
             throw CreatureBuilderException("Invalid or empty configuration stream provided");
         }
 
@@ -32,7 +33,7 @@ namespace creatures {
         this->configFile = std::move(configFile);
 
         if(!this->configFile->good()) {
-            error("config file isn't good");
+            logger->error("config file isn't good");
             throw CreatureBuilderException("good() returned false while reading config file");
         }
 
@@ -53,23 +54,23 @@ namespace creatures {
 
     std::shared_ptr<Creature> CreatureBuilder::build() {
 
-        info("about to try to parse the config file");
+        logger->info("about to try to parse the config file");
 
         std::string content((std::istreambuf_iterator<char>(*configFile)), std::istreambuf_iterator<char>());
-        debug("JSON file contents: {}", content);
+        logger->debug("JSON file contents: {}", content);
         configFile->seekg(0);
 
         json j;
         try {
             j = json::parse(content);
-            debug("file was parsed!");
+            logger->debug("file was parsed!");
         } catch (json::parse_error& e) {
-            error("JSON parse error: {}", e.what());
+            logger->error("JSON parse error: {}", e.what());
             throw CreatureBuilderException(fmt::format("JSON parse error: {}", e.what()));
         }
 
         if (!j.is_object()) {
-            error("JSON is not an object");
+            logger->error("JSON is not an object");
             throw CreatureBuilderException("JSON is not an object");
         }
 
@@ -81,7 +82,7 @@ namespace creatures {
         // Validate the creature type
         Creature::creature_type type = Creature::stringToCreatureType(j["type"]);
         if(type == Creature::invalid_creature) {
-            error("invalid creature type: {}", j["type"]);
+            logger->error("invalid creature type: {}", j["type"]);
             throw CreatureBuilderException(fmt::format("invalid creature type: {}", j["type"]));
         }
 
@@ -92,7 +93,7 @@ namespace creatures {
                 creature = std::make_shared<Parrot>();
                 break;
             default:
-                error("unimplemented creature type: {}", j["type"]);
+                logger->error("unimplemented creature type: {}", j["type"]);
                 std::exit(1);
                 break;
         }
@@ -108,7 +109,7 @@ namespace creatures {
         creature->setType(type);
 
         // Log that we've gotten this far
-        info("creature name is {} (version {}), at channel offset {}",
+        logger->info("creature name is {} (version {}), at channel offset {}",
              creature->getName(), creature->getVersion(), creature->getStartingDmxChannel());
 
         for(auto& motor : j["motors"]) {
@@ -117,7 +118,7 @@ namespace creatures {
             for (const auto& fieldName : requiredServoFields) {
                 checkJsonField(motor, fieldName);
             }
-            debug("looking at motor {}", motor["id"]);
+            logger->debug("looking at motor {}", motor["id"]);
 
             // Make sure we have a valid type for this motor
             Creature::motor_type motorType = Creature::stringToMotorType(motor["type"]);
@@ -126,18 +127,18 @@ namespace creatures {
                 // Do this in it's own context since there's a var being created
                 case Creature::servo: {
                     std::shared_ptr<Servo> servo = createServo(motor);
-                    debug("adding servo {}", servo->getId());
+                    logger->debug("adding servo {}", servo->getId());
                     creature->addServo(servo->getId(), servo);
                     break;
                 }
                 default:
-                    error("invalid motor type: {}", motor["type"]);
+                    logger->error("invalid motor type: {}", motor["type"]);
                     throw CreatureBuilderException(fmt::format("invalid motor type: {}", motor["type"]));
 
             }
 
         }
-        debug("done processing motors");
+        logger->debug("done processing motors");
 
         // TODO: Handle the inputs
 
@@ -200,15 +201,15 @@ namespace creatures {
      * @param filename the file to check
      * @return true if the file is both readable and accessible
      */
-    bool CreatureBuilder::isFileAccessible(const std::string& filename) {
+    bool CreatureBuilder::isFileAccessible(std::shared_ptr<Logger> logger, const std::string& filename) {
 
-        debug("making sure that {} is accessible and readable", filename);
+        logger->debug("making sure that {} is accessible and readable", filename);
 
         // Check if the file exists
         if (!std::filesystem::exists(filename)) {
             return false;
         }
-        debug("file exists");
+        logger->debug("file exists");
 
         // Try to open the file for reading
         std::ifstream file(filename);
@@ -228,26 +229,26 @@ namespace creatures {
         }
     }
 
-    std::unique_ptr<std::istream> CreatureBuilder::fileToStream(std::string filename) {
+    std::unique_ptr<std::istream> CreatureBuilder::fileToStream(std::shared_ptr<Logger> logger, std::string filename) {
 
-        debug("turning {} into an istream", filename);
+        logger->debug("turning {} into an istream", filename);
 
         // Make sure the file name is valid
         if(filename.empty()) {
-          error("no file name provided");
+            logger->error("no file name provided");
           throw CreatureBuilderException("no file name provided");
         }
 
         // Make sure we can both access and read the file
-        if(!isFileAccessible(filename)) {
-          error("file {} is not accessible", filename);
+        if(!isFileAccessible(logger, filename)) {
+            logger->error("file {} is not accessible", filename);
           throw CreatureBuilderException(fmt::format("file {} is not accessible", filename));
         }
 
         // Open the file and read its contents into a stringstream
         std::ifstream fileStream(filename);
         if (!fileStream) {
-            error("Failed to open file {}", filename);
+            logger->error("Failed to open file {}", filename);
             throw CreatureBuilderException(fmt::format("Failed to open file {}", filename));
         }
 
@@ -261,7 +262,7 @@ namespace creatures {
         stringStream->seekg(0, std::ios::end);
         size_t size = stringStream->tellg();
         stringStream->seekg(0);
-        debug("Opened file {} with size {} bytes", filename, size);
+        logger->debug("Opened file {} with size {} bytes", filename, size);
 
         return stringStream;
 

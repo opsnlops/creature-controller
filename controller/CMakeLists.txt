@@ -24,7 +24,7 @@ find_package(PkgConfig REQUIRED)
 FetchContent_Declare(
         fmt
         GIT_REPOSITORY https://github.com/fmtlib/fmt
-        GIT_TAG 10.1.1
+        GIT_TAG 9.1.0
 )
 FetchContent_MakeAvailable(fmt)
 set(FMT_HEADER_ONLY ON)
@@ -35,7 +35,7 @@ set(FMT_LOCALE ON)
 FetchContent_Declare(
         spdlog
         GIT_REPOSITORY https://github.com/gabime/spdlog
-        GIT_TAG v1.12.0
+        GIT_TAG v1.11.0
 )
 FetchContent_MakeAvailable(spdlog)
 
@@ -103,6 +103,9 @@ add_library(creature_lib
         src/io/handlers/StatsHandler.h
         src/io/handlers/LogHandler.h
         src/io/handlers/LogHandler.cpp
+        src/logging/Logger.h
+        src/logging/SpdlogLogger.h
+        src/logging/LoggingException.h
 )
 
 target_include_directories(creature_lib PUBLIC
@@ -142,6 +145,8 @@ add_executable(creature-controller-test
         tests/MessageQueue_test.cpp
         tests/SerialHandler_test.cpp
         tests/MessageProcessor_test.cpp
+        tests/LogHandler_test.cpp
+        tests/MockLogger.h
 )
 
 target_link_libraries(creature-controller-test

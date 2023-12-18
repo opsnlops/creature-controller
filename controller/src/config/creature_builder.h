@@ -1,15 +1,12 @@
-//
-// Created by April White on 11/30/23.
-//
 
-#ifndef CREATURE_CONTROLLER_CREATURE_BUILDER_H
-#define CREATURE_CONTROLLER_CREATURE_BUILDER_H
+#pragma once
 
 #include <string>
 
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
+#include "logging/Logger.h"
 #include "creature/creature.h"
 
 
@@ -26,7 +23,7 @@ namespace creatures {
     class CreatureBuilder {
 
     public:
-        CreatureBuilder(std::unique_ptr<std::istream> configFile);
+        CreatureBuilder(std::shared_ptr<Logger> logger, std::unique_ptr<std::istream> configFile);
         ~CreatureBuilder() = default;
 
         /**
@@ -37,23 +34,23 @@ namespace creatures {
         std::shared_ptr<Creature> build();
 
         // Convert a file to an istream
-        static std::unique_ptr<std::istream> fileToStream(std::string filename);
+        static std::unique_ptr<std::istream> fileToStream(std::shared_ptr<Logger> logger, std::string filename);
 
     private:
         std::unique_ptr<std::istream> configFile;
         std::vector<std::string> requiredTopLevelFields;
         std::vector<std::string> requiredServoFields;
 
-        static std::shared_ptr<Servo> createServo(const json& j);
+        std::shared_ptr<Servo> createServo(const json& j);
 
         // Make sure the file is both readable and accessible
-        static bool isFileAccessible(const std::string& filename);
+        static bool isFileAccessible(std::shared_ptr<Logger> logger, const std::string& filename);
 
         // Make sure a JSON field is present
         static void checkJsonField(const json& jsonObj, const std::string& fieldName);
 
+        std::shared_ptr<Logger> logger;
+
     };
 
 } // creatures
-
-#endif //CREATURE_CONTROLLER_CREATURE_BUILDER_H

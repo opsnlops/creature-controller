@@ -6,11 +6,12 @@
 #include <unordered_map>
 
 #include "controller-config.h"
-#include "namespace-stuffs.h"
+
 
 #include "io/handlers/IMessageHandler.h"
 #include "io/SerialHandler.h"
 #include "util/MessageQueue.h"
+#include "logging/Logger.h"
 
 
 namespace creatures {
@@ -18,7 +19,7 @@ namespace creatures {
     class MessageProcessor {
 
     public:
-        MessageProcessor(std::shared_ptr<SerialHandler> serialHandler);
+        MessageProcessor(std::shared_ptr<Logger> logger, std::shared_ptr<SerialHandler> serialHandler);
         ~MessageProcessor() = default;
 
         void start();
@@ -31,6 +32,8 @@ namespace creatures {
         std::thread workerThread;
 
         [[noreturn]] void processMessages();
+
+        std::shared_ptr<Logger> logger;
     };
 
 } // creatures
