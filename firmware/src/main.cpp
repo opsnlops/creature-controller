@@ -15,6 +15,7 @@
 
 #include "pico/stdlib.h"
 
+#include "debug/remote_logging.h"
 #include "debug/stats_reporter.h"
 #include "io/usb_serial.h"
 #include "logging/logging.h"
@@ -43,6 +44,9 @@ int main() {
     start_serial_tasks();
 
     start_stats_reporter();
+
+#warning "Remote log testing active!"
+    start_debugging_remote_logging();
 
     // And fire up the tasks!
     vTaskStartScheduler();

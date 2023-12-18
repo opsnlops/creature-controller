@@ -16,6 +16,7 @@
 #include "device/servo.h"
 #include "dmx/e131_server.h"
 #include "io/SerialHandler.h"
+#include "io/MessageProcessor.h"
 
 
 // spdlog
@@ -31,10 +32,6 @@ std::shared_ptr<Creature> creature;
 std::shared_ptr<creatures::Configuration> config;
 std::shared_ptr<creatures::E131Server> e131Server;
 std::mutex servoUpdateMutex;
-
-// Do we really want these in the global scope? 🤔
-std::shared_ptr<creatures::MessageQueue<std::string>> outgoingQueue;
-std::shared_ptr<creatures::MessageQueue<std::string>> incomingQueue;
 
 int main(int argc, char **argv) {
 
@@ -68,11 +65,14 @@ int main(int argc, char **argv) {
           creature->getNumberOfServos(), creature->getNumberOfSteppers());
 
     // Start up the SerialHandler
-    outgoingQueue = std::make_shared<creatures::MessageQueue<std::string>>();
-    incomingQueue = std::make_shared<creatures::MessageQueue<std::string>>();
+    auto outgoingQueue = std::make_shared<creatures::MessageQueue<std::string>>();
+    auto incomingQueue = std::make_shared<creatures::MessageQueue<std::string>>();
     auto serialHandler = std::make_shared<creatures::SerialHandler>(config->getUsbDevice(), outgoingQueue, incomingQueue);
     serialHandler->start();
 
+    // Fire up the MessageProcessor
+    auto messageProcessor = std::make_shared<creatures::MessageProcessor>(serialHandler);
+    messageProcessor->start();
 
 
     // Create and start the e1.13 server

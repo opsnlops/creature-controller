@@ -6,4 +6,4 @@
 
 #include "tasks.h"
 
-void start_stats_reporter();
+void start_debugging_remote_logging();

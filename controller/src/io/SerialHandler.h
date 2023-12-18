@@ -30,6 +30,9 @@ namespace creatures {
         void start();
         void stop();
 
+        std::shared_ptr<MessageQueue<std::string>> getOutgoingQueue();
+        std::shared_ptr<MessageQueue<std::string>> getIncomingQueue();
+
     private:
         std::string deviceNode;
         int fileDescriptor;

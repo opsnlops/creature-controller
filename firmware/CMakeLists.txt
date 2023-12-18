@@ -45,6 +45,7 @@ add_executable(firmware
         src/debug/blinker.cpp
         src/debug/stats_reporter.h
         src/debug/stats_reporter.cpp
+        src/debug/remote_logging.cpp
 )
 
 # PIO-based UART from the Pico examples

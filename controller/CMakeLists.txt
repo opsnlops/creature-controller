@@ -96,6 +96,13 @@ add_library(creature_lib
         src/io/SerialException.h
         src/util/thread_name.h
         src/util/thread_name.cpp
+        src/io/MessageProcessor.cpp
+        src/io/MessageProcessor.h
+        src/io/handlers/IMessageHandler.h
+        src/io/handlers/StatsHandler.cpp
+        src/io/handlers/StatsHandler.h
+        src/io/handlers/LogHandler.h
+        src/io/handlers/LogHandler.cpp
 )
 
 target_include_directories(creature_lib PUBLIC
@@ -134,6 +141,7 @@ add_executable(creature-controller-test
         tests/servo_test.cpp
         tests/MessageQueue_test.cpp
         tests/SerialHandler_test.cpp
+        tests/MessageProcessor_test.cpp
 )
 
 target_link_libraries(creature-controller-test

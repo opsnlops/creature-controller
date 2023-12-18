@@ -51,6 +51,14 @@ namespace creatures {
     }
 
 
+    // Access to our queues
+    std::shared_ptr<MessageQueue<std::string>> SerialHandler::getOutgoingQueue() {
+        return this->outgoingQueue;
+    }
+    std::shared_ptr<MessageQueue<std::string>> SerialHandler::getIncomingQueue() {
+        return this->incomingQueue;
+    }
+
     bool SerialHandler::setupSerialPort() {
 
         info("attempting to open {}", this->deviceNode);
@@ -182,7 +190,7 @@ namespace creatures {
                     size_t newlinePos;
                     while ((newlinePos = tempBuffer.find('\n')) != std::string::npos) {
                         std::string message = tempBuffer.substr(0, newlinePos);
-                        debug("adding message '{}' to the incoming queue", message);
+                        trace("adding message '{}' to the incoming queue", message);
                         this->incomingQueue->push(message); // Push the message to the queue
                         tempBuffer.erase(0, newlinePos + 1); // Remove the processed message from tempBuffer
                     }

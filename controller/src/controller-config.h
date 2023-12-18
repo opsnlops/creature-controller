@@ -123,3 +123,4 @@ using u64 = std::uint64_t;
 #define SERVO_7_GPIO_PIN            13              // Pin 17, PWM  6B
 
 #define DEBUG_CREATURE_POSITIONING  0
+#define DEBUG_MESSAGE_PROCESSING    0
