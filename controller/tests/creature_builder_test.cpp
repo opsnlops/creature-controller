@@ -8,7 +8,7 @@
 
 #include "config/CreatureBuilder.h"
 #include "config/CreatureBuilderException.h"
-#include "MockLogger.h"
+#include "mocks/logging/MockLogger.h"
 
 
 TEST(CreatureBuilder, BuildsCorrectlyWithValidData) {

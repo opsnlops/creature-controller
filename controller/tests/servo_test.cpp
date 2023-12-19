@@ -5,7 +5,7 @@
 #include "device/Servo.h"
 #include "device/ServoException.h"
 
-#include "MockLogger.h"
+#include "mocks/logging/MockLogger.h"
 
 TEST(Servo, CreateServo) {
 

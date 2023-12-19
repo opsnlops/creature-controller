@@ -9,7 +9,7 @@
 #include "creature/CreatureException.h"
 #include "logging/Logger.h"
 
-Creature::Creature(std::shared_ptr<creatures::Logger> logger) : logger(std::move(logger)) {
+Creature::Creature(std::shared_ptr<creatures::Logger> logger) : logger(logger) {
 
     this->controller = nullptr;
     //this->workerTaskHandle = nullptr;

@@ -19,9 +19,8 @@ using json = nlohmann::json;
 namespace creatures {
 
     CreatureBuilder::CreatureBuilder(std::shared_ptr<Logger> logger,
-                                     std::unique_ptr<std::istream> configFile) : logger(std::move(logger)) {
+                                     std::unique_ptr<std::istream> configFile) : logger(logger) {
 
-        this->logger = logger;
 
         // First check if the stream is valid before moving it
         if (!configFile || !(*configFile)) {

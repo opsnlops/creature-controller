@@ -17,9 +17,8 @@
 
 namespace creatures {
 
-    CommandLine::CommandLine(std::shared_ptr<Logger> logger) {
-        this->logger = std::move(logger);
-    }
+    CommandLine::CommandLine(std::shared_ptr<Logger> logger) : logger(logger) {}
+
 
     std::shared_ptr<Configuration> CommandLine::parseCommandLine(int argc, char **argv) {
 

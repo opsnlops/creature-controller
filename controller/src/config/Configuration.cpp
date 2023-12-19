@@ -8,7 +8,7 @@
 
 namespace creatures {
 
-    Configuration::Configuration(std::shared_ptr<Logger> logger) : logger(std::move(logger)) {
+    Configuration::Configuration(std::shared_ptr<Logger> logger) : logger(logger) {
 
         logger->debug("creating a new Configuration");
 

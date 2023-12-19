@@ -8,12 +8,12 @@
 #include "util/MessageQueue.h"
 
 
-#include "MockLogger.h"
+#include "mocks/logging/MockLogger.h"
 
 
 TEST(SerialOutput, CreateSerialOutput_ValidDevice) {
 
-    auto logger = std::make_shared<creatures::MockLogger>();
+    auto logger = std::make_shared<creatures::NiceMockLogger>();
     auto outputQueue = std::make_shared<creatures::MessageQueue<std::string>>();
     auto inputQueue = std::make_shared<creatures::MessageQueue<std::string>>();
 
@@ -25,7 +25,7 @@ TEST(SerialOutput, CreateSerialOutput_ValidDevice) {
 
 TEST(SerialOutput, CreateSerialOutput_DeviceDoesNotExist) {
 
-    auto logger = std::make_shared<creatures::MockLogger>();
+    auto logger = std::make_shared<creatures::NiceMockLogger>();
     auto outputQueue = std::make_shared<creatures::MessageQueue<std::string>>();
     auto inputQueue = std::make_shared<creatures::MessageQueue<std::string>>();
 
@@ -36,7 +36,7 @@ TEST(SerialOutput, CreateSerialOutput_DeviceDoesNotExist) {
 
 TEST(SerialOutput, CreateSerialOutput_DeviceNotCharacterDevice) {
 
-    auto logger = std::make_shared<creatures::MockLogger>();
+    auto logger = std::make_shared<creatures::NiceMockLogger>();
     auto outputQueue = std::make_shared<creatures::MessageQueue<std::string>>();
     auto inputQueue = std::make_shared<creatures::MessageQueue<std::string>>();
 
@@ -47,7 +47,7 @@ TEST(SerialOutput, CreateSerialOutput_DeviceNotCharacterDevice) {
 
 TEST(SerialOutput, CreateSerialOutput_InvalidOutputQueue) {
 
-    auto logger = std::make_shared<creatures::MockLogger>();
+    auto logger = std::make_shared<creatures::NiceMockLogger>();
     auto inputQueue = std::make_shared<creatures::MessageQueue<std::string>>();
 
     EXPECT_THROW({
@@ -57,7 +57,7 @@ TEST(SerialOutput, CreateSerialOutput_InvalidOutputQueue) {
 
 TEST(SerialOutput, CreateSerialOutput_InvalidInputQueue) {
 
-    auto logger = std::make_shared<creatures::MockLogger>();
+    auto logger = std::make_shared<creatures::NiceMockLogger>();
     auto outputQueue = std::make_shared<creatures::MessageQueue<std::string>>();
 
     EXPECT_THROW({

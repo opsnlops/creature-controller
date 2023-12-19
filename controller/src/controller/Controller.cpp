@@ -32,7 +32,7 @@ uint8_t Controller::numberOfSteppersInUse = 0;
 
 #endif
 
-Controller::Controller(std::shared_ptr<creatures::Logger> logger) : logger(std::move(logger)) {
+Controller::Controller(std::shared_ptr<creatures::Logger> logger) : logger(logger) {
 
     logger->debug("setting up the controller");
 

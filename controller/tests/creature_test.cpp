@@ -8,11 +8,11 @@
 #include "creature/Parrot.h"
 #include "creature/CreatureException.h"
 
-#include "MockLogger.h"
+#include "mocks/logging/MockLogger.h"
 
 TEST(Creature, CreateParrot) {
 
-    auto logger = std::make_shared<creatures::MockLogger>();
+    auto logger = std::make_shared<creatures::NiceMockLogger>();
     std::shared_ptr<Creature> parrot = std::make_shared<Parrot>(logger);
     parrot->setName("doug");
 
@@ -43,7 +43,7 @@ TEST(Creature, ServoMap_BaseFunctionality) {
 
 TEST(Creature, ServoMap_DuplicateId) {
 
-    auto logger = std::make_shared<creatures::MockLogger>();
+    auto logger = std::make_shared<creatures::NiceMockLogger>();
     std::shared_ptr<Creature> parrot = std::make_shared<Parrot>(logger);
     parrot->setName("doug");
 

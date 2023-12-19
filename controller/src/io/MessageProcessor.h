@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <thread>
+#include <string>
 #include <unordered_map>
 
 #include "controller-config.h"
@@ -22,7 +23,11 @@ namespace creatures {
         MessageProcessor(std::shared_ptr<Logger> logger, std::shared_ptr<SerialHandler> serialHandler);
         ~MessageProcessor() = default;
 
+        void registerHandler(std::string messageType, std::unique_ptr<IMessageHandler> handler);
         void start();
+
+        std::string waitForMessage();
+        void processMessage(const std::string& message);
 
     private:
         std::shared_ptr<SerialHandler> serialHandler;

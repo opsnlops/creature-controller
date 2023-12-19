@@ -37,7 +37,7 @@ static bool stepperAddressMapping[MAX_NUMBER_OF_STEPPERS][STEPPER_MUX_BITS] = {
 
 
 StepperHandler::StepperHandler(std::shared_ptr<creatures::Logger> logger, std::shared_ptr<Controller> controller) :
-    logger(std::move(logger)), controller(std::move(controller)) {
+    logger(logger), controller(controller) {
     logger->debug("new StepperHandler made");
 }
 

@@ -144,7 +144,9 @@ add_executable(creature-controller-test
         tests/SerialHandler_test.cpp
         tests/MessageProcessor_test.cpp
         tests/LogHandler_test.cpp
-        tests/MockLogger.h
+        tests/mocks/logging/MockLogger.h
+        tests/mocks/io/handlers/MockMessageHandler.cpp
+        tests/mocks/io/handlers/MockMessageHandler.h
 )
 
 target_link_libraries(creature-controller-test

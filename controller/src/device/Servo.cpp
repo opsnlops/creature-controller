@@ -38,7 +38,7 @@ extern u32 number_of_moves;
  * @param default_position the default position to set the servo to at start
  */
 Servo::Servo(std::shared_ptr<creatures::Logger> logger,std::string id, u8 outputPin, std::string name, u16 min_pulse_us,
-             u16 max_pulse_us, float smoothingValue, bool inverted, u16 default_position) : logger(std::move(logger)) {
+             u16 max_pulse_us, float smoothingValue, bool inverted, u16 default_position) : logger(logger) {
 
     // TODO: Convert to the new servo controller
     //gpio_set_function(gpio, GPIO_FUNC_PWM);
