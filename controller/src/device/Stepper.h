@@ -80,8 +80,8 @@ public:
 class Stepper {
 
 public:
-    Stepper(u8 slot, std::string name, u32 maxSteps, u16 decelerationAggressiveness,
-            u32 sleepWakeupPauseTimeUs, u32 sleepAfterUs, bool inverted);
+    Stepper(std::shared_ptr<creatures::Logger> logger,u8 slot, const std::string& name, u32 maxSteps,
+            u16 decelerationAggressiveness, u32 sleepWakeupPauseTimeUs, u32 sleepAfterUs, bool inverted);
     int init();
     int start();
 
@@ -124,6 +124,8 @@ public:
     u32 getSleepWakeupFrames();
     u32 getSleepAfterIdleFrames();
 
+private:
+    std::shared_ptr<creatures::Logger> logger;
 };
 
 #endif

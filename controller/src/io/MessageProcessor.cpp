@@ -16,11 +16,11 @@
 
 namespace creatures {
 
-    MessageProcessor::MessageProcessor(std::shared_ptr<Logger> logger,std::shared_ptr<SerialHandler> serialHandler) {
+    MessageProcessor::MessageProcessor(std::shared_ptr<Logger> logger, std::shared_ptr<SerialHandler> serialHandler) :
+        logger(std::move(logger)) {
 
-        this->logger = std::move(logger);
 
-        this->logger->info("Message Processor created!");
+        logger->info("Message Processor created!");
 
         this->serialHandler = std::move(serialHandler);
         this->incomingQueue = this->serialHandler->getIncomingQueue();
@@ -33,7 +33,7 @@ namespace creatures {
 
     void MessageProcessor::start() {
 
-        this->logger->info("Starting the message processor");
+        logger->info("Starting the message processor");
 
         this->workerThread = std::thread(&MessageProcessor::processMessages, this);
         this->workerThread.detach(); // Bye bye little thread!
@@ -44,7 +44,7 @@ namespace creatures {
 
         setThreadName("MessageProcessor::processMessages");
 
-        this->logger->debug("hello from the message processor thread! 👋🏻");
+        logger->debug("hello from the message processor thread! 👋🏻");
 
         for(EVER) {
 
@@ -66,10 +66,10 @@ namespace creatures {
             auto it = handlers.find(tokens[0]);
             if (it != handlers.end()) {
                 // Handler found, invoke it
-                it->second->handle(tokens);
+                it->second->handle(logger, tokens);
             } else {
                 // Handler not found, handle this situation (log, ignore, etc.)
-                this->logger->error("Unknown message type: {}", tokens[0]);
+                logger->error("Unknown message type: {}", tokens[0]);
             }
 
         }

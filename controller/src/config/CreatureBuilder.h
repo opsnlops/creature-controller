@@ -7,7 +7,7 @@
 using json = nlohmann::json;
 
 #include "logging/Logger.h"
-#include "creature/creature.h"
+#include "creature/Creature.h"
 
 
 namespace creatures {

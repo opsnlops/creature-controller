@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+#include "logging/Logger.h"
+
 namespace creatures {
 
     /**
@@ -12,6 +14,6 @@ namespace creatures {
     class IMessageHandler {
     public:
         virtual ~IMessageHandler() = default;
-        virtual void handle(const std::vector<std::string> &tokens) = 0;
+        virtual void handle(std::shared_ptr<Logger> logger,const std::vector<std::string> &tokens) = 0;
     };
 }

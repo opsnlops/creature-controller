@@ -74,17 +74,15 @@ include_directories(
 )
 
 add_library(creature_lib
-        src/config/command-line.cpp
-        src/config/config.cpp
-        src/config/creature_builder.cpp
-        src/controller/controller.cpp
-        src/controller/stepper_handler.cpp
-        src/creature/creature.cpp
-        src/creature/parrot.cpp
-        src/device/i2c_servo/i2c_servo.cpp
-        src/device/i2c_mock.cpp
-        src/device/servo.cpp
-        src/device/stepper.cpp
+        src/config/CommandLine.cpp
+        src/config/Configuration.cpp
+        src/config/CreatureBuilder.cpp
+        src/controller/Controller.cpp
+        src/controller/StepperHandler.cpp
+        src/creature/Creature.cpp
+        src/creature/Parrot.cpp
+        src/device/Servo.cpp
+        src/device/Stepper.cpp
         src/dmx/e131_server.cpp
         src/util/fast_hsv2rgb_32bit.cpp
         src/util/ranges.cpp

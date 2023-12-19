@@ -8,18 +8,18 @@
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
-#include "creature_builder.h"
+#include "CreatureBuilder.h"
 #include "CreatureBuilderException.h"
 
 #include "logging/Logger.h"
-#include "creature/creature.h"
-#include "creature/parrot.h"
+#include "creature/Creature.h"
+#include "creature/Parrot.h"
 
 
 namespace creatures {
 
     CreatureBuilder::CreatureBuilder(std::shared_ptr<Logger> logger,
-                                     std::unique_ptr<std::istream> configFile) {
+                                     std::unique_ptr<std::istream> configFile) : logger(std::move(logger)) {
 
         this->logger = logger;
 
@@ -90,7 +90,7 @@ namespace creatures {
 
         switch(type) {
             case Creature::parrot:
-                creature = std::make_shared<Parrot>();
+                creature = std::make_shared<Parrot>(logger);
                 break;
             default:
                 logger->error("unimplemented creature type: {}", j["type"]);
@@ -190,7 +190,7 @@ namespace creatures {
         }
 
         // Create the servo
-        return std::make_shared<Servo>(id, output_pin, name, min_pulse_us, max_pulse_us,
+        return std::make_shared<Servo>(logger, id, output_pin, name, min_pulse_us, max_pulse_us,
                                        smoothing_value, inverted, default_position);
 
     }

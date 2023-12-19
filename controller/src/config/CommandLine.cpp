@@ -5,8 +5,9 @@
 #include <argparse/argparse.hpp>
 #include <utility>
 
-#include "config.h"
-#include "command-line.h"
+#include "Configuration.h"
+#include "CommandLine.h"
+#include "logging/Logger.h"
 
 /*
  * This is using argparse:
@@ -62,10 +63,10 @@ namespace creatures {
         }
 
         auto usbDevice = program.get<std::string>("-u");
-        debug("read usb device {} from command line", usbDevice);
+        logger->debug("read usb device {} from command line", usbDevice);
         if(!usbDevice.empty()) {
             config->setUsbDevice(usbDevice);
-            info("set our usb device to {}", usbDevice);
+            logger->info("set our usb device to {}", usbDevice);
         }
 
         return config;

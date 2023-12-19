@@ -8,12 +8,12 @@
 #include <unordered_map>
 
 #include "controller-config.h"
-#include "namespace-stuffs.h"
 
-#include "controller/controller.h"
-#include "creature/creature.h"
-#include "device/servo.h"
-#include "device/stepper.h"
+#include "controller/Controller.h"
+#include "creature/Creature.h"
+#include "device/Servo.h"
+#include "device/Stepper.h"
+#include "logging/Logger.h"
 
 class Creature {
 
@@ -43,7 +43,7 @@ public:
         invalid_position
     };
 
-    explicit Creature();
+    explicit Creature(std::shared_ptr<creatures::Logger> logger);
 
     /**
      * Storage space for the joints!
@@ -77,7 +77,7 @@ public:
      * @param inputValue a `u8` to convert to the servo mappings
      * @return a value between MIN_POSITION and MAX_POSITION
      */
-    static u16 convertInputValueToServoValue(u8 inputValue);
+     u16 convertInputValueToServoValue(u8 inputValue);
 
     /**
      * Gets the number of joints that this creature has
@@ -93,10 +93,9 @@ public:
     [[nodiscard]] u8 getNumberOfSteppers() const;
 
 
-
-   static creature_type stringToCreatureType(const std::string& typeStr);
-   static motor_type stringToMotorType(const std::string& typeStr);
-   static default_position_type stringToDefaultPositionType(const std::string& typeStr);
+    static creature_type stringToCreatureType(const std::string& typeStr);
+    static motor_type stringToMotorType(const std::string& typeStr);
+    static default_position_type stringToDefaultPositionType(const std::string& typeStr);
 
 
     // Getters for all of the things
@@ -148,5 +147,6 @@ protected:
 
     u8 numberOfJoints;
 
+    std::shared_ptr<creatures::Logger> logger;
 
 };

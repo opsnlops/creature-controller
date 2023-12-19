@@ -2,13 +2,15 @@
 
 #include <gtest/gtest.h>
 
-#include "device/servo.h"
+#include "device/Servo.h"
 #include "device/ServoException.h"
 
+#include "MockLogger.h"
 
 TEST(Servo, CreateServo) {
 
-    auto servo = std::make_shared<Servo>("mock", 0, "Mock Server", 1000, 3000, 0.90, false, 2000);
+    auto logger = std::make_shared<creatures::NiceMockLogger>();
+    auto servo = std::make_shared<Servo>(logger, "mock", 0, "Mock Server", 1000, 3000, 0.90, false, 2000);
 
     // 🖕🏻 floating point!
     float expectedSmoothingValue = 0.9f;
@@ -26,7 +28,8 @@ TEST(Servo, CreateServo) {
 
 TEST(Servo, ServoOutOfRangeMove_Min) {
 
-    auto servo = std::make_shared<Servo>("mock", 0, "Mock Server", 1000, 3000, 0.90, false, 2000);
+    auto logger = std::make_shared<creatures::NiceMockLogger>();
+    auto servo = std::make_shared<Servo>(logger, "mock", 0, "Mock Server", 1000, 3000, 0.90, false, 2000);
 
     // This is a uint so this will actually be 65535
     EXPECT_THROW({servo->move(-1);
@@ -36,7 +39,8 @@ TEST(Servo, ServoOutOfRangeMove_Min) {
 
 TEST(Servo, ServoOutOfRangeMove_Max) {
 
-    auto servo = std::make_shared<Servo>("mock", 0, "Mock Server", 1000, 3000, 0.90, false, 2000);
+    auto logger = std::make_shared<creatures::NiceMockLogger>();
+    auto servo = std::make_shared<Servo>(logger, "mock", 0, "Mock Server", 1000, 3000, 0.90, false, 2000);
 
     EXPECT_THROW({servo->move(3001);
                  }, creatures::ServoException);

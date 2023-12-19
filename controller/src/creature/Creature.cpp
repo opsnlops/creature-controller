@@ -1,14 +1,15 @@
 
 #include <cmath>
+#include <utility>
 
-#include "namespace-stuffs.h"
+
 #include "controller-config.h"
 
-
-#include "creature/creature.h"
+#include "creature/Creature.h"
 #include "creature/CreatureException.h"
+#include "logging/Logger.h"
 
-Creature::Creature() {
+Creature::Creature(std::shared_ptr<creatures::Logger> logger) : logger(std::move(logger)) {
 
     this->controller = nullptr;
     //this->workerTaskHandle = nullptr;
@@ -18,7 +19,7 @@ Creature::Creature() {
     servos.clear();
     steppers.clear();
 
-    debug("Creature() called!");
+    logger->debug("Creature() called!");
 }
 
 // TODO: Thread time
@@ -27,21 +28,21 @@ Creature::Creature() {
 //}
 
 void Creature::init(std::shared_ptr<Controller> c) {
-    this->controller = c;
+    this->controller = std::move(c);
 
-    debug("init done, controller exists");
+    logger->debug("init done, controller exists");
 }
 
-uint16_t Creature::convertInputValueToServoValue(u8 inputValue) {
+u16 Creature::convertInputValueToServoValue(u8 inputValue) {
 
     // TODO: Play with the results if we do bit shifts instead (8 -> 10)
 
-    uint16_t servoRange = MAX_POSITION - MIN_POSITION;
+    u16 servoRange = MAX_POSITION - MIN_POSITION;
 
     double movementPercentage = (double)inputValue / (double)UCHAR_MAX;
-    auto servoValue = (uint16_t)(round((double)servoRange * movementPercentage) + MIN_POSITION);
+    auto servoValue = (u16)(round((double)servoRange * movementPercentage) + MIN_POSITION);
 
-    trace("mapped {} -> {}", inputValue, servoValue);
+    logger->trace("mapped {} -> {}", inputValue, servoValue);
 
     return servoValue;
 }
@@ -51,16 +52,16 @@ std::shared_ptr<Servo> Creature::getServo(const std::string& id) {
     return servos[id];
 }
 
-uint8_t Creature::getNumberOfJoints() const {
+u8 Creature::getNumberOfJoints() const {
     return numberOfJoints;
 }
 
-uint8_t Creature::getNumberOfServos() const {
+u8 Creature::getNumberOfServos() const {
     return servos.size();
 }
 
 #if USE_STEPPERS
-uint8_t Creature::getNumberOfSteppers() const {
+u8 Creature::getNumberOfSteppers() const {
     return steppers.size();
 }
 #endif
@@ -90,11 +91,11 @@ void Creature::addServo(std::string id, const std::shared_ptr<Servo>& servo) {
     // Whoa there, this shouldn't happen
     if(servos.contains(id)) {
         std::string errorMessage = fmt::format("Servo with id {} already exists!", id);
-        critical(errorMessage);
+        logger->critical(errorMessage);
         throw creatures::CreatureException(errorMessage);
     }
 
-    info("adding servo {} ({})", servo->getName(), id);
+    logger->info("adding servo {} ({})", servo->getName(), id);
     servos[id] = servo;
 }
 

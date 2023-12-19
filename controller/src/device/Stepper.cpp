@@ -2,12 +2,13 @@
 #include <cmath>
 
 #include "controller-config.h"
-#include "namespace-stuffs.h"
+
+#include "logging/Logger.h"
 
 
 #if USE_STEPPERS
 
-#include "stepper.h"
+#include "Stepper.h"
 
 StepperState::StepperState() {
 
@@ -39,10 +40,11 @@ StepperState::StepperState() {
 }
 
 
-Stepper::Stepper(uint8_t slot, std::string name, uint32_t maxSteps, uint16_t decelerationAggressiveness,
-                 uint32_t sleepWakeupPauseTimeUs, uint32_t sleepAfterUs, bool inverted) {
+Stepper::Stepper(std::shared_ptr<creatures::Logger> logger, u8 slot, const std::string& name, u32 maxSteps,
+                 u16 decelerationAggressiveness, u32 sleepWakeupPauseTimeUs, u32 sleepAfterUs, bool inverted) :
+                 logger(std::move(logger)) {
 
-    trace("setting up a new stepper");
+    logger->trace("setting up a new stepper");
 
     this->state = new StepperState();
     this->slot = slot;
@@ -66,7 +68,7 @@ Stepper::Stepper(uint8_t slot, std::string name, uint32_t maxSteps, uint16_t dec
     this->state->framesRequiredToWakeUp = this->sleepWakeupFrames;
     this->state->sleepAfterIdleFrames = this->sleepAfterIdleFrames;
 
-    info("set up stepper on slot {}: name: {}, max_steps: {}, deceleration: {}, wake frames: {}, idle after: {}, inverted: {}",
+    logger->info("set up stepper on slot {}: name: {}, max_steps: {}, deceleration: {}, wake frames: {}, idle after: {}, inverted: {}",
          slot, name, maxSteps, decelerationAggressiveness, this->sleepWakeupFrames, this->sleepAfterIdleFrames, inverted ? "yes" : "no");
 
 }

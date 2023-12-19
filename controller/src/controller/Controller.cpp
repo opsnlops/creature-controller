@@ -3,15 +3,14 @@
 #include <climits>
 #include <utility>
 
-#include "namespace-stuffs.h"
 #include "controller-config.h"
 
-#include "device/servo.h"
+#include "device/Servo.h"
 
-#include "controller/stepper_handler.h"
-#include "controller.h"
+#include "controller/StepperHandler.h"
+#include "Controller.h"
 
-#include "creature/creature.h"
+#include "creature/Creature.h"
 
 uint32_t number_of_moves = 0;
 
@@ -33,9 +32,9 @@ uint8_t Controller::numberOfSteppersInUse = 0;
 
 #endif
 
-Controller::Controller() {
+Controller::Controller(std::shared_ptr<creatures::Logger> logger) : logger(std::move(logger)) {
 
-    debug("setting up the controller");
+    logger->debug("setting up the controller");
 
     //creatureWorkerTaskHandle = nullptr;
     online = true;
@@ -63,7 +62,7 @@ void Controller::init(std::shared_ptr<Creature> _creature) {
     //
     // TODO: This is easier now that we have actual STL objects
     //
-    debug("building servo objects");
+    logger->debug("building servo objects");
     for (int i = 0; i < this->creature->getNumberOfServos(); i++) {
         //ServoConfig *servo = this->config->getServoConfig(i);
         //initServo(i, servo->name, servo->minPulseUs, servo->maxPulseUs,
@@ -72,7 +71,7 @@ void Controller::init(std::shared_ptr<Creature> _creature) {
 
 #if USE_STEPPERS
     // Set up the steppers
-    debug("building stepper objects");
+    logger->debug("building stepper objects");
     for (int i = 0; i < this->creature->getNumberOfSteppers(); i++) {
         /*
         StepperConfig *stepper = this->creature->getStepperConfig(i);
@@ -90,7 +89,7 @@ void Controller::init(std::shared_ptr<Creature> _creature) {
         currentFrame[i] = UCHAR_MAX / 2;
     }
 
-    debug("setting up the stepper pins");
+    logger->debug("setting up the stepper pins");
 
 #if USE_STEPPERS
     // Output Pins
@@ -115,7 +114,7 @@ void Controller::init(std::shared_ptr<Creature> _creature) {
     //gpio_set_dir(STEPPER_END_S_LOW_PIN, false);
     //gpio_set_dir(STEPPER_END_S_HIGH_PIN, false);
 
-    debug("done setting up the stepper pins");
+    logger->debug("done setting up the stepper pins");
 #endif
 
 }
@@ -123,7 +122,7 @@ void Controller::init(std::shared_ptr<Creature> _creature) {
 
 void Controller::configureGPIO(uint8_t pin, bool out, bool initialValue) {
 
-    trace("setting up stepper pin {}: direction: {}, initialValue: {}",
+    logger->trace("setting up stepper pin {}: direction: {}, initialValue: {}",
             pin,
             out ? "out" : "in",
             initialValue ? "on" : "off");
@@ -141,7 +140,7 @@ void Controller::setCreatureWorkerTaskHandle(TaskHandle_t taskHandle) {
  */
 
 void Controller::start() {
-    info("starting controller!");
+    logger->info("starting controller!");
 
     // TODO: Thread these
 
@@ -217,7 +216,7 @@ void Controller::initServo(uint8_t indexNumber, const char *name, uint16_t minPu
 
     numberOfServosInUse++;
 
-    info("controller servo init: index: {}, pin: {}, name: {}", indexNumber, gpioPin, name);
+    logger->info("controller servo init: index: {}, pin: {}, name: {}", indexNumber, gpioPin, name);
 
 }
 
@@ -225,11 +224,11 @@ void Controller::initServo(uint8_t indexNumber, const char *name, uint16_t minPu
 void Controller::initStepper(uint8_t slot, const char *name, uint32_t maxSteps, uint16_t decelerationAggressiveness,
                              uint32_t sleepWakeupPauseTimeUs, uint32_t sleepAfterUs, bool inverted) {
 
-    steppers[slot] = new Stepper(slot, name, maxSteps, decelerationAggressiveness, sleepWakeupPauseTimeUs,
+    steppers[slot] = new Stepper(logger, slot, name, maxSteps, decelerationAggressiveness, sleepWakeupPauseTimeUs,
                                  sleepAfterUs, inverted);
     numberOfSteppersInUse++;
 
-    info("controller stepper init: slot: {}, name: {}, max_steps: {}", slot, name, maxSteps);
+    logger->info("controller stepper init: slot: {}, name: {}, max_steps: {}", slot, name, maxSteps);
 
 }
 #endif
@@ -246,7 +245,7 @@ uint16_t Controller::getServoPosition(uint8_t indexNumber) {
 void Controller::requestServoPosition(uint8_t servoIndexNumber, uint16_t requestedPosition) {
 
     if (servos[servoIndexNumber]->getPosition() != requestedPosition) {
-        debug("requested to move servo {} from {} to position {}", servoIndexNumber,
+        logger->debug("requested to move servo {} from {} to position {}", servoIndexNumber,
               servos[servoIndexNumber]->getPosition(), requestedPosition);
         servos[servoIndexNumber]->move(requestedPosition);
 
@@ -270,7 +269,7 @@ void Controller::requestStepperPosition(uint8_t stepperIndexNumber, uint32_t req
 
     if (steppers[stepperIndexNumber]->state->requestedSteps != requestedPosition) {
 
-        debug("requested to move stepper {} from {} to position {}", stepperIndexNumber,
+        logger->debug("requested to move stepper {} from {} to position {}", stepperIndexNumber,
               steppers[stepperIndexNumber]->state->requestedSteps, requestedPosition);
 
         steppers[stepperIndexNumber]->state->requestedSteps = requestedPosition;
@@ -324,7 +323,7 @@ uint16_t Controller::getNumberOfDMXChannels() {
 }
 
 void Controller::setOnline(bool onlineValue) {
-    info("setting online to{}", onlineValue ? "true" : "false");
+    logger->info("setting online to{}", onlineValue ? "true" : "false");
     this->online = onlineValue;
 }
 

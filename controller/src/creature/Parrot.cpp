@@ -1,23 +1,23 @@
 
+#include <cassert>
 #include <climits>
 #include <cmath>
 
-#include "namespace-stuffs.h"
 #include "controller-config.h"
 
 #include "util/ranges.h"
 
-#include "parrot.h"
-#include "creature.h"
+#include "Parrot.h"
+#include "Creature.h"
 
-Parrot::Parrot()
-        : Creature() {
+Parrot::Parrot(const std::shared_ptr<creatures::Logger>& logger)
+        : Creature(logger) {
 
     // Calculate the head offset max
     this->headOffsetMax = lround((double) (MAX_POSITION - MIN_POSITION) * (double) HEAD_OFFSET_MAX);
-    debug("the head offset max is {}", this->headOffsetMax);
+    logger->debug("the head offset max is {}", this->headOffsetMax);
 
-    info("Bawk!");
+    logger->info("Bawk!");
 }
 
 /**
@@ -98,7 +98,7 @@ Parrot::Parrot()
 }
 
 void Parrot::init(std::shared_ptr<Controller> controller) {
-    debug("starting creature init");
+    logger->debug("starting creature init");
 
     this->controller = controller;
     this->numberOfJoints = 7;
@@ -128,12 +128,13 @@ void Parrot::start() {
                 &workerTaskHandle);
     */
 
-    debug("parrot started!");
+    logger->debug("parrot started!");
 }
 
 uint16_t Parrot::convertToHeadHeight(uint16_t y) const {
 
-    return convertRange(y,
+    return convertRange(logger,
+                        y,
                         MIN_POSITION,
                         MAX_POSITION,
                         MIN_POSITION + (this->headOffsetMax / 2),
@@ -143,7 +144,8 @@ uint16_t Parrot::convertToHeadHeight(uint16_t y) const {
 
 int32_t Parrot::configToHeadTilt(uint16_t x) const {
 
-    return convertRange(x,
+    return convertRange(logger,
+                        x,
                         MIN_POSITION,
                         MAX_POSITION,
                         1 - (this->headOffsetMax / 2),
@@ -160,7 +162,7 @@ head_position_t Parrot::calculateHeadPosition(uint16_t height, int32_t offset) {
     headPosition.left = left;
     headPosition.right = right;
 
-    trace("calculated head position: height: {}, offset: {} -> {}, {}", height, offset, right, left);
+    logger->trace("calculated head position: height: {}, offset: {} -> {}, {}", height, offset, right, left);
 
     return headPosition;
 

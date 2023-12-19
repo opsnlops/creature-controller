@@ -2,16 +2,15 @@
 
 #include "logging/Logger.h"
 
-#include "config.h"
+#include "Configuration.h"
 
 #include <utility>
 
 namespace creatures {
 
-    Configuration::Configuration(std::shared_ptr<Logger> logger) {
-        this->logger = std::move(logger);
+    Configuration::Configuration(std::shared_ptr<Logger> logger) : logger(std::move(logger)) {
 
-        this->logger->debug("creating a new Configuration");
+        logger->debug("creating a new Configuration");
 
     }
 

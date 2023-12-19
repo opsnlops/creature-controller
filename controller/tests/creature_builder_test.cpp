@@ -6,15 +6,15 @@
 #include <gmock/gmock.h>
 
 
-#include "config/creature_builder.h"
+#include "config/CreatureBuilder.h"
 #include "config/CreatureBuilderException.h"
-#include "logging/Logger.h"
 #include "MockLogger.h"
 
 
 TEST(CreatureBuilder, BuildsCorrectlyWithValidData) {
 
     std::shared_ptr<creatures::Logger> logger = std::make_shared<creatures::NiceMockLogger>();
+    logger->debug("Starting test");
 
     const std::string validJsonData = R"({  "name": "Test Creature",
       "version": "0.1.0",
@@ -77,7 +77,7 @@ TEST(CreatureBuilder, BuildsCorrectlyWithValidData) {
 
 TEST(CreatureBuilder, BuildFails_EmptyJson) {
 
-    std::shared_ptr<creatures::Logger> logger = std::make_shared<creatures::NiceMockLogger>();
+   auto logger = std::make_shared<creatures::NiceMockLogger>();
 
     const std::string badJsonData = R"({})";
     auto jsonStream = std::make_unique<std::istringstream>(badJsonData);
@@ -92,7 +92,7 @@ TEST(CreatureBuilder, BuildFails_EmptyJson) {
 
 TEST(CreatureBuilder, BuildFails_BrokenJson) {
 
-    std::shared_ptr<creatures::Logger> logger = std::make_shared<creatures::NiceMockLogger>();
+    auto logger = std::make_shared<creatures::NiceMockLogger>();
 
     const std::string badJsonData = R"({"type: "parrot"})";
     auto jsonStream = std::make_unique<std::istringstream>(badJsonData);
@@ -107,7 +107,7 @@ TEST(CreatureBuilder, BuildFails_BrokenJson) {
 
 TEST(CreatureBuilder, BuildFails_MeaningLessJson) {
 
-    std::shared_ptr<creatures::Logger> logger = std::make_shared<creatures::NiceMockLogger>();
+    auto logger = std::make_shared<creatures::NiceMockLogger>();
 
     const std::string badJsonData = R"({"type": "parrot", "name": 42})";
     auto jsonStream = std::make_unique<std::istringstream>(badJsonData);
@@ -122,7 +122,7 @@ TEST(CreatureBuilder, BuildFails_MeaningLessJson) {
 
 TEST(CreatureBuilder, BuildFails_InvalidType) {
 
-    std::shared_ptr<creatures::Logger> logger = std::make_shared<creatures::NiceMockLogger>();
+    auto logger = std::make_shared<creatures::NiceMockLogger>();
 
     const std::string badJsonData = R"({"type": "poop", "name": "Beaky"})";
     auto jsonStream = std::make_unique<std::istringstream>(badJsonData);
@@ -136,7 +136,7 @@ TEST(CreatureBuilder, BuildFails_InvalidType) {
 
 TEST(CreatureBuilder, BuildFails_MissingMotors) {
 
-    std::shared_ptr<creatures::Logger> logger = std::make_shared<creatures::NiceMockLogger>();
+    auto logger = std::make_shared<creatures::NiceMockLogger>();
 
 
     const std::string badJsonData = R"({  "name": "Test Creature",

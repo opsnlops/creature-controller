@@ -3,11 +3,10 @@
 #include <cmath>
 #include <utility>
 
-#include "namespace-stuffs.h"
 #include "controller-config.h"
 
 // This module
-#include "servo.h"
+#include "Servo.h"
 
 // Our modules
 #include "ServoException.h"
@@ -31,14 +30,15 @@ extern u32 number_of_moves;
  * The servo's PWM controller will be off by default to make sure it's not turned
  * on before we're ready to go.
  *
+ * @param logger a shared pointer to our logger
  * @param outputPin The GPIO pin this servo is connected to
  * @param min_pulse_us Min pulse length in microseconds
  * @param max_pulse_us Max pulse length in microseconds
  * @param inverted are this servo's movements inverted?
  * @param default_position the default position to set the servo to at start
  */
-Servo::Servo(std::string id, u8 outputPin, std::string name, u16 min_pulse_us, u16 max_pulse_us,
-             float smoothingValue, bool inverted, u16 default_position) {
+Servo::Servo(std::shared_ptr<creatures::Logger> logger,std::string id, u8 outputPin, std::string name, u16 min_pulse_us,
+             u16 max_pulse_us, float smoothingValue, bool inverted, u16 default_position) : logger(std::move(logger)) {
 
     // TODO: Convert to the new servo controller
     //gpio_set_function(gpio, GPIO_FUNC_PWM);
@@ -61,7 +61,7 @@ Servo::Servo(std::string id, u8 outputPin, std::string name, u16 min_pulse_us, u
     // Turn the servo on by default
     this->on = false;
 
-    info("set up servo on pin {}: name: {}, min_pulse: {}, max_pulse: {}, default: {}, inverted: {}",
+    logger->info("set up servo on pin {}: name: {}, min_pulse: {}, max_pulse: {}, default: {}, inverted: {}",
          outputPin, name, min_pulse_us, max_pulse_us, default_position, inverted ? "yes" : "no");
 }
 
@@ -75,7 +75,7 @@ void Servo::turnOn() {
     //pwm_set_enabled(slice, true);
     on = true;
 
-    info("Enabled servo on pin {} (slice {})", outputPin, slice);
+    logger->info("Enabled servo on pin {} (slice {})", outputPin, slice);
 }
 
 
@@ -89,7 +89,7 @@ void Servo::turnOff() {
     //pwm_set_enabled(slice, false);
     on = false;
 
-    info("Disabled servo on pin {} (slice {})", outputPin, slice);
+    logger->info("Disabled servo on pin {} (slice {})", outputPin, slice);
 }
 
 /**
@@ -121,7 +121,7 @@ void Servo::move(uint16_t position) {
     // Error checking. This could result in damage to a motor or
     // creature if not met, so this is a hard stop if it's wrong. 😱
     if(!(position >= MIN_POSITION && position <= MAX_POSITION)) {
-        critical("Servo::move() called with invalid position! min: {}, max: {}, requested: {}",
+        logger->critical("Servo::move() called with invalid position! min: {}, max: {}, requested: {}",
                  MIN_POSITION, MAX_POSITION, position);
         throw creatures::ServoException(fmt::format("Servo::move() called with invalid position! min: {}, max: {}, requested: {}",
                                                     MIN_POSITION, MAX_POSITION, position));
@@ -143,7 +143,7 @@ void Servo::move(uint16_t position) {
     desired_ticks = (float)resolution * frame_active;
     current_position = position;
 
-    trace("requesting servo on output pin {} be set to position {} ({} ticks)",
+    logger->trace("requesting servo on output pin {} be set to position {} ({} ticks)",
           outputPin,
           current_position,
           desired_ticks);

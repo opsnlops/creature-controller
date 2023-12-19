@@ -2,10 +2,10 @@
 
 #include <argparse/argparse.hpp>
 
-#include "config.h"
+#include "Configuration.h"
 #include "logging/Logger.h"
 
-#include "creature/creature.h"
+#include "creature/Creature.h"
 
 namespace creatures {
 
@@ -18,8 +18,6 @@ namespace creatures {
 
     private:
         std::shared_ptr<Logger> logger;
-        std::shared_ptr<Creature> parseConfigFile(std::string configFilename);
-
     };
 
 

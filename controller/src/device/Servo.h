@@ -7,6 +7,7 @@
 
 #include "controller-config.h"
 
+#include "logging/Logger.h"
 
 /**
  * A representation of a servo that we are controlling with the controller
@@ -22,7 +23,7 @@
 class Servo {
 
 public:
-    Servo(std::string id, u8 outputPin, std::string name, u16 min_pulse_us, u16 max_pulse_us,
+    Servo(std::shared_ptr<creatures::Logger> logger, std::string id, u8 outputPin, std::string name, u16 min_pulse_us, u16 max_pulse_us,
           float smoothingValue, bool inverted, u16 default_position);
     void turnOn();
     void turnOff();
@@ -65,5 +66,6 @@ private:
     u32 current_ticks;     // Which tick is the servo at
     std::string name;           // This servo's name
     float smoothingValue;       // The constant to use when smoothing the input
+    std::shared_ptr<creatures::Logger> logger;
 
 };

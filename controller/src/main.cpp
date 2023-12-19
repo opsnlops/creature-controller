@@ -3,14 +3,12 @@
 #include <thread>
 
 #include "controller-config.h"
-#include "pca9685/pca9685.h"
 
-#include "config/command-line.h"
-#include "config/config.h"
-#include "config/creature_builder.h"
-#include "creature/creature.h"
-#include "device/i2c_mock.h"
-#include "device/servo.h"
+#include "config/CommandLine.h"
+#include "config/Configuration.h"
+#include "config/CreatureBuilder.h"
+#include "creature/Creature.h"
+#include "device/Servo.h"
 #include "dmx/e131_server.h"
 #include "io/SerialHandler.h"
 #include "io/MessageProcessor.h"
@@ -18,10 +16,6 @@
 #include "logging/SpdlogLogger.h"
 
 
-
-
-#include "device/i2c_servo/i2c_servo.h"
-#include "device/i2c_smbus.h"
 
 // Declare the configuration globally
 std::shared_ptr<Creature> creature;
@@ -70,14 +64,6 @@ int main(int argc, char **argv) {
     e131Server = std::make_shared<creatures::E131Server>(logger);
     e131Server->start();
 
-    // Create the servo controller
-    //auto servoController = std::make_shared<I2CServoController>(i2cBus, PCA9685_I2C_ADDRESS);
-    //servoController->begin();
-    //trace("done with controller startup");
-
-    //u8 current_pre_scale = servoController->readPrescale();
-    //info("pre-scale is {}", current_pre_scale);
-
 
 
     // Set a signal on pin 0 for testing
@@ -105,6 +91,6 @@ int main(int argc, char **argv) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 
-    info("the main thread says bye! good luck little threads! 👋🏻");
+    logger->info("the main thread says bye! good luck little threads! 👋🏻");
     return EXIT_SUCCESS;
 }

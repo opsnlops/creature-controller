@@ -3,14 +3,13 @@
 
 #include <memory>
 
-#include "namespace-stuffs.h"
 #include "controller-config.h"
 
-
-#include "device/servo.h"
+#include "device/Servo.h"
+#include "logging/Logger.h"
 
 #if USE_STEPPERS
-#include "device/stepper.h"
+#include "device/Stepper.h"
 #endif
 
 // I've got a dependency loop. Let's use forward declaration to
@@ -20,10 +19,10 @@ class Creature; // Forward declaration
 class Controller {
 
 public:
-    Controller();
+    Controller(std::shared_ptr<creatures::Logger> logger);
 
-    static uint32_t getNumberOfPWMWraps();
-    uint16_t getServoPosition(u8 outputPin);
+    u32 getNumberOfPWMWraps();
+    u16 getServoPosition(u8 outputPin);
 
     void requestServoPosition(u8 outputPin, u16 requestedPosition);
 
@@ -46,7 +45,7 @@ public:
 
     bool acceptInput(u8* input);
 
-    static u8 getNumberOfServosInUse();
+    u8 getNumberOfServosInUse();
 
     [[nodiscard]] u16 getNumberOfDMXChannels();
 
@@ -54,13 +53,13 @@ public:
     void setOnline(bool onlineValue);
 
     // Get the servo, used for debugging
-    static Servo* getServo(u8 outputPin);
+    Servo* getServo(u8 outputPin);
 
 #if USE_STEPPERS
-    static Stepper* getStepper(u8 index);
-    static uint8_t getNumberOfSteppersInUse();
-    uint32_t getStepperPosition(u8 indexNumber);
-    static void requestStepperPosition(u8 stepperIndexNumber, u32 requestedPosition);
+    Stepper* getStepper(u8 index);
+    u8 getNumberOfSteppersInUse();
+    u32 getStepperPosition(u8 indexNumber);
+    void requestStepperPosition(u8 stepperIndexNumber, u32 requestedPosition);
 #endif
 
     // ISR, called when the PWM wraps
@@ -69,6 +68,7 @@ public:
 private:
 
     std::shared_ptr<Creature> creature;
+    std::shared_ptr<creatures::Logger> logger;
 
 
     /**
@@ -100,10 +100,10 @@ private:
     bool receivedFirstFrame = false;
 
     // The current state of the input from the controller
-    uint8_t* currentFrame{};
+    u8* currentFrame{};
 
     // How many channels we're expecting from the I/O handler
-    uint16_t numberOfChannels;
+    u16 numberOfChannels;
 
     /**
      * A handle to our creature's working task. Used to signal that a new
@@ -114,26 +114,26 @@ private:
     //TaskHandle_t creatureWorkerTaskHandle;
 
     // The ISR needs access to these values
-    static uint8_t numberOfServosInUse;
-    static uint32_t numberOfPWMWraps;
+    static u8 numberOfServosInUse;
+    static u32 numberOfPWMWraps;
 
-    static void configureGPIO(uint8_t pin, bool out, bool initialValue);
+    void configureGPIO(u8 pin, bool out, bool initialValue);
 
-    void initServo(uint8_t indexNumber, const char* name, uint16_t minPulseUs,
-                   uint16_t maxPulseUs, float smoothingValue, uint16_t defaultPosition, bool inverted);
+    void initServo(u8 indexNumber, const char* name, u16 minPulseUs,
+                   u16 maxPulseUs, float smoothingValue, u16 defaultPosition, bool inverted);
 
 #if USE_STEPPERS
-    void initStepper(uint8_t indexNumber, const char* name, uint32_t maxSteps, uint16_t decelerationAggressiveness,
-                     uint32_t sleepWakeupPauseTimeUs, uint32_t sleepAfterUs, bool inverted);
+    void initStepper(u8 indexNumber, const char* name, u32 maxSteps, u16 decelerationAggressiveness,
+                     u32 sleepWakeupPauseTimeUs, u32 sleepAfterUs, bool inverted);
 
     static Stepper* steppers[MAX_NUMBER_OF_STEPPERS];
-    static uint8_t numberOfSteppersInUse;
+    static u8 numberOfSteppersInUse;
 #endif
 
     /**
      * Map the servo index to the GPO pin to use
      */
-    uint8_t pinMappings[MAX_NUMBER_OF_SERVOS] = {
+    u8 pinMappings[MAX_NUMBER_OF_SERVOS] = {
             SERVO_0_GPIO_PIN,
             SERVO_1_GPIO_PIN,
             SERVO_2_GPIO_PIN,

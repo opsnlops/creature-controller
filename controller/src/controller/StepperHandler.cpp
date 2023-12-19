@@ -2,13 +2,12 @@
 #include  <atomic>
 
 #include "controller-config.h"
-#include "namespace-stuffs.h"
 
-#include "controller/controller.h"
+#include "controller/Controller.h"
 
 #if USE_STEPPERS
 
-#include "controller/stepper_handler.h"
+#include "controller/StepperHandler.h"
 
 //
 // START OF STEPPER TIMER STUFFS
@@ -37,7 +36,12 @@ static bool stepperAddressMapping[MAX_NUMBER_OF_STEPPERS][STEPPER_MUX_BITS] = {
 //
 
 
-void inline toggle_latch() {
+StepperHandler::StepperHandler(std::shared_ptr<creatures::Logger> logger, std::shared_ptr<Controller> controller) :
+    logger(std::move(logger)), controller(std::move(controller)) {
+    logger->debug("new StepperHandler made");
+}
+
+void inline StepperHandler::toggle_latch() {
     // Enable the latch
     // TODO: Switch these gpios
     //gpio_put(STEPPER_LATCH_PIN, false);     // It's active low
@@ -78,7 +82,7 @@ void inline toggle_latch() {
  * @param t the repeating timer
  * @return true
  */
-bool stepper_timer_handler(struct repeating_timer *t) {
+bool StepperHandler::stepper_timer_handler(struct repeating_timer *t) {
 
     // Let's keep some metrics of how long this takes
     // TODO: Chrono action time
@@ -90,9 +94,9 @@ bool stepper_timer_handler(struct repeating_timer *t) {
 
 
     // Look at each stepper we have and adjust if needed
-    for(int i = 0; i < Controller::getNumberOfSteppersInUse(); i++) {
+    for(int i = 0; i < controller->getNumberOfSteppersInUse(); i++) {
 
-        Stepper *s = Controller::getStepper(i);
+        Stepper *s = controller->getStepper(i);
         uint8_t slot = s->getSlot();
 
 
@@ -105,14 +109,14 @@ bool stepper_timer_handler(struct repeating_timer *t) {
 
         // TODO: This isn't a great way to handle this
         if(state->lowEndstop) {
-            error("Low endstop hit on stepper {}", slot);
+            logger->error("Low endstop hit on stepper {}", slot);
             state->isAwake = false;
             state->startedSleepingAt = stepper_frame_count;
             goto transmit;
         }
 
         if(state->highEndstop) {
-            error("High endstop hit on stepper {}", slot);
+            logger->error("High endstop hit on stepper {}", slot);
             state->isAwake = false;
             state->startedSleepingAt = stepper_frame_count;
             goto transmit;
@@ -133,7 +137,7 @@ bool stepper_timer_handler(struct repeating_timer *t) {
         if(state->isAwake && state->updatedFrame + state->sleepAfterIdleFrames < stepper_frame_count) {
             state->isAwake = false;
             state->startedSleepingAt = stepper_frame_count;
-            debug("sleeping stepper {} at frame {}", slot, stepper_frame_count);
+            logger->debug("sleeping stepper {} at frame {}", slot, stepper_frame_count);
             goto transmit;
 
         }
@@ -147,7 +151,7 @@ bool stepper_timer_handler(struct repeating_timer *t) {
         if(!state->isAwake) {
             state->isAwake = true;
             state->awakeAt = stepper_frame_count + state->framesRequiredToWakeUp;
-            debug("waking up stepper {} at frame {}", slot, stepper_frame_count);
+            logger->debug("waking up stepper {} at frame {}", slot, stepper_frame_count);
             goto transmit;
         }
 
@@ -234,7 +238,7 @@ bool stepper_timer_handler(struct repeating_timer *t) {
 }
 
 
-uint32_t set_ms1_ms2_and_get_steps(StepperState* state) {
+uint32_t StepperHandler::set_ms1_ms2_and_get_steps(StepperState* state) {
 
     uint32_t stepsToGo = (state->currentMicrostep > state->desiredMicrostep) ?
                          (state->currentMicrostep - state->desiredMicrostep) :
@@ -295,9 +299,9 @@ uint32_t set_ms1_ms2_and_get_steps(StepperState* state) {
 *
 * @param slot the stepper to home
 */
-bool home_stepper(uint8_t slot) {
+bool StepperHandler::home_stepper(uint8_t slot) {
 
-    info("attempting to home stepper {}", slot);
+    logger->info("attempting to home stepper {}", slot);
 
     // Set up the address lines for the stepper we're looking at
     // TODO: GPIO
@@ -313,7 +317,7 @@ bool home_stepper(uint8_t slot) {
     //gpio_put(STEPPER_SLEEP_PIN, true);
 
 
-    debug("waking up stepper {}", slot);
+    logger->debug("waking up stepper {}", slot);
 
     // Set this on the latches
     toggle_latch();

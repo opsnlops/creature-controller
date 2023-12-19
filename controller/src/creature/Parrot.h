@@ -3,12 +3,12 @@
 
 #include <memory>
 
-#include "namespace-stuffs.h"
 #include "controller-config.h"
 
-#include "creature.h"
+#include "Creature.h"
 
-#include "device/servo.h"
+#include "device/Servo.h"
+#include "logging/Logger.h"
 
 
 // joint -> servo mappings
@@ -50,15 +50,15 @@
 
 
 typedef struct {
-    uint16_t left;
-    uint16_t right;
+    u16 left;
+    u16 right;
 } head_position_t;
 
 class Parrot : public Creature {
 
 public:
 
-    explicit Parrot();
+    explicit Parrot(const std::shared_ptr<creatures::Logger>& logger);
 
     void init(std::shared_ptr<Controller> controller) override;
     void start() override;
@@ -68,7 +68,7 @@ public:
      * @param y the y coordinate
      * @return head height
      */
-    [[nodiscard]] uint16_t convertToHeadHeight(uint16_t y) const;
+    [[nodiscard]] u16 convertToHeadHeight(u16 y) const;
 
 
     /**
@@ -76,13 +76,13 @@ public:
      * @param x the x axis
      * @return head tilt
      */
-    [[nodiscard]] int32_t configToHeadTilt(uint16_t x) const;
+    [[nodiscard]] int32_t configToHeadTilt(u16 x) const;
 
-    static head_position_t calculateHeadPosition(uint16_t height, int32_t offset);
+    head_position_t calculateHeadPosition(u16 height, int32_t offset);
 
 private:
 
-    uint16_t headOffsetMax;
+    u16 headOffsetMax;
 
 };
 
@@ -91,6 +91,6 @@ private:
  */
 typedef struct {
     std::shared_ptr<Controller> controller;
-    uint16_t* joints;
+    u16 joints;
     Parrot* parrot;
 } ParrotInfo;
