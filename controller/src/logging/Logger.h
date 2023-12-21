@@ -20,7 +20,7 @@ namespace creatures {
         virtual ~Logger() = default;
 
         // A chance to initialize the logger as needed
-        virtual void init() = 0;
+        virtual void init(std::string loggerName) = 0;
 
         template<typename... Args>
         void trace(const std::string &format, Args&&... args) {

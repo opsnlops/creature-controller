@@ -8,6 +8,8 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
+#include "controller-config.h"
+
 #include "logging/Logger.h"
 #include "logging/LoggingException.h"
 
@@ -19,7 +21,7 @@ namespace creatures {
     class SpdlogLogger : public Logger {
 
     public:
-        void init() override {
+        void init(std::string loggerName) override {
             try {
                 // Set up our locale. If this vomits, install `locales-all`
                 std::locale::global(std::locale("en_US.UTF-8"));
@@ -29,38 +31,45 @@ namespace creatures {
                                                    std::string(e.what())));
             }
 
-            // Initialize and register the default logger
-            auto console = spdlog::stdout_color_mt("controller");
-            ::spdlog::set_default_logger(console);
+            // Save our name
+            this->ourName = std::move(loggerName);
 
-            // Default to trace-level logging
-            ::spdlog::set_level(spdlog::level::trace);
+            // Initialize and register the default logger
+            ourLogger = spdlog::stdout_color_mt(ourName);
+            ourLogger->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%n] [%^%l%$] %v");
+
+            // Default to debug level logging
+            ourLogger->set_level(spdlog::level::debug);
         }
 
     protected:
         void logTrace(const std::string &format, fmt::format_args args) override {
-            ::spdlog::trace(fmt::vformat(format, args));
+            ourLogger->trace(fmt::vformat(format, args));
         }
 
         void logDebug(const std::string &format, fmt::format_args args) override {
-            ::spdlog::debug(fmt::vformat(format, args));
+            ourLogger->debug(fmt::vformat(format, args));
         }
 
         void logInfo(const std::string &format, fmt::format_args args) override {
-            ::spdlog::info(fmt::vformat(format, args));
+            ourLogger->info(fmt::vformat(format, args));
         }
 
         void logWarning(const std::string &format, fmt::format_args args) override {
-            ::spdlog::warn(fmt::vformat(format, args));
+            ourLogger->warn(fmt::vformat(format, args));
         }
 
         void logError(const std::string &format, fmt::format_args args) override {
-            ::spdlog::error(fmt::vformat(format, args));
+            ourLogger->error(fmt::vformat(format, args));
         }
 
         void logCritical(const std::string &format, fmt::format_args args) override {
-            ::spdlog::critical(fmt::vformat(format, args));
+            ourLogger->critical(fmt::vformat(format, args));
         }
+
+    private:
+        std::shared_ptr<spdlog::logger> ourLogger;
+        std::string ourName;
 
     };
 

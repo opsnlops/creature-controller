@@ -8,6 +8,8 @@
 
 #include "controller-config.h"
 
+#include "logging/Logger.h"
+#include "logging/SpdlogLogger.h"
 #include "io/handlers/LogHandler.h"
 #include "io/handlers/StatsHandler.h"
 #include "util/thread_name.h"
@@ -17,10 +19,14 @@
 
 namespace creatures {
 
-    MessageProcessor::MessageProcessor(std::shared_ptr<Logger> logger, std::shared_ptr<SerialHandler> serialHandler) :
-        logger(logger) {
+    MessageProcessor::MessageProcessor(std::shared_ptr<Logger> _logger, std::shared_ptr<SerialHandler> serialHandler) {
 
-
+        /*
+        // Make a new logger just for us
+        this->logger = std::make_shared<creatures::SpdlogLogger>();
+        logger->init("rp2040");
+        */
+        logger = _logger;
         logger->info("Message Processor created!");
 
         this->serialHandler = std::move(serialHandler);

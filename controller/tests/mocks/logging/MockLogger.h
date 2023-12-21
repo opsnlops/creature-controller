@@ -39,7 +39,7 @@ namespace creatures {
         );
 
         // Override init() with an empty implementation if necessary
-        void init() override {
+        void init(std::string loggerName) override {
             // No initialization required for the mock
         }
     };

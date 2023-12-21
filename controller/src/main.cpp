@@ -14,6 +14,7 @@
 #include "io/MessageProcessor.h"
 #include "logging/Logger.h"
 #include "logging/SpdlogLogger.h"
+#include "util/thread_name.h"
 
 
 
@@ -25,9 +26,12 @@ std::mutex servoUpdateMutex;
 
 int main(int argc, char **argv) {
 
+    // Name the thread so it shows up right!
+    setThreadName("main");
+
     // Get the logger up and running ASAP
     std::shared_ptr<creatures::Logger> logger = std::make_shared<creatures::SpdlogLogger>();
-    logger->init();
+    logger->init("controller");
 
     logger->info("Welcome to the Creature Controller! 🦜");
 

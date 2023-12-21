@@ -22,6 +22,9 @@ using u64 = std::uint64_t;
 // The number of steppers we can control
 #define MAX_NUMBER_OF_STEPPERS              8
 
+// Logging levels
+#define CONTROLLER_LOG_LEVEL                "spdlog::level::debug"
+#define RP2040_LOG_LEVEL                    "spdlog::level::trace"
 
 // Use the status lights?
 #define USE_STATUS_LIGHTS                   1
