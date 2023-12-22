@@ -44,7 +44,7 @@ namespace creatures {
         };
 
         requiredServoFields = {
-                "type", "id", "name", "output_pin", "min_pulse_us", "max_pulse_us",
+                "type", "id", "name", "output_location", "min_pulse_us", "max_pulse_us",
                 "smoothing_value", "inverted", "default_position"
         };
 
@@ -162,7 +162,7 @@ namespace creatures {
 
         std::string id = j["id"];
         std::string name = j["name"];
-        u8 output_pin = j["output_pin"];
+        std::string output_location = j["output_location"];
         u16 min_pulse_us = j["min_pulse_us"];
         u16 max_pulse_us = j["max_pulse_us"];
         float smoothing_value = j["smoothing_value"];
@@ -189,7 +189,7 @@ namespace creatures {
         }
 
         // Create the servo
-        return std::make_shared<Servo>(logger, id, output_pin, name, min_pulse_us, max_pulse_us,
+        return std::make_shared<Servo>(logger, id, output_location, name, min_pulse_us, max_pulse_us,
                                        smoothing_value, inverted, default_position);
 
     }

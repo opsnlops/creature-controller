@@ -26,17 +26,17 @@ TEST(Creature, ServoMap_BaseFunctionality) {
     std::shared_ptr<Creature> parrot = std::make_shared<Parrot>(logger);
     parrot->setName("doug");
 
-    parrot->addServo("a", std::make_shared<Servo>(logger, "a", 0, "Servo A", 1000, 3000, 0.90, false, 2000));
-    parrot->addServo("b", std::make_shared<Servo>(logger,"b", 0, "Servo B", 1000, 3000, 0.90, false, 2000));
-    parrot->addServo("c", std::make_shared<Servo>(logger,"c", 0, "Servo C", 1000, 3000, 0.90, false, 2000));
-    parrot->addServo("d", std::make_shared<Servo>(logger,"d", 0, "Servo D", 1000, 3000, 0.90, false, 2000));
+    parrot->addServo("a", std::make_shared<Servo>(logger, "a", "A0", "Servo A0", 1000, 3000, 0.90, false, 2000));
+    parrot->addServo("b", std::make_shared<Servo>(logger, "b", "B1", "Servo B1", 1000, 3000, 0.90, false, 2000));
+    parrot->addServo("c", std::make_shared<Servo>(logger, "c", "C3", "Servo C3", 1000, 3000, 0.90, false, 2000));
+    parrot->addServo("d", std::make_shared<Servo>(logger, "d", "A2", "Servo A2", 1000, 3000, 0.90, false, 2000));
 
     EXPECT_EQ(4, parrot->getNumberOfServos());
 
-    EXPECT_EQ("Servo A", parrot->getServo("a")->getName());
-    EXPECT_EQ("Servo B", parrot->getServo("b")->getName());
-    EXPECT_EQ("Servo C", parrot->getServo("c")->getName());
-    EXPECT_EQ("Servo D", parrot->getServo("d")->getName());
+    EXPECT_EQ("Servo A0", parrot->getServo("a")->getName());
+    EXPECT_EQ("Servo B1", parrot->getServo("b")->getName());
+    EXPECT_EQ("Servo C3", parrot->getServo("c")->getName());
+    EXPECT_EQ("Servo A2", parrot->getServo("d")->getName());
 
     EXPECT_EQ(nullptr, parrot->getServo("e"));
 }
@@ -47,9 +47,9 @@ TEST(Creature, ServoMap_DuplicateId) {
     std::shared_ptr<Creature> parrot = std::make_shared<Parrot>(logger);
     parrot->setName("doug");
 
-    parrot->addServo("a", std::make_shared<Servo>(logger, "a", 0, "Servo A", 1000, 3000, 0.90, false, 2000));
+    parrot->addServo("a", std::make_shared<Servo>(logger, "a", "A3", "Servo A3", 1000, 3000, 0.90, false, 2000));
 
-    EXPECT_THROW({parrot->addServo("a", std::make_shared<Servo>(logger, "a", 0, "Servo B (but a)", 1000, 3000, 0.90, false, 2000));
+    EXPECT_THROW({parrot->addServo("a", std::make_shared<Servo>(logger, "a", "A0", "Servo B (but a)", 1000, 3000, 0.90, false, 2000));
                  }, creatures::CreatureException);
 
 }

@@ -31,19 +31,19 @@ extern u32 number_of_moves;
  * on before we're ready to go.
  *
  * @param logger a shared pointer to our logger
- * @param outputPin The GPIO pin this servo is connected to
+ * @param outputLocation Which board and pin this servo is connected to (ie, A0, A1, B0, etc.)
  * @param min_pulse_us Min pulse length in microseconds
  * @param max_pulse_us Max pulse length in microseconds
  * @param inverted are this servo's movements inverted?
  * @param default_position the default position to set the servo to at start
  */
-Servo::Servo(std::shared_ptr<creatures::Logger> logger,std::string id, u8 outputPin, std::string name, u16 min_pulse_us,
+Servo::Servo(std::shared_ptr<creatures::Logger> logger,std::string id, std::string outputLocation, std::string name, u16 min_pulse_us,
              u16 max_pulse_us, float smoothingValue, bool inverted, u16 default_position) : logger(logger) {
 
     // TODO: Convert to the new servo controller
     //gpio_set_function(gpio, GPIO_FUNC_PWM);
-    this->id = id;
-    this->outputPin = outputPin;
+    this->id = std::move(id);
+    this->outputLocation = std::move(outputLocation);
     this->name = name;
     this->min_pulse_us = min_pulse_us;
     this->max_pulse_us = max_pulse_us;
@@ -61,8 +61,8 @@ Servo::Servo(std::shared_ptr<creatures::Logger> logger,std::string id, u8 output
     // Turn the servo on by default
     this->on = false;
 
-    logger->info("set up servo on pin {}: name: {}, min_pulse: {}, max_pulse: {}, default: {}, inverted: {}",
-         outputPin, name, min_pulse_us, max_pulse_us, default_position, inverted ? "yes" : "no");
+    logger->info("set up servo on location {}: name: {}, min_pulse: {}, max_pulse: {}, default: {}, inverted: {}",
+         outputLocation, name, min_pulse_us, max_pulse_us, default_position, inverted ? "yes" : "no");
 }
 
 /**
@@ -75,7 +75,7 @@ void Servo::turnOn() {
     //pwm_set_enabled(slice, true);
     on = true;
 
-    logger->info("Enabled servo on pin {} (slice {})", outputPin, slice);
+    logger->info("Enabled servo at location {}", outputLocation);
 }
 
 
@@ -89,7 +89,7 @@ void Servo::turnOff() {
     //pwm_set_enabled(slice, false);
     on = false;
 
-    logger->info("Disabled servo on pin {} (slice {})", outputPin, slice);
+    logger->info("Disabled servo at location {}", outputLocation);
 }
 
 /**
@@ -143,8 +143,8 @@ void Servo::move(uint16_t position) {
     desired_ticks = (float)resolution * frame_active;
     current_position = position;
 
-    logger->trace("requesting servo on output pin {} be set to position {} ({} ticks)",
-          outputPin,
+    logger->trace("requesting servo on output location {} to be set to position {} ({} ticks)",
+          outputLocation,
           current_position,
           desired_ticks);
 
@@ -173,14 +173,6 @@ u16 Servo::getDefaultPosition() const {
     return this->default_position;
 }
 
-u8 Servo::getSlice() const {
-    return slice;
-}
-
-u8 Servo::getChannel() const {
-    return channel;
-}
-
 u32 Servo::getDesiredTick() const {
     return desired_ticks;
 }
@@ -204,8 +196,8 @@ bool Servo::isInverted() const {
     return inverted;
 };
 
-u8 Servo::getOutputPin() const {
-    return outputPin;
+std::string Servo::getOutputLocation() const {
+    return outputLocation;
 }
 
 u16 Servo::getMinPulseUs() const {

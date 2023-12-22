@@ -30,7 +30,7 @@ TEST(CreatureBuilder, BuildsCorrectlyWithValidData) {
           "type": "servo",
           "id": "neck_left",
           "name": "Neck Left",
-          "output_pin": 0,
+          "output_location": "A0",
           "min_pulse_us": 1250,
           "max_pulse_us": 2250,
           "smoothing_value": 0.90,
@@ -64,7 +64,7 @@ TEST(CreatureBuilder, BuildsCorrectlyWithValidData) {
     EXPECT_EQ(1, creature->getNumberOfServos());
     EXPECT_EQ("neck_left", creature->getServo("neck_left")->getId());
     EXPECT_EQ("Neck Left", creature->getServo("neck_left")->getName());
-    EXPECT_EQ(0, creature->getServo("neck_left")->getOutputPin());
+    EXPECT_EQ("A0", creature->getServo("neck_left")->getOutputLocation());
     EXPECT_EQ(1250, creature->getServo("neck_left")->getMinPulseUs());
     EXPECT_EQ(2250, creature->getServo("neck_left")->getMaxPulseUs());
     EXPECT_NEAR(expectedSmoothingValue, creature->getServo("neck_left")->getSmoothingValue(), tolerance);

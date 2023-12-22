@@ -23,15 +23,14 @@
 class Servo {
 
 public:
-    Servo(std::shared_ptr<creatures::Logger> logger, std::string id, u8 outputPin, std::string name, u16 min_pulse_us, u16 max_pulse_us,
+    Servo(std::shared_ptr<creatures::Logger> logger, std::string id, std::string outputLocation, std::string name, u16 min_pulse_us, u16 max_pulse_us,
           float smoothingValue, bool inverted, u16 default_position);
+
     void turnOn();
     void turnOff();
     std::string getId() const;
     [[nodiscard]] u16 getPosition() const;
     [[nodiscard]] u16 getDefaultPosition() const;
-    [[nodiscard]] u8 getSlice() const;
-    [[nodiscard]] u8 getChannel() const;
 
     // These are PWM values
     [[nodiscard]] u32 getDesiredTick() const;   // Where we want it to go
@@ -44,18 +43,16 @@ public:
     void calculateNextTick();
 
     bool isInverted() const;
-    u8 getOutputPin() const;
+    std::string getOutputLocation() const;
     u16 getMinPulseUs() const;
     u16 getMaxPulseUs() const;
 
 
 private:
     std::string id;               // This servo's id
-    u8 outputPin;                  // Pin on the board the servo is connected to
+    std::string outputLocation;     // Which servo board and pin is this servo on (ie, A0, A1, B0, etc.)
     u16 min_pulse_us;      // Lower bound on the servo's pulse size in microseconds
     u16 max_pulse_us;      // Upper bound on the servo's pulse size in microseconds
-    u8 slice;                 // PWM slice for this servo (Pi Pico)
-    u8 channel;               // PWM channel for this servo (Pi Pico)
     u32 resolution;        // The resolution for this servo
     u32 frame_length_us;   // How many microseconds are in each frame
     u16 current_position;  // Where we think the servo currently is in our position
