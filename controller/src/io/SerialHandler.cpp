@@ -141,7 +141,6 @@ namespace creatures {
     }
 
     [[noreturn]] void SerialHandler::writer() {
-
         setThreadName("SerialHandler::writer");
 
         this->logger->info("hello from the writer thread");
@@ -150,6 +149,19 @@ namespace creatures {
         for (EVER) {
             outgoingMessage = outgoingQueue->pop();
             this->logger->debug("message to write to {}: {}", deviceNode, outgoingMessage);
+
+            // Append a newline character to the message
+            outgoingMessage += '\n';
+
+            ssize_t bytesWritten = write(this->fileDescriptor, outgoingMessage.c_str(), outgoingMessage.length());
+
+            if (bytesWritten < 0) {
+                // Handle write error
+                this->logger->error("Error writing to {}: {}", deviceNode, strerror(errno));
+                // Consider adding error handling like retry mechanism or breaking the loop
+            } else {
+                this->logger->debug("Written {} bytes to {}", bytesWritten, deviceNode);
+            }
         }
     }
 

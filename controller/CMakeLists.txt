@@ -104,6 +104,13 @@ add_library(creature_lib
         src/logging/Logger.h
         src/logging/SpdlogLogger.h
         src/logging/LoggingException.h
+        src/controller/commands/tokens/ServoPosition.cpp
+        src/controller/commands/tokens/ServoPosition.h
+        src/controller/commands/ICommand.h
+        src/controller/commands/SetServoPositions.cpp
+        src/controller/commands/SetServoPositions.h
+        src/controller/commands/CommandException.h
+        src/controller/CommandSendException.h
 )
 
 target_include_directories(creature_lib PUBLIC
@@ -117,6 +124,7 @@ target_include_directories(creature_lib PUBLIC
 
 add_executable(creature-controller
         src/main.cpp
+        tests/controller/Controller_test.cpp
 )
 
 target_link_libraries(creature-controller
@@ -147,6 +155,11 @@ add_executable(creature-controller-test
         tests/mocks/logging/MockLogger.h
         tests/mocks/io/handlers/MockMessageHandler.cpp
         tests/mocks/io/handlers/MockMessageHandler.h
+        tests/controller/commands/tokens/ServoPosition_test.cpp
+        tests/controller/Controller_test.cpp
+        tests/mocks/controller/commands/MockCommand.h
+        tests/controller/commands/ICommand_test.cpp
+        tests/controller/commands/SetServoPositions_test.cpp
 )
 
 target_link_libraries(creature-controller-test
@@ -163,6 +176,7 @@ target_link_libraries(creature-controller-test
 target_include_directories(creature-controller-test PRIVATE
         ${googletest_SOURCE_DIR}/include
         ${googlemock_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/
 )
 
 # Tell CMake where our tests are

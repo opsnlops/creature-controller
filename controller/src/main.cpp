@@ -7,6 +7,7 @@
 #include "config/CommandLine.h"
 #include "config/Configuration.h"
 #include "config/CreatureBuilder.h"
+#include "controller/Controller.h"
 #include "creature/Creature.h"
 #include "device/Servo.h"
 #include "dmx/e131_server.h"
@@ -16,13 +17,8 @@
 #include "logging/SpdlogLogger.h"
 #include "util/thread_name.h"
 
-
-
-// Declare the configuration globally
-std::shared_ptr<Creature> creature;
-std::shared_ptr<creatures::Configuration> config;
-std::shared_ptr<creatures::E131Server> e131Server;
-std::mutex servoUpdateMutex;
+#include "controller/commands/SetServoPositions.h"
+#include "controller/commands/tokens/ServoPosition.h"
 
 int main(int argc, char **argv) {
 
@@ -42,10 +38,10 @@ int main(int argc, char **argv) {
 
     // Parse out the command line options
     auto commandLine = std::make_unique<creatures::CommandLine>(logger);
-    config = commandLine->parseCommandLine(argc, argv);
+    auto config = commandLine->parseCommandLine(argc, argv);
 
     auto builder = creatures::CreatureBuilder(logger, creatures::CreatureBuilder::fileToStream(logger, config->getConfigFileName()));
-    creature = builder.build();
+    auto creature = builder.build();
 
     // Hooray, we did it!
     logger->info("working with {}! ({})", creature->getName(), creature->getDescription());
@@ -62,38 +58,49 @@ int main(int argc, char **argv) {
     auto messageProcessor = std::make_shared<creatures::MessageProcessor>(logger, serialHandler);
     messageProcessor->start();
 
+    // Fire up the controller
+    auto controller = std::make_shared<Controller>(logger);
+    controller->init(creature, serialHandler);
+    controller->start();
 
+    // Create and start the servo controller
     // Create and start the e1.13 server
     logger->debug("starting the e1.13 server");
-    e131Server = std::make_shared<creatures::E131Server>(logger);
+    auto e131Server = std::make_shared<creatures::E131Server>(logger);
     e131Server->start();
 
 
 
-    // Set a signal on pin 0 for testing
-    /*
-    for(u16 i = 4000; i > 200; i = i - 20) {
-        info("setting pin 0 to start: 0, stop: {}", i);
-        servoController->setPin(0, i, false);
-        servoController->setPin(15, i, true);
+    // Send 1000 messages for testing at our normal pacing of 20ms per
+    for(u16 i = 0; i < 1000; i++) {
+        logger->info("setting pin 0 to start: 0, stop: {}", i);
+
+        auto command = std::make_shared<creatures::SetServoPositions>(logger);
+        command->addServoPosition(creatures::ServoPosition("A0", i));
+        command->addServoPosition(creatures::ServoPosition("A1", i+10));
+        command->addServoPosition(creatures::ServoPosition("A2", i+20));
+        command->addServoPosition(creatures::ServoPosition("A3", i+30));
+        command->addServoPosition(creatures::ServoPosition("B0", i+10));
+        command->addServoPosition(creatures::ServoPosition("B1", i+20));
+        command->addServoPosition(creatures::ServoPosition("B2", i+30));
+        command->addServoPosition(creatures::ServoPosition("B3", i+40));
+        command->addServoPosition(creatures::ServoPosition("C0", i+10));
+        command->addServoPosition(creatures::ServoPosition("C1", i+20));
+        command->addServoPosition(creatures::ServoPosition("C2", i+30));
+        command->addServoPosition(creatures::ServoPosition("C3", i+40));
+
+
+        controller->sendCommand(command);
+
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
-    servoController->setPWM(0, 0, 1000);
-    servoController->setPWM(15, 0, 2000);
 
-    info("pin 15 PWM is on: {}, off: {}", servoController->getPWM(15, false), servoController->getPWM(15, true));
-
-    trace("sleeping for 2 seconds");
-    std::this_thread::sleep_for(std::chrono::seconds(2));
-     */
-
-
-
-    //i2cBus->close();
-
-    while(true){
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "EndlessLoop"
+    for(EVER){
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
+#pragma clang diagnostic pop
 
     logger->info("the main thread says bye! good luck little threads! 👋🏻");
     return EXIT_SUCCESS;

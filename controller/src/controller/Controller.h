@@ -2,11 +2,16 @@
 #pragma once
 
 #include <memory>
+#include <string>
+#include <vector>
 
 #include "controller-config.h"
 
+#include "controller/commands/ICommand.h"
+
 #include "device/Servo.h"
 #include "logging/Logger.h"
+#include "io/SerialHandler.h"
 
 #if USE_STEPPERS
 #include "device/Stepper.h"
@@ -21,15 +26,19 @@ class Controller {
 public:
     Controller(std::shared_ptr<creatures::Logger> logger);
 
-    u32 getNumberOfPWMWraps();
     u16 getServoPosition(u8 outputPin);
 
-    void requestServoPosition(u8 outputPin, u16 requestedPosition);
-
-    void init(std::shared_ptr<Creature> creature);
+    void init(std::shared_ptr<Creature> creature, std::shared_ptr<creatures::SerialHandler> serialHandler);
     void start();
 
     //void setCreatureWorkerTaskHandle(TaskHandle_t creatureWorkerTaskHandle);
+
+    /**
+     * Enqueue a command to send to the creature
+     *
+     * @param command an instance of `ICommand` to send
+     */
+    void sendCommand(const std::shared_ptr<creatures::ICommand>& command);
 
     void powerOn();
     void powerOff();
@@ -62,21 +71,12 @@ public:
     void requestStepperPosition(u8 stepperIndexNumber, u32 requestedPosition);
 #endif
 
-    // ISR, called when the PWM wraps
-    //static void __isr on_pwm_wrap_handler();
-
 private:
 
     std::shared_ptr<Creature> creature;
     std::shared_ptr<creatures::Logger> logger;
+    std::shared_ptr<creatures::SerialHandler> serialHandler;
 
-
-    /**
-     * An array of all of the servos we have. Set to the max number possible,
-     * and then we wait for whatever creature is this to init the ones it
-     * intends to use.
-     */
-    static Servo* servos[MAX_NUMBER_OF_SERVOS];
 
     /**
      * Keeps track of if we are considered "online."
@@ -112,35 +112,5 @@ private:
      * TODO: Thread this
      */
     //TaskHandle_t creatureWorkerTaskHandle;
-
-    // The ISR needs access to these values
-    static u8 numberOfServosInUse;
-    static u32 numberOfPWMWraps;
-
-    void configureGPIO(u8 pin, bool out, bool initialValue);
-
-    void initServo(u8 indexNumber, const char* name, u16 minPulseUs,
-                   u16 maxPulseUs, float smoothingValue, u16 defaultPosition, bool inverted);
-
-#if USE_STEPPERS
-    void initStepper(u8 indexNumber, const char* name, u32 maxSteps, u16 decelerationAggressiveness,
-                     u32 sleepWakeupPauseTimeUs, u32 sleepAfterUs, bool inverted);
-
-    static Stepper* steppers[MAX_NUMBER_OF_STEPPERS];
-    static u8 numberOfSteppersInUse;
-#endif
-
-    /**
-     * Map the servo index to the GPO pin to use
-     */
-    u8 pinMappings[MAX_NUMBER_OF_SERVOS] = {
-            SERVO_0_GPIO_PIN,
-            SERVO_1_GPIO_PIN,
-            SERVO_2_GPIO_PIN,
-            SERVO_3_GPIO_PIN,
-            SERVO_4_GPIO_PIN,
-            SERVO_5_GPIO_PIN,
-            SERVO_6_GPIO_PIN,
-            SERVO_7_GPIO_PIN};
 
 };

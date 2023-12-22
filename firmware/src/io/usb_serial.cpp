@@ -108,7 +108,7 @@ void tud_cdc_rx_cb(uint8_t itf) {
             serial_characters_received += 1;
 
             // Check for newline character
-            if (ch == 0x0D) {
+            if (ch == 0x0A) {
 
                 verbose("it's the blessed character");
 
