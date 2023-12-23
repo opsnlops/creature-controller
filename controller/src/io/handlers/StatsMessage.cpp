@@ -8,15 +8,21 @@
 namespace creatures {
 
     StatsMessage::StatsMessage() {
-        freeHeap = 0;
-        charactersReceived = 0;
-        messagesReceived = 0;
-        messagesSent = 0;
+        freeHeap = 0UL;
+        charactersReceived = 0UL;
+        messagesReceived = 0UL;
+        messagesSent = 0UL;
+        parseSuccesses = 0UL;
+        parseFailures = 0UL;
+        checksumFailures = 0UL;
+        positionMessagesProcessed = 0UL;
     }
 
     std::string StatsMessage::toString() const {
-        return fmt::format("[firmware stats] Free heap: {}, Characters received: {}, Messages received: {}, Messages sent: {}",
-            freeHeap, charactersReceived, messagesReceived, messagesSent);
+        return fmt::format("[firmware stats] heap: {}, chars: {}, mesg_rec: {}, mesg_sent: {}, "
+                           "parse_suc: {}, parse_fail: {}, cksum_fail: {}, pos_proc: {}",
+            freeHeap, charactersReceived, messagesReceived, messagesSent, parseSuccesses,
+            parseFailures, checksumFailures, positionMessagesProcessed);
     }
 
 } // creatures

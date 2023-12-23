@@ -18,6 +18,13 @@
  */
 u32 stringToU32(const std::string& str);
 
+/**
+ * Convert a string into a u64 safely
+ *
+ * @param str the string to parse
+ * @return a u64 of the string, if possible
+ */
+u64 stringToU64(const std::string& str);
 
 /**
  * Split a string into pieces in a safe way

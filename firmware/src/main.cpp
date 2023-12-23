@@ -34,7 +34,7 @@ int main() {
     logger_init();
     debug("Logging running!");
 
-    start_debug_blinker();
+    //start_debug_blinker();
 
     board_init();
     start_usb_tasks();
@@ -45,8 +45,8 @@ int main() {
 
     start_stats_reporter();
 
-#warning "Remote log testing active!"
-    start_debugging_remote_logging();
+//#warning "Remote log testing active!"
+    //start_debugging_remote_logging();
 
     // And fire up the tasks!
     vTaskStartScheduler();

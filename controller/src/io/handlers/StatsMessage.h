@@ -15,10 +15,14 @@ namespace creatures {
 
         std::string toString() const;
 
-        u32 freeHeap;
-        u32 charactersReceived;
-        u32 messagesReceived;
-        u32 messagesSent;
+        u64 freeHeap;
+        u64 charactersReceived;
+        u64 messagesReceived;
+        u64 messagesSent;
+        u64 parseSuccesses;
+        u64 parseFailures;
+        u64 checksumFailures;
+        u64 positionMessagesProcessed;
 
     };
 

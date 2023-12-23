@@ -29,12 +29,12 @@ portTASK_FUNCTION(debug_remote_logging_task, pvParameters) {
 
         while (true) {
 
-            verbose("this is a verbose message");
-            debug("this is a debug message");
-            info("this is an info message");
-            warning("this is a warning message");
-            error("this is an error message");
-            fatal("this is a fatal message");
+            verbose("this is a verbose messaging");
+            debug("this is a debug messaging");
+            info("this is an info messaging");
+            warning("this is a warning messaging");
+            error("this is an error messaging");
+            fatal("this is a fatal messaging");
 
             vTaskDelay(pdMS_TO_TICKS(5000));
         }

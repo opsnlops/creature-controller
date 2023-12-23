@@ -42,9 +42,9 @@ void __unused verbose(const char *message, ...) {
 
     // Copy the arguments to a new va_list
     va_list args;
-    va_start(args, message);
+    va_start(args, messaging);
 
-    struct LogMessage lm = createMessageObject(LOG_LEVEL_VERBOSE, message, args);
+    struct LogMessage lm = createMessageObject(LOG_LEVEL_VERBOSE, messaging, args);
     va_end(args);
 
     xQueueSendToBackFromISR(creature_log_message_queue_handle, &lm, nullptr);
@@ -205,7 +205,7 @@ portTASK_FUNCTION(log_queue_reader_task, pvParameters) {
                     strncpy(levelBuffer, "[?] ", 3);
             }
 
-            // Format our message
+            // Format our messaging
             u32 time = to_ms_since_boot(get_absolute_time());
 
             auto message = (char*)pvPortMalloc(strlen(lm.message) + 33);

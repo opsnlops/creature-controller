@@ -148,7 +148,7 @@ namespace creatures {
         std::string outgoingMessage;
         for (EVER) {
             outgoingMessage = outgoingQueue->pop();
-            this->logger->debug("message to write to {}: {}", deviceNode, outgoingMessage);
+            this->logger->trace("message to write to {}: {}", deviceNode, outgoingMessage);
 
             // Append a newline character to the message
             outgoingMessage += '\n';
@@ -172,7 +172,7 @@ namespace creatures {
 
         fd_set read_fds;
         struct timeval timeout{};
-        timeout.tv_sec = 15;  // 15 seconds
+        timeout.tv_sec = 21;  // 21 seconds (Stats are sent every 20!)
         timeout.tv_usec = 0;
 
         std::string tempBuffer; // Temporary buffer to store incomplete messages

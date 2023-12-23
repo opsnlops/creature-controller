@@ -61,6 +61,54 @@ TEST(StringUtils, stringToU32_HexadecimalInput) {
 
 
 
+TEST(StringUtils, stringToU64_ValidResult) {
+
+    auto incomingString = "42";
+    auto result = stringToU64(incomingString);
+    EXPECT_EQ(result, 42);
+
+}
+
+TEST(StringUtils, stringToU64_NoneNumberInput) {
+
+    auto incomingString = "poop";
+    auto result = stringToU64(incomingString);
+    EXPECT_EQ(result, 0);
+}
+
+TEST(StringUtils, stringToU64_BlankInput) {
+
+    auto result = stringToU64("");
+    EXPECT_EQ(result, 0);
+}
+
+TEST(StringUtils, stringToU64_LeadingTrailingSpaces) {
+    EXPECT_EQ(stringToU64("  123  "), 123);
+}
+
+TEST(StringUtils, stringToU64_NumberPlusCharacters) {
+    EXPECT_EQ(stringToU64("123abc"), 123);
+}
+
+TEST(StringUtils, stringToU64_NegativeNumber) {
+    EXPECT_EQ(stringToU64("-69"), 0);
+}
+
+TEST(StringUtils, stringToU64_MaxUint64) {
+    EXPECT_EQ(stringToU64("18446744073709551615"), std::numeric_limits<u64>::max());
+}
+
+TEST(StringUtils, stringToU64_HexadecimalInput) {
+    EXPECT_EQ(stringToU64("0x1A"), 26);
+}
+
+
+
+
+
+
+
+
 
 
 TEST(StringUtils, splitString_BasicSplitting) {

@@ -16,6 +16,8 @@ using u64 = std::uint64_t;
 // Just because it's funny
 #define EVER ;;
 
+
+
 #define CDC_ACTIVE_PIN                      17
 
 // The most servos we can control
@@ -111,7 +113,7 @@ using u64 = std::uint64_t;
 #define USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH  512
 
 #define USB_SERIAL_OUTGOING_QUEUE_LENGTH        5
-#define USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH  60
+#define USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH  128
 
 /*
  * Position bounds

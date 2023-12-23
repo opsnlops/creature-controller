@@ -32,6 +32,10 @@ using u64 = std::uint64_t;
 #define STATS_CHARACTERS_RECEIVED           "C_RECV"
 #define STATS_MESSAGES_RECEIVED             "M_RECV"
 #define STATS_MESSAGES_SENT                 "SENT"
+#define STATS_SUCCESSFUL_PARSE              "S_PARSE"
+#define STATS_FAILED_PARSE                  "F_PARSE"
+#define STATS_CHECKSUM_FAILED               "CHKFAIL"
+#define STATS_POSITIONS_PROCESSED           "POS_PROC"
 
 // Use the status lights?
 #define USE_STATUS_LIGHTS                   1

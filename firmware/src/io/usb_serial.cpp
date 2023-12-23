@@ -5,8 +5,12 @@
 
 #include "controller-config.h"
 
+#include "pico/stdlib.h"
+#include "pico/stdio.h"
+
 #include "logging/logging.h"
 #include "io/usb_serial.h"
+#include "messaging/messaging.h"
 
 #include "tasks.h"
 #include "usb/usb.h"
@@ -151,7 +155,7 @@ void tud_cdc_rx_cb(uint8_t itf) {
 bool send_to_controller(const char* message) {
 
     if(strlen(message) > USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH) {
-        error("not sending message %s because it's %u long and the max length is %u",
+        error("not sending messaging %s because it's %u long and the max length is %u",
               message, strlen(message), USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH);
         return false;
     }
@@ -170,6 +174,15 @@ portTASK_FUNCTION(incoming_serial_reader_task, pvParameters) {
 
     debug("hello from the serial reader!");
 
+
+
+    gpio_init(PICO_DEFAULT_LED_PIN);
+    gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
+    bool isOn = true;
+    uint8_t direction = 1;
+    uint64_t count = 0L;
+
+
     // Define our buffer and zero it out
     auto rx_buffer = (char *)pvPortMalloc(sizeof(char) * USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH);
     memset(rx_buffer, '\0', USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH);
@@ -183,16 +196,27 @@ portTASK_FUNCTION(incoming_serial_reader_task, pvParameters) {
 
             serial_messages_received += 1;
 
+            // Create a buffer to hold the message and null it out
             char message[USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH];
-            memset(&message, '\0', USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH);
+            memset(message, '\0', USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH);
 
-            snprintf(message, USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH, "incoming message: %s",
-                     rx_buffer);
+            // Copy the message into the buffer
+            strncpy(message, rx_buffer, USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH);
 
-            warning(message);
+            // Send this off to the message processor
+            processMessage(message);
 
             // Wipe out the buffer for next time
             memset(rx_buffer, '\0', USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH);
+
+            // TODO: Debug code to blinky the LED
+            if (isOn) {
+                direction = 1;
+            } else {
+                direction = 0;
+            }
+            gpio_put(PICO_DEFAULT_LED_PIN, direction);
+            isOn = !isOn;
         }
     }
 #pragma clang diagnostic pop
@@ -224,7 +248,7 @@ portTASK_FUNCTION(outgoing_serial_writer_task, pvParameters) {
 
             u16 messageLength = strlen(rx_buffer);
 
-            // Ensure that the message is null-terminated
+            // Ensure that the messaging is null-terminated
             rx_buffer[messageLength] = '\n';
             rx_buffer[USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH + 1] = '\0';
 

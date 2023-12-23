@@ -46,6 +46,14 @@ add_executable(firmware
         src/debug/stats_reporter.h
         src/debug/stats_reporter.cpp
         src/debug/remote_logging.cpp
+        src/messaging/messaging.h
+        src/messaging/messaging.cpp
+        src/messaging/processors/ping_message.h
+        src/messaging/processors/ping_message.cpp
+        src/messaging/processors/position_message.h
+        src/messaging/processors/position_message.cpp
+        src/util/string_utils.cpp
+        src/util/string_utils.h
 )
 
 # PIO-based UART from the Pico examples
