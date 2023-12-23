@@ -31,12 +31,12 @@ namespace creatures {
         auto level = tokens[2];
         auto message = tokens[3];
 
-        if (level == FIRMWARE_LOGGING_VERBOSE) logger->trace("{}", message);
-        else if (level == FIRMWARE_LOGGING_DEBUG) logger->debug("{}", message);
-        else if (level == FIRMWARE_LOGGING_INFO) logger->info("{}", message);
-        else if (level == FIRMWARE_LOGGING_WARNING) logger->warn("{}", message);
-        else if (level == FIRMWARE_LOGGING_ERROR) logger->error("{}", message);
-        else if (level == FIRMWARE_LOGGING_FATAL) logger->critical("{}", message);
+        if (level == FIRMWARE_LOGGING_VERBOSE) logger->trace("📟 {}", message);
+        else if (level == FIRMWARE_LOGGING_DEBUG) logger->debug("📟 {}", message);
+        else if (level == FIRMWARE_LOGGING_INFO) logger->info("📟 {}", message);
+        else if (level == FIRMWARE_LOGGING_WARNING) logger->warn("📟 {}", message);
+        else if (level == FIRMWARE_LOGGING_ERROR) logger->error("📟 {}", message);
+        else if (level == FIRMWARE_LOGGING_FATAL) logger->critical("📟 {}", message);
         else logger->warn("Unknown logging level from firmware: {}, message: {}", level, message);
     }
 

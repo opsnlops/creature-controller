@@ -89,7 +89,6 @@ int main(int argc, char **argv) {
         command->addServoPosition(creatures::ServoPosition("C2", i+30));
         command->addServoPosition(creatures::ServoPosition("C3", i+40));
 
-
         controller->sendCommand(command);
 
         std::this_thread::sleep_for(std::chrono::milliseconds(20));

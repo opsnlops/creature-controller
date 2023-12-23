@@ -189,7 +189,7 @@ portTASK_FUNCTION(incoming_serial_reader_task, pvParameters) {
             snprintf(message, USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH, "incoming message: %s",
                      rx_buffer);
 
-            debug(message);
+            warning(message);
 
             // Wipe out the buffer for next time
             memset(rx_buffer, '\0', USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH);

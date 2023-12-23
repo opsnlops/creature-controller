@@ -111,6 +111,10 @@ add_library(creature_lib
         src/controller/commands/SetServoPositions.h
         src/controller/commands/CommandException.h
         src/controller/CommandSendException.h
+        src/io/handlers/StatsMessage.cpp
+        src/io/handlers/StatsMessage.h
+        src/util/string_utils.h
+        src/util/string_utils.cpp
 )
 
 target_include_directories(creature_lib PUBLIC
@@ -160,6 +164,8 @@ add_executable(creature-controller-test
         tests/mocks/controller/commands/MockCommand.h
         tests/controller/commands/ICommand_test.cpp
         tests/controller/commands/SetServoPositions_test.cpp
+        tests/mocks/io/handlers/StatsMessage_test.cpp
+        tests/string_utils_test.cpp
 )
 
 target_link_libraries(creature-controller-test

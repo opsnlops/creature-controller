@@ -46,7 +46,7 @@ int main() {
     start_stats_reporter();
 
 #warning "Remote log testing active!"
-    //start_debugging_remote_logging();
+    start_debugging_remote_logging();
 
     // And fire up the tasks!
     vTaskStartScheduler();
