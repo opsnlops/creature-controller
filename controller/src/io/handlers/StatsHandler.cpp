@@ -31,7 +31,12 @@ namespace creatures {
 
             // Split the name and value
             std::string name = split[0];
-            std::string value = split[1];
+
+            // If this is a stats message, there won't be a second piece
+            std::string value;
+            if(split.size() == 2) {
+                value = split[1];
+            }
 
             if(name == STATS_MESSAGE) {} // do nothing
 
