@@ -39,8 +39,8 @@ file(GLOB sourceFiles
 add_executable(firmware
         ${sourceFiles}
         FreeRTOSConfig.h
-        src/freertos_extra.cpp
-        src/freertos_extra.h
+        src/freertos_hooks.cpp
+        src/freertos_hooks.h
         src/debug/blinker.h
         src/debug/blinker.cpp
         src/debug/stats_reporter.h
@@ -56,6 +56,7 @@ add_executable(firmware
         src/util/string_utils.h
         src/controller/controller.h
         src/controller/controller.cpp
+        src/io/usb_workers.cpp
 )
 
 # PIO-based UART from the Pico examples

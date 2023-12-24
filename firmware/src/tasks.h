@@ -17,7 +17,11 @@ portTASK_FUNCTION_PROTO(debug_remote_logging_task, pvParameters);
 
 portTASK_FUNCTION_PROTO(log_queue_reader_task, pvParameters);           // used in logging/logging.cpp
 portTASK_FUNCTION_PROTO(status_lights_task, pvParameters);              // used by the status lights
-portTASK_FUNCTION_PROTO(incoming_serial_reader_task, pvParameters);     // used by io/usb_serial.cpp
-portTASK_FUNCTION_PROTO(outgoing_serial_writer_task, pvParameters);     // used by io/usb_serial.cpp
+
 
 portTASK_FUNCTION_PROTO(controller_motor_setup_task, pvParameters);     // used by the controller
+
+
+// Used by main.cpp to fire off things that should happen only AFTER
+// the scheduler is running
+portTASK_FUNCTION_PROTO(startup_task, pvParameters);

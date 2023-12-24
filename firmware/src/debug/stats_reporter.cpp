@@ -29,7 +29,7 @@ namespace creatures::debug {
 
         TimerHandle_t statsReportTimer = xTimerCreate(
                 "StatsReportTimer",              // Timer name
-                pdMS_TO_TICKS(20000),            // Timer period (20 seconds)
+                pdMS_TO_TICKS(20 * 1000),            // Timer period (20 seconds)
                 pdTRUE,                          // Auto-reload
                 (void *) 0,                        // Timer ID (not used here)
                 statsReportTimerCallback         // Callback function
@@ -57,7 +57,7 @@ namespace creatures::debug {
                  (unsigned long) position_messages_processed,
                  (unsigned long) number_of_pwm_wraps);
 
-        send_to_controller(message);
+        creatures::io::usb_serial::send_to_controller(message);
     }
 
 } // creatures::debug

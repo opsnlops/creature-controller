@@ -1,8 +1,9 @@
 
 #include "controller-config.h"
 
+
+
 #include <FreeRTOS.h>
-#include <task.h>
 #include <timers.h>
 
 #include "logging/logging.h"
@@ -15,6 +16,7 @@ u32 events_processed = 0;
 
 
 namespace creatures::usb {
+
     void init() {
 
         // init TinyUSB
@@ -30,21 +32,26 @@ namespace creatures::usb {
     void start() {
 
         TimerHandle_t usbDeviceTimer = xTimerCreate(
-                "USBDeviceTimer",              // Timer name
-                pdMS_TO_TICKS(1),            // Fire every millisecond
+                "usbDeviceTimer",              // Timer name
+                pdMS_TO_TICKS(1),            // Every millisecond
                 pdTRUE,                          // Auto-reload
-                (void *) nullptr,                        // Timer ID (not used here)
-                usb_device_timer         // Callback function
+                (void *) 0,                        // Timer ID (not used here)
+                usbDeviceTimerCallback         // Callback function
         );
 
-        if (usbDeviceTimer != nullptr) {
-            xTimerStart(usbDeviceTimer, 1); // Start timer
-        }
+        // Something's gone really wrong if we can't create the timer
+        configASSERT (usbDeviceTimer != nullptr);
+        xTimerStart(usbDeviceTimer, 0); // Start timer
+
+        info("USB service timer started");
+
     }
 
-    void usb_device_timer(TimerHandle_t xTimer) {
+    void usbDeviceTimerCallback(TimerHandle_t xTimer) {
         tud_task();
     }
+
+
 }
 
 

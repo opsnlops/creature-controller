@@ -24,10 +24,14 @@ extern "C"
 #define USBD_STACK_SIZE    (3*configMINIMAL_STACK_SIZE/2) * (CFG_TUSB_DEBUG ? 2 : 1)
 #define HID_STACK_SIZE      configMINIMAL_STACK_SIZE
 
+
+
 namespace creatures::usb {
+
     void init();
     void start();
-    void usb_device_timer(TimerHandle_t xTimer);
+    void usbDeviceTimerCallback(TimerHandle_t xTimer);
+
 }
 
 #ifdef __cplusplus

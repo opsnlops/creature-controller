@@ -212,7 +212,7 @@ portTASK_FUNCTION(log_queue_reader_task, pvParameters) {
             memset(message, '\0', strlen(lm.message) + 33);
             snprintf(message, strlen(lm.message) + 32, "LOG\t%lu\t%s\t%s", time, levelBuffer, lm.message);
 
-            send_to_controller(message);
+            creatures::io::usb_serial::send_to_controller(message);
 
             vPortFree(message);
 
