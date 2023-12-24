@@ -48,7 +48,7 @@ namespace creatures::io::usb_serial {
 
             if (xQueueReceive(usb_serial_incoming_commands, rx_buffer, (TickType_t) portMAX_DELAY) == pdPASS) {
 
-                serial_messages_received += 1;
+                serial_messages_received = serial_messages_received + 1;
 
                 // Create a buffer to hold the message and null it out
                 char message[USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH];
@@ -101,7 +101,7 @@ namespace creatures::io::usb_serial {
             // Make sure that we aren't writing anything bigger than this on the other side!
             if (xQueueReceive(usb_serial_outgoing_messages, rx_buffer, (TickType_t) portMAX_DELAY) == pdPASS) {
 
-                serial_messages_sent += 1;
+                serial_messages_sent = serial_messages_sent + 1;
 
                 u16 messageLength = strlen(rx_buffer);
 

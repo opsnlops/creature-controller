@@ -120,7 +120,7 @@ void tud_cdc_rx_cb(uint8_t itf) {
 #endif
 
             // Account for this character
-            serial_characters_received += 1;
+            serial_characters_received = serial_characters_received + 1;
 
             // Check for newline character
             if (ch == 0x0A) {
