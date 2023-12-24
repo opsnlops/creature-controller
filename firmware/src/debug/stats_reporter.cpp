@@ -5,6 +5,7 @@
 #include <task.h>
 #include <timers.h>
 
+#include "controller/controller.h"
 #include "debug/stats_reporter.h"
 #include "io/usb_serial.h"
 
@@ -29,7 +30,7 @@ namespace creatures::debug {
 
         TimerHandle_t statsReportTimer = xTimerCreate(
                 "StatsReportTimer",              // Timer name
-                pdMS_TO_TICKS(20 * 1000),            // Timer period (20 seconds)
+                pdMS_TO_TICKS(2 * 1000),            // Timer period (20 seconds)
                 pdTRUE,                          // Auto-reload
                 (void *) 0,                        // Timer ID (not used here)
                 statsReportTimerCallback         // Callback function
@@ -58,6 +59,7 @@ namespace creatures::debug {
                  (unsigned long) number_of_pwm_wraps);
 
         creatures::io::usb_serial::send_to_controller(message);
+
     }
 
 } // creatures::debug

@@ -15,7 +15,7 @@
 #include "controller-config.h"
 #include "controller.h"
 
-
+#define SERVO_FREQUENCY 50
 
 
 // Stats
@@ -45,9 +45,15 @@ namespace creatures::controller {
     void start() {
         info("starting the controller");
 
+        // Fire up PWM
+        for (auto & i : motor_map) {
+            gpio_set_function(i.gpio_pin, GPIO_FUNC_PWM);
+            pwm_set_freq_duty(i.slice, i.channel, 1000000 / SERVO_FREQUENCY, 0);
+            pwm_set_enabled(i.slice, true);
+        }
+
         // Install the IRQ handler for the servos
         pwm_set_irq_enabled(motor_map[0].slice, true);
-
 
         irq_set_exclusive_handler(PWM_IRQ_WRAP, creatures::controller::on_pwm_wrap_handler);
         irq_set_enabled(PWM_IRQ_WRAP, true);
@@ -70,8 +76,16 @@ namespace creatures::controller {
     }
 
 
-
     void __isr on_pwm_wrap_handler() {
+
+
+        for (auto & i : motor_map) {
+            pwm_set_chan_level(i.slice,
+                               i.channel,
+                               1500);   // TODO: This is not what I want
+        }
+
+        pwm_clear_irq(motor_map[0].slice);
         number_of_pwm_wraps = number_of_pwm_wraps + 1UL;
     }
 
