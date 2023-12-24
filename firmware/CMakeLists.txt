@@ -54,6 +54,8 @@ add_executable(firmware
         src/messaging/processors/position_message.cpp
         src/util/string_utils.cpp
         src/util/string_utils.h
+        src/controller/controller.h
+        src/controller/controller.cpp
 )
 
 # PIO-based UART from the Pico examples

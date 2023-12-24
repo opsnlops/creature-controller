@@ -4,6 +4,7 @@
 #include "logging/Logger.h"
 #include "io/handlers/IMessageHandler.h"
 
+
 namespace creatures {
 
     class StatsHandler : public IMessageHandler {
@@ -12,4 +13,3 @@ namespace creatures {
     };
 
 } // creatures
-

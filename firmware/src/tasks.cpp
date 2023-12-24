@@ -8,7 +8,6 @@
 
 volatile TaskHandle_t debug_blinker_task_handle;
 volatile TaskHandle_t debug_remote_logging_task_handle;
-volatile TaskHandle_t stats_reporter_task_handle;
 
 volatile TaskHandle_t log_queue_reader_task_handle;
 volatile TaskHandle_t incoming_serial_reader_task_handle;

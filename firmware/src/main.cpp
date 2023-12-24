@@ -15,6 +15,7 @@
 
 #include "pico/stdlib.h"
 
+#include "controller/controller.h"
 #include "debug/remote_logging.h"
 #include "debug/stats_reporter.h"
 #include "io/usb_serial.h"
@@ -37,16 +38,20 @@ int main() {
     //start_debug_blinker();
 
     board_init();
-    start_usb_tasks();
+    creatures::usb::init();
+    creatures::usb::start();
 
-    // Fire up the incoming serial tasks
-    usb_serial_init();
-    start_serial_tasks();
 
-    start_stats_reporter();
+    // Fire up the stats reporter
+    creatures::debug::start_stats_reporter();
+
+
+    // Start the controller
+    creatures::controller::init();
+    creatures::controller::start();
 
 //#warning "Remote log testing active!"
-    //start_debugging_remote_logging();
+    start_debugging_remote_logging();
 
     // And fire up the tasks!
     vTaskStartScheduler();

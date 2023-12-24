@@ -2,8 +2,11 @@
 #pragma once
 
 #include <FreeRTOS.h>
-#include <task.h>
+#include <timers.h>
 
-#include "tasks.h"
+namespace creatures::debug {
 
-void start_stats_reporter();
+    void start_stats_reporter();
+    void statsReportTimerCallback(TimerHandle_t xTimer);
+
+};

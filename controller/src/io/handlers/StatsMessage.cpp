@@ -16,13 +16,14 @@ namespace creatures {
         parseFailures = 0UL;
         checksumFailures = 0UL;
         positionMessagesProcessed = 0UL;
+        pwmWraps = 0UL;
     }
 
     std::string StatsMessage::toString() const {
         return fmt::format("[firmware stats] heap: {}, chars: {}, mesg_rec: {}, mesg_sent: {}, "
-                           "parse_suc: {}, parse_fail: {}, cksum_fail: {}, pos_proc: {}",
+                           "parse_suc: {}, parse_fail: {}, cksum_fail: {}, pos_proc: {}, pwm_wraps: {}",
             freeHeap, charactersReceived, messagesReceived, messagesSent, parseSuccesses,
-            parseFailures, checksumFailures, positionMessagesProcessed);
+            parseFailures, checksumFailures, positionMessagesProcessed, pwmWraps);
     }
 
 } // creatures

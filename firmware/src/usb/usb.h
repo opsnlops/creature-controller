@@ -13,7 +13,7 @@ extern "C"
 
 // FreeRTOS
 #include <FreeRTOS.h>
-#include <task.h>
+#include <timers.h>
 
 // TinyUSB
 #include "tusb.h"
@@ -24,11 +24,11 @@ extern "C"
 #define USBD_STACK_SIZE    (3*configMINIMAL_STACK_SIZE/2) * (CFG_TUSB_DEBUG ? 2 : 1)
 #define HID_STACK_SIZE      configMINIMAL_STACK_SIZE
 
-_Noreturn
-portTASK_FUNCTION_PROTO(usb_device_task, pvParameters);
-
-void start_usb_tasks();
-
+namespace creatures::usb {
+    void init();
+    void start();
+    void usb_device_timer(TimerHandle_t xTimer);
+}
 
 #ifdef __cplusplus
 }
@@ -36,4 +36,3 @@ void start_usb_tasks();
 
 // Back to C++!
 void cdc_send(char const* line);
-

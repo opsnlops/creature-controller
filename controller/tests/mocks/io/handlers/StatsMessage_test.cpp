@@ -14,6 +14,7 @@ TEST(StatsMessage, Create) {
                         statsMessage.parseFailures = 20;
                         statsMessage.checksumFailures = 30;
                         statsMessage.positionMessagesProcessed = 40;
+                        statsMessage.pwmWraps = 299999923UL;
                     });
 }
 
@@ -28,7 +29,8 @@ TEST(StatsMessage, ToString) {
     statsMessage.parseFailures = 20;
     statsMessage.checksumFailures = 30;
     statsMessage.positionMessagesProcessed = 40;
+    statsMessage.pwmWraps = 299999923UL;
 
-    EXPECT_EQ("[firmware stats] heap: 1111111, chars: 123, mesg_rec: 456, mesg_sent: 789, parse_suc: 10, parse_fail: 20, cksum_fail: 30, pos_proc: 40",
+    EXPECT_EQ("[firmware stats] heap: 1111111, chars: 123, mesg_rec: 456, mesg_sent: 789, parse_suc: 10, parse_fail: 20, cksum_fail: 30, pos_proc: 40, pwm_wraps: 299999923",
               statsMessage.toString());
 }

@@ -26,16 +26,6 @@ using u64 = std::uint64_t;
 #define CONTROLLER_LOG_LEVEL                "spdlog::level::debug"
 #define RP2040_LOG_LEVEL                    "spdlog::level::trace"
 
-// Stats messages from the firmware
-#define STATS_MESSAGE                       "STATS"
-#define STATS_HEAP_FREE                     "HEAP_FREE"
-#define STATS_CHARACTERS_RECEIVED           "C_RECV"
-#define STATS_MESSAGES_RECEIVED             "M_RECV"
-#define STATS_MESSAGES_SENT                 "SENT"
-#define STATS_SUCCESSFUL_PARSE              "S_PARSE"
-#define STATS_FAILED_PARSE                  "F_PARSE"
-#define STATS_CHECKSUM_FAILED               "CHKFAIL"
-#define STATS_POSITIONS_PROCESSED           "POS_PROC"
 
 // Use the status lights?
 #define USE_STATUS_LIGHTS                   1

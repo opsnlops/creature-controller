@@ -3,6 +3,7 @@
 
 #include <FreeRTOS.h>
 #include <task.h>
+#include <timers.h>
 
 #include "logging/logging.h"
 #include "usb/usb.h"
@@ -13,19 +14,39 @@ bool device_mounted = false;
 u32 events_processed = 0;
 
 
-TaskHandle_t usb_device_task_handle;
+namespace creatures::usb {
+    void init() {
+
+        // init TinyUSB
+        tusb_init();
+
+        // init device stack on configured roothub port
+        // This should be called after scheduler/kernel is started.
+        // Otherwise, it could cause kernel issue since USB IRQ handler does use RTOS queue API.
+        tud_init(BOARD_TUD_RHPORT);
+    }
 
 
-void start_usb_tasks() {
+    void start() {
 
-    // Create a task for tinyusb device stack
-    xTaskCreate(usb_device_task,
-                "usbd",
-                2048,
-                nullptr,
-                1,
-                &usb_device_task_handle);
+        TimerHandle_t usbDeviceTimer = xTimerCreate(
+                "USBDeviceTimer",              // Timer name
+                pdMS_TO_TICKS(1),            // Fire every millisecond
+                pdTRUE,                          // Auto-reload
+                (void *) nullptr,                        // Timer ID (not used here)
+                usb_device_timer         // Callback function
+        );
+
+        if (usbDeviceTimer != nullptr) {
+            xTimerStart(usbDeviceTimer, 1); // Start timer
+        }
+    }
+
+    void usb_device_timer(TimerHandle_t xTimer) {
+        tud_task();
+    }
 }
+
 
 
 //--------------------------------------------------------------------+
@@ -85,24 +106,4 @@ void cdc_send(char const* message) {
 
 
 
-// USB Device Driver task
-// This top level thread process all usb events and invoke callbacks
-_Noreturn void usb_device_task(void *param) {
-    (void) param;
 
-    tusb_init();
-
-    // init device stack on configured roothub port
-    // This should be called after scheduler/kernel is started.
-    // Otherwise, it could cause kernel issue since USB IRQ handler does use RTOS queue API.
-    tud_init(BOARD_TUD_RHPORT);
-
-    // RTOS forever loop
-    for (EVER) {
-        // put this thread to waiting state until there is new events
-        tud_task();
-
-        // Give the RTOS a chance to breathe, USB is not the primary thing we do
-        vTaskDelay(pdMS_TO_TICKS(1));
-    }
-}

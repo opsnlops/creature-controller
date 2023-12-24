@@ -67,6 +67,10 @@ namespace creatures {
                 statsMessage.positionMessagesProcessed = stringToU64(value);
             }
 
+            else if(name == STATS_PWM_WRAPS) {
+                statsMessage.pwmWraps = stringToU64(value);
+            }
+
             else {
                 logger->warn("unknown token in {} message: {}", STATS_MESSAGE, token);
             }
