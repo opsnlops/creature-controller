@@ -14,6 +14,11 @@ TEST(StatsHandler, Create) {
                     });
 }
 
+/*
+ * There was a bug in the StatsHandler that caused it to fail to parse STATS
+ * messages on Linux only. (The bug impacted both macOS and Linux, but it only
+ * caused a segfault on Linux.)
+ */
 TEST(StatsHandler, HandleValid) {
 
     auto logger = std::make_shared<creatures::NiceMockLogger>();
@@ -22,8 +27,8 @@ TEST(StatsHandler, HandleValid) {
     tokens.emplace_back("STATS");
     tokens.emplace_back("FREE_HEAP 20394");
 
-    EXPECT_NO_THROW({
-                        auto statsHandler = creatures::StatsHandler();
-                        statsHandler.handle(logger, tokens);
-                    });
+    auto statsHandler = creatures::StatsHandler();
+
+    EXPECT_NO_FATAL_FAILURE(statsHandler.handle(logger, tokens));
+
 }
