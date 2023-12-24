@@ -164,9 +164,9 @@ add_executable(creature-controller-test
         tests/mocks/controller/commands/MockCommand.h
         tests/controller/commands/ICommand_test.cpp
         tests/controller/commands/SetServoPositions_test.cpp
-        tests/mocks/io/handlers/StatsMessage_test.cpp
+        tests/io/handlers/StatsMessage_test.cpp
         tests/string_utils_test.cpp
-        tests/mocks/io/handlers/StatsHandler_test.cpp
+        tests/io/handlers/StatsHandler_test.cpp
 )
 
 target_link_libraries(creature-controller-test
