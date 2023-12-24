@@ -17,7 +17,7 @@ extern "C" void vApplicationMallocFailedHook( void )
 
 
 
-void vApplicationStackOverflowHook(TaskHandle_t xTask, const char* pcTaskName) {
+void vApplicationStackOverflowHook(TaskHandle_t xTask, char* pcTaskName) {
 
     // Halt the system on a stack overflow.
     taskDISABLE_INTERRUPTS();
