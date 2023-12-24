@@ -28,6 +28,11 @@ namespace creatures {
             trace(" {}", token);
         }
 #endif
+        if (tokens.size() < 4) {
+            logger->error("Invalid number of tokens in log message: {}", tokens.size());
+            return;
+        }
+
         auto level = tokens[2];
         auto message = tokens[3];
 

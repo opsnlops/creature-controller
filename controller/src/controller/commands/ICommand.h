@@ -2,6 +2,7 @@
 #pragma once
 
 #include <string>
+#include <fmt/format.h>
 
 #include "controller-config.h"
 
@@ -17,11 +18,12 @@ namespace creatures {
         virtual ~ICommand() = default;
 
         /**
-         * Convert the command into a message to go on the wire
-         * @return
+         * @brief Convert the command into a message string without a checksum
+         *
+         * @return a string representation of the command
          */
         virtual std::string toMessage() = 0;
-        virtual std::string toMessageWithChecksum() = 0;
+
 
         /*
          * Get the checksum of this message as a u16
@@ -35,6 +37,15 @@ namespace creatures {
             }
 
            return checksum;
+        }
+
+        /**
+         * @brief  Convert this message into one that can be sent on the wire with a check at the end
+         *
+         * @return the complete message with a checksum
+         */
+        std::string toMessageWithChecksum() {
+            return fmt::format("{}\tCS {}", toMessage(), getChecksum());
         }
     };
 

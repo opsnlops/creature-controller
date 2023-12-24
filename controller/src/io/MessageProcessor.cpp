@@ -11,6 +11,7 @@
 #include "logging/Logger.h"
 #include "logging/SpdlogLogger.h"
 #include "io/handlers/LogHandler.h"
+#include "io/handlers/PongHandler.h"
 #include "io/handlers/StatsHandler.h"
 #include "util/thread_name.h"
 
@@ -35,6 +36,7 @@ namespace creatures {
         // Register handlers
         registerHandler("LOG", std::make_unique<LogHandler>());
         registerHandler("STATS", std::make_unique<StatsHandler>());
+        registerHandler("PONG", std::make_unique<PongHandler>());
     }
 
     void MessageProcessor::registerHandler(std::string messageType, std::unique_ptr<IMessageHandler> handler) {

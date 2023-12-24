@@ -10,7 +10,7 @@
 #define MAX_TOKENS 30
 
 // MAX_TOKEN_LENGTH is the maximum length of each token
-#define MAX_TOKEN_LENGTH 20
+#define MAX_TOKEN_LENGTH 40
 
 // The size of a message action
 #define MESSAGE_ACTION_MAX_SIZE 8

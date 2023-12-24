@@ -15,7 +15,7 @@
 #include "SetServoPositions.h"
 
 
-namespace creatures {
+namespace creatures::commands {
 
     SetServoPositions::SetServoPositions(std::shared_ptr<Logger> logger) : logger(logger) { // NOLINT(*-pass-by-value)
         this->servoPositions = std::vector<ServoPosition>();
@@ -57,11 +57,4 @@ namespace creatures {
         return message;
     }
 
-    std::string SetServoPositions::toMessageWithChecksum() {
-
-        u16 checksum = getChecksum();
-        logger->trace("checksum is: {}", checksum);
-        return fmt::format("{}\tCS {}", toMessage(), checksum);
-    }
-
-} // creatures
+} // creatures::commands

@@ -1,12 +1,9 @@
 
-
-#include <cstddef>
 #include <cstring>
 
 #include "logging/logging.h"
 #include "messaging/messaging.h"
 #include "util/string_utils.h"
-
 
 #include "controller-config.h"
 

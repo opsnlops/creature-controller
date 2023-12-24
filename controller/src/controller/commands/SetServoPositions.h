@@ -11,7 +11,7 @@
 #include "controller/commands/tokens/ServoPosition.h"
 
 
-namespace creatures {
+namespace creatures::commands {
 
     class SetServoPositions : public ICommand {
 
@@ -21,7 +21,6 @@ namespace creatures {
         void addServoPosition(const ServoPosition& servoPosition);
 
         std::string toMessage() override;
-        std::string toMessageWithChecksum() override;
 
     private:
 
@@ -29,6 +28,6 @@ namespace creatures {
         std::shared_ptr<Logger> logger;
     };
 
-} // creatures
+} // creatures::commands
 
 

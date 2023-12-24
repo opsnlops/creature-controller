@@ -115,6 +115,12 @@ add_library(creature_lib
         src/io/handlers/StatsMessage.h
         src/util/string_utils.h
         src/util/string_utils.cpp
+        src/controller/commands/Ping.h
+        src/controller/commands/Ping.cpp
+        src/controller/tasks/PingTask.cpp
+        src/controller/tasks/PingTask.h
+        src/io/handlers/PongHandler.h
+        src/io/handlers/PongHandler.cpp
 )
 
 target_include_directories(creature_lib PUBLIC
@@ -128,7 +134,6 @@ target_include_directories(creature_lib PUBLIC
 
 add_executable(creature-controller
         src/main.cpp
-        tests/controller/Controller_test.cpp
 )
 
 target_link_libraries(creature-controller

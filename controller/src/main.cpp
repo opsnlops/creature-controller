@@ -8,6 +8,7 @@
 #include "config/Configuration.h"
 #include "config/CreatureBuilder.h"
 #include "controller/Controller.h"
+#include "controller/tasks/PingTask.h"
 #include "creature/Creature.h"
 #include "device/Servo.h"
 #include "dmx/e131_server.h"
@@ -69,13 +70,19 @@ int main(int argc, char **argv) {
     auto e131Server = std::make_shared<creatures::E131Server>(logger);
     e131Server->start();
 
+    // Fire up the ping task
+    auto pingTask = std::make_shared<creatures::tasks::PingTask>(logger);
+    pingTask->init(serialHandler);
+    pingTask->start();
+
+
 
 
     // Send 1000 messages for testing at our normal pacing of 20ms per
     for(u16 i = 0; i < 1000; i++) {
         logger->info("setting pin 0 to start: 0, stop: {}", i);
 
-        auto command = std::make_shared<creatures::SetServoPositions>(logger);
+        auto command = std::make_shared<creatures::commands::SetServoPositions>(logger);
         command->addServoPosition(creatures::ServoPosition("A0", i));
         command->addServoPosition(creatures::ServoPosition("A1", i+10));
         command->addServoPosition(creatures::ServoPosition("A2", i+20));
