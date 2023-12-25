@@ -9,7 +9,7 @@
 #include "controller-config.h"
 
 #include "controller/commands/ICommand.h"
-#include "controller/tasks/ControllerWorkerTask.h"
+#include "controller/commands/SetServoPositions.h"
 
 #include "device/Servo.h"
 #include "logging/Logger.h"
@@ -71,6 +71,8 @@ public:
     std::shared_ptr<Creature> getCreature();
 
 
+    u64 getNumberOfFrames();
+
 #if USE_STEPPERS
     Stepper* getStepper(u8 index);
     u8 getNumberOfSteppersInUse();
@@ -115,7 +117,9 @@ private:
     /**
      * Our worker thread!
      */
-    std::unique_ptr<creatures::tasks::ControllerWorkerTask> worker;
+    void worker();
     std::thread workerThread;
+    std::atomic<bool> workerRunning = false;
+    std::atomic<u64> number_of_frames = 0UL;
 
 };

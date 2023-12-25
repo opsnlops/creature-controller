@@ -121,8 +121,6 @@ add_library(creature_lib
         src/controller/tasks/PingTask.h
         src/io/handlers/PongHandler.h
         src/io/handlers/PongHandler.cpp
-        src/controller/tasks/ControllerWorkerTask.cpp
-        src/controller/tasks/ControllerWorkerTask.h
 )
 
 target_include_directories(creature_lib PUBLIC

@@ -11,6 +11,7 @@
 #include "creature/Creature.h"
 #include "controller/CommandSendException.h"
 #include "controller/commands/ICommand.h"
+#include "controller/commands/SetServoPositions.h"
 
 u64 number_of_moves = 0UL;
 
@@ -36,9 +37,6 @@ void Controller::init(std::shared_ptr<Creature> creature, std::shared_ptr<creatu
     this->serialHandler = serialHandler;
     this->numberOfChannels = DMX_NUMBER_OF_CHANNELS;
 
-
-    this->worker = std::shared_ptr<creatures::tasks::ControllerWorkerTask>(logger, this);
-
     logger->info("Controller for {} initialized", creature->getName());
 
 }
@@ -53,8 +51,9 @@ void Controller::sendCommand(const std::shared_ptr<creatures::ICommand>& command
 void Controller::start() {
     logger->info("starting controller!");
 
-    // Create
-
+    // Start the worker
+    workerThread = std::thread(&Controller::worker, this);
+    workerThread.detach();
 }
 
 /**
@@ -114,6 +113,61 @@ bool Controller::isOnline() {
     return online;
 }
 
+u64 Controller::getNumberOfFrames() {
+    return number_of_frames;
+}
+
+void Controller::worker() {
+
+    using namespace std::chrono;
+
+    logger->info("controller worker now running");
+
+    // Mark ourselves as running
+    workerRunning = true;
+
+    auto target_delta = microseconds( 1000000 / creature->getServoUpdateFrequencyHz());
+    auto next_target_time = high_resolution_clock::now() + target_delta;
+
+    while (workerRunning) {
+
+        number_of_frames = number_of_frames + 1;
+
+        if(number_of_frames % 100 == 0) {
+            logger->info("frames: {}", number_of_frames);
+        }
+
+        // Go fetch the positions
+        std::vector<creatures::ServoPosition> requestedPositions = creature->getRequestedServoPositions();
+
+        auto command = std::make_shared<creatures::commands::SetServoPositions>(logger);
+        for(auto& position : requestedPositions) {
+            command->addServoPosition(position);
+        }
+
+        // Fire this off to the controller
+        sendCommand(command);
+
+        // Tell the creature to get ready for next time
+        creature->calculateNextServoPositions();
+
+        // Figure out how much time we have until the next tick
+        auto remaining_time = next_target_time - high_resolution_clock::now();
+
+        // If there's time left, wait.
+        if (remaining_time > nanoseconds(0)) {
+            // Sleep for the remaining time
+            std::this_thread::sleep_for(remaining_time);
+        }
+
+        // Update the target time for the next iteration
+        next_target_time += target_delta;
+
+    }
+
+    logger->info("controller worker stopped");
+
+}
 
 /*
 portTASK_FUNCTION(controller_housekeeper_task, pvParameters) {
