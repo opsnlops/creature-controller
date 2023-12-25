@@ -39,7 +39,7 @@ namespace creatures {
         // Define the required config file fields
         requiredTopLevelFields = {
                 "type", "name", "version", "starting_dmx_channel", "motors",
-                "head_offset_max", "frame_time_ms", "position_min", "position_max",
+                "head_offset_max", "servo_frequency", "position_min", "position_max",
                 "description",
         };
 
@@ -97,6 +97,11 @@ namespace creatures {
                 break;
         }
 
+        // The servo frequency is shared. There can only be one per creature, so it's
+        // set in the creature tree, but it needs to be passed into the servos. It
+        // needs to know this to do math on position updates.
+        u16 servo_frequency = j["servo_frequency"];
+
         creature->setName(j["name"]);
         creature->setVersion(j["version"]);
         creature->setDescription(j["description"]);
@@ -104,7 +109,7 @@ namespace creatures {
         creature->setPositionMin(j["position_min"]);
         creature->setPositionMax(j["position_max"]);
         creature->setHeadOffsetMax(j["head_offset_max"]);
-        creature->setFrameTimeMs(j["frame_time_ms"]);
+        creature->setServoUpdateFrequencyHz(servo_frequency);
         creature->setType(type);
 
         // Log that we've gotten this far
@@ -123,9 +128,9 @@ namespace creatures {
             Creature::motor_type motorType = Creature::stringToMotorType(motor["type"]);
             switch(motorType) {
 
-                // Do this in it's own context since there's a var being created
+                // Do this in its own context since there's a var being created
                 case Creature::servo: {
-                    std::shared_ptr<Servo> servo = createServo(motor);
+                    std::shared_ptr<Servo> servo = createServo(motor, servo_frequency);
                     logger->debug("adding servo {}", servo->getId());
                     creature->addServo(servo->getId(), servo);
                     break;
@@ -153,7 +158,7 @@ namespace creatures {
      * @param j
      * @return a `std::shared_ptr<Servo>` to the new servo
      */
-    std::shared_ptr<Servo> CreatureBuilder::createServo(const json& j) {
+    std::shared_ptr<Servo> CreatureBuilder::createServo(const json& j, u16 servo_frequency) {
 
         Creature::motor_type type = Creature::stringToMotorType(j["type"]);
         if(type == Creature::invalid_motor) {
@@ -190,7 +195,7 @@ namespace creatures {
 
         // Create the servo
         return std::make_shared<Servo>(logger, id, output_location, name, min_pulse_us, max_pulse_us,
-                                       smoothing_value, inverted, default_position);
+                                       smoothing_value, inverted, servo_frequency, default_position);
 
     }
 

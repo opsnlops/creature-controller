@@ -24,7 +24,7 @@ class Servo {
 
 public:
     Servo(std::shared_ptr<creatures::Logger> logger, std::string id, std::string outputLocation, std::string name, u16 min_pulse_us, u16 max_pulse_us,
-          float smoothingValue, bool inverted, u16 default_position);
+          float smoothingValue, bool inverted, u16 servo_update_frequency_hz, u16 default_position);
 
     void turnOn();
     void turnOff();
@@ -42,10 +42,15 @@ public:
 
     void calculateNextTick();
 
-    bool isInverted() const;
-    std::string getOutputLocation() const;
-    u16 getMinPulseUs() const;
-    u16 getMaxPulseUs() const;
+    [[nodiscard]] bool isInverted() const;
+    [[nodiscard]] std::string getOutputLocation() const;
+    [[nodiscard]] u16 getMinPulseUs() const;
+    [[nodiscard]] u16 getMaxPulseUs() const;
+
+    [[nodiscard]] u16 getServoUpdateFrequencyHz() const;
+    [[nodiscard]] u32 getResolution() const;
+    [[nodiscard]] u32 getFrameLengthMicroseconds() const;
+
 
 
 private:
@@ -54,7 +59,8 @@ private:
     u16 min_pulse_us;      // Lower bound on the servo's pulse size in microseconds
     u16 max_pulse_us;      // Upper bound on the servo's pulse size in microseconds
     u32 resolution;        // The resolution for this servo
-    u32 frame_length_us;   // How many microseconds are in each frame
+    u16 servo_update_frequency_hz;   // How fast should we tell the firmware to update the servo (usually 50Hz)
+    u32 frame_length_microseconds;  // Calculated off the servo_update_frequency_hz
     u16 current_position;  // Where we think the servo currently is in our position
     u16 default_position;   // The position to go to when there's nothing else
     bool on;                    // Is the servo active?
@@ -64,5 +70,13 @@ private:
     std::string name;           // This servo's name
     float smoothingValue;       // The constant to use when smoothing the input
     std::shared_ptr<creatures::Logger> logger;
+
+
+    /**
+     * Calculate the resolution for this servo
+     *
+     * @return the resolution for this servo
+     */
+    [[nodiscard]] u32 calculateResolution() const;
 
 };

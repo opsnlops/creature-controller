@@ -23,10 +23,10 @@ TEST(Creature, ServoMap_BaseFunctionality) {
     std::shared_ptr<Creature> parrot = std::make_shared<Parrot>(logger);
     parrot->setName("doug");
 
-    parrot->addServo("a", std::make_shared<Servo>(logger, "a", "A0", "Servo A0", 1000, 3000, 0.90, false, 2000));
-    parrot->addServo("b", std::make_shared<Servo>(logger, "b", "B1", "Servo B1", 1000, 3000, 0.90, false, 2000));
-    parrot->addServo("c", std::make_shared<Servo>(logger, "c", "C3", "Servo C3", 1000, 3000, 0.90, false, 2000));
-    parrot->addServo("d", std::make_shared<Servo>(logger, "d", "A2", "Servo A2", 1000, 3000, 0.90, false, 2000));
+    parrot->addServo("a", std::make_shared<Servo>(logger, "a", "A0", "Servo A0", 1000, 3000, 0.90, false, 50, 2000));
+    parrot->addServo("b", std::make_shared<Servo>(logger, "b", "B1", "Servo B1", 1000, 3000, 0.90, false, 50, 2000));
+    parrot->addServo("c", std::make_shared<Servo>(logger, "c", "C3", "Servo C3", 1000, 3000, 0.90, false, 50, 2000));
+    parrot->addServo("d", std::make_shared<Servo>(logger, "d", "A2", "Servo A2", 1000, 3000, 0.90, false, 50, 2000));
 
     EXPECT_EQ(4, parrot->getNumberOfServos());
 
@@ -44,9 +44,9 @@ TEST(Creature, ServoMap_DuplicateId) {
     std::shared_ptr<Creature> parrot = std::make_shared<Parrot>(logger);
     parrot->setName("doug");
 
-    parrot->addServo("a", std::make_shared<Servo>(logger, "a", "A3", "Servo A3", 1000, 3000, 0.90, false, 2000));
+    parrot->addServo("a", std::make_shared<Servo>(logger, "a", "A3", "Servo A3", 1000, 3000, 0.90, false, 50, 2000));
 
-    EXPECT_THROW({parrot->addServo("a", std::make_shared<Servo>(logger, "a", "A0", "Servo B (but a)", 1000, 3000, 0.90, false, 2000));
+    EXPECT_THROW({parrot->addServo("a", std::make_shared<Servo>(logger, "a", "A0", "Servo B (but a)", 1000, 3000, 0.90, false, 50, 2000));
                  }, creatures::CreatureException);
 
 }

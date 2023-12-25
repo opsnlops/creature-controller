@@ -10,7 +10,7 @@
 TEST(Servo, CreateServo) {
 
     auto logger = std::make_shared<creatures::NiceMockLogger>();
-    auto servo = std::make_shared<Servo>(logger, "mock", "A0", "Mock Server", 1000, 3000, 0.90, false, 2000);
+    auto servo = std::make_shared<Servo>(logger, "mock", "A0", "Mock Server", 1000, 3000, 0.90, false, 50, 2000);
 
     // 🖕🏻 floating point!
     float expectedSmoothingValue = 0.9f;
@@ -24,13 +24,16 @@ TEST(Servo, CreateServo) {
     EXPECT_NEAR(expectedSmoothingValue, servo->getSmoothingValue(), tolerance);
     EXPECT_FALSE(servo->isInverted());
     EXPECT_EQ(2000, servo->getDefaultPosition());
+    EXPECT_EQ(50, servo->getServoUpdateFrequencyHz());
+    EXPECT_EQ(65465, servo->getResolution());
+    EXPECT_EQ(20000, servo->getFrameLengthMicroseconds());
 
 }
 
 TEST(Servo, ServoOutOfRangeMove_Min) {
 
     auto logger = std::make_shared<creatures::NiceMockLogger>();
-    auto servo = std::make_shared<Servo>(logger, "mock", "B0", "Mock Server", 1000, 3000, 0.90, false, 2000);
+    auto servo = std::make_shared<Servo>(logger, "mock", "B0", "Mock Server", 1000, 3000, 0.90, false, 50, 2000);
 
     // This is a uint so this will actually be 65535
     EXPECT_THROW({servo->move(-1);
@@ -41,7 +44,7 @@ TEST(Servo, ServoOutOfRangeMove_Min) {
 TEST(Servo, ServoOutOfRangeMove_Max) {
 
     auto logger = std::make_shared<creatures::NiceMockLogger>();
-    auto servo = std::make_shared<Servo>(logger, "mock", "C1", "Mock Server", 1000, 3000, 0.90, false, 2000);
+    auto servo = std::make_shared<Servo>(logger, "mock", "C1", "Mock Server", 1000, 3000, 0.90, false, 50, 2000);
 
     EXPECT_THROW({servo->move(3001);
                  }, creatures::ServoException);

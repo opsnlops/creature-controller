@@ -41,7 +41,7 @@ namespace creatures {
         std::vector<std::string> requiredTopLevelFields;
         std::vector<std::string> requiredServoFields;
 
-        std::shared_ptr<Servo> createServo(const json& j);
+        std::shared_ptr<Servo> createServo(const json& j, u16 servo_frequency);
 
         // Make sure the file is both readable and accessible
         static bool isFileAccessible(std::shared_ptr<Logger> logger, const std::string& filename);

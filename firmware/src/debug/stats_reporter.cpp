@@ -30,7 +30,7 @@ namespace creatures::debug {
 
         TimerHandle_t statsReportTimer = xTimerCreate(
                 "StatsReportTimer",              // Timer name
-                pdMS_TO_TICKS(2 * 1000),            // Timer period (20 seconds)
+                pdMS_TO_TICKS(20 * 1000),            // Timer period (20 seconds)
                 pdTRUE,                          // Auto-reload
                 (void *) 0,                        // Timer ID (not used here)
                 statsReportTimerCallback         // Callback function

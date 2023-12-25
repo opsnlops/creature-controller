@@ -131,6 +131,14 @@ void Creature::setType(Creature::creature_type type) {
     Creature::type = type;
 }
 
+u16 Creature::getServoUpdateFrequencyHz() const {
+    return servoUpdateFrequencyHz;
+}
+
+void Creature::setServoUpdateFrequencyHz(u16 hertz) {
+    Creature::servoUpdateFrequencyHz = hertz;
+}
+
 u8 Creature::getStartingDmxChannel() const {
     return startingDmxChannel;
 }
@@ -170,12 +178,3 @@ float Creature::getHeadOffsetMax() const {
 void Creature::setHeadOffsetMax(float headOffsetMax) {
     Creature::headOffsetMax = headOffsetMax;
 }
-
-u16 Creature::getFrameTimeMs() const {
-    return frameTimeMs;
-}
-
-void Creature::setFrameTimeMs(u16 frameTimeMs) {
-    Creature::frameTimeMs = frameTimeMs;
-}
-

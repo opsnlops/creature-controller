@@ -23,8 +23,8 @@ TEST(CreatureBuilder, BuildsCorrectlyWithValidData) {
       "position_min": 0,
       "position_max": 1023,
       "head_offset_max": 0.4,
-      "frame_time_ms": 20,
       "type": "parrot",
+      "servo_frequency": 50,
       "motors": [
         {
           "type": "servo",
@@ -60,7 +60,7 @@ TEST(CreatureBuilder, BuildsCorrectlyWithValidData) {
     EXPECT_EQ(0, creature->getPositionMin());
     EXPECT_EQ(1023, creature->getPositionMax());
     EXPECT_NEAR(expectedHeadOffsetMax, creature->getHeadOffsetMax(), tolerance);
-    EXPECT_EQ(20, creature->getFrameTimeMs());
+    EXPECT_EQ(50, creature->getServoUpdateFrequencyHz());
     EXPECT_EQ(1, creature->getNumberOfServos());
     EXPECT_EQ("neck_left", creature->getServo("neck_left")->getId());
     EXPECT_EQ("Neck Left", creature->getServo("neck_left")->getName());
@@ -69,9 +69,7 @@ TEST(CreatureBuilder, BuildsCorrectlyWithValidData) {
     EXPECT_EQ(2250, creature->getServo("neck_left")->getMaxPulseUs());
     EXPECT_NEAR(expectedSmoothingValue, creature->getServo("neck_left")->getSmoothingValue(), tolerance);
     EXPECT_FALSE(creature->getServo("neck_left")->isInverted());
-    EXPECT_EQ(1250 + ((2250 - 1250) / 2),  creature->getServo("neck_left")->getDefaultPosition());
-
-    //EXPECT_EQ(0, creature->getNumberOfInputs());
+    EXPECT_EQ(1250 + ((2250 - 1250) / 2), creature->getServo("neck_left")->getDefaultPosition());
 
 }
 
@@ -146,7 +144,7 @@ TEST(CreatureBuilder, BuildFails_MissingMotors) {
       "position_min": 0,
       "position_max": 666,
       "head_offset_max": 0.4,
-      "frame_time_ms": 20,
+      "servo_frequency": 50,
       "type": "parrot"
       }
     )";

@@ -82,7 +82,7 @@ namespace creatures {
         }
 
         // Now log it!
-        logger->debug(statsMessage.toString());
+        logger->info(statsMessage.toString());
     }
 
 } // creatures

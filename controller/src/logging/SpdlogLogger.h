@@ -39,7 +39,7 @@ namespace creatures {
             ourLogger->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%n] [%^%l%$] %v");
 
             // Default to debug level logging
-            ourLogger->set_level(spdlog::level::debug);
+            ourLogger->set_level(spdlog::level::info);
         }
 
     protected:

@@ -1,5 +1,4 @@
 
-#include <cassert>
 #include <cmath>
 #include <utility>
 
@@ -11,8 +10,7 @@
 // Our modules
 #include "ServoException.h"
 
-
-extern u32 number_of_moves;
+extern u64 number_of_moves;
 
 /**
  * @brief Initializes a servo and gets it ready for use
@@ -31,17 +29,18 @@ extern u32 number_of_moves;
  * on before we're ready to go.
  *
  * @param logger a shared pointer to our logger
+ * @param id the id of this servo
  * @param outputLocation Which board and pin this servo is connected to (ie, A0, A1, B0, etc.)
  * @param min_pulse_us Min pulse length in microseconds
  * @param max_pulse_us Max pulse length in microseconds
+ * @param smoothingValue how aggressive should our movement smoothing be
  * @param inverted are this servo's movements inverted?
+ * @param servo_update_frequency_hz how fast should we tell the firmware to update the servos
  * @param default_position the default position to set the servo to at start
  */
-Servo::Servo(std::shared_ptr<creatures::Logger> logger,std::string id, std::string outputLocation, std::string name, u16 min_pulse_us,
-             u16 max_pulse_us, float smoothingValue, bool inverted, u16 default_position) : logger(logger) {
+Servo::Servo(std::shared_ptr<creatures::Logger> logger, std::string id, std::string outputLocation, std::string name, u16 min_pulse_us,
+             u16 max_pulse_us, float smoothingValue, bool inverted, u16 servo_update_frequency_hz, u16 default_position) : logger(logger) {
 
-    // TODO: Convert to the new servo controller
-    //gpio_set_function(gpio, GPIO_FUNC_PWM);
     this->id = std::move(id);
     this->outputLocation = std::move(outputLocation);
     this->name = name;
@@ -49,11 +48,19 @@ Servo::Servo(std::shared_ptr<creatures::Logger> logger,std::string id, std::stri
     this->max_pulse_us = max_pulse_us;
     this->smoothingValue = smoothingValue;
     this->default_position = default_position;
-
+    this->servo_update_frequency_hz = servo_update_frequency_hz;
     this->inverted = inverted;
+
+    // Calculate the length of a frame in microseconds based on the frequency
+    this->frame_length_microseconds = 1000000 / servo_update_frequency_hz;
+
+    // Calculate the resolution of the servo
+    this->resolution = calculateResolution();
+
+    // Runtime values
     this->desired_ticks = 0;
     this->current_ticks = 0;
-    this->current_position = MIN_POSITION / 2;
+    this->current_position = getDefaultPosition();
 
     // Force a calculation for the current tick
     calculateNextTick();
@@ -117,7 +124,6 @@ void Servo::turnOff() {
  */
 void Servo::move(uint16_t position) {
 
-
     // Error checking. This could result in damage to a motor or
     // creature if not met, so this is a hard stop if it's wrong. 😱
     if(!(position >= MIN_POSITION && position <= MAX_POSITION)) {
@@ -139,7 +145,7 @@ void Servo::move(uint16_t position) {
 
     // Now that we know how many microseconds we're expected to have, map that to
     // a frame and a value that can be passed to the PWM controller
-    float frame_active = desired_pulse_length_us / (float)(frame_length_us);
+    float frame_active = desired_pulse_length_us / (float)(frame_length_microseconds);
     desired_ticks = (float)resolution * frame_active;
     current_position = position;
 
@@ -148,7 +154,7 @@ void Servo::move(uint16_t position) {
           current_position,
           desired_ticks);
 
-    number_of_moves++;
+    number_of_moves = number_of_moves + 1;
 }
 
 std::string Servo::getName() const {
@@ -206,4 +212,30 @@ u16 Servo::getMinPulseUs() const {
 
 u16 Servo::getMaxPulseUs() const {
     return max_pulse_us;
+}
+
+u16 Servo::getServoUpdateFrequencyHz() const {
+    return servo_update_frequency_hz;
+}
+
+u32 Servo::getFrameLengthMicroseconds() const {
+    return frame_length_microseconds;
+}
+
+u32 Servo::getResolution() const {
+    return resolution;
+}
+
+/**
+ * This is very specific to the Pi Pico. See it's matching function in the firmware
+ * for more information.
+ *
+ * @return the resolution of the PWM controller
+ */
+u32 Servo::calculateResolution() const {
+    u32 clock = 125000000;
+    u32 divider16 = clock / servo_update_frequency_hz / 4096 + (clock % (servo_update_frequency_hz * 4096) != 0);
+    if (divider16 / 16 == 0) divider16 = 16;
+    u32 wrap = clock * 16 / divider16 / servo_update_frequency_hz - 1;
+    return wrap;
 }

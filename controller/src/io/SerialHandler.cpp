@@ -160,7 +160,7 @@ namespace creatures {
                 this->logger->error("Error writing to {}: {}", deviceNode, strerror(errno));
                 // Consider adding error handling like retry mechanism or breaking the loop
             } else {
-                this->logger->debug("Written {} bytes to {}", bytesWritten, deviceNode);
+                this->logger->trace("Written {} bytes to {}", bytesWritten, deviceNode);
             }
         }
     }

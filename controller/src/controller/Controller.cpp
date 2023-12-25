@@ -14,7 +14,7 @@
 #include "controller/CommandSendException.h"
 #include "controller/commands/ICommand.h"
 
-u32 number_of_moves = 0;
+u64 number_of_moves = 0UL;
 
 // TODO: Threads now
 //extern TaskHandle_t controllerHousekeeperTaskHandle;
@@ -48,7 +48,7 @@ void Controller::init(std::shared_ptr<Creature> creature, std::shared_ptr<creatu
 
 
 void Controller::sendCommand(const std::shared_ptr<creatures::ICommand>& command) {
-    logger->debug("sending command {}", command->toMessageWithChecksum());
+    logger->trace("sending command {}", command->toMessageWithChecksum());
     serialHandler->getOutgoingQueue()->push(command->toMessageWithChecksum());
 }
 

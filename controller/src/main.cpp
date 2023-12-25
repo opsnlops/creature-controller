@@ -79,8 +79,8 @@ int main(int argc, char **argv) {
 
 
     // Send 1000 messages for testing at our normal pacing of 20ms per
-    for(u16 i = 1500; i < 12000; i = i + 50) {
-        logger->info("setting pin 0 to start: 0, stop: {}", i);
+    logger->info("starting the servo test");
+    for(u16 i = 1000; i < 8000; i = i + 50) {
 
         auto command = std::make_shared<creatures::commands::SetServoPositions>(logger);
         command->addServoPosition(creatures::ServoPosition("A0", i));
@@ -96,6 +96,7 @@ int main(int argc, char **argv) {
 
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
+    logger->info("done with the servo test");
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "EndlessLoop"
