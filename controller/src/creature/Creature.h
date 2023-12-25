@@ -10,6 +10,7 @@
 #include "controller-config.h"
 
 #include "controller/Controller.h"
+#include "controller/commands/tokens/ServoPosition.h"
 #include "creature/Creature.h"
 #include "device/Servo.h"
 #include "device/Stepper.h"
@@ -96,6 +97,23 @@ public:
     static creature_type stringToCreatureType(const std::string& typeStr);
     static motor_type stringToMotorType(const std::string& typeStr);
     static default_position_type stringToDefaultPositionType(const std::string& typeStr);
+
+
+    /**
+     * @brief Get the current requested positions of the servos
+     *
+     * This walks the map of servos and returns a vector of the number of each ticks
+     * that the creature would like the servos set to. This is called from the controller's
+     * worker thread.
+     *
+     * @return a `std::vector<creatures::ServoPosition>` of the requested positions
+     */
+    std::vector<creatures::ServoPosition> getRequestedServoPositions();
+
+    /**
+     * @brief Ask all of the servos to calculate their next positions
+     */
+    void calculateNextServoPositions();
 
 
     // Getters for all of the things

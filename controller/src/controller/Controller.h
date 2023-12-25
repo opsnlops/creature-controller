@@ -3,11 +3,13 @@
 
 #include <memory>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "controller-config.h"
 
 #include "controller/commands/ICommand.h"
+#include "controller/tasks/ControllerWorkerTask.h"
 
 #include "device/Servo.h"
 #include "logging/Logger.h"
@@ -21,17 +23,16 @@
 // break it.
 class Creature; // Forward declaration
 
+
 class Controller {
 
 public:
-    Controller(std::shared_ptr<creatures::Logger> logger);
+    explicit Controller(std::shared_ptr<creatures::Logger> logger);
 
-    u16 getServoPosition(u8 outputPin);
 
     void init(std::shared_ptr<Creature> creature, std::shared_ptr<creatures::SerialHandler> serialHandler);
     void start();
 
-    //void setCreatureWorkerTaskHandle(TaskHandle_t creatureWorkerTaskHandle);
 
     /**
      * Enqueue a command to send to the creature
@@ -61,8 +62,14 @@ public:
     [[nodiscard]] bool isOnline();
     void setOnline(bool onlineValue);
 
-    // Get the servo, used for debugging
-    Servo* getServo(u8 outputPin);
+
+    /**
+     * @brief Gets a shared pointer to our creature
+     *
+     * @return std::shared_ptr<Creature>
+     */
+    std::shared_ptr<Creature> getCreature();
+
 
 #if USE_STEPPERS
     Stepper* getStepper(u8 index);
@@ -106,11 +113,9 @@ private:
     u16 numberOfChannels;
 
     /**
-     * A handle to our creature's working task. Used to signal that a new
-     * frame has been received off the wire.
-     *
-     * TODO: Thread this
+     * Our worker thread!
      */
-    //TaskHandle_t creatureWorkerTaskHandle;
+    std::unique_ptr<creatures::tasks::ControllerWorkerTask> worker;
+    std::thread workerThread;
 
 };

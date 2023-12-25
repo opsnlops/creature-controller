@@ -6,8 +6,6 @@
 #include "controller-config.h"
 
 #include "device/Servo.h"
-
-#include "controller/StepperHandler.h"
 #include "Controller.h"
 
 #include "creature/Creature.h"
@@ -39,8 +37,7 @@ void Controller::init(std::shared_ptr<Creature> creature, std::shared_ptr<creatu
     this->numberOfChannels = DMX_NUMBER_OF_CHANNELS;
 
 
-    // Declare some space on the heap for our current frame buffer
-    currentFrame = (uint8_t *) malloc(sizeof(uint8_t) * numberOfChannels);
+    this->worker = std::shared_ptr<creatures::tasks::ControllerWorkerTask>(logger, this);
 
     logger->info("Controller for {} initialized", creature->getName());
 
@@ -52,34 +49,11 @@ void Controller::sendCommand(const std::shared_ptr<creatures::ICommand>& command
     serialHandler->getOutgoingQueue()->push(command->toMessageWithChecksum());
 }
 
-/*
-void Controller::setCreatureWorkerTaskHandle(TaskHandle_t taskHandle) {
-    this->creatureWorkerTaskHandle = taskHandle;
-}
- */
 
 void Controller::start() {
     logger->info("starting controller!");
 
-    // TODO: Thread these
-
-    /*
-    // Fire off the housekeeper
-    xTaskCreate(controller_housekeeper_task,
-                "controller_housekeeper_task",
-                256,
-                (void *) this,
-                1,
-                &controllerHousekeeperTaskHandle);
-
-    // Fire off the motor setup task
-    xTaskCreate(controller_motor_setup_task,
-                "controller_motor_setup_task",
-                1024,
-                (void *) this,
-                1,
-                &controller_motor_setup_task_handle);
-    */
+    // Create
 
 }
 
@@ -115,10 +89,9 @@ bool Controller::acceptInput(uint8_t *input) {
     return true;
 }
 
-uint8_t *Controller::getCurrentFrame() {
-    return currentFrame;
+std::shared_ptr<Creature> Controller::getCreature() {
+    return creature;
 }
-
 
 
 

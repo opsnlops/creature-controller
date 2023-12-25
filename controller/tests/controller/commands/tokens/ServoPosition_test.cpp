@@ -11,7 +11,7 @@ TEST(ServoPosition, Create) {
     auto position = std::make_shared<creatures::ServoPosition>("A0", std::numeric_limits<u32>::max());
 
     EXPECT_EQ("A0", position->getOutputPosition());
-    EXPECT_EQ(std::numeric_limits<u32>::max(), position->getRequestedPosition());
+    EXPECT_EQ(std::numeric_limits<u32>::max(), position->getRequestedTicks());
 }
 
 TEST(ServoPosition, ToString) {

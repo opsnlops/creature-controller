@@ -8,19 +8,19 @@
 namespace creatures {
 
 
-    ServoPosition::ServoPosition(std::string outputPosition, u32 requestedPosition) :
-    outputPosition(std::move(outputPosition)), requestedPosition(requestedPosition) {}
+    ServoPosition::ServoPosition(std::string outputPosition, u32 requestedTicks) :
+            outputPosition(std::move(outputPosition)), requestedTicks(requestedTicks) {}
 
     std::string ServoPosition::getOutputPosition() const {
         return outputPosition;
     }
 
-    u32 ServoPosition::getRequestedPosition() const {
-        return requestedPosition;
+    u32 ServoPosition::getRequestedTicks() const {
+        return requestedTicks;
     }
 
     std::string ServoPosition::toString() const {
-        return fmt::format("{} {}", outputPosition, requestedPosition);
+        return fmt::format("{} {}", outputPosition, requestedTicks);
     }
 
 } // creatures

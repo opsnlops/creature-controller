@@ -47,6 +47,29 @@ u16 Creature::convertInputValueToServoValue(u8 inputValue) {
     return servoValue;
 }
 
+std::vector<creatures::ServoPosition> Creature::getRequestedServoPositions() {
+
+    std::vector<creatures::ServoPosition> positions;
+    positions.reserve(servos.size());
+
+    // Quickly walk the servos and return the number of ticks we want next
+    for (const auto& [key, servo] : servos) {
+        positions.emplace_back(servo->getOutputLocation(), servo->getDesiredTick());
+    }
+
+    return positions;
+
+}
+
+void Creature::calculateNextServoPositions() {
+
+    // Quickly walk the servos and return the number of ticks we want next
+    for (const auto& [key, servo] : servos) {
+        servo->calculateNextTick();
+    }
+}
+
+
 
 std::shared_ptr<Servo> Creature::getServo(const std::string& id) {
     return servos[id];
@@ -98,6 +121,7 @@ void Creature::addServo(std::string id, const std::shared_ptr<Servo>& servo) {
     logger->info("adding servo {} ({})", servo->getName(), id);
     servos[id] = servo;
 }
+
 
 const std::string &Creature::getName() const {
     return name;

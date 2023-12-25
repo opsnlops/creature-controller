@@ -12,9 +12,6 @@
 /**
  * A representation of a servo that we are controlling with the controller
  *
- * At init the slice, channel, and resolution are calculated from the Pico
- * SDK.
- *
  * The min and max pulse define the length of the travel for this servo within
  * the creature. It is highly specific to the individual creature.
  *

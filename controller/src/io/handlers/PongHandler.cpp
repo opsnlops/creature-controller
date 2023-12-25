@@ -20,7 +20,7 @@ namespace creatures {
         // How long did it take?
         auto pingTimeMicroseconds = std::chrono::duration_cast<std::chrono::microseconds>(pongTime - lastPingSentAt).count();
 
-        logger->debug("incoming pong! {}us", pingTimeMicroseconds);
+        logger->info("Pong from firmware! ({}us)", pingTimeMicroseconds);
 
     }
 

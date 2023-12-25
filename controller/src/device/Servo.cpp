@@ -122,7 +122,7 @@ void Servo::turnOff() {
  *
  * @param position The requested position
  */
-void Servo::move(uint16_t position) {
+void Servo::move(u16 position) {
 
     // Error checking. This could result in damage to a motor or
     // creature if not met, so this is a hard stop if it's wrong. 😱

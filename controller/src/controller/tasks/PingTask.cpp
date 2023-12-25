@@ -32,7 +32,7 @@ namespace creatures::tasks {
 
         // Set thread name
         setThreadName("creatures::tasks::PingTask");
-        logger->info("hello from the ping task! 🙋🏼‍♀️");
+        logger->info("hello from the ping task!");
 
         // How long should we wait between pings?
         std::chrono::milliseconds interval(PING_INTERVAL_MS);
