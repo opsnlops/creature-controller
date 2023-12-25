@@ -42,16 +42,11 @@ namespace creatures::controller {
         uint gpio_pin;
         uint slice;
         uint channel;
+        u16 requested_position;
     } MotorMap;
 
 
-    /**
-     * @brief Gets the GPIO pin for a given motor ID from the controller
-     *
-     * @param motor_id the motor ID from the controller (ie A0, A2, B0, B2, etc)
-     * @return a `uint` with the GPIO pin, or INVALID_MOTOR_ID if not found
-     */
-    uint getGpioPin(const char* motor_id);
+    u8 getMotorMapIndex(const char* motor_id);
 
 
     // ISR, called when the PWM wraps

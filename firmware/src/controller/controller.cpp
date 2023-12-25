@@ -48,7 +48,8 @@ namespace creatures::controller {
         // Fire up PWM
         for (auto & i : motor_map) {
             gpio_set_function(i.gpio_pin, GPIO_FUNC_PWM);
-            pwm_set_freq_duty(i.slice, i.channel, 1000000 / SERVO_FREQUENCY, 0);
+            //pwm_set_freq_duty(i.slice, i.channel, 1000000 / SERVO_FREQUENCY, 0);
+            pwm_set_freq_duty(i.slice, i.channel, 50, 0);
             pwm_set_enabled(i.slice, true);
         }
 
@@ -59,7 +60,7 @@ namespace creatures::controller {
         irq_set_enabled(PWM_IRQ_WRAP, true);
     }
 
-    uint getGpioPin(const char* motor_id) {
+    u8 getMotorMapIndex(const char* motor_id) {
         if(motor_id == nullptr || motor_id[1] == '\0') return INVALID_MOTOR_ID;
 
         u8 module = motor_id[0] - 'A';         // Convert 'A', 'B', 'C' to 0, 1, 2
@@ -71,18 +72,34 @@ namespace creatures::controller {
             return INVALID_MOTOR_ID;
         }
 
-        uint index = module * CONTROLLER_MOTORS_PER_MODULE + motor_number;
-        return motor_map[index].gpio_pin;
+        u8 index = module * CONTROLLER_MOTORS_PER_MODULE + motor_number;
+        return index;
     }
 
 
+    bool requestServoPosition(const char* motor_id, u16 requestedPosition) {
+        if(motor_id == nullptr || motor_id[1] == '\0') return false;
+
+        // Get the index in the array
+        u8 motor_id_index = getMotorMapIndex(motor_id);
+        if(motor_id_index == INVALID_MOTOR_ID) {
+            warning("Invalid motor ID: %s", motor_id);
+            return false;
+        }
+
+        motor_map[motor_id_index].requested_position = requestedPosition;
+
+        return true;
+    }
+
     void __isr on_pwm_wrap_handler() {
 
+        // This is an ISR. Treat with caution! ☠️
 
         for (auto & i : motor_map) {
             pwm_set_chan_level(i.slice,
                                i.channel,
-                               1500);   // TODO: This is not what I want
+                               i.requested_position);
         }
 
         pwm_clear_irq(motor_map[0].slice);

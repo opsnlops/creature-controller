@@ -79,7 +79,7 @@ int main(int argc, char **argv) {
 
 
     // Send 1000 messages for testing at our normal pacing of 20ms per
-    for(u16 i = 0; i < 1000; i++) {
+    for(u16 i = 1500; i < 12000; i = i + 50) {
         logger->info("setting pin 0 to start: 0, stop: {}", i);
 
         auto command = std::make_shared<creatures::commands::SetServoPositions>(logger);
@@ -91,10 +91,6 @@ int main(int argc, char **argv) {
         command->addServoPosition(creatures::ServoPosition("B1", i+20));
         command->addServoPosition(creatures::ServoPosition("B2", i+30));
         command->addServoPosition(creatures::ServoPosition("B3", i+40));
-        command->addServoPosition(creatures::ServoPosition("C0", i+10));
-        command->addServoPosition(creatures::ServoPosition("C1", i+20));
-        command->addServoPosition(creatures::ServoPosition("C2", i+30));
-        command->addServoPosition(creatures::ServoPosition("C3", i+40));
 
         controller->sendCommand(command);
 

@@ -16,8 +16,7 @@ namespace creatures::tasks {
 
     void PingTask::init(std::shared_ptr<SerialHandler> serialHandler) {
         this->serialHandler = serialHandler;
-        logger->init("init'ed the ping task");
-
+        logger->info("init'ed the ping task");
         running = false;
     }
 
