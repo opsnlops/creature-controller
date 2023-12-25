@@ -10,7 +10,7 @@
 TEST(SetServoPositions, Create) {
 
     auto logger = std::make_shared<creatures::NiceMockLogger>();
-    auto setServoPositions = std::make_shared<creatures::SetServoPositions>(logger);
+    auto setServoPositions = std::make_shared<creatures::commands::SetServoPositions>(logger);
 
     // Assert that setServoPositions is not null
     ASSERT_NE(setServoPositions, nullptr) << "setServoPositions should not be null";
@@ -19,7 +19,7 @@ TEST(SetServoPositions, Create) {
 TEST(SetServoPositions, AddPosition) {
 
     auto logger = std::make_shared<creatures::NiceMockLogger>();
-    auto setServoPositions = std::make_shared<creatures::SetServoPositions>(logger);
+    auto setServoPositions = std::make_shared<creatures::commands::SetServoPositions>(logger);
 
     EXPECT_NO_THROW({
         setServoPositions->addServoPosition(creatures::ServoPosition("A0", 12345));
@@ -30,7 +30,7 @@ TEST(SetServoPositions, AddPosition) {
 TEST(SetServoPositions, NoDuplicateOutputPositions) {
 
     auto logger = std::make_shared<creatures::NiceMockLogger>();
-    auto setServoPositions = std::make_shared<creatures::SetServoPositions>(logger);
+    auto setServoPositions = std::make_shared<creatures::commands::SetServoPositions>(logger);
 
     EXPECT_THROW(({
         setServoPositions->addServoPosition(creatures::ServoPosition("A0", 12345));
@@ -43,7 +43,7 @@ TEST(SetServoPositions, NoDuplicateOutputPositions) {
 TEST(SetServoPositions, ToMessage) {
 
     auto logger = std::make_shared<creatures::NiceMockLogger>();
-    auto setServoPositions = std::make_shared<creatures::SetServoPositions>(logger);
+    auto setServoPositions = std::make_shared<creatures::commands::SetServoPositions>(logger);
 
     EXPECT_NO_THROW({
         setServoPositions->addServoPosition(creatures::ServoPosition("A0", 123));
@@ -58,7 +58,7 @@ TEST(SetServoPositions, ToMessage) {
 TEST(SetServoPositions, ChecksumValid) {
 
     auto logger = std::make_shared<creatures::NiceMockLogger>();
-    auto setServoPositions = std::make_shared<creatures::SetServoPositions>(logger);
+    auto setServoPositions = std::make_shared<creatures::commands::SetServoPositions>(logger);
 
     EXPECT_NO_THROW({
                         setServoPositions->addServoPosition(creatures::ServoPosition("A0", 123));
@@ -73,7 +73,7 @@ TEST(SetServoPositions, ChecksumValid) {
 TEST(SetServoPositions, ChecksumInvalid) {
 
     auto logger = std::make_shared<creatures::NiceMockLogger>();
-    auto setServoPositions = std::make_shared<creatures::SetServoPositions>(logger);
+    auto setServoPositions = std::make_shared<creatures::commands::SetServoPositions>(logger);
 
     EXPECT_NO_THROW({
                         setServoPositions->addServoPosition(creatures::ServoPosition("A0", 666));
@@ -87,7 +87,7 @@ TEST(SetServoPositions, ChecksumInvalid) {
 TEST(SetServoPositions, ToMessageWithChecksum) {
 
     auto logger = std::make_shared<creatures::NiceMockLogger>();
-    auto setServoPositions = std::make_shared<creatures::SetServoPositions>(logger);
+    auto setServoPositions = std::make_shared<creatures::commands::SetServoPositions>(logger);
 
     EXPECT_NO_THROW({
                         setServoPositions->addServoPosition(creatures::ServoPosition("A0", 123));
