@@ -62,14 +62,14 @@ public:
      * @param inputs a `std::vector<creatures::Input>` of input objects
      * @return true if it worked
      */
-    bool acceptInput(std::vector<creatures::Input> inputs);
+    bool acceptInput(const std::vector<creatures::Input>& inputs);
 
     /**
      * @brief Get a reference to the input queue
      *
-     * @return a `std::shared_ptr<creatures::MessageQueue<std::vector<creatures::Input>>>` 😅
+     * @return a `std::shared_ptr<creatures::MessageQueue<std::unordered_map<std::string, creatures::Input>>>` 😅
      */
-    std::shared_ptr<creatures::MessageQueue<std::vector<creatures::Input>>> getInputQueue();
+    std::shared_ptr<creatures::MessageQueue<std::unordered_map<std::string, creatures::Input>>> getInputQueue();
 
     u8 getNumberOfServosInUse();
 
@@ -106,7 +106,7 @@ private:
      * Our queue of inputs from the I/O handlers. A reference to this
      * queue is made available to the creature.
      */
-    std::shared_ptr<creatures::MessageQueue<std::vector<creatures::Input>>> inputQueue;
+    std::shared_ptr<creatures::MessageQueue<std::unordered_map<std::string, creatures::Input>>> inputQueue;
 
 
     /**

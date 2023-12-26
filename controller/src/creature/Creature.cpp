@@ -62,7 +62,7 @@ namespace creatures::creature {
 
         // Quickly walk the servos and return the number of ticks we want next
         for (const auto &[key, servo]: servos) {
-            positions.emplace_back(servo->getOutputLocation(), servo->getDesiredTick());
+            positions.emplace_back(servo->getOutputLocation(), servo->getCurrentTick());
         }
 
         return positions;

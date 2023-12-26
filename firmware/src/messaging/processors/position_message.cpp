@@ -30,6 +30,8 @@ bool handlePositionMessage(const GenericMessage* msg) {
             verbose("Second part: %s", value);
         }
 
+        verbose("incoming position message: %s %s", position, value);
+
         creatures::controller::requestServoPosition(position, stringToU16(value));
     }
 

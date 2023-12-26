@@ -15,8 +15,6 @@
 #include "controller-config.h"
 #include "controller.h"
 
-#define SERVO_FREQUENCY 50
-
 
 // Stats
 volatile u64 number_of_pwm_wraps = 0UL;
@@ -48,7 +46,7 @@ namespace creatures::controller {
         // Fire up PWM
         for (auto & i : motor_map) {
             gpio_set_function(i.gpio_pin, GPIO_FUNC_PWM);
-            //pwm_set_freq_duty(i.slice, i.channel, 1000000 / SERVO_FREQUENCY, 0);
+            //pwm_set_freq_duty(i.slice, i.channel, 1000000 / 50, 0);
             pwm_set_freq_duty(i.slice, i.channel, 50, 0);
             pwm_set_enabled(i.slice, true);
         }
@@ -86,6 +84,8 @@ namespace creatures::controller {
             warning("Invalid motor ID: %s", motor_id);
             return false;
         }
+
+        verbose("Requested position for %s: %d", motor_id, requestedPosition);
 
         motor_map[motor_id_index].requested_position = requestedPosition;
 

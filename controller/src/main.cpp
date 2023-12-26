@@ -82,7 +82,7 @@ int main(int argc, char **argv) {
     pingTask->start();
 
 
-
+#if 0
 
     // Send 1000 messages for testing at our normal pacing of 20ms per
     logger->info("starting the servo test");
@@ -103,7 +103,7 @@ int main(int argc, char **argv) {
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
     logger->info("done with the servo test");
-
+#endif
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "EndlessLoop"
     for(EVER){

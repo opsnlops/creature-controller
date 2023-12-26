@@ -146,11 +146,27 @@ head_position_t Parrot::calculateHeadPosition(uint16_t height, int32_t offset) {
 
          auto incoming = inputQueue->pop();
 
-         logger->debug("creature got {} inputs", incoming.size());
+         logger->trace("creature got {} inputs", incoming.size());
 
-         for(auto& input : incoming) {
-             logger->debug("got input: {}", input.toString());
-         }
+         //for(auto& input : incoming) {
+         //    logger->debug("got input: {}", input.second.toString());
+        // }
+
+         u8 height = incoming["head_height"].getIncomingRequest();
+         u8 tilt = incoming["head_tilt"].getIncomingRequest();
+
+         u16 headHeight = convertToHeadHeight(Parrot::convertInputValueToServoValue(height));
+         int32_t headTilt = configToHeadTilt(Parrot::convertInputValueToServoValue(tilt));
+         logger->trace("head height: {}, head tilt: {}", headHeight, headTilt);
+
+         head_position_t headPosition = calculateHeadPosition(headHeight, headTilt);
+
+         // Update our servos so they'll get picked up on the next frame
+         servos["neck_left"]->move(headPosition.left);
+         servos["neck_right"]->move(headPosition.right);
+         servos["neck_rotate"]->move(incoming["neck_rotate"].getIncomingRequest());
+         servos["body_lean"]->move(incoming["body_lean"].getIncomingRequest());
+         servos["beak"]->move(incoming["beak"].getIncomingRequest());
 
      }
 

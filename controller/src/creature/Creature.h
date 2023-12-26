@@ -198,8 +198,15 @@ namespace creatures::creature {
         u16 dmxUniverse;
         u8 startingDmxChannel;
 
+        /**
+         * Inputs as defined in the config file for this creature
+         */
         std::vector<creatures::Input> inputs;
-        std::shared_ptr<creatures::MessageQueue<std::vector<creatures::Input>>> inputQueue;
+
+        /**
+         * Message queue to send inputs to the creature
+         */
+        std::shared_ptr<creatures::MessageQueue<std::unordered_map<std::string, creatures::Input>>> inputQueue;
 
         std::vector<creatures::ServoPosition> servoPositions;
         std::shared_ptr<Controller> controller;

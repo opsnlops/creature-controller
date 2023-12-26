@@ -26,7 +26,7 @@ Controller::Controller(std::shared_ptr<creatures::Logger> logger): logger(logger
     receivedFirstFrame = false;
 
     // Create our input queue
-    inputQueue = std::make_shared<creatures::MessageQueue<std::vector<creatures::Input>>>();
+    inputQueue = std::make_shared<creatures::MessageQueue<std::unordered_map<std::string, creatures::Input>>>();
     logger->debug("created the input queue");
 
 }
@@ -58,7 +58,7 @@ void Controller::start() {
 
 
 
-bool Controller::acceptInput(std::vector<creatures::Input> inputs) {
+bool Controller::acceptInput(const std::vector<creatures::Input>& inputs) {
 
     // Don't waste time with empty sets
     if(inputs.empty()) {
@@ -66,13 +66,22 @@ bool Controller::acceptInput(std::vector<creatures::Input> inputs) {
         return false;
     }
 
+    // The I/O handler cares about slots in the DMX stream, the creature
+    // cares about names. Let's build the map the creature actually wants
+    // here, so the creature doesn't have to do it.
+    std::unordered_map<std::string, creatures::Input> creatureInputs;
+    for(auto& input: inputs) {
+        creatureInputs[input.getName()] = input;
+    }
+
     // Assign this to the input queue and hope the creature sees it!
-    inputQueue->push(std::move(inputs));
-    logger->trace("pushed {} inputs to the input queue", inputs.size());
+    logger->trace("sending {} inputs to the input queue", creatureInputs.size());
+    inputQueue->push(creatureInputs);
+
     return true;
 }
 
-std::shared_ptr<creatures::MessageQueue<std::vector<creatures::Input>>> Controller::getInputQueue() {
+std::shared_ptr<creatures::MessageQueue<std::unordered_map<std::string, creatures::Input>>> Controller::getInputQueue() {
     return inputQueue;
 }
 
