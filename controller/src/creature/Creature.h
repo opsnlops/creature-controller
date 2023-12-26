@@ -122,6 +122,7 @@ public:
     const std::string &getDescription() const;
     creature_type getType() const;
     u8 getStartingDmxChannel() const;
+    u16 getDmxUniverse() const;
     u16 getPositionMin() const;
     u16 getPositionMax() const;
     u16 getPositionDefault() const;
@@ -137,6 +138,7 @@ public:
     void setDescription(const std::string &description);;
     void setType(creature_type type);
     void setStartingDmxChannel(u8 startingDmxChannel);
+    void setDmxUniverse(u16 dmxUniverse);
     void setPositionMin(u16 positionMin);
     void setPositionMax(u16 positionMax);
     void setPositionDefault(u16 positionDefault);
@@ -149,18 +151,21 @@ protected:
     std::string version;
     std::string description;
     creature_type type;
-    u8 startingDmxChannel;
+
     u16 positionMin;
     u16 positionMax;
     u16 positionDefault;
     float headOffsetMax;
     u16 servoUpdateFrequencyHz;
 
+    u16 dmxUniverse;
+    u8 startingDmxChannel;
+
+
     std::shared_ptr<Controller> controller;
     std::unordered_map<std::string, std::shared_ptr<Servo>> servos;
     std::unordered_map<std::string, std::shared_ptr<Stepper>> steppers;
 
-    // TODO: Thread
     std::thread workerTaskHandle;
 
     u8 numberOfJoints;

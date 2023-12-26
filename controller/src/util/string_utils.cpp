@@ -3,7 +3,6 @@
 #include <cctype>
 #include <string>
 #include <vector>
-#include <ranges>
 #include <sstream>
 
 #include "controller-config.h"

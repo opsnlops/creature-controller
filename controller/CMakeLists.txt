@@ -83,7 +83,7 @@ add_library(creature_lib
         src/creature/Parrot.cpp
         src/device/Servo.cpp
         src/device/Stepper.cpp
-        src/dmx/e131_server.cpp
+        src/dmx/E131Server.cpp
         src/util/fast_hsv2rgb_32bit.cpp
         src/util/ranges.cpp
         src/device/ServoException.h
@@ -121,6 +121,7 @@ add_library(creature_lib
         src/controller/tasks/PingTask.h
         src/io/handlers/PongHandler.h
         src/io/handlers/PongHandler.cpp
+        src/dmx/E131Exception.h
 )
 
 target_include_directories(creature_lib PUBLIC
@@ -140,7 +141,6 @@ target_link_libraries(creature-controller
         PUBLIC
         creature_lib
         libe131
-        $<$<PLATFORM_ID:Linux>:i2c>
         fmt::fmt
         argparse
         spdlog::spdlog $<$<BOOL:${MINGW}>:ws2_32>
@@ -172,12 +172,15 @@ add_executable(creature-controller-test
         tests/io/handlers/StatsMessage_test.cpp
         tests/string_utils_test.cpp
         tests/io/handlers/StatsHandler_test.cpp
+        tests/dmx/E131Server_test.cpp
+        tests/mocks/creature/MockCreature.h
 )
 
 target_link_libraries(creature-controller-test
         creature_lib
         gtest_main
         gmock_main
+        libe131
         nlohmann_json::nlohmann_json
         fmt::fmt
         argparse

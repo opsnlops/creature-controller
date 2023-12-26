@@ -135,8 +135,8 @@ const std::string &Creature::getVersion() const {
     return version;
 }
 
-void Creature::setVersion(const std::string &version) {
-    Creature::version = version;
+void Creature::setVersion(const std::string &_version) {
+    Creature::version = _version;
 }
 
 const std::string &Creature::getDescription() const {
@@ -167,8 +167,16 @@ u8 Creature::getStartingDmxChannel() const {
     return startingDmxChannel;
 }
 
-void Creature::setStartingDmxChannel(u8 startingDmxChannel) {
-    Creature::startingDmxChannel = startingDmxChannel;
+void Creature::setStartingDmxChannel(u8 _startingDmxChannel) {
+    Creature::startingDmxChannel = _startingDmxChannel;
+}
+
+u16 Creature::getDmxUniverse() const {
+    return dmxUniverse;
+}
+
+void Creature::setDmxUniverse(u16 _dmxUniverse) {
+    Creature::dmxUniverse = _dmxUniverse;
 }
 
 u16 Creature::getPositionMin() const {

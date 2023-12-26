@@ -11,7 +11,7 @@
 #include "controller/tasks/PingTask.h"
 #include "creature/Creature.h"
 #include "device/Servo.h"
-#include "dmx/e131_server.h"
+#include "dmx/E131Server.h"
 #include "io/SerialHandler.h"
 #include "io/MessageProcessor.h"
 #include "logging/Logger.h"
@@ -67,7 +67,8 @@ int main(int argc, char **argv) {
     // Create and start the servo controller
     // Create and start the e1.13 server
     logger->debug("starting the e1.13 server");
-    auto e131Server = std::make_shared<creatures::E131Server>(logger);
+    auto e131Server = std::make_shared<creatures::dmx::E131Server>(logger);
+    e131Server->init(creature, controller);
     e131Server->start();
 
     // Fire up the ping task
