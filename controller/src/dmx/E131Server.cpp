@@ -1,8 +1,10 @@
 
 #include <thread>
+#include <unordered_map>
 
 #include "e131.h"
 
+#include "creature/Creature.h"
 #include "dmx/E131Exception.h"
 #include "dmx/E131Server.h"
 #include "logging/Logger.h"
@@ -16,6 +18,7 @@
 
 namespace creatures::dmx {
 
+
     E131Server::E131Server(const std::shared_ptr<creatures::Logger>& logger) : logger(logger) {
 
         this->logger->info("e1.31 server created");
@@ -28,11 +31,19 @@ namespace creatures::dmx {
         }
     }
 
-    void E131Server::init(const std::shared_ptr<Creature>& _creature, const std::shared_ptr<Controller>& _controller) {
+    void E131Server::init(const std::shared_ptr<creatures::creature::Creature>& _creature, const std::shared_ptr<Controller>& _controller) {
         this->creature = _creature;
         this->controller = _controller;
 
-        logger->debug("e1.31 server init'ed");
+        // Create our input map
+        for( const auto& input : this->creature->getInputs() ) {
+
+            // Make a new Input and copy the data into it
+            auto newInput = creatures::Input(input);
+            this->inputMap.emplace(newInput.getSlot(), newInput);
+        }
+        logger->debug("e1.31 server init'ed with {} inputs", this->inputMap.size());
+
     }
 
 
@@ -122,11 +133,30 @@ namespace creatures::dmx {
 
         std::string hexString = "";
 
-        for(u16 i = creature->getStartingDmxChannel(); i < 7; i++) {
+        // TODO: Don't do this unless verbose is on
+        for(u16 i = creature->getStartingDmxChannel(); i < creature->getNumberOfServos(); i++) {
             hexString += fmt::format("{:#04x} ", packet.dmp.prop_val[i]);
         }
+        logger->trace("Received e1.31 packet: {}", hexString);
 
-        logger->info("Received e1.31 packet: {}", hexString);
+
+        std::vector<creatures::Input> inputs;
+
+
+        // Walk the input map
+        for( auto& input : this->inputMap ) {
+
+            u16 slot = input.first + creature->getStartingDmxChannel();
+            u8 value = packet.dmp.prop_val[slot];
+
+            auto inputToSend = creatures::Input(input.second);
+            inputToSend.setIncomingRequest(value);
+
+            inputs.push_back(inputToSend);
+
+        }
+
+        this->controller->acceptInput(inputs);
 
     }
 

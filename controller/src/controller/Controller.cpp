@@ -9,16 +9,12 @@
 #include "Controller.h"
 
 #include "creature/Creature.h"
+#include "controller/Input.h"
 #include "controller/CommandSendException.h"
 #include "controller/commands/ICommand.h"
 #include "controller/commands/SetServoPositions.h"
 
 u64 number_of_moves = 0UL;
-
-// TODO: Threads now
-//extern TaskHandle_t controllerHousekeeperTaskHandle;
-//extern TaskHandle_t controller_motor_setup_task_handle;
-//BaseType_t isrPriorityTaskWoken = pdFALSE;
 
 
 Controller::Controller(std::shared_ptr<creatures::Logger> logger): logger(logger) {
@@ -29,9 +25,13 @@ Controller::Controller(std::shared_ptr<creatures::Logger> logger): logger(logger
     online = true;
     receivedFirstFrame = false;
 
+    // Create our input queue
+    inputQueue = std::make_shared<creatures::MessageQueue<std::vector<creatures::Input>>>();
+    logger->debug("created the input queue");
+
 }
 
-void Controller::init(std::shared_ptr<Creature> creature, std::shared_ptr<creatures::SerialHandler> serialHandler) {
+void Controller::init(std::shared_ptr<creatures::creature::Creature> creature, std::shared_ptr<creatures::SerialHandler> serialHandler) {
 
     this->creature = creature;
     this->serialHandler = serialHandler;
@@ -56,39 +56,28 @@ void Controller::start() {
     workerThread.detach();
 }
 
-/**
- * Accepts input from an IOHandler
- *
- * @param input a buffer of size DMX_NUMBER_OF_CHANNELS containing the incoming data
- * @return true if it worked
- */
-bool Controller::acceptInput(uint8_t *input) {
 
-    // If we're not online, stop now and do nothing
-    if(!online) {
+
+bool Controller::acceptInput(std::vector<creatures::Input> inputs) {
+
+    // Don't waste time with empty sets
+    if(inputs.empty()) {
+        logger->warn("ignoring an empty set of inputs");
         return false;
     }
 
-    // Copy the incoming buffer into our buffer
-    memcpy(currentFrame, input, numberOfChannels);
-
-    /**
-     * If there's no worker task, stop here.
-     */
-    //if (creatureWorkerTaskHandle == nullptr) {
-    //    return false;
-    //}
-
-    // Send the processor a message
-    // TODO Use a cv
-    //xTaskNotify(creatureWorkerTaskHandle,
-    //            0,
-    //            eNoAction);
-
+    // Assign this to the input queue and hope the creature sees it!
+    inputQueue->push(std::move(inputs));
+    logger->trace("pushed {} inputs to the input queue", inputs.size());
     return true;
 }
 
-std::shared_ptr<Creature> Controller::getCreature() {
+std::shared_ptr<creatures::MessageQueue<std::vector<creatures::Input>>> Controller::getInputQueue() {
+    return inputQueue;
+}
+
+
+std::shared_ptr<creatures::creature::Creature> Controller::getCreature() {
     return creature;
 }
 

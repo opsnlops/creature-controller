@@ -10,7 +10,7 @@ volatile u64 position_messages_processed = 0UL;
 
 bool handlePositionMessage(const GenericMessage* msg) {
 
-    debug("handling position message");
+    verbose("handling position message");
 
     for (int i = 0; i < msg->tokenCount; ++i) {
         const char *orig_token = msg->tokens[i];
@@ -25,7 +25,7 @@ bool handlePositionMessage(const GenericMessage* msg) {
             verbose("First part: %s", position);
         }
 
-        char *value = strtok_r(NULL, " ", &temp_token);
+        char *value = strtok_r(nullptr, " ", &temp_token);
         if (value != nullptr) {
             verbose("Second part: %s", value);
         }

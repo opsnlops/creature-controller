@@ -3,7 +3,6 @@
 #include <sstream>
 
 #include <gtest/gtest.h>
-#include <gmock/gmock.h>
 
 
 #include "config/CreatureBuilder.h"
@@ -110,7 +109,7 @@ TEST(CreatureBuilder, BuildFails_BrokenJson) {
 
     const std::string badJsonData = R"({"type: "parrot"})";
     auto jsonStream = std::make_unique<std::istringstream>(badJsonData);
-;
+
 
     EXPECT_THROW({
                      creatures::CreatureBuilder builder(logger, std::move(jsonStream));
@@ -171,8 +170,6 @@ TEST(CreatureBuilder, BuildFails_MissingMotors) {
     ]
     }
     )";
-
-
 
     auto jsonStream = std::make_unique<std::istringstream>(badJsonData);
 

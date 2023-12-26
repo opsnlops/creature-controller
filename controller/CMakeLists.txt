@@ -122,8 +122,8 @@ add_library(creature_lib
         src/io/handlers/PongHandler.h
         src/io/handlers/PongHandler.cpp
         src/dmx/E131Exception.h
-        src/creature/Input.cpp
-        src/creature/Input.h
+        src/controller/Input.cpp
+        src/controller/Input.h
 )
 
 target_include_directories(creature_lib PUBLIC

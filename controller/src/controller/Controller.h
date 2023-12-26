@@ -8,12 +8,15 @@
 
 #include "controller-config.h"
 
+#include "controller/Input.h"
 #include "controller/commands/ICommand.h"
 #include "controller/commands/SetServoPositions.h"
+#include "creature/Creature.h"
 
 #include "device/Servo.h"
 #include "logging/Logger.h"
 #include "io/SerialHandler.h"
+#include "util/MessageQueue.h"
 
 #if USE_STEPPERS
 #include "device/Stepper.h"
@@ -21,7 +24,9 @@
 
 // I've got a dependency loop. Let's use forward declaration to
 // break it.
-class Creature; // Forward declaration
+namespace creatures::creature {
+    class Creature; // Forward declaration
+}
 
 
 class Controller {
@@ -30,7 +35,7 @@ public:
     explicit Controller(std::shared_ptr<creatures::Logger> logger);
 
 
-    void init(std::shared_ptr<Creature> creature, std::shared_ptr<creatures::SerialHandler> serialHandler);
+    void init(std::shared_ptr<creatures::creature::Creature> creature, std::shared_ptr<creatures::SerialHandler> serialHandler);
     void start();
 
 
@@ -49,11 +54,22 @@ public:
     [[nodiscard]] bool hasReceivedFirstFrame();
     void confirmFirstFrameReceived();
 
-    u8* getCurrentFrame();
 
-    u8 getPinMapping(u8 servoNumber);
 
-    bool acceptInput(u8* input);
+    /**
+     * Accept input from an input handler
+     *
+     * @param inputs a `std::vector<creatures::Input>` of input objects
+     * @return true if it worked
+     */
+    bool acceptInput(std::vector<creatures::Input> inputs);
+
+    /**
+     * @brief Get a reference to the input queue
+     *
+     * @return a `std::shared_ptr<creatures::MessageQueue<std::vector<creatures::Input>>>` 😅
+     */
+    std::shared_ptr<creatures::MessageQueue<std::vector<creatures::Input>>> getInputQueue();
 
     u8 getNumberOfServosInUse();
 
@@ -66,9 +82,9 @@ public:
     /**
      * @brief Gets a shared pointer to our creature
      *
-     * @return std::shared_ptr<Creature>
+     * @return std::shared_ptr<creatures::creature::Creature>
      */
-    std::shared_ptr<Creature> getCreature();
+    std::shared_ptr<creatures::creature::Creature> getCreature();
 
 
     u64 getNumberOfFrames();
@@ -82,9 +98,15 @@ public:
 
 private:
 
-    std::shared_ptr<Creature> creature;
+    std::shared_ptr<creatures::creature::Creature> creature;
     std::shared_ptr<creatures::Logger> logger;
     std::shared_ptr<creatures::SerialHandler> serialHandler;
+
+    /**
+     * Our queue of inputs from the I/O handlers. A reference to this
+     * queue is made available to the creature.
+     */
+    std::shared_ptr<creatures::MessageQueue<std::vector<creatures::Input>>> inputQueue;
 
 
     /**

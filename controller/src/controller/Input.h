@@ -16,13 +16,26 @@ namespace creatures {
     class Input {
 
     public:
-        Input(std::string name, u16 slot, u8 width);
+        Input() = default;
+        Input(std::string name, u16 slot, u8 width, u32 incomingRequest);
         ~Input() = default;
 
+        // Copy constructor
+        Input(const Input& other);
 
         std::string getName() const;
         u16 getSlot() const;
         u8 getWidth() const;
+        u32 getIncomingRequest() const;
+
+        /**
+         * Set the value of the incoming request
+         *
+         * @param incomingRequest
+         */
+        void setIncomingRequest(u32 incomingRequest);
+
+        std::string toString() const;
 
     private:
 
@@ -42,6 +55,11 @@ namespace creatures {
          * (This is currently unused)
          */
         u8 width;
+
+        /**
+         * The request from the server of where to move this input to
+         */
+        u32 incomingRequest;
     };
 
 } // creatures

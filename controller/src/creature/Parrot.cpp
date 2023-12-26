@@ -1,6 +1,7 @@
 
 #include <cassert>
 #include <climits>
+#include <chrono>
 #include <cmath>
 
 #include "controller-config.h"
@@ -97,39 +98,7 @@ Parrot::Parrot(const std::shared_ptr<creatures::Logger>& logger)
 
 }
 
-void Parrot::init(std::shared_ptr<Controller> controller) {
-    logger->debug("starting creature init");
 
-    this->controller = controller;
-    this->numberOfJoints = 7;
-
-    // Initialize the array on for the joints on the heap
-    this->joints = (uint16_t *) malloc(sizeof(uint16_t) * numberOfJoints);
-}
-
-void Parrot::start() {
-
-    // Make sure we have a controller
-    assert(this->controller != nullptr);
-
-    // Declare this on the heap, so it lasts once start() goes out of scope
-    auto info = (ParrotInfo *) malloc(sizeof(ParrotInfo));
-    info->controller = this->controller;
-    info->parrot = this;
-
-    // Fire off our worker task
-    // TODO: Thread
-    /*
-    xTaskCreate(creature_worker_task,
-                "creature_worker_task",
-                2048,
-                (void *) info,
-                1,
-                &workerTaskHandle);
-    */
-
-    logger->debug("parrot started!");
-}
 
 uint16_t Parrot::convertToHeadHeight(uint16_t y) const {
 
@@ -167,6 +136,25 @@ head_position_t Parrot::calculateHeadPosition(uint16_t height, int32_t offset) {
     return headPosition;
 
 }
+
+[[noreturn]] void Parrot::worker() {
+
+     logger->info("Parrot reporting for duty!  📣🦜");
+
+
+     for(EVER) {
+
+         auto incoming = inputQueue->pop();
+
+         logger->debug("creature got {} inputs", incoming.size());
+
+         for(auto& input : incoming) {
+             logger->debug("got input: {}", input.toString());
+         }
+
+     }
+
+ }
 
 /**
  * This task is the main worker task for the parrot itself!

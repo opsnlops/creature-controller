@@ -13,7 +13,7 @@ using json = nlohmann::json;
 
 #include "logging/Logger.h"
 #include "creature/Creature.h"
-#include "creature/Input.h"
+#include "controller/Input.h"
 #include "creature/Parrot.h"
 
 
@@ -56,7 +56,7 @@ namespace creatures {
     }
 
 
-    std::shared_ptr<Creature> CreatureBuilder::build() {
+    std::shared_ptr<creatures::creature::Creature> CreatureBuilder::build() {
 
         logger->info("about to try to parse the config file");
 
@@ -84,16 +84,16 @@ namespace creatures {
         }
 
         // Validate the creature type
-        Creature::creature_type type = Creature::stringToCreatureType(j["type"]);
-        if(type == Creature::invalid_creature) {
+        creatures::creature::Creature::creature_type type = creatures::creature::Creature::stringToCreatureType(j["type"]);
+        if(type == creatures::creature::Creature::invalid_creature) {
             logger->error("invalid creature type: {}", j["type"]);
             throw CreatureBuilderException(fmt::format("invalid creature type: {}", j["type"]));
         }
 
-        std::shared_ptr<Creature> creature;
+        std::shared_ptr<creatures::creature::Creature> creature;
 
         switch(type) {
-            case Creature::parrot:
+            case creatures::creature::Creature::parrot:
                 creature = std::make_shared<Parrot>(logger);
                 break;
             default:
@@ -131,11 +131,11 @@ namespace creatures {
             logger->debug("looking at motor {}", motor["id"]);
 
             // Make sure we have a valid type for this motor
-            Creature::motor_type motorType = Creature::stringToMotorType(motor["type"]);
+            creatures::creature::Creature::motor_type motorType = creatures::creature::Creature::stringToMotorType(motor["type"]);
             switch(motorType) {
 
                 // Do this in its own context since there's a var being created
-                case Creature::servo: {
+                case creatures::creature::Creature::servo: {
                     std::shared_ptr<Servo> servo = createServo(motor, servo_frequency);
                     logger->debug("adding servo {}", servo->getId());
                     creature->addServo(servo->getId(), servo);
@@ -167,7 +167,7 @@ namespace creatures {
                 throw CreatureBuilderException(fmt::format("input slot {} is out of range", inputSlot));
             }
 
-            creature->addInput(creatures::Input(inputName, inputSlot, inputWidth));
+            creature->addInput(creatures::Input(inputName, inputSlot, inputWidth, 0UL));
             logger->debug("added input {} at slot {}", inputName, inputSlot);
 
         }
@@ -186,8 +186,8 @@ namespace creatures {
      */
     std::shared_ptr<Servo> CreatureBuilder::createServo(const json& j, u16 servo_frequency) {
 
-        Creature::motor_type type = Creature::stringToMotorType(j["type"]);
-        if(type == Creature::invalid_motor) {
+        creatures::creature::Creature::motor_type type = creatures::creature::Creature::stringToMotorType(j["type"]);
+        if(type == creatures::creature::Creature::invalid_motor) {
             throw CreatureBuilderException(fmt::format("invalid motor type: {}", j["type"]));
         }
 
@@ -202,19 +202,19 @@ namespace creatures {
 
         // Figure out what the default position should be
         u16 default_position = 0;
-        Creature::default_position_type requestedDefault = Creature::stringToDefaultPositionType(parseDefault);
+        creatures::creature::Creature::default_position_type requestedDefault = creatures::creature::Creature::stringToDefaultPositionType(parseDefault);
 
         switch(requestedDefault) {
-            case Creature::center:
+            case creatures::creature::Creature::center:
                 default_position = min_pulse_us + ((max_pulse_us - min_pulse_us) / 2);
                 break;
-            case Creature::min:
+            case creatures::creature::Creature::min:
                 default_position = min_pulse_us;
                 break;
-            case Creature::max:
+            case creatures::creature::Creature::max:
                 default_position = max_pulse_us;
                 break;
-            case Creature::invalid_position:
+            case creatures::creature::Creature::invalid_position:
                 throw CreatureBuilderException(fmt::format("invalid default position: {}", parseDefault));
                 break;
         }

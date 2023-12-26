@@ -31,7 +31,7 @@ namespace creatures {
          *
          * @return a shared_ptr to our prize
          */
-        std::shared_ptr<Creature> build();
+        std::shared_ptr<creatures::creature::Creature> build();
 
         // Convert a file to an istream
         static std::unique_ptr<std::istream> fileToStream(std::shared_ptr<Logger> logger, std::string filename);

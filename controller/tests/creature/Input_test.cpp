@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 
-#include "creature/Input.h"
+#include "controller/Input.h"
 
 TEST(Input, Create) {
 

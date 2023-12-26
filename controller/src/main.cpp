@@ -44,6 +44,7 @@ int main(int argc, char **argv) {
     auto builder = creatures::CreatureBuilder(logger, creatures::CreatureBuilder::fileToStream(logger, config->getConfigFileName()));
     auto creature = builder.build();
 
+
     // Hooray, we did it!
     logger->info("working with {}! ({})", creature->getName(), creature->getDescription());
     logger->debug("{} has {} servos and {} steppers", creature->getName(),
@@ -63,6 +64,10 @@ int main(int argc, char **argv) {
     auto controller = std::make_shared<Controller>(logger);
     controller->init(creature, serialHandler);
     controller->start();
+
+    // Now that the controller is running, we can start the creature
+    creature->init(controller);
+    creature->start();
 
     // Create and start the servo controller
     // Create and start the e1.13 server

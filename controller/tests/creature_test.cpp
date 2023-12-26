@@ -10,7 +10,7 @@
 TEST(Creature, CreateParrot) {
 
     auto logger = std::make_shared<creatures::NiceMockLogger>();
-    std::shared_ptr<Creature> parrot = std::make_shared<Parrot>(logger);
+    std::shared_ptr<creatures::creature::Creature> parrot = std::make_shared<Parrot>(logger);
     parrot->setName("doug");
 
     EXPECT_EQ("doug", parrot->getName());
@@ -20,7 +20,7 @@ TEST(Creature, CreateParrot) {
 TEST(Creature, ServoMap_BaseFunctionality) {
 
     auto logger = std::make_shared<creatures::NiceMockLogger>();
-    std::shared_ptr<Creature> parrot = std::make_shared<Parrot>(logger);
+    std::shared_ptr<creatures::creature::Creature> parrot = std::make_shared<Parrot>(logger);
     parrot->setName("doug");
 
     parrot->addServo("a", std::make_shared<Servo>(logger, "a", "A0", "Servo A0", 1000, 3000, 0.90, false, 50, 2000));
@@ -41,7 +41,7 @@ TEST(Creature, ServoMap_BaseFunctionality) {
 TEST(Creature, ServoMap_DuplicateId) {
 
     auto logger = std::make_shared<creatures::NiceMockLogger>();
-    std::shared_ptr<Creature> parrot = std::make_shared<Parrot>(logger);
+    std::shared_ptr<creatures::creature::Creature> parrot = std::make_shared<Parrot>(logger);
     parrot->setName("doug");
 
     parrot->addServo("a", std::make_shared<Servo>(logger, "a", "A3", "Servo A3", 1000, 3000, 0.90, false, 50, 2000));

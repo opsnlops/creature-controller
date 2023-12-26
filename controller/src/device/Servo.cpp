@@ -194,7 +194,7 @@ float Servo::getSmoothingValue() const {
 void Servo::calculateNextTick() {
     u32 last_tick = current_ticks;
 
-    current_ticks =  lround(((double)desired_ticks * (1.0 - smoothingValue)) + ((double)last_tick * smoothingValue));
+    current_ticks = lround(((double)desired_ticks * (1.0 - smoothingValue)) + ((double)last_tick * smoothingValue));
     //debug("-- set current_ticks to {}", current_ticks);
 }
 

@@ -54,14 +54,11 @@ typedef struct {
     u16 right;
 } head_position_t;
 
-class Parrot : public Creature {
+class Parrot : public creatures::creature::Creature {
 
 public:
 
     explicit Parrot(const std::shared_ptr<creatures::Logger>& logger);
-
-    void init(std::shared_ptr<Controller> controller) override;
-    void start() override;
 
     /**
      * Convert a given y coordinate to where the head should be
@@ -84,13 +81,7 @@ private:
 
     u16 headOffsetMax;
 
-};
+    // Our worker thread
+    [[noreturn]] void worker() override;
 
-/**
- * Used for passing information into our task
- */
-typedef struct {
-    std::shared_ptr<Controller> controller;
-    u16 joints;
-    Parrot* parrot;
-} ParrotInfo;
+};
