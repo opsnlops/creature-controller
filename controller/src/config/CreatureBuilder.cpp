@@ -13,6 +13,7 @@ using json = nlohmann::json;
 
 #include "logging/Logger.h"
 #include "creature/Creature.h"
+#include "creature/Input.h"
 #include "creature/Parrot.h"
 
 
@@ -46,6 +47,10 @@ namespace creatures {
         requiredServoFields = {
                 "type", "id", "name", "output_location", "min_pulse_us", "max_pulse_us",
                 "smoothing_value", "inverted", "default_position"
+        };
+
+        requiredInputFields = {
+                "name", "slot", "width"
         };
 
     }
@@ -145,7 +150,27 @@ namespace creatures {
         }
         logger->debug("done processing motors");
 
-        // TODO: Handle the inputs
+        // Handle the inputs
+        for(auto& input : j["inputs"]) {
+
+            // Validate the fields in this object
+            for (const auto& fieldName : requiredInputFields) {
+                checkJsonField(input, fieldName);
+            }
+
+            std::string inputName = input["name"];
+            u16 inputSlot = input["slot"];
+            u8 inputWidth = input["width"];
+
+            // Make sure the slot is in the correct range for DMX
+            if(inputSlot > 512) {
+                throw CreatureBuilderException(fmt::format("input slot {} is out of range", inputSlot));
+            }
+
+            creature->addInput(creatures::Input(inputName, inputSlot, inputWidth));
+            logger->debug("added input {} at slot {}", inputName, inputSlot);
+
+        }
 
         return creature;
 

@@ -210,3 +210,11 @@ float Creature::getHeadOffsetMax() const {
 void Creature::setHeadOffsetMax(float headOffsetMax) {
     Creature::headOffsetMax = headOffsetMax;
 }
+
+void Creature::addInput(creatures::Input input) {
+    inputs.push_back(input);
+}
+
+std::vector<creatures::Input> Creature::getInputs() const {
+    return inputs;
+}

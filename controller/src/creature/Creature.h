@@ -6,12 +6,14 @@
 #include <unistd.h>
 #include <thread>
 #include <unordered_map>
+#include <vector>
 
 #include "controller-config.h"
 
 #include "controller/Controller.h"
 #include "controller/commands/tokens/ServoPosition.h"
 #include "creature/Creature.h"
+#include "creature/Input.h"
 #include "device/Servo.h"
 #include "device/Stepper.h"
 #include "logging/Logger.h"
@@ -28,6 +30,7 @@ public:
         parrot,
         wled_light,
         skunk,
+        test,
         invalid_creature // (Not really a valid type) 😅
     };
 
@@ -128,6 +131,7 @@ public:
     u16 getPositionDefault() const;
     float getHeadOffsetMax() const;
     u16 getServoUpdateFrequencyHz() const;
+    std::vector<creatures::Input> getInputs() const;
 
     std::shared_ptr<Servo> getServo(const std::string& id);
     std::shared_ptr<Stepper> getStepper(std::string id);
@@ -144,6 +148,7 @@ public:
     void setPositionDefault(u16 positionDefault);
     void setHeadOffsetMax(float headOffsetMax);
     void setServoUpdateFrequencyHz(u16 hertz);
+    void addInput(creatures::Input input);
 
 
 protected:
@@ -161,6 +166,7 @@ protected:
     u16 dmxUniverse;
     u8 startingDmxChannel;
 
+    std::vector<creatures::Input> inputs;
 
     std::shared_ptr<Controller> controller;
     std::unordered_map<std::string, std::shared_ptr<Servo>> servos;

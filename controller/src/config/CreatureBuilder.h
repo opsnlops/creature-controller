@@ -40,6 +40,7 @@ namespace creatures {
         std::unique_ptr<std::istream> configFile;
         std::vector<std::string> requiredTopLevelFields;
         std::vector<std::string> requiredServoFields;
+        std::vector<std::string> requiredInputFields;
 
         std::shared_ptr<Servo> createServo(const json& j, u16 servo_frequency);
 

@@ -122,6 +122,8 @@ add_library(creature_lib
         src/io/handlers/PongHandler.h
         src/io/handlers/PongHandler.cpp
         src/dmx/E131Exception.h
+        src/creature/Input.cpp
+        src/creature/Input.h
 )
 
 target_include_directories(creature_lib PUBLIC
@@ -154,7 +156,7 @@ target_link_libraries(creature-controller
 enable_testing()
 
 add_executable(creature-controller-test
-        tests/creature_builder_test.cpp
+        tests/config/CreatureBuilder_test.cpp
         tests/creature_test.cpp
         tests/servo_test.cpp
         tests/MessageQueue_test.cpp
@@ -174,6 +176,7 @@ add_executable(creature-controller-test
         tests/io/handlers/StatsHandler_test.cpp
         tests/dmx/E131Server_test.cpp
         tests/mocks/creature/MockCreature.h
+        tests/creature/Input_test.cpp
 )
 
 target_link_libraries(creature-controller-test
