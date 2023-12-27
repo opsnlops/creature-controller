@@ -7,6 +7,7 @@
 #include "controller-config.h"
 
 #include "util/ranges.h"
+#include "util/thread_name.h"
 
 #include "Parrot.h"
 #include "Creature.h"
@@ -19,83 +20,6 @@ Parrot::Parrot(const std::shared_ptr<creatures::Logger>& logger)
     logger->debug("the head offset max is {}", this->headOffsetMax);
 
     logger->info("Bawk!");
-}
-
-/**
- * This is all legacy code from the pre-Linux version. Commented out just for reference
- * in case I need it later. (opsnlops)
- */
- void wasImportantGetDefaultConfig() {
-
-    /*
-    auto defaultConfig = new CreatureConfig(CREATURE_NAME, 50, 6, 1, 1);
-
-    defaultConfig->setServoConfig(SERVO_NECK_LEFT,
-                                  new ServoConfig("Neck Left", 1250, 2250,
-                                                  0.90, DEFAULT_POSITION, false));
-    defaultConfig->setServoConfig(SERVO_NECK_RIGHT,
-                                  new ServoConfig("Neck Right", 800, 1800,
-                                                  0.90, DEFAULT_POSITION, true));
-    defaultConfig->setServoConfig(SERVO_NECK_ROTATE,
-                                  new ServoConfig("Neck Rotate", 1400, 1900,
-                                                  0.95, DEFAULT_POSITION, false));
-    defaultConfig->setServoConfig(SERVO_BODY_LEAN,
-                                  new ServoConfig("Body Lean", 1475, 1950,
-                                                  0.96, MIN_POSITION,true));
-    defaultConfig->setServoConfig(SERVO_BEAK,
-                                  new ServoConfig("Beak", 1600, 2350,
-                                                  0.4, MIN_POSITION, true));
-    defaultConfig->setServoConfig(SERVO_CHEST,
-                                  new ServoConfig("Chest", 250, 2500,
-                                                  0.99, DEFAULT_POSITION, false));
-
-     */
-
-    // "Max Steps" is in full steps (use the datasheet from the stepper to know how big that is)
-
-    /*
-     * StepperConfig(uint8_t slot, const char* name, uint32_t maxSteps, uint16_t decelerationAggressiveness,
-                  uint32_t sleepWakeupPauseTimeUs, uint32_t sleepAfterUs, bool inverted)
-     */
-
-    /*
-     * The datasheet for the stepper driver we're using says that it needs 1ms to wake back up again
-     */
-#define WAIT_AFTER_WAKEUP_TIME 2000
-
-    /*
-    defaultConfig->setStepperConfig(STEPPER_NECK_ROTATE,
-                                    new StepperConfig(STEPPER_NECK_ROTATE,
-                                                      "Neck Rotate",
-                                                      20p,
-                                                      8,
-                                                      WAIT_AFTER_WAKEUP_TIME,
-                                                      5000 * 1000,        // 5s
-                                                      false));
-
-    defaultConfig->setStepperConfig(STEPPER_BODY_LEAN,
-                                    new StepperConfig(STEPPER_BODY_LEAN,
-                                                      "Body Lean",
-                                                      400,
-                                                      2,
-                                                      WAIT_AFTER_WAKEUP_TIME,
-                                                      1000 * 1000,
-                                                      false));
-
-    defaultConfig->setStepperConfig(STEPPER_STAND_ROTATE,
-                                    new StepperConfig(STEPPER_STAND_ROTATE,
-                                                      "Stand Rotate",
-                                                      300,
-                                                      8,
-                                                      WAIT_AFTER_WAKEUP_TIME,
-                                                      2000 * 1000,
-                                                      false));
-    */
-    // Make our running defaultConfig point to this
-    //this->runningConfig = defaultConfig;
-
-    //return defaultConfig;
-
 }
 
 
@@ -138,6 +62,8 @@ head_position_t Parrot::calculateHeadPosition(uint16_t height, int32_t offset) {
 }
 
 [[noreturn]] void Parrot::worker() {
+
+    setThreadName("Parrot::worker");
 
      logger->info("Parrot reporting for duty!  📣🦜");
 
