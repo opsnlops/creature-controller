@@ -5,6 +5,7 @@
 #include <unistd.h>   // UNIX standard function definitions
 #include <fcntl.h>    // File control definitions
 #include <termios.h>  // POSIX terminal control definitions
+#include <poll.h>
 
 #include "controller-config.h"
 
@@ -170,28 +171,26 @@ namespace creatures {
 
         setThreadName("SerialHandler::reader");
 
-        fd_set read_fds;
-        struct timeval timeout{};
-        timeout.tv_sec = 21;  // 21 seconds (Stats are sent every 20!)
-        timeout.tv_usec = 0;
+        struct pollfd fds[1];
+        int timeout_msecs = 21000; // 21 seconds in milliseconds
+
+        fds[0].fd = this->fileDescriptor;
+        fds[0].events = POLLIN;
 
         std::string tempBuffer; // Temporary buffer to store incomplete messages
 
         for (EVER) {
-            FD_ZERO(&read_fds);
-            FD_SET(this->fileDescriptor, &read_fds);
+            int ret = poll(fds, 1, timeout_msecs);
 
-            int selectStatus = select(this->fileDescriptor + 1, &read_fds, nullptr, nullptr, &timeout);
-
-            if (selectStatus < 0) {
-                this->logger->error("Error on select: {}", strerror(errno));
+            if (ret < 0) {
+                this->logger->error("Error on poll: {}", strerror(errno));
                 break;
-            } else if (selectStatus == 0) {
-                this->logger->debug("Select timeout. No data received.");
+            } else if (ret == 0) {
+                this->logger->debug("Poll timeout. No data received.");
                 continue;
             }
 
-            if (FD_ISSET(this->fileDescriptor, &read_fds)) {
+            if (fds[0].revents & POLLIN) {
                 char readBuf[256];
                 memset(&readBuf, '\0', sizeof(readBuf));
 
@@ -212,6 +211,7 @@ namespace creatures {
             }
         }
     }
+
 
     /**
      * Makes sure that a device node exists, and is a character device
