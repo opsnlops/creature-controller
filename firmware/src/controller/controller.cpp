@@ -35,6 +35,20 @@ namespace creatures::controller {
     };
 
 
+    /**
+     * We need to know how long each frame is in microseconds. This is set when the
+     * first servo is configured. It's _possible_ for the Pi Pico to run PWM channel at
+     * a different frequency, but we don't do that. It doesn't really make sense to do it,
+     * since almost all servos work at 50Hz.
+     */
+    u64 frame_length_microseconds = 0UL;
+
+    /**
+     * What's the size of the PWM counter?
+     */
+    u32 pwm_resolution = 0UL;
+
+
     void init() {
         info("init-ing the controller");
 
@@ -44,16 +58,23 @@ namespace creatures::controller {
         info("starting the controller");
 
         // Fire up PWM
+        u32 wrap = 0UL;
         for (auto & i : motor_map) {
             gpio_set_function(i.gpio_pin, GPIO_FUNC_PWM);
-            //pwm_set_freq_duty(i.slice, i.channel, 1000000 / 50, 0);
-            pwm_set_freq_duty(i.slice, i.channel, 50, 0);
+            wrap = pwm_set_freq_duty(i.slice, i.channel, 50, 0);
             pwm_set_enabled(i.slice, true);
         }
 
-        // Install the IRQ handler for the servos
-        pwm_set_irq_enabled(motor_map[0].slice, true);
+        /*
+         * If this is the first one, set the frame length and resolution
+         */
+        if(frame_length_microseconds == 0UL) {
+            frame_length_microseconds = 1000000UL / 50UL;  // TODO: This is assuming 50Hz
+            pwm_resolution = wrap;
+        }
 
+        // Install the IRQ handler for the servos. Use servo 0 as a proxy for the rest.
+        pwm_set_irq_enabled(motor_map[0].slice, true);
         irq_set_exclusive_handler(PWM_IRQ_WRAP, creatures::controller::on_pwm_wrap_handler);
         irq_set_enabled(PWM_IRQ_WRAP, true);
     }
@@ -75,7 +96,7 @@ namespace creatures::controller {
     }
 
 
-    bool requestServoPosition(const char* motor_id, u16 requestedPosition) {
+    bool requestServoPosition(const char* motor_id, u16 requestedMicroseconds) {
         if(motor_id == nullptr || motor_id[1] == '\0') return false;
 
         // Get the index in the array
@@ -85,9 +106,14 @@ namespace creatures::controller {
             return false;
         }
 
-        verbose("Requested position for %s: %d", motor_id, requestedPosition);
+        // What percentage of the frame is going to be set to on?
+        double frame_active = (float)requestedMicroseconds / (float)frame_length_microseconds;
 
-        motor_map[motor_id_index].requested_position = requestedPosition;
+        // ..and what counter value is that?
+        u32 desired_ticks = (u32)((float)pwm_resolution * frame_active);
+
+        verbose("Requested position for %s: %u ticks -> %u microseconds", motor_id, desired_ticks, requestedMicroseconds);
+        motor_map[motor_id_index].requested_position = desired_ticks;
 
         return true;
     }
@@ -105,7 +131,6 @@ namespace creatures::controller {
         pwm_clear_irq(motor_map[0].slice);
         number_of_pwm_wraps = number_of_pwm_wraps + 1UL;
     }
-
 
 
     u32 pwm_set_freq_duty(uint slice_num, uint chan, u32 frequency, int d) {

@@ -39,8 +39,6 @@ u16 calculateChecksum(const char* message) {
 
 bool parseMessage(const char* rawMessage, GenericMessage* outMessage) {
 
-    debug("attempting to parse: %s", rawMessage);
-
     // Temporary buffer to hold parts of the message
     char buffer[USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH];
     memset(buffer, '\0', USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH);

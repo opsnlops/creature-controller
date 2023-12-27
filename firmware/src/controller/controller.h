@@ -57,7 +57,44 @@ namespace creatures::controller {
     void start();
 
 
-    bool requestServoPosition(const char* motor_id, u16 requestedPosition);
+    /**
+     * @brief Request that a servo's PWM counter be set to a desired number of microseconds
+     *
+     * Servos work via a PWM counter. This counter defines the position of the servo. Each
+     * servo has a range that it maps a number of microseconds of a pulse at the start of a
+     * frame to.
+     *
+     * The microsecond range that each servo works over is defined from two important things:
+     *
+     *    * The range specified by the servo's manufacturer
+     *    * The range each of our servos are configured to work over
+     *
+     * This is pretty critical. If we try to go beyond the number of microseconds that our
+     * configuration is set to, it's likely that we're going to break something. The servos
+     * in use are quite strong, and most of the creatures are made out of 3D printed parts, ie
+     * they're just plastic.
+     *
+     *
+     * But there's more to this story.
+     *
+     * The Pi Pico uses a PWM counter. It doesn't really work by microseconds. It has a counter
+     * and it turns the channel on if the counter is lower than the requested value, and it turns
+     * it off if it's higher. That's all it does.
+     *
+     * What this function does is map the microseconds requested to the number of ticks on the
+     * counter when the channel should go from on to off.
+     *
+     * It was a design decision to keep this in the firmware itself. Right now I have no plans
+     * to expand beyond Pi Picos, but if some new microcontroller comes along (or even a new
+     * version of the Pi Pico), it'll work differently. I'm using this piece of low level code
+     * to do the actual translation from microseconds to ticks, because it's very specific to
+     * this one microcontroller.
+     *
+     * @param motor_id The motor ID to adjust (ie A0, A1, C0, etc)
+     * @param requestedMicroseconds The number of microseconds to request
+     * @return true if all error checks passed, or false otherwise
+     */
+    bool requestServoPosition(const char* motor_id, u16 requestedMicroseconds);
 
 
 

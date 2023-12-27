@@ -164,9 +164,9 @@ head_position_t Parrot::calculateHeadPosition(uint16_t height, int32_t offset) {
          // Update our servos so they'll get picked up on the next frame
          servos["neck_left"]->move(headPosition.left);
          servos["neck_right"]->move(headPosition.right);
-         servos["neck_rotate"]->move(incoming["neck_rotate"].getIncomingRequest());
-         servos["body_lean"]->move(incoming["body_lean"].getIncomingRequest());
-         servos["beak"]->move(incoming["beak"].getIncomingRequest());
+         servos["neck_rotate"]->move(Parrot::convertInputValueToServoValue(incoming["neck_rotate"].getIncomingRequest()));
+         servos["body_lean"]->move(Parrot::convertInputValueToServoValue(incoming["body_lean"].getIncomingRequest()));
+         servos["beak"]->move(Parrot::convertInputValueToServoValue(incoming["beak"].getIncomingRequest()));
 
      }
 

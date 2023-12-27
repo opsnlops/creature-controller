@@ -9,6 +9,7 @@
 
 // Our modules
 #include "ServoException.h"
+#include "util/ranges.h"
 
 extern u64 number_of_moves;
 
@@ -53,9 +54,6 @@ Servo::Servo(std::shared_ptr<creatures::Logger> logger, std::string id, std::str
 
     // Calculate the length of a frame in microseconds based on the frequency
     this->frame_length_microseconds = 1000000 / servo_update_frequency_hz;
-
-    // Calculate the resolution of the servo
-    this->resolution = calculateResolution();
 
     // Runtime values
     this->desired_microseconds = 0;
@@ -138,18 +136,13 @@ void Servo::move(u16 position) {
     // If this servo is inverted, do it now
     if(inverted) position = MAX_POSITION - position;
 
-    // What percentage of our travel is expected?
-    float travel_percentage = (float)position / MAX_POSITION;
-    float desired_pulse_length_us = (float)(((max_pulse_us - min_pulse_us)) * travel_percentage)
-                                    + (float)min_pulse_us;
+    // Covert this to a desired microsecond
+    desired_microseconds = convertRange(logger, position, MIN_POSITION, MAX_POSITION, min_pulse_us, max_pulse_us);
 
-    // Now that we know how many microseconds we're expected to have, map that to
-    // a frame and a value that can be passed to the PWM controller
-    float frame_active = desired_pulse_length_us / (float)(frame_length_microseconds);
-    desired_microseconds = (float)resolution * frame_active;
+    // Save the position for debugging
     current_position = position;
 
-    logger->trace("requesting servo on output location {} to be set to position {} ({} ticks)",
+    logger->trace("requesting servo on output location {} to be set to position {} ({}us)",
                   outputLocation,
                   current_position,
                   desired_microseconds);
@@ -220,22 +213,4 @@ u16 Servo::getServoUpdateFrequencyHz() const {
 
 u32 Servo::getFrameLengthMicroseconds() const {
     return frame_length_microseconds;
-}
-
-u32 Servo::getResolution() const {
-    return resolution;
-}
-
-/**
- * This is very specific to the Pi Pico. See it's matching function in the firmware
- * for more information.
- *
- * @return the resolution of the PWM controller
- */
-u32 Servo::calculateResolution() const {
-    u32 clock = 125000000;
-    u32 divider16 = clock / servo_update_frequency_hz / 4096 + (clock % (servo_update_frequency_hz * 4096) != 0);
-    if (divider16 / 16 == 0) divider16 = 16;
-    u32 wrap = clock * 16 / divider16 / servo_update_frequency_hz - 1;
-    return wrap;
 }
