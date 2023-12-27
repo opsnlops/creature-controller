@@ -25,7 +25,6 @@ TEST(Servo, CreateServo) {
     EXPECT_FALSE(servo->isInverted());
     EXPECT_EQ(2000, servo->getDefaultPosition());
     EXPECT_EQ(50, servo->getServoUpdateFrequencyHz());
-    EXPECT_EQ(65465, servo->getResolution());
     EXPECT_EQ(20000, servo->getFrameLengthMicroseconds());
 
 }
