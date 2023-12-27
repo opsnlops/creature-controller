@@ -58,8 +58,8 @@ Servo::Servo(std::shared_ptr<creatures::Logger> logger, std::string id, std::str
     this->resolution = calculateResolution();
 
     // Runtime values
-    this->desired_ticks = 0;
-    this->current_ticks = 0;
+    this->desired_microseconds = 0;
+    this->current_microseconds = 0;
     this->current_position = getDefaultPosition();
 
     // Force a calculation for the current tick
@@ -106,7 +106,7 @@ void Servo::turnOff() {
  * assert will be fired in not to prevent damage to the creature or a motor.
  *
  * `servo_move()` does not actually move the servo. Instead, it marks it's requested
- * position in `desired_ticks` and waits for the IRQ handler to fire off to actually
+ * position in `desired_microseconds` and waits for the IRQ handler to fire off to actually
  * move to that position. Working this way decouples changing the duty cycle from
  * the request to the PWM circuit, which is useful when moving servos following
  * some sort of external control. (DMX in our case!)
@@ -146,13 +146,13 @@ void Servo::move(u16 position) {
     // Now that we know how many microseconds we're expected to have, map that to
     // a frame and a value that can be passed to the PWM controller
     float frame_active = desired_pulse_length_us / (float)(frame_length_microseconds);
-    desired_ticks = (float)resolution * frame_active;
+    desired_microseconds = (float)resolution * frame_active;
     current_position = position;
 
     logger->trace("requesting servo on output location {} to be set to position {} ({} ticks)",
-          outputLocation,
-          current_position,
-          desired_ticks);
+                  outputLocation,
+                  current_position,
+                  desired_microseconds);
 
     number_of_moves = number_of_moves + 1;
 }
@@ -179,12 +179,12 @@ u16 Servo::getDefaultPosition() const {
     return this->default_position;
 }
 
-u32 Servo::getDesiredTick() const {
-    return desired_ticks;
+u32 Servo::getDesiredMicroseconds() const {
+    return desired_microseconds;
 }
 
-u32 Servo::getCurrentTick() const {
-    return current_ticks;
+u32 Servo::getCurrentMicroseconds() const {
+    return current_microseconds;
 }
 
 float Servo::getSmoothingValue() const {
@@ -192,10 +192,10 @@ float Servo::getSmoothingValue() const {
 }
 
 void Servo::calculateNextTick() {
-    u32 last_tick = current_ticks;
+    u32 last_tick = current_microseconds;
 
-    current_ticks = lround(((double)desired_ticks * (1.0 - smoothingValue)) + ((double)last_tick * smoothingValue));
-    //debug("-- set current_ticks to {}", current_ticks);
+    current_microseconds = lround(((double)desired_microseconds * (1.0 - smoothingValue)) + ((double)last_tick * smoothingValue));
+    //debug("-- set current_microseconds to {}", current_microseconds);
 }
 
 bool Servo::isInverted() const {

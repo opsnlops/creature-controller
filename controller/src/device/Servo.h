@@ -30,8 +30,8 @@ public:
     [[nodiscard]] u16 getDefaultPosition() const;
 
     // These are PWM values
-    [[nodiscard]] u32 getDesiredTick() const;   // Where we want it to go
-    [[nodiscard]] u32 getCurrentTick() const;   // Where the servo currently is
+    [[nodiscard]] u32 getDesiredMicroseconds() const;   // Where we want it to go
+    [[nodiscard]] u32 getCurrentMicroseconds() const;   // Where the servo currently is
 
     [[nodiscard]] float getSmoothingValue() const;
     [[nodiscard]] std::string getName() const;
@@ -62,8 +62,8 @@ private:
     u16 default_position;   // The position to go to when there's nothing else
     bool on;                    // Is the servo active?
     bool inverted;              // Should the movements be inverted?
-    u32 desired_ticks;     // The number of ticks we should be set to on the next cycle
-    u32 current_ticks;     // Which tick is the servo at
+    u32 desired_microseconds;     // The number of microseconds the servo should be set to next
+    u32 current_microseconds;     // The current number of microseconds the servo is set to
     std::string name;           // This servo's name
     float smoothingValue;       // The constant to use when smoothing the input
     std::shared_ptr<creatures::Logger> logger;
