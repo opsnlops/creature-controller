@@ -21,16 +21,16 @@ volatile u64 checksum_errors = 0UL;
 
 const MessageTypeHandler messageHandlers[] = {
         {"PING", handlePingMessage},
-        {"POS", handlePositionMessage},
+        {"POS",  handlePositionMessage},
 };
 
 
-u16 calculateChecksum(const char* message) {
+u16 calculateChecksum(const char *message) {
     u16 checksum = 0;
 
     if (message != NULL) {
         while (*message != '\0') {
-            checksum += (u8)(*message);
+            checksum += (u8) (*message);
             message++;
         }
     }
@@ -40,7 +40,7 @@ u16 calculateChecksum(const char* message) {
 }
 
 
-bool parseMessage(const char* rawMessage, GenericMessage* outMessage) {
+bool parseMessage(const char *rawMessage, GenericMessage *outMessage) {
 
     // Temporary buffer to hold parts of the message
     char buffer[USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH];
@@ -50,7 +50,7 @@ bool parseMessage(const char* rawMessage, GenericMessage* outMessage) {
     buffer[USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH - 1] = '\0';
 
     // Tokenize the message
-    char* token = strtok(buffer, "\t");
+    char *token = strtok(buffer, "\t");
     int tokenIndex = 0;
 
     while (token != NULL && tokenIndex < MAX_TOKENS - 1) {
@@ -77,8 +77,8 @@ bool parseMessage(const char* rawMessage, GenericMessage* outMessage) {
     outMessage->tokenCount = tokenIndex - 2; // Exclude checksum token in count
 
     // Extract the expected checksum from the last token
-    char* checksumToken = outMessage->tokens[outMessage->tokenCount];
-    char* spacePos = strchr(checksumToken, ' ');
+    char *checksumToken = outMessage->tokens[outMessage->tokenCount];
+    char *spacePos = strchr(checksumToken, ' ');
     if (spacePos != NULL && *(spacePos + 1) != '\0') {
         outMessage->expectedChecksum = stringToU16(spacePos + 1);  // Convert the part after the space
     } else {
@@ -88,7 +88,7 @@ bool parseMessage(const char* rawMessage, GenericMessage* outMessage) {
 
 
     // Find the position of the last tab character, which precedes the checksum token
-    const char* lastTabPos = strrchr(rawMessage, '\t');
+    const char *lastTabPos = strrchr(rawMessage, '\t');
     if (lastTabPos != NULL) {
         // Calculate the length of the message part that should be included in the checksum calculation
         size_t checksumLength = lastTabPos - rawMessage;
@@ -109,7 +109,7 @@ bool parseMessage(const char* rawMessage, GenericMessage* outMessage) {
     return true;
 }
 
-void processMessage(const char* rawMessage) {
+void processMessage(const char *rawMessage) {
 
     verbose("processing message: %s", rawMessage);
 

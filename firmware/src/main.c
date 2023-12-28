@@ -27,7 +27,6 @@
 #include "debug/blinker.h"
 
 
-
 volatile size_t xFreeHeapSpace;
 
 int main() {
@@ -80,7 +79,7 @@ portTASK_FUNCTION(startup_task, pvParameters) {
     usb_init();
     usb_start();
 
-   // Bye!
-   vTaskDelete(NULL);
+    // Bye!
+    vTaskDelete(NULL);
 
 }

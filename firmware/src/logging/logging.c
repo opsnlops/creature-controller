@@ -57,7 +57,7 @@ void debug(const char *message, ...) {
 #if LOGGING_LEVEL > 3
 
     // If the logging queue if full, stop now
-    if(!_is_safe_to_log())
+    if (!_is_safe_to_log())
         return;
 
     // Copy the arguments to a new va_list
@@ -67,7 +67,7 @@ void debug(const char *message, ...) {
     struct LogMessage lm = createMessageObject(LOG_LEVEL_DEBUG, message, args);
     va_end(args);
 
-   xQueueSendToBackFromISR(creature_log_message_queue_handle, &lm, NULL);
+    xQueueSendToBackFromISR(creature_log_message_queue_handle, &lm, NULL);
 
 #endif
 }
@@ -76,7 +76,7 @@ void info(const char *message, ...) {
 #if LOGGING_LEVEL > 2
 
     // If the logging queue if full, stop now
-    if(!_is_safe_to_log())
+    if (!_is_safe_to_log())
         return;
 
     // Copy the arguments to a new va_list
@@ -95,7 +95,7 @@ void warning(const char *message, ...) {
 #if LOGGING_LEVEL > 1
 
     // If the logging queue if full, stop now
-    if(!_is_safe_to_log())
+    if (!_is_safe_to_log())
         return;
 
     // Copy the arguments to a new va_list
@@ -114,7 +114,7 @@ void error(const char *message, ...) {
 #if LOGGING_LEVEL > 0
 
     // If the logging queue if full, stop now
-    if(!_is_safe_to_log())
+    if (!_is_safe_to_log())
         return;
 
     // Copy the arguments to a new va_list
@@ -132,7 +132,7 @@ void error(const char *message, ...) {
 void __unused fatal(const char *message, ...) {
 
     // If the logging queue if full, stop now
-    if(!_is_safe_to_log())
+    if (!_is_safe_to_log())
         return;
 
     // Copy the arguments to a new va_list
@@ -210,7 +210,7 @@ portTASK_FUNCTION(log_queue_reader_task, pvParameters) {
             // Format our messaging
             u32 time = to_ms_since_boot(get_absolute_time());
 
-            char* message = (char*)pvPortMalloc(strlen(lm.message) + 33);
+            char *message = (char *) pvPortMalloc(strlen(lm.message) + 33);
             memset(message, '\0', strlen(lm.message) + 33);
             snprintf(message, strlen(lm.message) + 32, "LOG\t%lu\t%s\t%s", time, levelBuffer, lm.message);
 

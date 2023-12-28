@@ -12,15 +12,13 @@
 extern volatile size_t xFreeHeapSpace;
 
 
-void vApplicationMallocFailedHook( void )
-{
+void vApplicationMallocFailedHook(void) {
     /* Force an assert. */
-    configASSERT( ( volatile void * ) NULL );
+    configASSERT((volatile void *) NULL);
 }
 
 
-
-void vApplicationStackOverflowHook(TaskHandle_t xTask, char* pcTaskName) {
+void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName) {
 
     // Halt the system on a stack overflow.
     taskDISABLE_INTERRUPTS();
@@ -32,16 +30,14 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char* pcTaskName) {
     configASSERT(true);
 }
 
-void vApplicationIdleHook( void )
-{
+void vApplicationIdleHook(void) {
 
     // Record the free heap space for the stats handler
     xFreeHeapSpace = xPortGetFreeHeapSize();
 
 }
 
-void vApplicationTickHook( void )
-{
+void vApplicationTickHook(void) {
     // Nothing for now
 
 }

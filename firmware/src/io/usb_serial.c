@@ -69,16 +69,16 @@ bool is_safe_to_enqueue_outgoing_usb_serial() {
     return (outgoing_queue_exists && !xQueueIsQueueFullFromISR(usb_serial_outgoing_messages));
 }
 
-bool send_to_controller(const char* message) {
+bool send_to_controller(const char *message) {
 
-    if(strlen(message) > USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH) {
+    if (strlen(message) > USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH) {
         error("not sending messaging %s because it's %u long and the max length is %u",
               message, strlen(message), USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH);
         return false;
     }
 
     // If the queue isn't full, send it
-    if(is_safe_to_enqueue_outgoing_usb_serial()) {
+    if (is_safe_to_enqueue_outgoing_usb_serial()) {
         xQueueSendToBack(usb_serial_outgoing_messages, message, (TickType_t) pdMS_TO_TICKS(10));
         return true;
     }
@@ -128,7 +128,7 @@ void tud_cdc_rx_cb(uint8_t itf) {
                 verbose("it's the blessed character");
 
                 // If there was a blank line warn the sender
-                if(bufferIndex == 0) {
+                if (bufferIndex == 0) {
                     warning("skipping blank input line from sender");
                     break;
                 }

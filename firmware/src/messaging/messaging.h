@@ -29,7 +29,7 @@ typedef struct {
 /**
  * Our Message Handler
  */
-typedef bool (*MessageHandler)(const GenericMessage*);
+typedef bool (*MessageHandler)(const GenericMessage *);
 
 typedef struct {
     char messageType[MESSAGE_ACTION_MAX_SIZE];
@@ -42,7 +42,7 @@ typedef struct {
  *
  * @param rawMessage the raw message
  */
-void processMessage(const char* rawMessage);
+void processMessage(const char *rawMessage);
 
 /**
  * Parse a message from the serial connection
@@ -51,7 +51,7 @@ void processMessage(const char* rawMessage);
  * @param outMessage GenericMessage out
  * @return true if it worked, false if not
  */
-bool parseMessage(const char* rawMessage, GenericMessage* outMessage);
+bool parseMessage(const char *rawMessage, GenericMessage *outMessage);
 
 
 /**
@@ -60,4 +60,4 @@ bool parseMessage(const char* rawMessage, GenericMessage* outMessage);
  * @param message the message to check
  * @return the u16 checksum
  */
-u16 calculateChecksum(const char* message);
+u16 calculateChecksum(const char *message);

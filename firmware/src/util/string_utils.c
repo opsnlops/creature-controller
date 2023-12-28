@@ -12,7 +12,7 @@
 #include "controller-config.h"
 
 
-u16 stringToU16(const char* str) {
+u16 stringToU16(const char *str) {
 
     // Make sure this is a valid string
     if (str == NULL) {
@@ -20,7 +20,7 @@ u16 stringToU16(const char* str) {
     }
 
     // Skip leading whitespace
-    while (*str != '\0' && isspace((unsigned char)*str)) {
+    while (*str != '\0' && isspace((unsigned char) *str)) {
         str++;
     }
 
@@ -31,7 +31,7 @@ u16 stringToU16(const char* str) {
 
     // Detect hexadecimal (starts with "0x" or "0X")
     bool isHex = (str[0] == '0' && (str[1] == 'x' || str[1] == 'X'));
-    char* endPointer;
+    char *endPointer;
     errno = 0;
 
     // Convert to u16
@@ -43,5 +43,5 @@ u16 stringToU16(const char* str) {
         return 0;
     }
 
-    return (u16)value;
+    return (u16) value;
 }

@@ -7,7 +7,7 @@
 
 #include "controller-config.h"
 
-bool handlePingMessage(const GenericMessage* msg) {
+bool handlePingMessage(const GenericMessage *msg) {
 
     debug("handling ping message");
 

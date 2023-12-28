@@ -20,14 +20,11 @@
 #define HID_STACK_SIZE      configMINIMAL_STACK_SIZE
 
 
+void usb_init();
+
+void usb_start();
+
+void usbDeviceTimerCallback(TimerHandle_t xTimer);
 
 
-
-    void usb_init();
-    void usb_start();
-    void usbDeviceTimerCallback(TimerHandle_t xTimer);
-
-
-
-
-void cdc_send(char const* line);
+void cdc_send(char const *line);

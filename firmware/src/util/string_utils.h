@@ -19,4 +19,4 @@
  * @param str to convert
  * @return the u16
  */
-u16 stringToU16(const char* str);
+u16 stringToU16(const char *str);

@@ -38,7 +38,7 @@ portTASK_FUNCTION(incoming_serial_reader_task, pvParameters) {
 
 
     // Define our buffer and zero it out
-    char* rx_buffer = (char *) pvPortMalloc(sizeof(char) * USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH);
+    char *rx_buffer = (char *) pvPortMalloc(sizeof(char) * USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH);
     memset(rx_buffer, '\0', USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH);
 
 
@@ -86,7 +86,7 @@ portTASK_FUNCTION(outgoing_serial_writer_task, pvParameters) {
     configASSERT(usb_serial_outgoing_messages != NULL);
 
     // Allocate buffer on the heap
-    char *rx_buffer = (char *)pvPortMalloc(USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH + 3);
+    char *rx_buffer = (char *) pvPortMalloc(USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH + 3);
     if (rx_buffer == NULL) {
         configASSERT("stopping the serial writer because of a failure to allocate memory");
         return;

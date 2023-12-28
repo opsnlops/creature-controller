@@ -5,4 +5,4 @@
 #include "messaging/messaging.h"
 
 
-bool handlePositionMessage(const GenericMessage* msg);
+bool handlePositionMessage(const GenericMessage *msg);

@@ -9,7 +9,6 @@
 #include "hardware/pwm.h"
 
 
-
 #include "logging/logging.h"
 
 #include "controller-config.h"
@@ -75,7 +74,7 @@ void controller_start() {
     /*
      * If this is the first one, set the frame length and resolution
      */
-    if(frame_length_microseconds == 0UL) {
+    if (frame_length_microseconds == 0UL) {
         frame_length_microseconds = 1000000UL / 50UL;  // TODO: This is assuming 50Hz
         pwm_resolution = wrap;
     }
@@ -86,14 +85,15 @@ void controller_start() {
     irq_set_enabled(PWM_IRQ_WRAP, true);
 }
 
-u8 getMotorMapIndex(const char* motor_id) {
-    if(motor_id == NULL || motor_id[1] == '\0') return INVALID_MOTOR_ID;
+u8 getMotorMapIndex(const char *motor_id) {
+    if (motor_id == NULL || motor_id[1] == '\0') return INVALID_MOTOR_ID;
 
     u8 module = motor_id[0] - 'A';         // Convert 'A', 'B', 'C' to 0, 1, 2
     u8 motor_number = motor_id[1] - '0';   // Convert '0', '1', ..., '3' to 0, 1, ..., 3
 
     // Make sure the controller requested a valid motor
-    if(module < 0 || module >= CONTROLLER_NUM_MODULES || motor_number < 0 || motor_number >= CONTROLLER_MOTORS_PER_MODULE) {
+    if (module < 0 || module >= CONTROLLER_NUM_MODULES || motor_number < 0 ||
+        motor_number >= CONTROLLER_MOTORS_PER_MODULE) {
         warning("Invalid motor ID: %s", motor_id);
         return INVALID_MOTOR_ID;
     }
@@ -103,21 +103,21 @@ u8 getMotorMapIndex(const char* motor_id) {
 }
 
 
-bool requestServoPosition(const char* motor_id, u16 requestedMicroseconds) {
-    if(motor_id == NULL || motor_id[1] == '\0') return false;
+bool requestServoPosition(const char *motor_id, u16 requestedMicroseconds) {
+    if (motor_id == NULL || motor_id[1] == '\0') return false;
 
     // Get the index in the array
     u8 motor_id_index = getMotorMapIndex(motor_id);
-    if(motor_id_index == INVALID_MOTOR_ID) {
+    if (motor_id_index == INVALID_MOTOR_ID) {
         warning("Invalid motor ID: %s", motor_id);
         return false;
     }
 
     // What percentage of the frame is going to be set to on?
-    double frame_active = (float)requestedMicroseconds / (float)frame_length_microseconds;
+    double frame_active = (float) requestedMicroseconds / (float) frame_length_microseconds;
 
     // ..and what counter value is that?
-    u32 desired_ticks = (u32)((float)pwm_resolution * frame_active);
+    u32 desired_ticks = (u32) ((float) pwm_resolution * frame_active);
 
     verbose("Requested position for %s: %u ticks -> %u microseconds", motor_id, desired_ticks, requestedMicroseconds);
     motor_map[motor_id_index].requested_position = desired_ticks;
@@ -125,7 +125,9 @@ bool requestServoPosition(const char* motor_id, u16 requestedMicroseconds) {
     return true;
 }
 
-void __isr on_pwm_wrap_handler() {
+void __isr
+
+on_pwm_wrap_handler() {
 
     // This is an ISR. Treat with caution! ☠️
 
@@ -150,4 +152,3 @@ u32 pwm_set_freq_duty(uint slice_num, uint chan, u32 frequency, int d) {
     pwm_set_chan_level(slice_num, chan, wrap * d / 100);
     return wrap;
 }
-

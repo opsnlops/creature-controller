@@ -48,7 +48,7 @@ extern "C" {
 // Default to Highspeed for MCU with internal HighSpeed PHY (can be port specific), otherwise FullSpeed
 #ifndef BOARD_DEVICE_RHPORT_SPEED
 #if (CFG_TUSB_MCU == OPT_MCU_LPC18XX || CFG_TUSB_MCU == OPT_MCU_LPC43XX || CFG_TUSB_MCU == OPT_MCU_MIMXRT10XX || \
-       CFG_TUSB_MCU == OPT_MCU_NUC505  || CFG_TUSB_MCU == OPT_MCU_CXD56 || CFG_TUSB_MCU == OPT_MCU_SAMX7X)
+       CFG_TUSB_MCU == OPT_MCU_NUC505 || CFG_TUSB_MCU == OPT_MCU_CXD56 || CFG_TUSB_MCU == OPT_MCU_SAMX7X)
 #define BOARD_DEVICE_RHPORT_SPEED   OPT_MODE_HIGH_SPEED
 #else
 #define BOARD_DEVICE_RHPORT_SPEED   OPT_MODE_FULL_SPEED
@@ -61,7 +61,7 @@ extern "C" {
 #elif BOARD_DEVICE_RHPORT_NUM == 1
 #define CFG_TUSB_RHPORT1_MODE     (OPT_MODE_DEVICE | BOARD_DEVICE_RHPORT_SPEED)
 #else
-  #error "Incorrect RHPort configuration"
+#error "Incorrect RHPort configuration"
 #endif
 
 #ifndef CFG_TUSB_OS

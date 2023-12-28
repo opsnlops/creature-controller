@@ -4,7 +4,6 @@
 #include "controller-config.h"
 
 
-
 #include <FreeRTOS.h>
 #include <timers.h>
 
@@ -15,7 +14,6 @@ u32 reports_sent = 0;
 bool usb_bus_active = false;
 bool device_mounted = false;
 u32 events_processed = 0;
-
 
 
 void usb_init() {
@@ -60,16 +58,14 @@ void usbDeviceTimerCallback(TimerHandle_t xTimer) {
 //--------------------------------------------------------------------+
 
 // Invoked when device is mounted
-void tud_mount_cb(void)
-{
+void tud_mount_cb(void) {
     debug("device mounted");
     device_mounted = true;
     usb_bus_active = true;
 }
 
 // Invoked when device is unmounted
-void tud_umount_cb(void)
-{
+void tud_umount_cb(void) {
     debug("device unmounted");
     device_mounted = false;
 }
@@ -77,8 +73,7 @@ void tud_umount_cb(void)
 // Invoked when usb bus is suspended
 // remote_wakeup_en : if host allow us  to perform remote wakeup
 // Within 7ms, device must draw an average of current less than 2.5 mA from bus
-void tud_suspend_cb(bool remote_wakeup_en)
-{
+void tud_suspend_cb(bool remote_wakeup_en) {
     (void) remote_wakeup_en;
     debug("USB bus suspended");
 
@@ -87,8 +82,7 @@ void tud_suspend_cb(bool remote_wakeup_en)
 }
 
 // Invoked when usb bus is resumed
-void tud_resume_cb(void)
-{
+void tud_resume_cb(void) {
     debug("USB bus resumed");
     usb_bus_active = true;
 }
@@ -98,14 +92,13 @@ void tud_resume_cb(void)
  * CDC Stuff
  */
 
-void cdc_send(char const* message) {
+void cdc_send(char const *message) {
 
     if (tud_cdc_connected()) {
 
         tud_cdc_n_write_str(0, message);
         tud_cdc_n_write_flush(0);
-    }
-    else {
+    } else {
         verbose("skipped CDC send");
     }
 }

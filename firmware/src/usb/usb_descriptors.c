@@ -147,13 +147,12 @@ u16 const *tud_descriptor_string_cb(u8 index, u16 langid) {
     if (index == 0) {
         memcpy(&_desc_str[1], string_desc_arr[0], 2);
         chr_count = 1;
-    }
-    else if (index == USB_SERIAL_NUMBER_INDEX) {
+    } else if (index == USB_SERIAL_NUMBER_INDEX) {
 
         // Grab our unique_id
         pico_unique_board_id_t board_id;
         pico_get_unique_board_id(&board_id);
-        char* pico_board_id = (char *) pvPortMalloc(sizeof(char) * (2 * PICO_UNIQUE_BOARD_ID_SIZE_BYTES + 1));
+        char *pico_board_id = (char *) pvPortMalloc(sizeof(char) * (2 * PICO_UNIQUE_BOARD_ID_SIZE_BYTES + 1));
         pico_get_unique_board_id_string(pico_board_id, 2 * PICO_UNIQUE_BOARD_ID_SIZE_BYTES + 1);
 
         chr_count = strlen(pico_board_id);
@@ -164,8 +163,7 @@ u16 const *tud_descriptor_string_cb(u8 index, u16 langid) {
         }
 
         vPortFree(pico_board_id);
-    }
-    else {
+    } else {
         // Note: the 0xEE index string is a Microsoft OS 1.0 Descriptors.
         // https://docs.microsoft.com/en-us/windows-hardware/drivers/usbcon/microsoft-defined-usb-descriptors
 
@@ -184,7 +182,7 @@ u16 const *tud_descriptor_string_cb(u8 index, u16 langid) {
     }
 
     // first byte is length (including header), second byte is string type
-    _desc_str[0] = (u16) ((TUSB_DESC_STRING << 8 ) | (2*chr_count + 2));
+    _desc_str[0] = (u16) ((TUSB_DESC_STRING << 8) | (2 * chr_count + 2));
 
     return _desc_str;
 }

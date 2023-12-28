@@ -30,14 +30,12 @@ void start_debug_blinker() {
 
 portTASK_FUNCTION(debug_blinker_task, pvParameters) {
 
-    #pragma clang diagnostic push
-    #pragma ide diagnostic ignored "EndlessLoop"
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "EndlessLoop"
     for (EVER) {
 
         bool isOn = true;
         u8 direction = 1;
-
-        u32 count = 0L;
 
         while (true) {
 
@@ -54,5 +52,5 @@ portTASK_FUNCTION(debug_blinker_task, pvParameters) {
             vTaskDelay(pdMS_TO_TICKS(250));
         }
     }
-    #pragma clang diagnostic pop
+#pragma clang diagnostic pop
 }

@@ -11,7 +11,7 @@
 
 volatile u64 position_messages_processed = 0UL;
 
-bool handlePositionMessage(const GenericMessage* msg) {
+bool handlePositionMessage(const GenericMessage *msg) {
 
     verbose("handling position message");
 

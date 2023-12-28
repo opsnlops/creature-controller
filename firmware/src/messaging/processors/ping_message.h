@@ -5,4 +5,4 @@
 #include "messaging/messaging.h"
 
 
-bool handlePingMessage(const GenericMessage* msg);
+bool handlePingMessage(const GenericMessage *msg);
