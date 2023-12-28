@@ -1,9 +1,10 @@
 
-#include <cctype>
-#include <cstdint>
-#include <cstdlib>
-#include <cstdbool>
-#include <cerrno>
+#include <ctype.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <errno.h>
 
 #include "logging/logging.h"
 
@@ -14,7 +15,7 @@
 u16 stringToU16(const char* str) {
 
     // Make sure this is a valid string
-    if (str == nullptr) {
+    if (str == NULL) {
         return 0;
     }
 

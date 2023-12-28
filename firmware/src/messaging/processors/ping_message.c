@@ -21,7 +21,7 @@ bool handlePingMessage(const GenericMessage* msg) {
     snprintf(message, USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH,
              "PONG\t%lu", to_ms_since_boot(get_absolute_time()));
 
-    creatures::io::usb_serial::send_to_controller(message);
+    send_to_controller(message);
     debug("sent back a pong");
 
     return true;

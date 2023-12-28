@@ -3,10 +3,10 @@
 
 #include "controller-config.h"
 
-#include <cstring>
-#include <cstdio>
-#include <cstdint>
-#include <string>
+#include <string.h>
+#include <stdio.h>
+#include <stdint.h>
+
 
 #define LOG_LEVEL_VERBOSE 5
 #define LOG_LEVEL_DEBUG 4
@@ -36,7 +36,7 @@ void error(const char *message, ...);
 
 void __unused fatal(const char *message, ...);
 
-LogMessage createMessageObject(uint8_t level, const char *message, va_list args);
+struct LogMessage createMessageObject(uint8_t level, const char *message, va_list args);
 
 bool _is_safe_to_log();
 

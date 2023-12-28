@@ -1,11 +1,11 @@
 
 #pragma once
 
-#include <cctype>
-#include <cstdint>
-#include <cstdlib>
-#include <cstdbool>
-#include <cerrno>
+#include <ctype.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <errno.h>
 
 #include "logging/logging.h"
 

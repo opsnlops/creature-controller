@@ -1,7 +1,7 @@
 
-#include "controller-config.h"
+#include <stddef.h>
 
-#include <memory>
+#include "controller-config.h"
 
 #include <FreeRTOS.h>
 #include <task.h>
@@ -28,8 +28,6 @@
 
 
 
-
-
 volatile size_t xFreeHeapSpace;
 
 int main() {
@@ -45,22 +43,22 @@ int main() {
     board_init();
 
     // Fire up the serial incoming and outgoing queues
-    creatures::io::usb_serial::init();
-    creatures::io::usb_serial::start();
+    usb_serial_init();
+    usb_serial_start();
 
     // Start the controller
-    creatures::controller::init();
-    creatures::controller::start();
+    controller_init();
+    controller_start();
 
     // Fire up the stats reporter
-    creatures::debug::start_stats_reporter();
+    start_stats_reporter();
 
     // Queue up the startup task for right after the scheduler starts
     TaskHandle_t startup_task_handle;
     xTaskCreate(startup_task,
                 "startup_task",
                 configMINIMAL_STACK_SIZE,
-                nullptr,
+                NULL,
                 1,
                 &startup_task_handle);
 
@@ -79,10 +77,10 @@ portTASK_FUNCTION(startup_task, pvParameters) {
         Otherwise, it could cause kernel issue since USB IRQ handler does use RTOS queue API.
      */
 
-    creatures::usb::init();
-    creatures::usb::start();
+    usb_init();
+    usb_start();
 
    // Bye!
-   vTaskDelete(nullptr);
+   vTaskDelete(NULL);
 
 }

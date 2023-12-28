@@ -3,13 +3,8 @@
 
 #include <sys/select.h>
 #include <sys/cdefs.h>
-#include <string>
+#include <string.h>
 
-// Mark this as being in C to C++ apps
-#ifdef __cplusplus
-extern "C"
-{
-#endif
 
 // FreeRTOS
 #include <FreeRTOS.h>
@@ -26,17 +21,13 @@ extern "C"
 
 
 
-namespace creatures::usb {
 
-    void init();
-    void start();
+
+    void usb_init();
+    void usb_start();
     void usbDeviceTimerCallback(TimerHandle_t xTimer);
 
-}
 
-#ifdef __cplusplus
-}
-#endif
 
-// Back to C++!
+
 void cdc_send(char const* line);

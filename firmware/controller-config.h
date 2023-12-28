@@ -1,23 +1,23 @@
 
 #pragma once
 
-#include <cstdint>
+#include <stdint.h>
 
 /**
 * Main configuration for the controller
 */
 
 
-using u8 = std::uint8_t;
-using u16 = std::uint16_t;
-using u32 = std::uint32_t;
-using u64 = std::uint64_t;
+typedef uint8_t u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
+typedef uint64_t u64;
 
 // Just because it's funny
 #define EVER ;;
 
 
-
+// Light to flash when commands are being received
 #define CDC_ACTIVE_PIN                      17
 
 // The most servos we can control

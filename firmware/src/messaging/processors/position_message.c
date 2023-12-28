@@ -1,4 +1,7 @@
 
+#include <stddef.h>
+#include <string.h>
+
 #include "controller/controller.h"
 #include "logging/logging.h"
 #include "messaging/messaging.h"
@@ -21,18 +24,18 @@ bool handlePositionMessage(const GenericMessage* msg) {
 
         char *temp_token = token_copy;
         char *position = strtok_r(temp_token, " ", &temp_token);
-        if (position != nullptr) {
+        if (position != NULL) {
             verbose("First part: %s", position);
         }
 
-        char *value = strtok_r(nullptr, " ", &temp_token);
-        if (value != nullptr) {
+        char *value = strtok_r(NULL, " ", &temp_token);
+        if (value != NULL) {
             verbose("Second part: %s", value);
         }
 
         verbose("incoming position message: %s %s", position, value);
 
-        creatures::controller::requestServoPosition(position, stringToU16(value));
+        requestServoPosition(position, stringToU16(value));
     }
 
     position_messages_processed = position_messages_processed + 1;

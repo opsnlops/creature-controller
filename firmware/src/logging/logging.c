@@ -1,8 +1,8 @@
 
-#include <cstdio>
-#include <cstdarg>
-#include <cstring>
-#include <string>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdarg.h>
+#include <string.h>
 
 #include <FreeRTOS.h>
 #include <queue.h>
@@ -12,6 +12,8 @@
 #include "logging.h"
 #include "io/usb_serial.h"
 #include "usb/usb.h"
+
+#include "controller-config.h"
 
 
 extern TaskHandle_t log_queue_reader_task_handle;   // in tasks.cpp
@@ -23,7 +25,7 @@ bool logging_queue_exists = false;
 
 
 void logger_init() {
-    creature_log_message_queue_handle = xQueueCreate(LOGGING_QUEUE_LENGTH, sizeof(LogMessage));
+    creature_log_message_queue_handle = xQueueCreate(LOGGING_QUEUE_LENGTH, sizeof(struct LogMessage));
     vQueueAddToRegistry(creature_log_message_queue_handle, "log_message_queue");
     logging_queue_exists = true;
     start_log_reader();
@@ -65,7 +67,7 @@ void debug(const char *message, ...) {
     struct LogMessage lm = createMessageObject(LOG_LEVEL_DEBUG, message, args);
     va_end(args);
 
-   xQueueSendToBackFromISR(creature_log_message_queue_handle, &lm, nullptr);
+   xQueueSendToBackFromISR(creature_log_message_queue_handle, &lm, NULL);
 
 #endif
 }
@@ -84,7 +86,7 @@ void info(const char *message, ...) {
     struct LogMessage lm = createMessageObject(LOG_LEVEL_INFO, message, args);
     va_end(args);
 
-    xQueueSendToBackFromISR(creature_log_message_queue_handle, &lm, nullptr);
+    xQueueSendToBackFromISR(creature_log_message_queue_handle, &lm, NULL);
 
 #endif
 }
@@ -103,7 +105,7 @@ void warning(const char *message, ...) {
     struct LogMessage lm = createMessageObject(LOG_LEVEL_WARNING, message, args);
     va_end(args);
 
-    xQueueSendToBackFromISR(creature_log_message_queue_handle, &lm, nullptr);
+    xQueueSendToBackFromISR(creature_log_message_queue_handle, &lm, NULL);
 
 #endif
 }
@@ -122,7 +124,7 @@ void error(const char *message, ...) {
     struct LogMessage lm = createMessageObject(LOG_LEVEL_ERROR, message, args);
     va_end(args);
 
-    xQueueSendToBackFromISR(creature_log_message_queue_handle, &lm, nullptr);
+    xQueueSendToBackFromISR(creature_log_message_queue_handle, &lm, NULL);
 
 #endif
 }
@@ -140,7 +142,7 @@ void __unused fatal(const char *message, ...) {
     struct LogMessage lm = createMessageObject(LOG_LEVEL_FATAL, message, args);
     va_end(args);
 
-    xQueueSendToBackFromISR(creature_log_message_queue_handle, &lm, nullptr);
+    xQueueSendToBackFromISR(creature_log_message_queue_handle, &lm, NULL);
 
 }
 
@@ -150,7 +152,7 @@ struct LogMessage createMessageObject(uint8_t level, const char *message, va_lis
 
     vsnprintf(buffer, LOGGING_MESSAGE_MAX_LENGTH, message, args);
 
-    LogMessage lm{};
+    struct LogMessage lm;
     lm.level = level;
     memcpy(lm.message, buffer, LOGGING_MESSAGE_MAX_LENGTH);
     return lm;
@@ -160,7 +162,7 @@ void start_log_reader() {
     xTaskCreate(log_queue_reader_task,
                 "log_queue_reader_task",
                 1512,
-                nullptr,
+                NULL,
                 1,
                 &log_queue_reader_task_handle);
 }
@@ -176,7 +178,7 @@ void start_log_reader() {
 
 portTASK_FUNCTION(log_queue_reader_task, pvParameters) {
 
-    LogMessage lm{};
+    struct LogMessage lm;
     char levelBuffer[4];
     memset(&levelBuffer, '\0', 4);
 
@@ -208,11 +210,11 @@ portTASK_FUNCTION(log_queue_reader_task, pvParameters) {
             // Format our messaging
             u32 time = to_ms_since_boot(get_absolute_time());
 
-            auto message = (char*)pvPortMalloc(strlen(lm.message) + 33);
+            char* message = (char*)pvPortMalloc(strlen(lm.message) + 33);
             memset(message, '\0', strlen(lm.message) + 33);
             snprintf(message, strlen(lm.message) + 32, "LOG\t%lu\t%s\t%s", time, levelBuffer, lm.message);
 
-            creatures::io::usb_serial::send_to_controller(message);
+            send_to_controller(message);
 
             vPortFree(message);
 

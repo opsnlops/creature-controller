@@ -23,6 +23,8 @@
  *
  */
 
+#include <stddef.h>
+
 #include "controller-config.h"
 
 #include <FreeRTOS.h>
@@ -126,7 +128,7 @@ char const *string_desc_arr[] =
                 (const char[]) {0x09, 0x04}, // 0: is supported language is English (0x0409)
                 "April's Creature Workshop",                     // 1: Manufacturer
                 "Creature Controller",              // 2: Product
-                nullptr,                           // Figured out at runtime (serial number)
+                NULL,                           // Figured out at runtime (serial number)
                 "Debug Console"
         };
 
@@ -151,7 +153,7 @@ u16 const *tud_descriptor_string_cb(u8 index, u16 langid) {
         // Grab our unique_id
         pico_unique_board_id_t board_id;
         pico_get_unique_board_id(&board_id);
-        auto pico_board_id = (char *) pvPortMalloc(sizeof(char) * (2 * PICO_UNIQUE_BOARD_ID_SIZE_BYTES + 1));
+        char* pico_board_id = (char *) pvPortMalloc(sizeof(char) * (2 * PICO_UNIQUE_BOARD_ID_SIZE_BYTES + 1));
         pico_get_unique_board_id_string(pico_board_id, 2 * PICO_UNIQUE_BOARD_ID_SIZE_BYTES + 1);
 
         chr_count = strlen(pico_board_id);
@@ -167,7 +169,7 @@ u16 const *tud_descriptor_string_cb(u8 index, u16 langid) {
         // Note: the 0xEE index string is a Microsoft OS 1.0 Descriptors.
         // https://docs.microsoft.com/en-us/windows-hardware/drivers/usbcon/microsoft-defined-usb-descriptors
 
-        if (index >= sizeof(string_desc_arr) / sizeof(string_desc_arr[0])) return nullptr;
+        if (index >= sizeof(string_desc_arr) / sizeof(string_desc_arr[0])) return NULL;
 
         const char *str = string_desc_arr[index];
 

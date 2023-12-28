@@ -8,7 +8,7 @@ include($ENV{FREERTOS_KERNEL_PATH}/portable/ThirdParty/GCC/RP2040/FreeRTOS_Kerne
 
 project(firmware C CXX ASM)
 set(CMAKE_C_STANDARD 11)
-set(CMAKE_CXX_STANDARD 20)
+
 
 include(FetchContent)
 set(FETCHCONTENT_QUIET OFF)
@@ -33,30 +33,31 @@ file(GLOB sourceFiles
         src/logging/*
         src/shell/*
         src/usb/*
-        src/util/*
 )
 
 add_executable(firmware
         ${sourceFiles}
         FreeRTOSConfig.h
-        src/freertos_hooks.cpp
+        src/freertos_hooks.c
         src/freertos_hooks.h
         src/debug/blinker.h
-        src/debug/blinker.cpp
+        src/debug/blinker.c
         src/debug/stats_reporter.h
-        src/debug/stats_reporter.cpp
-        src/debug/remote_logging.cpp
+        src/debug/stats_reporter.c
+        src/debug/remote_logging.c
         src/messaging/messaging.h
-        src/messaging/messaging.cpp
+        src/messaging/messaging.c
         src/messaging/processors/ping_message.h
-        src/messaging/processors/ping_message.cpp
+        src/messaging/processors/ping_message.c
         src/messaging/processors/position_message.h
-        src/messaging/processors/position_message.cpp
-        src/util/string_utils.cpp
+        src/messaging/processors/position_message.c
+        src/util/fast_hsv2rgb.h
+        src/util/fast_hsv2rgb_32bit.c
+        src/util/string_utils.c
         src/util/string_utils.h
         src/controller/controller.h
-        src/controller/controller.cpp
-        src/io/usb_workers.cpp
+        src/controller/controller.c
+        src/io/usb_workers.c
 )
 
 # PIO-based UART from the Pico examples

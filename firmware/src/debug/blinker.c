@@ -1,4 +1,6 @@
 
+#include <stddef.h>
+
 #include <FreeRTOS.h>
 #include <task.h>
 
@@ -7,8 +9,9 @@
 
 #include "debug/blinker.h"
 
-
 #include "tasks.h"
+
+#include "controller-config.h"
 
 extern TaskHandle_t debug_blinker_task_handle;
 
@@ -20,7 +23,7 @@ void start_debug_blinker() {
     xTaskCreate(debug_blinker_task,
                 "debug_blinker_task",
                 256,
-                nullptr,
+                NULL,
                 1,
                 &debug_blinker_task_handle);
 }
@@ -32,9 +35,9 @@ portTASK_FUNCTION(debug_blinker_task, pvParameters) {
     for (EVER) {
 
         bool isOn = true;
-        uint8_t direction = 1;
+        u8 direction = 1;
 
-        uint64_t count = 0L;
+        u32 count = 0L;
 
         while (true) {
 

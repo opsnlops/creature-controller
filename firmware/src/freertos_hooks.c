@@ -1,18 +1,21 @@
 
+
+#include <stddef.h>
+#include <stdio.h>
+
+
 #include <FreeRTOS.h>
 #include <task.h>
-
-#include <cstdio>
 
 
 // Keep track of the amount of free heap space
 extern volatile size_t xFreeHeapSpace;
 
 
-extern "C" void vApplicationMallocFailedHook( void )
+void vApplicationMallocFailedHook( void )
 {
     /* Force an assert. */
-    configASSERT( ( volatile void * ) nullptr );
+    configASSERT( ( volatile void * ) NULL );
 }
 
 

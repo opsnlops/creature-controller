@@ -1,5 +1,6 @@
 
-#include <cstring>
+#include <stddef.h>
+#include <string.h>
 
 #include <FreeRTOS.h>
 #include <task.h>
@@ -16,7 +17,7 @@ void start_debugging_remote_logging() {
     xTaskCreate(debug_remote_logging_task,
                 "debug_remote_logging_task",
                 256,
-                nullptr,
+                NULL,
                 1,
                 &debug_remote_logging_task_handle);
 }

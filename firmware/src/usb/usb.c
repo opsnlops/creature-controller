@@ -1,4 +1,6 @@
 
+#include <stddef.h>
+
 #include "controller-config.h"
 
 
@@ -15,44 +17,41 @@ bool device_mounted = false;
 u32 events_processed = 0;
 
 
-namespace creatures::usb {
 
-    void init() {
+void usb_init() {
 
-        // init TinyUSB
-        tusb_init();
+    // init TinyUSB
+    tusb_init();
 
-        // init device stack on configured roothub port
-        // This should be called after scheduler/kernel is started.
-        // Otherwise, it could cause kernel issue since USB IRQ handler does use RTOS queue API.
-        tud_init(BOARD_TUD_RHPORT);
-    }
+    // init device stack on configured roothub port
+    // This should be called after scheduler/kernel is started.
+    // Otherwise, it could cause kernel issue since USB IRQ handler does use RTOS queue API.
+    tud_init(BOARD_TUD_RHPORT);
+}
 
 
-    void start() {
+void usb_start() {
 
-        TimerHandle_t usbDeviceTimer = xTimerCreate(
-                "usbDeviceTimer",              // Timer name
-                pdMS_TO_TICKS(1),            // Every millisecond
-                pdTRUE,                          // Auto-reload
-                (void *) 0,                        // Timer ID (not used here)
-                usbDeviceTimerCallback         // Callback function
-        );
+    TimerHandle_t usbDeviceTimer = xTimerCreate(
+            "usbDeviceTimer",              // Timer name
+            pdMS_TO_TICKS(1),            // Every millisecond
+            pdTRUE,                          // Auto-reload
+            (void *) 0,                        // Timer ID (not used here)
+            usbDeviceTimerCallback         // Callback function
+    );
 
-        // Something's gone really wrong if we can't create the timer
-        configASSERT (usbDeviceTimer != nullptr);
-        xTimerStart(usbDeviceTimer, 0); // Start timer
+    // Something's gone really wrong if we can't create the timer
+    configASSERT (usbDeviceTimer != NULL);
+    xTimerStart(usbDeviceTimer, 0); // Start timer
 
-        info("USB service timer started");
-
-    }
-
-    void usbDeviceTimerCallback(TimerHandle_t xTimer) {
-        tud_task();
-    }
-
+    info("USB service timer started");
 
 }
+
+void usbDeviceTimerCallback(TimerHandle_t xTimer) {
+    tud_task();
+}
+
 
 
 

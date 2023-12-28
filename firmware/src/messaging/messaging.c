@@ -1,5 +1,8 @@
 
-#include <cstring>
+#include <stdbool.h>
+#include <stddef.h>
+#include <string.h>
+
 
 #include "logging/logging.h"
 #include "messaging/messaging.h"
@@ -25,7 +28,7 @@ const MessageTypeHandler messageHandlers[] = {
 u16 calculateChecksum(const char* message) {
     u16 checksum = 0;
 
-    if (message != nullptr) {
+    if (message != NULL) {
         while (*message != '\0') {
             checksum += (u8)(*message);
             message++;
@@ -50,7 +53,7 @@ bool parseMessage(const char* rawMessage, GenericMessage* outMessage) {
     char* token = strtok(buffer, "\t");
     int tokenIndex = 0;
 
-    while (token != nullptr && tokenIndex < MAX_TOKENS - 1) {
+    while (token != NULL && tokenIndex < MAX_TOKENS - 1) {
         if (tokenIndex == 0) {
             // First token is the message type
             strncpy(outMessage->messageType, token, MESSAGE_ACTION_MAX_SIZE);
@@ -61,7 +64,7 @@ bool parseMessage(const char* rawMessage, GenericMessage* outMessage) {
             outMessage->tokens[tokenIndex - 1][MAX_TOKEN_LENGTH - 1] = '\0';
         }
 
-        token = strtok(nullptr, "\t");
+        token = strtok(NULL, "\t");
         tokenIndex++;
     }
 
@@ -76,7 +79,7 @@ bool parseMessage(const char* rawMessage, GenericMessage* outMessage) {
     // Extract the expected checksum from the last token
     char* checksumToken = outMessage->tokens[outMessage->tokenCount];
     char* spacePos = strchr(checksumToken, ' ');
-    if (spacePos != nullptr && *(spacePos + 1) != '\0') {
+    if (spacePos != NULL && *(spacePos + 1) != '\0') {
         outMessage->expectedChecksum = stringToU16(spacePos + 1);  // Convert the part after the space
     } else {
         // Checksum token format error
@@ -86,7 +89,7 @@ bool parseMessage(const char* rawMessage, GenericMessage* outMessage) {
 
     // Find the position of the last tab character, which precedes the checksum token
     const char* lastTabPos = strrchr(rawMessage, '\t');
-    if (lastTabPos != nullptr) {
+    if (lastTabPos != NULL) {
         // Calculate the length of the message part that should be included in the checksum calculation
         size_t checksumLength = lastTabPos - rawMessage;
 
