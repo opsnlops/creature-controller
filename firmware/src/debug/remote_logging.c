@@ -6,10 +6,12 @@
 #include <task.h>
 
 #include "logging/logging.h"
+#include "debug/remote_logging.h"
 
 #include "tasks.h"
 
-extern TaskHandle_t debug_remote_logging_task_handle;
+TaskHandle_t debug_remote_logging_task_handle;
+
 
 
 void start_debugging_remote_logging() {

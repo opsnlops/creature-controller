@@ -2,8 +2,6 @@
 
 #include <limits.h>
 
-#include <FreeRTOS.h>
-
 // Our modules
 #include "hardware/gpio.h"
 #include "hardware/pwm.h"
@@ -64,7 +62,7 @@ void controller_start() {
     info("starting the controller");
 
     // Fire up PWM
-    u32 wrap = 0UL;
+    u32 wrap;
     for (size_t i = 0; i < sizeof(motor_map) / sizeof(motor_map[0]); ++i) {
         gpio_set_function(motor_map[i].gpio_pin, GPIO_FUNC_PWM);
         wrap = pwm_set_freq_duty(motor_map[i].slice, motor_map[i].channel, 50, 0);
@@ -151,4 +149,18 @@ u32 pwm_set_freq_duty(uint slice_num, uint chan, u32 frequency, int d) {
     pwm_set_wrap(slice_num, wrap);
     pwm_set_chan_level(slice_num, chan, wrap * d / 100);
     return wrap;
+}
+
+/**
+ * Called from a timer in usb.c when the CDC is connected
+ */
+void controller_connected() {
+
+}
+
+/**
+ * Called from a timer in usb.c when the CDC is disconnected
+ */
+void controller_disconnected() {
+
 }
