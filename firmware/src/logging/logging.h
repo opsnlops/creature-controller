@@ -3,6 +3,7 @@
 
 #include "controller-config.h"
 
+#include <stdbool.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdint.h>

@@ -31,7 +31,6 @@
 
 #define INVALID_MOTOR_ID            255
 
-
 // Defines a mapping between motor IDs and GPIO pins
 typedef struct {
     const char* motor_id;
@@ -116,4 +115,3 @@ bool requestServoPosition(const char* motor_id, u16 requestedMicroseconds);
  * @return the wrap counter wrap value for this slice an channel (aka the resolution)
  */
 u32 pwm_set_freq_duty(uint slice_num, uint chan, uint32_t frequency, int d);
-

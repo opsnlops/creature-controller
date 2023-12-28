@@ -53,11 +53,15 @@ add_executable(firmware
         src/messaging/processors/position_message.c
         src/util/fast_hsv2rgb.h
         src/util/fast_hsv2rgb_32bit.c
+        src/util/ranges.h
+        src/util/ranges.c
         src/util/string_utils.c
         src/util/string_utils.h
         src/controller/controller.h
         src/controller/controller.c
         src/io/usb_workers.c
+        src/device/status_lights.h
+        src/device/status_lights.c
 )
 
 # PIO-based UART from the Pico examples

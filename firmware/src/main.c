@@ -16,6 +16,7 @@
 #include "pico/stdlib.h"
 
 #include "controller/controller.h"
+#include "device/status_lights.h"
 #include "debug/remote_logging.h"
 #include "debug/stats_reporter.h"
 #include "io/usb_serial.h"
@@ -51,6 +52,10 @@ int main() {
 
     // Fire up the stats reporter
     start_stats_reporter();
+
+    // Turn on the status lights
+    status_lights_init();
+    status_lights_start();
 
     // Queue up the startup task for right after the scheduler starts
     TaskHandle_t startup_task_handle;
