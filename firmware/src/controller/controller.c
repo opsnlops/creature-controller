@@ -2,11 +2,16 @@
 
 #include <limits.h>
 
+
+#include <FreeRTOS.h>
+#include <timers.h>
+
+
 // Our modules
 #include "hardware/gpio.h"
 #include "hardware/pwm.h"
 
-
+#include "io/usb_serial.h"
 #include "logging/logging.h"
 
 #include "controller-config.h"
@@ -53,9 +58,43 @@ u64 frame_length_microseconds = 0UL;
 u32 pwm_resolution = 0UL;
 
 
+/**
+ * Have we been initialized by a computer?
+ *
+ * Don't run the control loop until we know it's safe to do so. We don't want to accidentally
+ * break plastic.
+ */
+volatile bool controller_safe_to_run = false;
+
+
+/**
+ * A timer that gets fired to request that the computer we're connected to
+ * send us servo information
+ */
+TimerHandle_t controller_init_request_timer = NULL;
+
+/**
+ * The current state of the firmware
+ *
+ * This is reflected in the LEDs on the board
+ */
+enum FirmwareState controller_firmware_state = idle;
+
+
 void controller_init() {
     info("init-ing the controller");
 
+    // Create, but don't actually start the timer (it will be started when the CDC is connected)
+    controller_init_request_timer = xTimerCreate(
+            "controller_init_request_timer",            // Timer name
+            pdMS_TO_TICKS(INIT_REQUEST_TIME_MS),        // Fire every INIT_REQUEST_TIME_MS
+            pdTRUE,                                     // Auto-reload
+            (void *) 0,                                 // Timer ID (not used here)
+            send_init_request                           // Callback function
+    );
+
+    // If this fails, something is super broke. Bail out now.
+    configASSERT (controller_init_request_timer != NULL);
 }
 
 void controller_start() {
@@ -111,6 +150,12 @@ bool requestServoPosition(const char *motor_id, u16 requestedMicroseconds) {
         return false;
     }
 
+    // Make sure the motor is allowed to move to this position
+    if(requestedMicroseconds < motor_map[motor_id_index].min_position || requestedMicroseconds > motor_map[motor_id_index].max_position) {
+        fatal("Invalid position requested for %s: %u", motor_id, requestedMicroseconds);
+        return false;
+    }
+
     // What percentage of the frame is going to be set to on?
     double frame_active = (float) requestedMicroseconds / (float) frame_length_microseconds;
 
@@ -123,20 +168,54 @@ bool requestServoPosition(const char *motor_id, u16 requestedMicroseconds) {
     return true;
 }
 
-void __isr
+bool configureServoMinMax(const char* motor_id, u16 minMicroseconds, u16 maxMicroseconds) {
+    if (motor_id == NULL || motor_id[1] == '\0') return false;
 
-on_pwm_wrap_handler() {
+    // Get the index in the array
+    u8 motor_id_index = getMotorMapIndex(motor_id);
+    if (motor_id_index == INVALID_MOTOR_ID) {
+        warning("Invalid motor ID while configuring: %s", motor_id);
+        return false;
+    }
+
+    motor_map[motor_id_index].min_position = minMicroseconds;
+    motor_map[motor_id_index].max_position = maxMicroseconds;
+    info("updated the motor map to allow motor %s to move between %u and %u microseconds",
+         motor_id, minMicroseconds, maxMicroseconds);
+
+    return true;
+}
+
+
+void __isr on_pwm_wrap_handler() {
 
     // This is an ISR. Treat with caution! ☠️
 
-    for (size_t i = 0; i < sizeof(motor_map) / sizeof(motor_map[0]); ++i) {
-        pwm_set_chan_level(motor_map[i].slice,
-                           motor_map[i].channel,
-                           motor_map[i].requested_position);
+    // Don't actually wiggle the motors if we haven't been told it's safe
+    if(controller_safe_to_run) {
+        for (size_t i = 0; i < sizeof(motor_map) / sizeof(motor_map[0]); ++i) {
+            pwm_set_chan_level(motor_map[i].slice,
+                               motor_map[i].channel,
+                               motor_map[i].requested_position);
+        }
     }
 
+    // Clear the IRQ regardless of if it's safe to wiggle things
     pwm_clear_irq(motor_map[0].slice);
-    number_of_pwm_wraps = number_of_pwm_wraps + 1UL;
+    number_of_pwm_wraps = number_of_pwm_wraps + 1;
+}
+
+void send_init_request(TimerHandle_t xTimer) {
+
+    char message[USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH];
+    memset(&message, '\0', USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH);
+
+    snprintf(message, USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH,
+             "INIT\t%u", FIRMWARE_VERSION);
+
+    send_to_controller(message);
+    debug("sent init request");
+
 }
 
 
@@ -156,11 +235,30 @@ u32 pwm_set_freq_duty(uint slice_num, uint chan, u32 frequency, int d) {
  */
 void controller_connected() {
 
+    // We just got connected for the first time, halt anything
+    // that might already be running
+    controller_safe_to_run = false;
+
+    // We're in state configuring now!
+    controller_firmware_state = configuring;
+
+    // Start sending init requests
+    xTimerStart(controller_init_request_timer, 0);
+    debug("started asking the computer for our configuration");
 }
 
 /**
  * Called from a timer in usb.c when the CDC is disconnected
  */
 void controller_disconnected() {
+
+    info("controller disconnected, stopping");
+    controller_safe_to_run = false;
+
+    // Back to idle we go!
+    controller_firmware_state = idle;
+
+    // No point in doing this if we're not connected
+    xTimerStop(controller_init_request_timer, 0);
 
 }

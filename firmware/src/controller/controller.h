@@ -9,6 +9,7 @@
 
 #include <FreeRTOS.h>
 #include <tasks.h>
+#include <timers.h>
 
 
 #include "controller-config.h"
@@ -38,7 +39,17 @@ typedef struct {
     uint slice;
     uint channel;
     u16 requested_position;
+    u16 min_position;
+    u16 max_position;
 } MotorMap;
+
+// The four genders
+enum FirmwareState {
+    idle,
+    configuring,
+    running,
+    errored_out
+};
 
 
 u8 getMotorMapIndex(const char* motor_id);
@@ -93,6 +104,21 @@ bool requestServoPosition(const char* motor_id, u16 requestedMicroseconds);
 
 
 
+/**
+ * @brief Update a motor in the motor map's min and max values
+ *
+ * This is called in `config_message.c` in response to a CONFIG message from the controller. We
+ * use it to update the min and max position that a servo is allowed to move to. That's used for
+ * error checking, and to determine the color of the status lights.
+ *
+ * @param motor_id The motor ID to adjust (ie A0, A1, C0, etc)
+ * @param minMicroseconds the minimum position that the servo is allowed to move to
+ * @param maxMicroseconds the maximum position that the servo is allowed to move to
+ * @return
+ */
+bool configureServoMinMax(const char* motor_id, u16 minMicroseconds, u16 maxMicroseconds);
+
+
 
 /**
  * @brief Sets the frequency on a PWM channel. Returns the resolution of the slice.
@@ -120,3 +146,18 @@ u32 pwm_set_freq_duty(uint slice_num, uint chan, uint32_t frequency, int d);
 
 void controller_connected();
 void controller_disconnected();
+
+
+/**
+ * Callback for the init request timer. Sent once the controller
+ * is connected to a computer, asking the computer for our configuration
+ *
+ * @param xTimer
+ */
+void send_init_request(TimerHandle_t xTimer);
+
+
+/**
+ * Signals to the computer that we're ready to go
+ */
+void controller_ready();

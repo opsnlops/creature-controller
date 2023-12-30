@@ -69,6 +69,21 @@ namespace creatures::creature {
 
     }
 
+    std::vector<creatures::ServoConfig> Creature::getServoConfigs() {
+
+        std::vector<creatures::ServoConfig> servoConfigs;
+        servoConfigs.reserve(servos.size());
+
+        // Walk all of our servos and make a ServoConfig for each
+        for (const auto &[key, servo]: servos) {
+            ServoConfig servoConfig = ServoConfig(logger, servo);
+            servoConfigs.emplace_back(servoConfig);
+        }
+
+        return servoConfigs;
+    }
+
+
     void Creature::calculateNextServoPositions() {
 
         // Quickly walk the servos and return the number of ticks we want next

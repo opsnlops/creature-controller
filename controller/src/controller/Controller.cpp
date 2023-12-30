@@ -12,7 +12,12 @@
 #include "controller/Input.h"
 #include "controller/CommandSendException.h"
 #include "controller/commands/ICommand.h"
+#include "controller/commands/CreatureConfiguration.h"
 #include "controller/commands/SetServoPositions.h"
+
+// Exceptions
+#include "controller/ControllerException.h"
+
 
 u64 number_of_moves = 0UL;
 
@@ -80,6 +85,27 @@ bool Controller::acceptInput(const std::vector<creatures::Input>& inputs) {
 
     return true;
 }
+
+void Controller::firmwareReadyForInitialization(u32 firmwareVersion) {
+
+    // Make sure we got the version of the firmware we were built against
+    if(firmwareVersion != FIRMWARE_VERSION) {
+        std::string errorMessage = fmt::format("Firmware version mismatch! Excepted {}, got {}", firmwareVersion, FIRMWARE_VERSION);
+        logger->critical(errorMessage);
+        throw creatures::ControllerException(errorMessage);
+    }
+
+    logger->debug("firmware is ready for initialization (version {})", firmwareVersion);
+
+    // Go gather the configuration from the creature
+    auto creatureConfigCommand = creatures::commands::CreatureConfiguration(logger);
+    creatureConfigCommand.getServoConfigurations(creature);
+
+    // ...and toss it to the serial handler
+    serialHandler->getOutgoingQueue()->push(creatureConfigCommand.toMessageWithChecksum());
+
+}
+
 
 std::shared_ptr<creatures::MessageQueue<std::unordered_map<std::string, creatures::Input>>> Controller::getInputQueue() {
     return inputQueue;

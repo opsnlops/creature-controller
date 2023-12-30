@@ -11,6 +11,7 @@
 #include "controller-config.h"
 
 // Various handlers
+#include "messaging/processors/config_message.h"
 #include "messaging/processors/ping_message.h"
 #include "messaging/processors/position_message.h"
 
@@ -22,6 +23,7 @@ volatile u64 checksum_errors = 0UL;
 const MessageTypeHandler messageHandlers[] = {
         {"PING", handlePingMessage},
         {"POS",  handlePositionMessage},
+        {"CONFIG", handleConfigMessage},
 };
 
 

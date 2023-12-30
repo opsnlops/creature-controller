@@ -10,6 +10,7 @@
 #include "controller-config.h"
 
 volatile u64 position_messages_processed = 0UL;
+extern volatile bool controller_safe_to_run;
 
 bool handlePositionMessage(const GenericMessage *msg) {
 
@@ -35,7 +36,12 @@ bool handlePositionMessage(const GenericMessage *msg) {
 
         verbose("incoming position message: %s %s", position, value);
 
-        requestServoPosition(position, stringToU16(value));
+        if(!controller_safe_to_run) {
+            warning("dropping position message because we haven't been told it's safe");
+        }
+        else {
+            requestServoPosition(position, stringToU16(value));
+        }
     }
 
     position_messages_processed = position_messages_processed + 1;

@@ -26,6 +26,8 @@ using u64 = std::uint64_t;
 #define CONTROLLER_LOG_LEVEL                "spdlog::level::debug"
 #define RP2040_LOG_LEVEL                    "spdlog::level::trace"
 
+// The version of the firmware we are expecting
+#define FIRMWARE_VERSION                    1
 
 // Use the status lights?
 #define USE_STATUS_LIGHTS                   1

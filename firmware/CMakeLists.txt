@@ -10,11 +10,12 @@ project(firmware C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 
 
-include(FetchContent)
-set(FETCHCONTENT_QUIET OFF)
-
 # Initialize the SDK
 pico_sdk_init()
+
+# Ensure we're using the hardware floating point
+set(PICO_DEFAULT_FLOAT_IMPL pico_float_pico)
+set(PICO_DEFAULT_DOUBLE_IMPL pico_double_pico)
 
 
 # Set up our includes
@@ -51,8 +52,6 @@ add_executable(firmware
         src/messaging/processors/ping_message.c
         src/messaging/processors/position_message.h
         src/messaging/processors/position_message.c
-        src/util/fast_hsv2rgb.h
-        src/util/fast_hsv2rgb_32bit.c
         src/util/ranges.h
         src/util/ranges.c
         src/util/string_utils.c
@@ -62,7 +61,11 @@ add_executable(firmware
         src/io/usb_workers.c
         src/device/status_lights.h
         src/device/status_lights.c
+        src/device/colors.h
+        src/device/colors.c
+        src/messaging/processors/config_message.c
 )
+
 
 # PIO-based UART from the Pico examples
 pico_generate_pio_header(firmware ${CMAKE_CURRENT_LIST_DIR}/src/io/uart_rx.pio OUTPUT_DIR ${CMAKE_CURRENT_LIST_DIR}/generated)
@@ -75,8 +78,6 @@ target_include_directories(firmware PRIVATE
         .
         ${CMAKE_CURRENT_LIST_DIR}
 )
-
-#add_subdirectory(pico-ssd1306)
 
 # pull in common dependencies
 target_link_libraries(firmware

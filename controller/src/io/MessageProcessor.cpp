@@ -10,6 +10,7 @@
 
 #include "logging/Logger.h"
 #include "logging/SpdlogLogger.h"
+#include "io/handlers/InitHandler.h"
 #include "io/handlers/LogHandler.h"
 #include "io/handlers/PongHandler.h"
 #include "io/handlers/StatsHandler.h"
@@ -20,26 +21,42 @@
 
 namespace creatures {
 
-    MessageProcessor::MessageProcessor(std::shared_ptr<Logger> _logger, std::shared_ptr<SerialHandler> serialHandler) {
+    MessageProcessor::MessageProcessor(std::shared_ptr<Logger> _logger,
+                                       std::shared_ptr<SerialHandler> serialHandler,
+                                       std::shared_ptr<Controller> controller) :
+                                       logger(_logger),
+                                       serialHandler(std::move(serialHandler)),
+                                       controller(controller) {
 
         /*
         // Make a new logger just for us
         this->logger = std::make_shared<creatures::SpdlogLogger>();
         logger->init("rp2040");
         */
-        logger = _logger;
         logger->info("Message Processor created!");
-
-        this->serialHandler = std::move(serialHandler);
         this->incomingQueue = this->serialHandler->getIncomingQueue();
 
+        createHandlers();
+
         // Register handlers
-        registerHandler("LOG", std::make_unique<LogHandler>());
-        registerHandler("STATS", std::make_unique<StatsHandler>());
-        registerHandler("PONG", std::make_unique<PongHandler>());
+        registerHandler("LOG", this->logHandler);
+        registerHandler("STATS", this->statsHandler);
+        registerHandler("PONG", this->pongHandler);
+        registerHandler("INIT", this->initHandler);
     }
 
-    void MessageProcessor::registerHandler(std::string messageType, std::unique_ptr<IMessageHandler> handler) {
+    void MessageProcessor::createHandlers() {
+        logger->debug("creating the message handlers");
+
+        this->logHandler = std::make_shared<LogHandler>();
+        this->initHandler = std::make_shared<InitHandler>(this->logger, this->controller);
+        this->pongHandler = std::make_shared<PongHandler>();
+        this->statsHandler = std::make_shared<StatsHandler>();
+
+
+    }
+
+    void MessageProcessor::registerHandler(std::string messageType, std::shared_ptr<IMessageHandler> handler) {
         logger->info("registering handler for {}", messageType);
         handlers[messageType] = std::move(handler);
     }

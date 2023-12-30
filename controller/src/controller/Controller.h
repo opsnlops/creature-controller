@@ -87,6 +87,15 @@ public:
     std::shared_ptr<creatures::creature::Creature> getCreature();
 
 
+    /**
+     * @brief Informs the controller that the firmware is ready for initialization
+     *
+     * This is called by the InitHandler when we get a message from the firmware that it's
+     * showtime!
+     */
+    void firmwareReadyForInitialization(u32 firmwareVersion);
+
+
     u64 getNumberOfFrames();
 
 #if USE_STEPPERS

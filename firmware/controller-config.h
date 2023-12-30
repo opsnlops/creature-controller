@@ -17,6 +17,16 @@ typedef uint64_t u64;
 #define EVER ;;
 
 
+/**
+ * @brief Firmware Version
+ *
+ * This is the version that's sent to the controller. The controller is expected to know what
+ * do to with this version.
+ */
+#define FIRMWARE_VERSION                    1
+#define INIT_REQUEST_TIME_MS                1000
+
+
 // Light to flash when commands are being received
 #define CDC_ACTIVE_PIN                      17
 
@@ -57,9 +67,9 @@ typedef uint64_t u64;
 // How many frames should we wait to turn off a motor's light?
 #define STATUS_LIGHTS_MOTOR_OFF_FRAMES      100
 
-#define STATUS_LIGHTS_DMX_STATUS_BRIGHTNESS 30
-#define STATUS_LIGHTS_RUNNING_BRIGHTNESS    35
-#define STATUS_LIGHTS_RUNNING_FRAME_CHANGE  66
+#define STATUS_LIGHTS_SYSTEM_STATE_STATUS_BRIGHTNESS 0.1
+#define STATUS_LIGHTS_RUNNING_BRIGHTNESS    0.1
+#define STATUS_LIGHTS_RUNNING_FRAME_CHANGE  100
 
 
 

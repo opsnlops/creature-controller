@@ -124,6 +124,13 @@ add_library(creature_lib
         src/dmx/E131Exception.h
         src/controller/Input.cpp
         src/controller/Input.h
+        src/io/handlers/InitHandler.cpp
+        src/io/handlers/InitHandler.h
+        src/controller/ControllerException.h
+        src/controller/commands/tokens/ServoConfig.cpp
+        src/controller/commands/tokens/ServoConfig.h
+        src/controller/commands/CreatureConfiguration.cpp
+        src/controller/commands/CreatureConfiguration.h
 )
 
 target_include_directories(creature_lib PUBLIC

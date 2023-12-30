@@ -17,7 +17,6 @@ namespace creatures::commands {
 
     public:
         SetServoPositions(std::shared_ptr<Logger> logger);
-
         void addServoPosition(const ServoPosition& servoPosition);
 
         std::string toMessage() override;

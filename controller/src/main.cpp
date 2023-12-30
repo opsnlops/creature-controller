@@ -56,14 +56,14 @@ int main(int argc, char **argv) {
     auto serialHandler = std::make_shared<creatures::SerialHandler>(logger, config->getUsbDevice(), outgoingQueue, incomingQueue);
     serialHandler->start();
 
-    // Fire up the MessageProcessor
-    auto messageProcessor = std::make_shared<creatures::MessageProcessor>(logger, serialHandler);
-    messageProcessor->start();
-
     // Fire up the controller
     auto controller = std::make_shared<Controller>(logger);
     controller->init(creature, serialHandler);
     controller->start();
+
+    // Fire up the MessageProcessor
+    auto messageProcessor = std::make_shared<creatures::MessageProcessor>(logger, serialHandler, controller);
+    messageProcessor->start();
 
     // Now that the controller is running, we can start the creature
     creature->init(controller);

@@ -11,6 +11,7 @@
 #include "controller-config.h"
 
 #include "controller/Controller.h"
+#include "controller/commands/tokens/ServoConfig.h"
 #include "controller/commands/tokens/ServoPosition.h"
 #include "creature/Creature.h"
 #include "controller/Input.h"
@@ -121,6 +122,17 @@ namespace creatures::creature {
          * @return a `std::vector<creatures::ServoPosition>` of the requested positions
          */
         std::vector<creatures::ServoPosition> getRequestedServoPositions();
+
+        /**
+         * @brief Gets a ServoConfig for each servo
+         *
+         * This is used to generate a configuration that's sent over to the firmware in response
+         * to an INIT message. It allows the creature to tell the firmware the limits of each of
+         * the servos so it can also do error checking on it's side.
+         *
+         * @return `std::vector<creatures::ServoConfig>` of the servos this creature has
+         */
+        std::vector<creatures::ServoConfig> getServoConfigs();
 
         /**
          * @brief Ask all of the servos to calculate their next positions
