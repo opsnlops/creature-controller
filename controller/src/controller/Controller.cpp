@@ -79,6 +79,12 @@ bool Controller::acceptInput(const std::vector<creatures::Input>& inputs) {
         creatureInputs[input.getName()] = input;
     }
 
+    // Is this first data we've gotten?
+    if(!receivedFirstFrame) {
+        logger->info("first frame received");
+        receivedFirstFrame = true;
+    }
+
     // Assign this to the input queue and hope the creature sees it!
     logger->trace("sending {} inputs to the input queue", creatureInputs.size());
     inputQueue->push(creatureInputs);
@@ -161,19 +167,23 @@ void Controller::worker() {
             logger->info("frames: {}", number_of_frames);
         }
 
-        // Go fetch the positions
-        std::vector<creatures::ServoPosition> requestedPositions = creature->getRequestedServoPositions();
+        // If we haven't received a frame yet, don't do anything
+        if (receivedFirstFrame) {
 
-        auto command = std::make_shared<creatures::commands::SetServoPositions>(logger);
-        for(auto& position : requestedPositions) {
-            command->addServoPosition(position);
+            // Go fetch the positions
+            std::vector<creatures::ServoPosition> requestedPositions = creature->getRequestedServoPositions();
+
+            auto command = std::make_shared<creatures::commands::SetServoPositions>(logger);
+            for (auto &position: requestedPositions) {
+                command->addServoPosition(position);
+            }
+
+            // Fire this off to the controller
+            sendCommand(command);
+
+            // Tell the creature to get ready for next time
+            creature->calculateNextServoPositions();
         }
-
-        // Fire this off to the controller
-        sendCommand(command);
-
-        // Tell the creature to get ready for next time
-        creature->calculateNextServoPositions();
 
         // Figure out how much time we have until the next tick
         auto remaining_time = next_target_time - high_resolution_clock::now();
