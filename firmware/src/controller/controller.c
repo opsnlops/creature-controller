@@ -152,7 +152,8 @@ bool requestServoPosition(const char *motor_id, u16 requestedMicroseconds) {
 
     // Make sure the motor is allowed to move to this position
     if(requestedMicroseconds < motor_map[motor_id_index].min_position || requestedMicroseconds > motor_map[motor_id_index].max_position) {
-        fatal("Invalid position requested for %s: %u", motor_id, requestedMicroseconds);
+        fatal("Invalid position requested for %s: %u (valid is: %u - %u)",
+              motor_id, requestedMicroseconds, motor_map[motor_id_index].min_position, motor_map[motor_id_index].max_position);
         return false;
     }
 
