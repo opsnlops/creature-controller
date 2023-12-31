@@ -37,10 +37,10 @@ extern u64 number_of_moves;
  * @param smoothingValue how aggressive should our movement smoothing be
  * @param inverted are this servo's movements inverted?
  * @param servo_update_frequency_hz how fast should we tell the firmware to update the servos
- * @param default_position the default position to set the servo to at start
+ * @param default_position_microseconds the default position to set the servo to at start
  */
 Servo::Servo(std::shared_ptr<creatures::Logger> logger, std::string id, std::string outputLocation, std::string name, u16 min_pulse_us,
-             u16 max_pulse_us, float smoothingValue, bool inverted, u16 servo_update_frequency_hz, u16 default_position) : logger(logger) {
+             u16 max_pulse_us, float smoothingValue, bool inverted, u16 servo_update_frequency_hz, u16 default_position_microseconds) : logger(logger) {
 
     this->id = std::move(id);
     this->outputLocation = std::move(outputLocation);
@@ -48,17 +48,18 @@ Servo::Servo(std::shared_ptr<creatures::Logger> logger, std::string id, std::str
     this->min_pulse_us = min_pulse_us;
     this->max_pulse_us = max_pulse_us;
     this->smoothingValue = smoothingValue;
-    this->default_position = default_position;
+    this->default_microseconds = default_position_microseconds;
     this->servo_update_frequency_hz = servo_update_frequency_hz;
     this->inverted = inverted;
 
     // Calculate the length of a frame in microseconds based on the frequency
     this->frame_length_microseconds = 1000000 / servo_update_frequency_hz;
 
-    // Runtime values
-    this->desired_microseconds = 0;
-    this->current_microseconds = 0;
-    this->current_position = getDefaultPosition();
+    // Default to setting all of our values to the default that the config file
+    // said we should use as our default
+    this->desired_microseconds = inverted ? max_pulse_us - getDefaultMicroseconds() : getDefaultMicroseconds();
+    this->current_microseconds = inverted ? max_pulse_us - getDefaultMicroseconds() : getDefaultMicroseconds();
+    this->current_position = inverted ? MAX_POSITION - microsecondsToPosition(getDefaultMicroseconds()) : microsecondsToPosition(getDefaultMicroseconds());
 
     // Force a calculation for the current tick
     calculateNextTick();
@@ -67,7 +68,7 @@ Servo::Servo(std::shared_ptr<creatures::Logger> logger, std::string id, std::str
     this->on = false;
 
     logger->info("set up servo on location {}: name: {}, min_pulse: {}, max_pulse: {}, default: {}, inverted: {}",
-         outputLocation, name, min_pulse_us, max_pulse_us, default_position, inverted ? "yes" : "no");
+                 outputLocation, name, min_pulse_us, max_pulse_us, default_position_microseconds, inverted ? "yes" : "no");
 }
 
 /**
@@ -137,7 +138,7 @@ void Servo::move(u16 position) {
     if(inverted) position = MAX_POSITION - position;
 
     // Covert this to a desired microsecond
-    desired_microseconds = convertRange(logger, position, MIN_POSITION, MAX_POSITION, min_pulse_us, max_pulse_us);
+    desired_microseconds = positionToMicroseconds(position);
 
     // Save the position for debugging
     current_position = position;
@@ -148,6 +149,14 @@ void Servo::move(u16 position) {
                   desired_microseconds);
 
     number_of_moves = number_of_moves + 1;
+}
+
+u32 Servo::positionToMicroseconds(u16 position) {
+    return convertRange(logger, position, MIN_POSITION, MAX_POSITION, min_pulse_us, max_pulse_us);
+}
+
+u16 Servo::microsecondsToPosition(u32 microseconds) {
+    return convertRange(logger, microseconds, min_pulse_us, max_pulse_us, MIN_POSITION, MAX_POSITION);
 }
 
 std::string Servo::getName() const {
@@ -168,8 +177,8 @@ u16 Servo::getPosition() const {
     }
 }
 
-u16 Servo::getDefaultPosition() const {
-    return this->default_position;
+u16 Servo::getDefaultMicroseconds() const {
+    return this->default_microseconds;
 }
 
 u32 Servo::getDesiredMicroseconds() const {

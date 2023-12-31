@@ -16,6 +16,7 @@
 #include "pico/stdlib.h"
 
 #include "controller/controller.h"
+#include "device/power_relay.h"
 #include "device/status_lights.h"
 #include "debug/remote_logging.h"
 #include "debug/stats_reporter.h"
@@ -24,8 +25,6 @@
 #include "usb/usb.h"
 
 #include "tasks.h"
-
-#include "debug/blinker.h"
 
 
 volatile size_t xFreeHeapSpace;
@@ -38,9 +37,11 @@ int main() {
     logger_init();
     debug("Logging running!");
 
-    //start_debug_blinker();
-
+    // Set up the board
     board_init();
+
+    // Set up the power relay
+    init_power_relay();
 
     // Fire up the serial incoming and outgoing queues
     usb_serial_init();

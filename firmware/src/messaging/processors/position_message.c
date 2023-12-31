@@ -11,6 +11,7 @@
 
 volatile u64 position_messages_processed = 0UL;
 extern volatile bool controller_safe_to_run;
+extern volatile bool has_first_frame_been_received;
 
 bool handlePositionMessage(const GenericMessage *msg) {
 
@@ -41,6 +42,11 @@ bool handlePositionMessage(const GenericMessage *msg) {
         }
         else {
             requestServoPosition(position, stringToU16(value));
+
+            // Was this the first frame we've received?
+            if(!has_first_frame_been_received) {
+                first_frame_received(true);
+            }
         }
     }
 

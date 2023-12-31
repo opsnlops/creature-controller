@@ -11,6 +11,7 @@
 #include "hardware/gpio.h"
 #include "hardware/pwm.h"
 
+#include "device/power_relay.h"
 #include "io/usb_serial.h"
 #include "logging/logging.h"
 
@@ -80,6 +81,13 @@ TimerHandle_t controller_init_request_timer = NULL;
  */
 enum FirmwareState controller_firmware_state = idle;
 
+
+/**
+ * Keep track of if we've received the first frame
+ *
+ * This is set in the position handler
+ */
+volatile bool has_first_frame_been_received = false;
 
 void controller_init() {
     info("init-ing the controller");
@@ -262,7 +270,36 @@ void controller_disconnected() {
     // Back to idle we go!
     controller_firmware_state = idle;
 
+    // Flag that we've not gotten a good frame, but don't kill the relay
+    has_first_frame_been_received = false;
+
     // No point in doing this if we're not connected
     xTimerStop(controller_init_request_timer, 0);
 
+}
+
+void firmware_configuration_received() {
+
+    info("We've received a valid configuration from the controller!");
+
+    // Tell everyone to go go go
+    controller_firmware_state = running;
+    controller_safe_to_run = true;
+
+    // Let the controller know we're ready
+    send_to_controller("READY\t1");
+}
+
+void first_frame_received(bool yesOrNo) {
+    has_first_frame_been_received = yesOrNo;
+
+    if(yesOrNo) {
+        info("We've received our first frame from the controller!");
+        power_relay_on();
+    }
+    else
+    {
+        info("We haven't received our first frame from the controller yet");
+        power_relay_off();
+    }
 }

@@ -167,6 +167,13 @@ void send_init_request(TimerHandle_t xTimer);
 
 
 /**
- * Signals to the computer that we're ready to go
+ * A message from the config message that we've received a valid configuration!
  */
-void controller_ready();
+void firmware_configuration_received();
+
+/**
+ * Have we received our first frame from the controller?
+ *
+ * @param yesOrNo
+ */
+void first_frame_received(bool yesOrNo);

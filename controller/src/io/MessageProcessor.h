@@ -13,6 +13,7 @@
 #include "io/handlers/InitHandler.h"
 #include "io/handlers/LogHandler.h"
 #include "io/handlers/PongHandler.h"
+#include "io/handlers/ReadyHandler.h"
 #include "io/handlers/StatsHandler.h"
 #include "io/SerialHandler.h"
 #include "util/MessageQueue.h"
@@ -57,6 +58,7 @@ namespace creatures {
         std::shared_ptr<creatures::LogHandler> logHandler;
         std::shared_ptr<creatures::InitHandler> initHandler;
         std::shared_ptr<creatures::PongHandler> pongHandler;
+        std::shared_ptr<creatures::ReadyHandler> readyHandler;
         std::shared_ptr<creatures::StatsHandler> statsHandler;
     };
 

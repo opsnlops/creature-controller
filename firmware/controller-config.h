@@ -37,10 +37,8 @@ typedef uint64_t u64;
 #define MAX_NUMBER_OF_STEPPERS              8
 
 // Devices
-#define E_STOP_PIN                          28
+#define POWER_PIN                           28
 
-// Use the status lights?
-#define USE_STATUS_LIGHTS                   1
 
 // The NeoPixel status lights
 #define STATUS_LIGHTS_TIME_MS               20

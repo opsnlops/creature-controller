@@ -43,6 +43,7 @@ namespace creatures {
         registerHandler("STATS", this->statsHandler);
         registerHandler("PONG", this->pongHandler);
         registerHandler("INIT", this->initHandler);
+        registerHandler("READY", this->readyHandler);
     }
 
     void MessageProcessor::createHandlers() {
@@ -52,7 +53,7 @@ namespace creatures {
         this->initHandler = std::make_shared<InitHandler>(this->logger, this->controller);
         this->pongHandler = std::make_shared<PongHandler>();
         this->statsHandler = std::make_shared<StatsHandler>();
-
+        this->readyHandler = std::make_shared<ReadyHandler>(this->logger, this->controller);
 
     }
 

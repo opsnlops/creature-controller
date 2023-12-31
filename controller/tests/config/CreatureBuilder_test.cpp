@@ -84,7 +84,7 @@ TEST(CreatureBuilder, BuildsCorrectlyWithValidData) {
     EXPECT_EQ(2250, creature->getServo("neck_left")->getMaxPulseUs());
     EXPECT_NEAR(expectedSmoothingValue, creature->getServo("neck_left")->getSmoothingValue(), tolerance);
     EXPECT_FALSE(creature->getServo("neck_left")->isInverted());
-    EXPECT_EQ(1250 + ((2250 - 1250) / 2), creature->getServo("neck_left")->getDefaultPosition());
+    EXPECT_EQ(1250 + ((2250 - 1250) / 2), creature->getServo("neck_left")->getDefaultMicroseconds());
 
 }
 

@@ -101,8 +101,9 @@ bool handleConfigMessage(const GenericMessage *msg) {
 
     }
 
-    controller_firmware_state = running;
-    controller_safe_to_run = true;
+    // Let the controller know we're good to go! 🎉
+    firmware_configuration_received();
+
     return true;
 
 }

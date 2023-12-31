@@ -131,6 +131,8 @@ add_library(creature_lib
         src/controller/commands/tokens/ServoConfig.h
         src/controller/commands/CreatureConfiguration.cpp
         src/controller/commands/CreatureConfiguration.h
+        src/io/handlers/ReadyHandler.cpp
+        src/io/handlers/ReadyHandler.h
 )
 
 target_include_directories(creature_lib PUBLIC

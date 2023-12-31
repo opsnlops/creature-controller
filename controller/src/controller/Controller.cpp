@@ -26,7 +26,6 @@ Controller::Controller(std::shared_ptr<creatures::Logger> logger): logger(logger
 
     logger->debug("setting up the controller");
 
-    //creatureWorkerTaskHandle = nullptr;
     online = true;
     receivedFirstFrame = false;
 
@@ -128,8 +127,6 @@ bool Controller::hasReceivedFirstFrame() {
     return receivedFirstFrame;
 }
 
-
-
 uint16_t Controller::getNumberOfDMXChannels() {
     return numberOfChannels;
 }
@@ -143,9 +140,13 @@ bool Controller::isOnline() {
     return online;
 }
 
-u64 Controller::getNumberOfFrames() {
-    return number_of_frames;
+void Controller::firmwareReadyToOperate() {
+    logger->info("firmware is ready to operate");
+    this->firmwareReady = true;
 }
+
+
+
 
 void Controller::worker() {
 
@@ -168,7 +169,7 @@ void Controller::worker() {
         }
 
         // If we haven't received a frame yet, don't do anything
-        if (receivedFirstFrame) {
+        if (receivedFirstFrame && firmwareReady) {
 
             // Go fetch the positions
             std::vector<creatures::ServoPosition> requestedPositions = creature->getRequestedServoPositions();
@@ -184,6 +185,15 @@ void Controller::worker() {
             // Tell the creature to get ready for next time
             creature->calculateNextServoPositions();
         }
+        else {
+
+            // If we're stalled, log why every few frames
+            if(number_of_frames % 100 == 0) {
+                logger->warn("not sending frames because we're not ready! receivedFirstFrame: {}, firmwareReady: {}",
+                             receivedFirstFrame, firmwareReady);
+
+            }
+        }
 
         // Figure out how much time we have until the next tick
         auto remaining_time = next_target_time - high_resolution_clock::now();
@@ -196,7 +206,6 @@ void Controller::worker() {
 
         // Update the target time for the next iteration
         next_target_time += target_delta;
-
     }
 
     logger->info("controller worker stopped");

@@ -95,8 +95,12 @@ public:
      */
     void firmwareReadyForInitialization(u32 firmwareVersion);
 
-
-    u64 getNumberOfFrames();
+    /**
+     * @brief Tells the controller that the firmware is ready to operate
+     *
+     * This is set by ReadyHandler.
+     */
+    void firmwareReadyToOperate();
 
 #if USE_STEPPERS
     Stepper* getStepper(u8 index);
@@ -133,14 +137,18 @@ private:
     /**
      * Have we received a frame off the wire?
      *
-     * This is used to if it's safe to turn on the motors. To avoid having the servos jump
-     * to what might be an invalid position, and risking damaging things, don't turn on
-     * the power until we've gotten good data from the wire.
+     * Don't transmit anything to the firmware if we haven't gotten a signal from the
+     * I/O handler. It's not good to send junk frames to the firmware. It _should_ discard
+     * anything that doesn't make sense, but do we really wanna trust it?
      */
     bool receivedFirstFrame = false;
 
-    // The current state of the input from the controller
-    u8* currentFrame{};
+    /**
+     * Has the firmware told us that it's ready?
+     *
+     * This is set via a READY message from the firmware.
+     */
+    bool firmwareReady = false;
 
     // How many channels we're expecting from the I/O handler
     u16 numberOfChannels;

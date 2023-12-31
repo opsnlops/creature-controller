@@ -64,6 +64,8 @@ add_executable(firmware
         src/device/colors.h
         src/device/colors.c
         src/messaging/processors/config_message.c
+        src/device/power_relay.h
+        src/device/power_relay.c
 )
 
 
