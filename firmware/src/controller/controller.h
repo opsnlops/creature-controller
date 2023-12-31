@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include <limits.h>
+
 // Our modules
 #include "hardware/gpio.h"
 #include "hardware/pwm.h"
@@ -20,6 +22,11 @@
 // The max number of motors per module (0, 1, 2, 3)
 #define CONTROLLER_MOTORS_PER_MODULE 4
 
+// Do the math to get the total number of motors
+#define MOTOR_MAP_SIZE (CONTROLLER_NUM_MODULES * CONTROLLER_MOTORS_PER_MODULE)
+
+
+
 // Eight servos at the moment. (C is not used)
 #define SERVO_0_GPIO_PIN            6               // Pin 9,  PMW  3A
 #define SERVO_1_GPIO_PIN            7               // Pin 10, PWM  3B
@@ -30,7 +37,8 @@
 #define SERVO_6_GPIO_PIN            12              // Pin 16, PWM  6A
 #define SERVO_7_GPIO_PIN            13              // Pin 17, PWM  6B
 
-#define INVALID_MOTOR_ID            255
+#define INVALID_MOTOR_ID            UINT8_MAX
+#define INVALID_MOTOR_INDEX         UINT16_MAX
 
 // Defines a mapping between motor IDs and GPIO pins
 typedef struct {
@@ -38,9 +46,10 @@ typedef struct {
     uint gpio_pin;
     uint slice;
     uint channel;
-    u16 requested_position;
-    u16 min_position;
-    u16 max_position;
+    u16 requested_position;             // Position in the value on the PWM counter (not microseconds)
+    u16 min_microseconds;               // Minimum number of microseconds that this motor can be set to
+    u16 max_microseconds;               // Maximum number of microseconds that this motor can be set to
+    u16 current_microseconds;           // Current number of microseconds that this motor is set to
 } MotorMap;
 
 // The four genders

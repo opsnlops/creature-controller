@@ -1,14 +1,10 @@
 
 #include <limits.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 #include "ws2812.pio.h"
 
 #include "pico/double.h"
-#include "pico/stdlib.h"
 #include "pico/rand.h"
-#include "hardware/regs/rosc.h"
 
 #include "controller/controller.h"
 #include "device/colors.h"
@@ -35,16 +31,15 @@ u8 logic_board_state_machine;
 u8 module_a_state_machine;
 u8 module_b_state_machine;
 u8 module_c_state_machine;
-u32 last_input_frame = 0UL;
 
 
-// Located in tasks.cpp
-extern TaskHandle_t status_lights_task_handle;
-
+TaskHandle_t status_lights_task_handle;
 extern enum FirmwareState controller_firmware_state;
 
+// Get access to the motor map from the controller
+extern MotorMap motor_map[MOTOR_MAP_SIZE];
 
-void put_pixel(uint32_t pixel_grb, uint8_t state_machine) {
+void put_pixel(u32 pixel_grb, u8 state_machine) {
     pio_sm_put_blocking(STATUS_LIGHTS_PIO, state_machine, pixel_grb << 8u);
 }
 
@@ -128,29 +123,29 @@ portTASK_FUNCTION(status_lights_task, pvParameters) {
     TickType_t lastDrawTime;
 
     // What frame are we on?
-    uint64_t frame = 0;
+    u64 frame = 0;
 
-    uint32_t currentIOFrameNumber = 0;
-    uint32_t lastIOFrameNumber = 0;
-    uint64_t lastIOFrame = 0;
+    u32 currentIOFrameNumber = 0;
+    u32 lastIOFrameNumber = 0;
+    u64 lastIOFrame = 0;
 
     // Are we currently getting data?
     bool ioActive = false;
 
 
-    uint32_t statusLightColor = 0;
-    uint32_t runningLightColor = 0;
+    u32 statusLightColor;
+    u32 runningLightColor;
 
     // Start up with two random colors
-    uint16_t currentRunningLightHue = convertRange(get_rand_32(), 0, UINT32_MAX, 1000, 360 * 100);
-    uint16_t oldRunningLightHue = convertRange(get_rand_32(), 0, UINT32_MAX, 1000, 360 * 100);
-    uint16_t runningLightFadeStep = 0;
+    u16 currentRunningLightHue = convertRange(get_rand_32(), 0, UINT32_MAX, 1000, 360 * 100);
+    u16 oldRunningLightHue = convertRange(get_rand_32(), 0, UINT32_MAX, 1000, 360 * 100);
+    u16 runningLightFadeStep = 0;
     u16 tempHue = 0;
     hsv_t runningLightHSV;
 
-    uint32_t motorLightColor[MAX_NUMBER_OF_SERVOS + MAX_NUMBER_OF_STEPPERS] = {0};
-    uint64_t lastServoFrame[MAX_NUMBER_OF_SERVOS + MAX_NUMBER_OF_STEPPERS] = {0};
-    uint16_t currentLightState[MAX_NUMBER_OF_SERVOS + MAX_NUMBER_OF_STEPPERS] = {0};
+    u32 motorLightColor[MOTOR_MAP_SIZE] = {0};
+    u64 lastServoFrame[MOTOR_MAP_SIZE] = {0};
+    u16 currentLightState[MOTOR_MAP_SIZE] = {0};
 
 
     // Pre-compute the colors for the system status
@@ -239,7 +234,7 @@ portTASK_FUNCTION(status_lights_task, pvParameters) {
         if(runningLightFadeStep > STATUS_LIGHTS_RUNNING_FRAME_CHANGE)
         {
             oldRunningLightHue = currentRunningLightHue;
-            currentRunningLightHue = (uint16_t)(getNextColor(currentRunningLightHue / 36000.0) * 36000);
+            currentRunningLightHue = (u16)(getNextColor(currentRunningLightHue / 36000.0) * 36000);
             runningLightFadeStep = 0;
         }
 
@@ -248,11 +243,13 @@ portTASK_FUNCTION(status_lights_task, pvParameters) {
         /*
          * The rest of the lights are the status of the motors
          */
-        /*
-        for (uint8_t currentServo = 0; currentServo < CONTROLLER_NUM_MODULES * CONTROLLER_MOTORS_PER_MODULE; currentServo++) {
 
-            u16 currentPosition = 512;
-            ///uint16_t currentPosition = Controller::getServo(currentServo)->getPosition();
+        for (u8 currentServo = 0; currentServo < MOTOR_MAP_SIZE; currentServo++) {
+
+            // Get a copy of the current state in case it mutates while we're processing things
+            u16 currentPosition = motor_map[currentServo].current_microseconds;
+            u16 minPosition = motor_map[currentServo].min_microseconds;
+            u16 maxPosition = motor_map[currentServo].max_microseconds;
 
             // Has this one changed?
             if (currentLightState[currentServo] != currentPosition) {
@@ -264,22 +261,26 @@ portTASK_FUNCTION(status_lights_task, pvParameters) {
             if (lastServoFrame[currentServo] + STATUS_LIGHTS_MOTOR_OFF_FRAMES > frame) {
 
                 // Convert the position to a hue
-                uint16_t hue = convertRange(currentPosition,
-                                            MIN_POSITION,
-                                            MAX_POSITION,
-                                            HSV_HUE_MIN,
-                                            HSV_HUE_MAX);
+                u16 hue = convertRange(currentPosition,
+                                       minPosition,
+                                       maxPosition,
+                                       0,              // 0 is red
+                                       23300);         // 233 * 100 (233 is blue)
 
                 // Dim slowly until we've hit the limit for when we'd turn off
-                uint8_t brightness = convertRange(frame - lastServoFrame[currentServo],
+                u8 brightness = convertRange(frame - lastServoFrame[currentServo],
                                                   0,
                                                   STATUS_LIGHTS_MOTOR_OFF_FRAMES,
                                                   0,
                                                   STATUS_LIGHTS_SERVO_BRIGHTNESS);
                 brightness = STATUS_LIGHTS_SERVO_BRIGHTNESS - brightness;
 
-                fast_hsv2rgb_32bit(hue, 255, brightness, &r, &g, &b);
-                motorLightColor[currentServo] = status_lights_urgb_u32(r, g, b);
+                // Make this into a color we can show
+                hsv_t hsv;
+                hsv.h = (double)((double)hue / 100.0);
+                hsv.s = 1.0;
+                hsv.v = (double)((double)brightness / UINT8_MAX);
+                motorLightColor[currentServo] = hsv_to_urgb(hsv);
 
             } else {
 
@@ -287,26 +288,22 @@ portTASK_FUNCTION(status_lights_task, pvParameters) {
                 motorLightColor[currentServo] = 0;
             }
         }
-         */
 
         // Now write out the colors of the lights in one big chunk
         put_pixel(statusLightColor, logic_board_state_machine);
         put_pixel(runningLightColor, logic_board_state_machine);
 
-        /*
         // Dump out the lights to the various modules
-        for(uint8_t i = 0; i <= 3; i++) {
-            put_pixel(motorLightColor[i], module_a_state_machine);
-        }
+        for(u8 i = 0; i < MOTOR_MAP_SIZE; i++) {
 
-        for(uint8_t i = 4; i <= 7 != 0; i++) {
-            put_pixel(motorLightColor[i], module_b_state_machine);
+            if(i < CONTROLLER_MOTORS_PER_MODULE) {
+                put_pixel(motorLightColor[i], module_a_state_machine);
+            } else if(i < CONTROLLER_MOTORS_PER_MODULE * 2) {
+                put_pixel(motorLightColor[i], module_b_state_machine);
+            } else {
+                put_pixel(motorLightColor[i], module_c_state_machine);
+            }
         }
-
-        for(uint8_t i = 8; i < (CONTROLLER_NUM_MODULES * CONTROLLER_MOTORS_PER_MODULE) && i <= 12; i++) {
-            put_pixel(motorLightColor[i], module_c_state_machine);
-        }
-         */
 
         // Wait till it's time go again
         vTaskDelayUntil(&lastDrawTime, pdMS_TO_TICKS(STATUS_LIGHTS_TIME_MS));

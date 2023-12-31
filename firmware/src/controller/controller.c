@@ -32,7 +32,7 @@ volatile u64 number_of_pwm_wraps = 0UL;
  */
 
 // Mapping of motor IDs to GPIO pins
-MotorMap motor_map[CONTROLLER_NUM_MODULES * CONTROLLER_MOTORS_PER_MODULE] = {
+MotorMap motor_map[MOTOR_MAP_SIZE] = {
         {"A0", SERVO_0_GPIO_PIN, (SERVO_0_GPIO_PIN >> 1u) & 7u, SERVO_0_GPIO_PIN & 1u},
         {"A1", SERVO_1_GPIO_PIN, (SERVO_1_GPIO_PIN >> 1u) & 7u, SERVO_1_GPIO_PIN & 1u},
         {"A2", SERVO_2_GPIO_PIN, (SERVO_2_GPIO_PIN >> 1u) & 7u, SERVO_2_GPIO_PIN & 1u},
@@ -151,11 +151,14 @@ bool requestServoPosition(const char *motor_id, u16 requestedMicroseconds) {
     }
 
     // Make sure the motor is allowed to move to this position
-    if(requestedMicroseconds < motor_map[motor_id_index].min_position || requestedMicroseconds > motor_map[motor_id_index].max_position) {
+    if(requestedMicroseconds < motor_map[motor_id_index].min_microseconds || requestedMicroseconds > motor_map[motor_id_index].max_microseconds) {
         fatal("Invalid position requested for %s: %u (valid is: %u - %u)",
-              motor_id, requestedMicroseconds, motor_map[motor_id_index].min_position, motor_map[motor_id_index].max_position);
+              motor_id, requestedMicroseconds, motor_map[motor_id_index].min_microseconds, motor_map[motor_id_index].max_microseconds);
         return false;
     }
+
+    // Update the number of microseconds we're set to for the status lights to use
+    motor_map[motor_id_index].current_microseconds = requestedMicroseconds;
 
     // What percentage of the frame is going to be set to on?
     double frame_active = (float) requestedMicroseconds / (float) frame_length_microseconds;
@@ -179,8 +182,8 @@ bool configureServoMinMax(const char* motor_id, u16 minMicroseconds, u16 maxMicr
         return false;
     }
 
-    motor_map[motor_id_index].min_position = minMicroseconds;
-    motor_map[motor_id_index].max_position = maxMicroseconds;
+    motor_map[motor_id_index].min_microseconds = minMicroseconds;
+    motor_map[motor_id_index].max_microseconds = maxMicroseconds;
     info("updated the motor map to allow motor %s to move between %u and %u microseconds",
          motor_id, minMicroseconds, maxMicroseconds);
 

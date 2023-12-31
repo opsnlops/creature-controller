@@ -125,12 +125,6 @@ typedef uint64_t u64;
 #define USB_SERIAL_OUTGOING_QUEUE_LENGTH        5
 #define USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH  128
 
-/*
- * Position bounds
- */
-#define MIN_POSITION                0
-#define MAX_POSITION                1023
-#define DEFAULT_POSITION            512
 
 /*
  * Servo <-> GPIO Pin Mappings
