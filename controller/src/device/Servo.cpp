@@ -57,9 +57,9 @@ Servo::Servo(std::shared_ptr<creatures::Logger> logger, std::string id, std::str
 
     // Default to setting all of our values to the default that the config file
     // said we should use as our default
-    this->desired_microseconds = inverted ? max_pulse_us - getDefaultMicroseconds() : getDefaultMicroseconds();
-    this->current_microseconds = inverted ? max_pulse_us - getDefaultMicroseconds() : getDefaultMicroseconds();
-    this->current_position = inverted ? MAX_POSITION - microsecondsToPosition(getDefaultMicroseconds()) : microsecondsToPosition(getDefaultMicroseconds());
+    this->desired_microseconds = inverted ? max_pulse_us - (getDefaultMicroseconds() - min_pulse_us) : getDefaultMicroseconds();
+    this->current_microseconds = inverted ? max_pulse_us - (getDefaultMicroseconds() - min_pulse_us)  : getDefaultMicroseconds();
+    this->current_position = inverted ? MAX_POSITION - microsecondsToPosition(getDefaultMicroseconds() - min_pulse_us) : microsecondsToPosition(getDefaultMicroseconds());
 
     // Force a calculation for the current tick
     calculateNextTick();
@@ -131,8 +131,6 @@ void Servo::move(u16 position) {
         throw creatures::ServoException(fmt::format("Servo::move() called with invalid position! min: {}, max: {}, requested: {}",
                                                     MIN_POSITION, MAX_POSITION, position));
     };
-
-    // TODO: This assumes that MIN_POSITION is always 0. Is that okay?
 
     // If this servo is inverted, do it now
     if(inverted) position = MAX_POSITION - position;
