@@ -89,6 +89,7 @@ target_link_libraries(firmware
         tinyusb_device
         tinyusb_board
         pico_stdlib
+        pico_rand
         pico_unique_id
         pico_multicore
         FreeRTOS-Kernel

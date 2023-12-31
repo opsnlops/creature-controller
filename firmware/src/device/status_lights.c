@@ -7,6 +7,7 @@
 
 #include "pico/double.h"
 #include "pico/stdlib.h"
+#include "pico/rand.h"
 #include "hardware/regs/rosc.h"
 
 #include "controller/controller.h"
@@ -67,9 +68,6 @@ void status_lights_init() {
     module_c_state_machine = pio_claim_unused_sm(STATUS_LIGHTS_PIO, true);
     debug("module C state machine: %u", module_c_state_machine);
     ws2812_program_init(STATUS_LIGHTS_PIO, module_c_state_machine, offset, STATUS_LIGHTS_MOD_C_PIN, 800000, STATUS_LIGHTS_MOD_C_IS_RGBW);
-
-    // Seed the random number generator better so we get better colors on the running light
-    seed_random_from_rosc();
 
 }
 
@@ -144,8 +142,8 @@ portTASK_FUNCTION(status_lights_task, pvParameters) {
     uint32_t runningLightColor = 0;
 
     // Start up with two random colors
-    uint16_t currentRunningLightHue = rand() * 360 * 100;
-    uint16_t oldRunningLightHue = rand() * 360 * 100;
+    uint16_t currentRunningLightHue = convertRange(get_rand_32(), 0, UINT32_MAX, 1000, 360 * 100);
+    uint16_t oldRunningLightHue = convertRange(get_rand_32(), 0, UINT32_MAX, 1000, 360 * 100);
     uint16_t runningLightFadeStep = 0;
     u16 tempHue = 0;
     hsv_t runningLightHSV;
@@ -314,28 +312,4 @@ portTASK_FUNCTION(status_lights_task, pvParameters) {
         vTaskDelayUntil(&lastDrawTime, pdMS_TO_TICKS(STATUS_LIGHTS_TIME_MS));
     }
 #pragma clang diagnostic pop
-}
-
-/**
- * Seed the random number generator from the ROSC
- *
- * This came from a little gem on the Pi forums:
- *   https://forums.raspberrypi.com/viewtopic.php?t=302960
- */
-void seed_random_from_rosc()
-{
-    u32 random = 0;
-    u32 random_bit;
-    volatile u32 *rnd_reg = (u32 *)(ROSC_BASE + ROSC_RANDOMBIT_OFFSET);
-
-    for (int k = 0; k < 32; k++) {
-        while (1) {
-            random_bit = (*rnd_reg) & 1;
-            if (random_bit != ((*rnd_reg) & 1)) break;
-        }
-
-        random = (random << 1) | random_bit;
-    }
-
-    srand(random);
 }
