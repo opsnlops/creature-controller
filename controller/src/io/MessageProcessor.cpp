@@ -116,7 +116,11 @@ namespace creatures {
             it->second->handle(logger, tokens);
         } else {
             // We didn't find a handler!
-            std::string errorMessage = fmt::format("Unknown message type: {}", tokens[0]);
+
+            // Sanitize the input to ensure it's null-terminated in the case of junk data
+            // coming in off the wire.
+            std::string safeToken = tokens[0];
+            std::string errorMessage = fmt::format("Unknown message type: {}", safeToken);
             logger->error(errorMessage);
             throw MessageProcessingException(errorMessage);
         }
