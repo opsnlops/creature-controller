@@ -12,18 +12,21 @@
 
 #include "logging/logging.h"
 #include "io/usb_serial.h"
-#include "messaging/messaging.h"
 
 #include "usb/usb.h"
 
 
-volatile u64 serial_messages_received = 0L;
-volatile u64 serial_messages_sent = 0L;
+volatile u64 usb_serial_messages_received = 0L;
+volatile u64 usb_serial_messages_sent = 0L;
 
+// Our queues
 extern QueueHandle_t usb_serial_incoming_commands;
 extern QueueHandle_t usb_serial_outgoing_messages;
 
-portTASK_FUNCTION(incoming_serial_reader_task, pvParameters) {
+// The global incoming messages queue
+extern QueueHandle_t incoming_messages;
+
+portTASK_FUNCTION(incoming_usb_serial_reader_task, pvParameters) {
 
     debug("hello from the serial reader!");
 
@@ -48,7 +51,7 @@ portTASK_FUNCTION(incoming_serial_reader_task, pvParameters) {
 
         if (xQueueReceive(usb_serial_incoming_commands, rx_buffer, (TickType_t) portMAX_DELAY) == pdPASS) {
 
-            serial_messages_received = serial_messages_received + 1;
+            usb_serial_messages_received = usb_serial_messages_received + 1;
 
             // Create a buffer to hold the message and null it out
             char message[USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH];
@@ -57,8 +60,8 @@ portTASK_FUNCTION(incoming_serial_reader_task, pvParameters) {
             // Copy the message into the buffer
             strncpy(message, rx_buffer, USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH);
 
-            // Send this off to the message processor
-            processMessage(message);
+            // Send this off to the incoming messages queue
+            xQueueSendToBack(incoming_messages, &message, (TickType_t) portMAX_DELAY);
 
             // Wipe out the buffer for next time
             memset(rx_buffer, '\0', USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH);
@@ -78,7 +81,7 @@ portTASK_FUNCTION(incoming_serial_reader_task, pvParameters) {
 }
 
 
-portTASK_FUNCTION(outgoing_serial_writer_task, pvParameters) {
+portTASK_FUNCTION(outgoing_usb_serial_writer_task, pvParameters) {
 
     debug("hello from the serial writer!");
 
@@ -99,17 +102,10 @@ portTASK_FUNCTION(outgoing_serial_writer_task, pvParameters) {
         // Make sure that we aren't writing anything bigger than this on the other side!
         if (xQueueReceive(usb_serial_outgoing_messages, rx_buffer, portMAX_DELAY) == pdPASS) {
 
-            serial_messages_sent = serial_messages_sent + 1;
-
-            size_t messageLength = strlen(rx_buffer);
-
-            // Ensure that the messaging is null-terminated
-            rx_buffer[messageLength] = '\n';
-            rx_buffer[USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH + 1] = '\0';
-
+            usb_serial_messages_sent = usb_serial_messages_sent + 1;
             cdc_send(rx_buffer);
 
-            memset(rx_buffer, '\0', USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH + 2);
+            memset(rx_buffer, '\0', USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH + 3);
         }
     }
 

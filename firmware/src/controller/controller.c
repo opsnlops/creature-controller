@@ -12,6 +12,7 @@
 #include "hardware/pwm.h"
 
 #include "device/power_relay.h"
+#include "io/message_processor.h"
 #include "io/usb_serial.h"
 #include "logging/logging.h"
 
@@ -31,8 +32,6 @@ volatile u64 number_of_pwm_wraps = 0UL;
  * See `pwm.h` in the Pico SDK for more information! 😅
  *
  */
-
-// Mapping of motor IDs to GPIO pins
 MotorMap motor_map[MOTOR_MAP_SIZE] = {
         {"A0", SERVO_0_GPIO_PIN, (SERVO_0_GPIO_PIN >> 1u) & 7u, SERVO_0_GPIO_PIN & 1u},
         {"A1", SERVO_1_GPIO_PIN, (SERVO_1_GPIO_PIN >> 1u) & 7u, SERVO_1_GPIO_PIN & 1u},

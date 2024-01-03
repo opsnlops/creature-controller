@@ -8,6 +8,7 @@
 #include "controller-config.h"
 
 #include "logging/logging.h"
+#include "io/message_processor.h"
 #include "io/usb_serial.h"
 #include "usb/usb.h"
 
@@ -15,75 +16,59 @@
 // Stats
 volatile u64 serial_characters_received = 0L;
 
-TaskHandle_t incoming_serial_reader_task_handle;
-TaskHandle_t outgoing_serial_writer_task_handle;
+TaskHandle_t incoming_usb_serial_reader_task_handle;
+TaskHandle_t outgoing_usb_serial_writer_task_handle;
 
 QueueHandle_t usb_serial_incoming_commands;
 QueueHandle_t usb_serial_outgoing_messages;
 
-bool incoming_queue_exists = false;
-bool outgoing_queue_exists = false;
+bool incoming_usb_queue_exists = false;
+bool outgoing_usb_queue_exists = false;
 
 void usb_serial_init() {
 
     // Create the incoming queue
     usb_serial_incoming_commands = xQueueCreate(USB_SERIAL_INCOMING_QUEUE_LENGTH,
                                                 USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH);
-    vQueueAddToRegistry(usb_serial_incoming_commands, "usb_serial_incoming_queue");
-    incoming_queue_exists = true;
+    vQueueAddToRegistry(usb_serial_incoming_commands, "usb_incoming_queue");
+    incoming_usb_queue_exists = true;
 
     // And the outgoing queue
     usb_serial_outgoing_messages = xQueueCreate(USB_SERIAL_OUTGOING_QUEUE_LENGTH,
                                                 USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH);
-    vQueueAddToRegistry(usb_serial_outgoing_messages, "usb_serial_outgoing_queue");
-    outgoing_queue_exists = true;
+    vQueueAddToRegistry(usb_serial_outgoing_messages, "usb_outgoing_queue");
+    outgoing_usb_queue_exists = true;
 
-    info("created the serial queues");
+    info("created the USB serial queues");
 
 }
 
 void usb_serial_start() {
 
     info("starting the incoming USB serial reader task");
-    xTaskCreate(incoming_serial_reader_task,
-                "incoming_serial_reader_task",
+    xTaskCreate(incoming_usb_serial_reader_task,
+                "incoming_usb_serial_reader_task",
                 1512,
                 NULL,
                 1,
-                &incoming_serial_reader_task_handle);
+                &incoming_usb_serial_reader_task_handle);
 
     info("starting the outgoing USB serial writer task");
-    xTaskCreate(outgoing_serial_writer_task,
-                "outgoing_serial_writer_task",
+    xTaskCreate(outgoing_usb_serial_writer_task,
+                "outgoing_usb_serial_writer_task",
                 1512,
                 NULL,
                 1,
-                &outgoing_serial_writer_task_handle);
+                &outgoing_usb_serial_writer_task_handle);
+
 }
 
 bool is_safe_to_enqueue_incoming_usb_serial() {
-    return (incoming_queue_exists && !xQueueIsQueueFullFromISR(usb_serial_incoming_commands));
+    return (incoming_usb_queue_exists && !xQueueIsQueueFullFromISR(usb_serial_incoming_commands));
 }
 
 bool is_safe_to_enqueue_outgoing_usb_serial() {
-    return (outgoing_queue_exists && !xQueueIsQueueFullFromISR(usb_serial_outgoing_messages));
-}
-
-bool send_to_controller(const char *message) {
-
-    if (strlen(message) > USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH) {
-        error("not sending messaging %s because it's %u long and the max length is %u",
-              message, strlen(message), USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH);
-        return false;
-    }
-
-    // If the queue isn't full, send it
-    if (is_safe_to_enqueue_outgoing_usb_serial()) {
-        xQueueSendToBack(usb_serial_outgoing_messages, message, (TickType_t) pdMS_TO_TICKS(10));
-        return true;
-    }
-
-    return false;
+    return (outgoing_usb_queue_exists && !xQueueIsQueueFullFromISR(usb_serial_outgoing_messages));
 }
 
 

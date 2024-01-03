@@ -108,8 +108,8 @@ namespace creatures {
             tty.c_cc[VMIN] = 0;
             tty.c_cc[VTIME] = 1;
 
-            cfsetispeed(&tty, B115200);      // Set in baud rate
-            cfsetospeed(&tty, B115200);      // Set out baud rate
+            cfsetispeed(&tty, BAUD_RATE);      // Set in baud rate
+            cfsetospeed(&tty, BAUD_RATE);      // Set out baud rate
 
             if (tcsetattr(this->fileDescriptor, TCSANOW, &tty) != 0) {
                 this->logger->error("Error from tcsetattr: {}", strerror(errno));

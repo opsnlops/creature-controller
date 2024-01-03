@@ -20,7 +20,9 @@
 #include "device/status_lights.h"
 #include "debug/remote_logging.h"
 #include "debug/stats_reporter.h"
+#include "io/message_processor.h"
 #include "io/usb_serial.h"
+#include "io/uart_serial.h"
 #include "logging/logging.h"
 #include "usb/usb.h"
 
@@ -43,9 +45,15 @@ int main() {
     // Set up the power relay
     init_power_relay();
 
-    // Fire up the serial incoming and outgoing queues
+    // Bring up the message processor
+    message_processor_init();
     usb_serial_init();
+    uart_serial_init();
+
+    // Start the I/O bits
+    message_processor_start();
     usb_serial_start();
+    uart_serial_start();
 
     // Start the controller
     controller_init();

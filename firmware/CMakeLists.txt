@@ -66,6 +66,10 @@ add_executable(firmware
         src/messaging/processors/config_message.c
         src/device/power_relay.h
         src/device/power_relay.c
+        src/io/uart_serial.c
+        src/io/uart_serial.h
+        src/io/message_processor.h
+        src/io/message_processor.c
 )
 
 

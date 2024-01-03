@@ -16,6 +16,8 @@ using u64 = std::uint64_t;
 // Just because it's funny
 #define EVER ;;
 
+#define BAUD_RATE                           B115200
+
 // The most servos we can control
 #define MAX_NUMBER_OF_SERVOS                8
 

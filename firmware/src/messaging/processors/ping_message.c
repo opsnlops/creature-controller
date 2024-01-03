@@ -1,7 +1,7 @@
 
 #include "pico/time.h"
 
-#include "io/usb_serial.h"
+#include "io/message_processor.h"
 #include "logging/logging.h"
 #include "messaging/messaging.h"
 

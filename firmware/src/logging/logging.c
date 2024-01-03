@@ -10,6 +10,7 @@
 
 #include "tasks.h"
 #include "logging.h"
+#include "io/message_processor.h"
 #include "io/usb_serial.h"
 #include "usb/usb.h"
 
