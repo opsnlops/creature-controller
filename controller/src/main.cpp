@@ -10,7 +10,7 @@
 #include "controller/Controller.h"
 #include "controller/tasks/PingTask.h"
 #include "creature/Creature.h"
-#include "device/Servo.h"
+#include "device/GPIO.h"
 #include "dmx/E131Server.h"
 #include "io/SerialHandler.h"
 #include "io/MessageProcessor.h"
@@ -50,6 +50,11 @@ int main(int argc, char **argv) {
     logger->debug("{} has {} servos and {} steppers", creature->getName(),
           creature->getNumberOfServos(), creature->getNumberOfSteppers());
 
+    // Bring up the GPIO pins if enabled on the command line
+    auto gpio = std::make_shared<creatures::device::GPIO>(logger, config->getUseGPIO());
+    gpio->init();
+    gpio->toggleFirmwareReset();
+
     // Start up the SerialHandler
     auto outgoingQueue = std::make_shared<creatures::MessageQueue<std::string>>();
     auto incomingQueue = std::make_shared<creatures::MessageQueue<std::string>>();
@@ -82,28 +87,6 @@ int main(int argc, char **argv) {
     pingTask->start();
 
 
-#if 0
-
-    // Send 1000 messages for testing at our normal pacing of 20ms per
-    logger->info("starting the servo test");
-    for(u16 i = 1000; i < 8000; i = i + 50) {
-
-        auto command = std::make_shared<creatures::commands::SetServoPositions>(logger);
-        command->addServoPosition(creatures::ServoPosition("A0", i));
-        command->addServoPosition(creatures::ServoPosition("A1", i+10));
-        command->addServoPosition(creatures::ServoPosition("A2", i+20));
-        command->addServoPosition(creatures::ServoPosition("A3", i+30));
-        command->addServoPosition(creatures::ServoPosition("B0", i+10));
-        command->addServoPosition(creatures::ServoPosition("B1", i+20));
-        command->addServoPosition(creatures::ServoPosition("B2", i+30));
-        command->addServoPosition(creatures::ServoPosition("B3", i+40));
-
-        controller->sendCommand(command);
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(20));
-    }
-    logger->info("done with the servo test");
-#endif
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "EndlessLoop"
     for(EVER){

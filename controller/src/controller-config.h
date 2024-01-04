@@ -31,38 +31,18 @@ using u64 = std::uint64_t;
 // The version of the firmware we are expecting
 #define FIRMWARE_VERSION                    1
 
-// Use the status lights?
-#define USE_STATUS_LIGHTS                   1
+// GPIO
+#define GPIO_DEVICE                         "/dev/gpiomem"
+#define FIRMWARE_RESET_PIN                  8
 
-// The NeoPixel status lights
-#define STATUS_LIGHTS_TIME_MS               20
-#define STATUS_LIGHTS_PIO                   pio1
-
-#define STATUS_LIGHTS_LOGIC_BOARD_PIN       5
-#define STATUS_LIGHTS_LOGIC_BOARD_IS_RGBW   false
-
-// Max brightness of the lights on the servo modules. Max is 255.
-#define STATUS_LIGHTS_SERVO_BRIGHTNESS      64
-
-#define STATUS_LIGHTS_MOD_A_PIN             14
-#define STATUS_LIGHTS_MOD_A_IS_RGBW         false
-
-#define STATUS_LIGHTS_MOD_B_PIN             15
-#define STATUS_LIGHTS_MOD_B_IS_RGBW         false
-
-#define STATUS_LIGHTS_MOD_C_PIN             16
-#define STATUS_LIGHTS_MOD_C_IS_RGBW         false
-
-// How many frames do we have to go before we decide there's no IO
-#define STATUS_LIGHTS_IO_RESPONSIVENESS     10
-
-// How many frames should we wait to turn off a motor's light?
-#define STATUS_LIGHTS_MOTOR_OFF_FRAMES      100
-
-#define STATUS_LIGHTS_DMX_STATUS_BRIGHTNESS 30
-#define STATUS_LIGHTS_RUNNING_BRIGHTNESS    35
-#define STATUS_LIGHTS_RUNNING_FRAME_CHANGE  20
-
+// These are from the server. They aren't used here, but just to note
+// which ones are used over there.
+#define SERVER_RUNNING_GPIO_PIN             17
+#define PLAYING_ANIMATION_GPIO_PIN          27
+#define PLAYING_SOUND_GPIO_PIN              22
+#define RECEIVING_STREAM_FRAMES_GPIO_PIN    23
+#define SENDING_DMX_GPIO_PIN                24
+#define HEARTBEAT_GPIO_PIN                  25
 
 
 // Stepper

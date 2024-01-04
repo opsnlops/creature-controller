@@ -133,6 +133,9 @@ add_library(creature_lib
         src/controller/commands/CreatureConfiguration.h
         src/io/handlers/ReadyHandler.cpp
         src/io/handlers/ReadyHandler.h
+        src/device/GPIO.cpp
+        src/device/GPIO.h
+        src/device/GPIOException.h
 )
 
 target_include_directories(creature_lib PUBLIC

@@ -16,10 +16,12 @@ namespace creatures {
 
         std::string getConfigFileName() const;
         std::string getUsbDevice() const;
+        bool getUseGPIO() const;
 
     protected:
         void setConfigFileName(std::string _configFileName);
         void setUsbDevice(std::string _usbDevice);
+        void setUseGPIO(bool _useGPIO);
 
     private:
 
@@ -30,6 +32,9 @@ namespace creatures {
         std::string configFileName;
 
         std::shared_ptr<Logger> logger;
+
+        // Should we use the GPIO pins?
+        bool useGPIO = false;
 
     };
 

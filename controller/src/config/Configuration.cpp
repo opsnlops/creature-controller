@@ -22,6 +22,10 @@ namespace creatures {
         return this->usbDevice;
     }
 
+    bool Configuration::getUseGPIO() const {
+        return this->useGPIO;
+    }
+
     void Configuration::setConfigFileName(std::string _configFileName) {
         this->configFileName = std::move(_configFileName);
 
@@ -30,5 +34,9 @@ namespace creatures {
 
     void Configuration::setUsbDevice(std::string _usbDevice) {
         this->usbDevice = std::move(_usbDevice);
+    }
+
+    void Configuration::setUseGPIO(bool _useGPIO) {
+        this->useGPIO = _useGPIO;
     }
 }

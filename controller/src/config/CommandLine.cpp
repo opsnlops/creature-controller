@@ -36,6 +36,11 @@ namespace creatures {
                 .default_value("/dev/tty.usbmodem101")
                 .required();
 
+        program.add_argument("-g", "--use-gpio")
+                .help("Use the GPIO pins? (RPI only!)")
+                .default_value(false)
+                .implicit_value(true);
+
         program.add_description("This application is the Linux version of the Creature Controller that's part\n"
                                 "of April's Creature Workshop! 🐰");
         program.add_epilog("🦜 Bawk!");
@@ -66,6 +71,13 @@ namespace creatures {
         if(!usbDevice.empty()) {
             config->setUsbDevice(usbDevice);
             logger->info("set our usb device to {}", usbDevice);
+        }
+
+        auto useGPIO = program.get<bool>("-g");
+        logger->debug("read use GPIO {} from command line", useGPIO);
+        if(useGPIO) {
+            config->setUseGPIO(useGPIO);
+            logger->info("set our use GPIO to {}", useGPIO);
         }
 
         return config;
