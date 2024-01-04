@@ -81,6 +81,9 @@ int main(int argc, char **argv) {
     e131Server->init(creature, controller);
     e131Server->start();
 
+    // Before we start sending pings, ask the controller to flush its buffer
+    controller->sendFlushBufferRequest();
+
     // Fire up the ping task
     auto pingTask = std::make_shared<creatures::tasks::PingTask>(logger);
     pingTask->init(serialHandler);

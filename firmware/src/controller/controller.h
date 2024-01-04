@@ -165,6 +165,17 @@ void controller_disconnected();
  */
 void send_init_request(TimerHandle_t xTimer);
 
+/**
+ * Callback for the reset timer. Checks to see if the controller
+ * has signals that we should reset.
+ *
+ * It will assert pin CONTROLLER_RESET_PIN for 500ms if we should
+ * reset, so this timer needs to be called at least that often..
+ *
+ * @param xTimer
+ */
+void controller_reset_request_check_timer_callback(TimerHandle_t xTimer);
+
 
 /**
  * A message from the config message that we've received a valid configuration!
@@ -177,3 +188,11 @@ void firmware_configuration_received();
  * @param yesOrNo
  */
 void first_frame_received(bool yesOrNo);
+
+
+/**
+ * A timer callback to check if we should reset our configuration. This is
+ * every CONTROLLER_RESET_SIGNAL_PERIOD_MS milliseconds and looks for GPIO
+ * pin CONTROLLER_RESET_PIN to go high.
+ */
+void check_for_controller_reset_request();

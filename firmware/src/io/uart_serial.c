@@ -18,6 +18,8 @@
 
 // Stats
 volatile u64 uart_characters_received = 0L;
+volatile u64 uart_messages_received = 0L;
+volatile u64 uart_messages_sent = 0L;
 
 TaskHandle_t incoming_uart_serial_reader_task_handle;
 TaskHandle_t outgoing_uart_serial_writer_task_handle;
@@ -158,7 +160,7 @@ portTASK_FUNCTION(outgoing_uart_serial_writer_task, pvParameters) {
         // Make sure that we aren't writing anything bigger than this on the other side!
         if (xQueueReceive(uart_serial_outgoing_messages, rx_buffer, portMAX_DELAY) == pdPASS) {
 
-            //uart_serial_messages_sent = uart_serial_messages_sent + 1;
+            uart_messages_sent = uart_messages_sent + 1;
             uart_write_blocking(UART_DEVICE_NAME, rx_buffer, strlen(rx_buffer));
 
             memset(rx_buffer, '\0', UART_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH + 3);
@@ -191,8 +193,20 @@ void __isr serial_reader_isr() {
         // Account for this character
         uart_characters_received = uart_characters_received + 1;
 
+        // Is this our reset character?
+        if (ch == 0x07) {
+
+            // We heard a bell! Time to reset everything!
+            memset(lineBuffer, '\0', UART_SERIAL_INCOMING_MESSAGE_MAX_LENGTH);
+            bufferIndex = 0;
+
+            // Let the user know, if the logger is up and running! 😅
+            info("We heard the bell! The incoming buffer has been reset!");
+
+        }
+
         // Check for newline character
-        if (ch == 0x0A) {
+        else if (ch == 0x0A) {
 
             // If there was a blank line warn the sender
             if (bufferIndex == 0) {
@@ -201,6 +215,7 @@ void __isr serial_reader_isr() {
 
             lineBuffer[bufferIndex] = '\0';  // Null-terminate the string
             xQueueSendToBackFromISR(uart_serial_incoming_commands, lineBuffer, NULL);
+            uart_messages_received = uart_messages_received + 1;
 
             bufferIndex = 0;  // Reset buffer index
 
@@ -211,6 +226,7 @@ void __isr serial_reader_isr() {
             // Buffer overflow handling
             lineBuffer[UART_SERIAL_INCOMING_MESSAGE_MAX_LENGTH - 1] = '\0';  // Ensure null-termination
             xQueueSendToBackFromISR(uart_serial_incoming_commands, lineBuffer, NULL);
+            uart_messages_received = uart_messages_received + 1;
 
             bufferIndex = 0;  // Reset buffer index
 

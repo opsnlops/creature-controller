@@ -40,38 +40,61 @@ namespace creatures {
 
             if(name == STATS_MESSAGE) {} // do nothing
 
+            // Memory
             else if(name == STATS_HEAP_FREE) {
                 statsMessage.freeHeap = stringToU64(value);
             }
 
-            else if(name == STATS_CHARACTERS_RECEIVED) {
-                statsMessage.charactersReceived = stringToU64(value);
+            // USB
+            else if(name == STATS_USB_CHARACTERS_RECEIVED) {
+                statsMessage.uSBCharactersReceived = stringToU64(value);
+            }
+            else if(name == STATS_USB_MESSAGES_RECEIVED) {
+                statsMessage.uSBMessagesReceived = stringToU64(value);
+            }
+            else if(name == STATS_USB_MESSAGES_SENT) {
+                statsMessage.uSBMessagesSent = stringToU64(value);
             }
 
-            else if(name == STATS_MESSAGES_RECEIVED) {
-                statsMessage.messagesReceived = stringToU64(value);
+
+            // UART
+            else if(name == STATS_UART_CHARACTERS_RECEIVED) {
+                statsMessage.uARTCharactersReceived = stringToU64(value);
+            }
+            else if(name == STATS_UART_MESSAGES_RECEIVED) {
+                statsMessage.uARTMessagesReceived = stringToU64(value);
+            }
+            else if(name == STATS_UART_MESSAGES_SENT) {
+                statsMessage.uARTMessagesSent = stringToU64(value);
             }
 
-            else if(name == STATS_MESSAGES_SENT) {
-                statsMessage.messagesSent = stringToU64(value);
+
+            // Message Processor
+            else if(name == STATS_MP_MESSAGES_RECEIVED) {
+                statsMessage.mPMessagesReceived = stringToU64(value);
+            }
+            else if(name == STATS_MP_MESSAGES_SENT) {
+                statsMessage.mPMessagesSent = stringToU64(value);
             }
 
+
+            // Parsing
             else if(name == STATS_SUCCESSFUL_PARSE) {
                 statsMessage.parseSuccesses = stringToU64(value);
             }
-
             else if(name == STATS_FAILED_PARSE) {
                 statsMessage.parseFailures = stringToU64(value);
             }
-
             else if(name == STATS_CHECKSUM_FAILED) {
                 statsMessage.checksumFailures = stringToU64(value);
             }
 
+            // Movement
             else if(name == STATS_POSITIONS_PROCESSED) {
                 statsMessage.positionMessagesProcessed = stringToU64(value);
             }
 
+            // PWM
             else if(name == STATS_PWM_WRAPS) {
                 statsMessage.pwmWraps = stringToU64(value);
             }

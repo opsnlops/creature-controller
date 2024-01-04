@@ -9,9 +9,15 @@ namespace creatures {
 
     StatsMessage::StatsMessage() {
         freeHeap = 0UL;
-        charactersReceived = 0UL;
-        messagesReceived = 0UL;
-        messagesSent = 0UL;
+        uSBCharactersReceived = 0UL;
+        uSBMessagesReceived = 0UL;
+        uSBMessagesSent = 0UL;
+        uARTCharactersReceived = 0UL;
+        uARTMessagesReceived = 0UL;
+        uARTMessagesSent = 0UL;
+        mPMessagesReceived = 0UL;
+        mPMessagesSent = 0UL;
+
         parseSuccesses = 0UL;
         parseFailures = 0UL;
         checksumFailures = 0UL;
@@ -20,10 +26,17 @@ namespace creatures {
     }
 
     std::string StatsMessage::toString() const {
-        return fmt::format("[firmware stats] heap: {}, chars: {}, mesg_rec: {}, mesg_sent: {}, "
+        return fmt::format("[firmware] heap: {}, usb_chars: {}, usb_mesg_rec: {}, usb_mesg_sent: {}, "
+                           "uart_chars: {}, uart_mesg_rec: {}, uart_mesg_sent: {}, "
+                           "mp_recv: {}, mp_sent: {}, "
                            "parse_suc: {}, parse_fail: {}, cksum_fail: {}, pos_proc: {}, pwm_wraps: {}",
-            freeHeap, charactersReceived, messagesReceived, messagesSent, parseSuccesses,
-            parseFailures, checksumFailures, positionMessagesProcessed, pwmWraps);
+            freeHeap,
+            uSBCharactersReceived, uSBMessagesReceived, uSBMessagesSent,
+            uARTCharactersReceived, uARTMessagesReceived, uARTMessagesSent,
+            mPMessagesReceived, mPMessagesSent,
+            parseSuccesses, parseFailures, checksumFailures,
+            positionMessagesProcessed,
+            pwmWraps);
     }
 
 } // creatures

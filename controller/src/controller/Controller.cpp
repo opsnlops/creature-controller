@@ -13,6 +13,7 @@
 #include "controller/CommandSendException.h"
 #include "controller/commands/ICommand.h"
 #include "controller/commands/CreatureConfiguration.h"
+#include "controller/commands/FlushBuffer.h"
 #include "controller/commands/SetServoPositions.h"
 
 // Exceptions
@@ -109,6 +110,15 @@ void Controller::firmwareReadyForInitialization(u32 firmwareVersion) {
     // ...and toss it to the serial handler
     serialHandler->getOutgoingQueue()->push(creatureConfigCommand.toMessageWithChecksum());
 
+}
+
+void Controller::sendFlushBufferRequest() {
+    logger->info("Sending a request to the firmware to flush the buffer");
+
+    // This is a special message that doesn't have a checksum. It's a magic character
+    // that the firmware is looking for to know it's time to reset the buffer.
+    auto flushBufferCommand = creatures::commands::FlushBuffer(logger);
+    serialHandler->getOutgoingQueue()->push(flushBufferCommand.toMessage()); // No checksum, only 🔔
 }
 
 

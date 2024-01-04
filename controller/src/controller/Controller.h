@@ -46,6 +46,12 @@ public:
      */
     void sendCommand(const std::shared_ptr<creatures::ICommand>& command);
 
+
+    /**
+     * Send a special request to the firmware to flush its buffer
+     */
+    void sendFlushBufferRequest();
+
     void powerOn();
     void powerOff();
     void powerToggle();

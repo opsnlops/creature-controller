@@ -136,6 +136,8 @@ add_library(creature_lib
         src/device/GPIO.cpp
         src/device/GPIO.h
         src/device/GPIOException.h
+        src/controller/commands/FlushBuffer.h
+        src/controller/commands/FlushBuffer.cpp
 )
 
 target_include_directories(creature_lib PUBLIC

@@ -23,7 +23,7 @@ typedef uint64_t u64;
  * This is the version that's sent to the controller. The controller is expected to know what
  * do to with this version.
  */
-#define FIRMWARE_VERSION                    1
+#define FIRMWARE_VERSION                    2
 #define INIT_REQUEST_TIME_MS                1000
 
 
@@ -117,35 +117,38 @@ typedef uint64_t u64;
  * Message Processor Config
  */
 #define INCOMING_MESSAGE_QUEUE_LENGTH        5
-#define INCOMING_MESSAGE_MAX_LENGTH          255
+#define INCOMING_MESSAGE_MAX_LENGTH          128
 
-#define OUTGOING_MESSAGE_QUEUE_LENGTH        5
-#define OUTGOING_MESSAGE_MAX_LENGTH          128
+#define OUTGOING_MESSAGE_QUEUE_LENGTH        15
+#define OUTGOING_MESSAGE_MAX_LENGTH          255
 
 
 /*
  * USB Serial Config
  */
 #define USB_SERIAL_INCOMING_QUEUE_LENGTH        5
-#define USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH  255
+#define USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH  128
 
-#define USB_SERIAL_OUTGOING_QUEUE_LENGTH        10
-#define USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH  128
+#define USB_SERIAL_OUTGOING_QUEUE_LENGTH        15
+#define USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH  255
 
 /*
  * UART Serial Config
  */
 #define UART_SERIAL_INCOMING_QUEUE_LENGTH        5
-#define UART_SERIAL_INCOMING_MESSAGE_MAX_LENGTH  255
+#define UART_SERIAL_INCOMING_MESSAGE_MAX_LENGTH  128
 
-#define UART_SERIAL_OUTGOING_QUEUE_LENGTH        25
-#define UART_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH  128
+#define UART_SERIAL_OUTGOING_QUEUE_LENGTH        15
+#define UART_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH  255
 
 #define UART_DEVICE_NAME                        uart1
 #define UART_RX_PIN                             21
 #define UART_TX_PIN                             20
 #define UART_BAUD_RATE                          115200
 
+// Used by the controller to signal that we need to reset
+#define CONTROLLER_RESET_PIN                    22
+#define CONTROLLER_RESET_SIGNAL_PERIOD_MS       250
 
 
 /*

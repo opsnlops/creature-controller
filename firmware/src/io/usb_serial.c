@@ -14,7 +14,7 @@
 
 
 // Stats
-volatile u64 serial_characters_received = 0L;
+volatile u64 usb_serial_characters_received = 0L;
 
 TaskHandle_t incoming_usb_serial_reader_task_handle;
 TaskHandle_t outgoing_usb_serial_writer_task_handle;
@@ -105,10 +105,22 @@ void tud_cdc_rx_cb(uint8_t itf) {
 #endif
 
             // Account for this character
-            serial_characters_received = serial_characters_received + 1;
+            usb_serial_characters_received = usb_serial_characters_received + 1;
+
+            // Is this our reset character?
+            if (ch == 0x07) {
+
+                // We heard a bell! Time to reset everything!
+                memset(lineBuffer, '\0', UART_SERIAL_INCOMING_MESSAGE_MAX_LENGTH);
+                bufferIndex = 0;
+
+                // Let the user know, if the logger is up and running! 😅
+                info("We heard the bell! The incoming buffer has been reset!");
+
+            }
 
             // Check for newline character
-            if (ch == 0x0A) {
+            else if (ch == 0x0A) {
 
                 verbose("it's the blessed character");
 

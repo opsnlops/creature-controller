@@ -13,7 +13,6 @@
 
 #include "device/power_relay.h"
 #include "io/message_processor.h"
-#include "io/usb_serial.h"
 #include "logging/logging.h"
 
 #include "controller-config.h"
@@ -74,6 +73,17 @@ volatile bool controller_safe_to_run = false;
 TimerHandle_t controller_init_request_timer = NULL;
 
 /**
+ * This timer is used to check if the controller is requesting
+ * us to reset. Used to signal that the controller has restarted
+ * and has a new config for us.
+ *
+ * This can also be accomplished by unplugging the USB port, but
+ * if we're running in UART mode we don't have a way to know that
+ * the controller has been restarted.
+ */
+TimerHandle_t controller_reset_request_check_timer = NULL;
+
+/**
  * The current state of the firmware
  *
  * This is reflected in the LEDs on the board
@@ -93,7 +103,7 @@ void controller_init() {
 
     // Create, but don't actually start the timer (it will be started when the CDC is connected)
     controller_init_request_timer = xTimerCreate(
-            "controller_init_request_timer",            // Timer name
+            "Init Request Sender",                      // Timer name
             pdMS_TO_TICKS(INIT_REQUEST_TIME_MS),        // Fire every INIT_REQUEST_TIME_MS
             pdTRUE,                                     // Auto-reload
             (void *) 0,                                 // Timer ID (not used here)
@@ -102,6 +112,24 @@ void controller_init() {
 
     // If this fails, something is super broke. Bail out now.
     configASSERT (controller_init_request_timer != NULL);
+
+
+    // Set up the GPIO pin for monitoring for a reset signal
+    gpio_set_function(CONTROLLER_RESET_PIN, GPIO_FUNC_SIO);
+    gpio_set_dir(CONTROLLER_RESET_PIN, GPIO_IN);
+
+    // Create the timer that checks for a reset request
+    controller_reset_request_check_timer = xTimerCreate(
+            "Reset Request Checker",                            // Timer name
+            pdMS_TO_TICKS(CONTROLLER_RESET_SIGNAL_PERIOD_MS),   // Fire every CONTROLLER_RESET_SIGNAL_PERIOD_MS
+            pdTRUE,                                             // Auto-reload
+            (void *) 0,                                         // Timer ID (not used here)
+            controller_reset_request_check_timer_callback       // Callback function
+    );
+
+    // Same deal, this shouldn't happen.
+    configASSERT (controller_reset_request_check_timer != NULL);
+
 }
 
 void controller_start() {
@@ -127,6 +155,10 @@ void controller_start() {
     pwm_set_irq_enabled(motor_map[0].slice, true);
     irq_set_exclusive_handler(PWM_IRQ_WRAP, on_pwm_wrap_handler);
     irq_set_enabled(PWM_IRQ_WRAP, true);
+
+    // Start the timer that checks for a request to reset from the controller
+    xTimerStart(controller_reset_request_check_timer, 0);
+
 }
 
 u8 getMotorMapIndex(const char *motor_id) {
@@ -300,5 +332,23 @@ void first_frame_received(bool yesOrNo) {
     {
         info("We haven't received our first frame from the controller yet");
         power_relay_off();
+    }
+}
+
+void controller_reset_request_check_timer_callback(TimerHandle_t xTimer) {
+    if (gpio_get(CONTROLLER_RESET_PIN)) {
+        info("Controller reset request received");
+
+        // If we're in the configuration state, there's nothing to do
+        if(controller_firmware_state == configuring) {
+            debug("doing nothing since we're in the configuring state");
+            return;
+        }
+
+        // Go back to the configuring state
+        controller_safe_to_run = false;
+        controller_firmware_state = configuring;
+        xTimerStart(controller_init_request_timer, 0);
+        debug("started asking the computer for our configuration");
     }
 }
