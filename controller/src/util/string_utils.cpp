@@ -3,6 +3,7 @@
 #include <cctype>
 #include <string>
 #include <vector>
+#include <ranges>
 #include <sstream>
 
 #include "controller-config.h"
@@ -82,9 +83,10 @@ u64 stringToU64(const std::string& str) {
 std::vector<std::string> splitString(const std::string& str) {
     std::istringstream iss(str);
     std::vector<std::string> tokens;
+    std::string token;
 
-    for (const auto& part : std::ranges::istream_view<std::string>(iss)) {
-        tokens.push_back(part);
+    while (std::getline(iss, token, ' ')) { // assuming space is the delimiter
+        tokens.push_back(token);
     }
 
     return tokens;

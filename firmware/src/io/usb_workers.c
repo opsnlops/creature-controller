@@ -33,8 +33,8 @@ portTASK_FUNCTION(incoming_usb_serial_reader_task, pvParameters) {
     // Bad things are gonna happen if this is null
     configASSERT(usb_serial_incoming_commands != NULL);
 
-    gpio_init(CDC_ACTIVE_PIN);
-    gpio_set_dir(CDC_ACTIVE_PIN, GPIO_OUT);
+    //gpio_init(CDC_ACTIVE_PIN);
+    //gpio_set_dir(CDC_ACTIVE_PIN, GPIO_OUT);
     bool isOn = true;
     uint8_t direction = 1;
     uint64_t count = 0L;
@@ -72,7 +72,7 @@ portTASK_FUNCTION(incoming_usb_serial_reader_task, pvParameters) {
             } else {
                 direction = 0;
             }
-            gpio_put(CDC_ACTIVE_PIN, direction);
+            //gpio_put(CDC_ACTIVE_PIN, direction);
             isOn = !isOn;
         }
     }

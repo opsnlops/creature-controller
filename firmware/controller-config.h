@@ -28,7 +28,7 @@ typedef uint64_t u64;
 
 
 // Light to flash when commands are being received
-#define CDC_ACTIVE_PIN                      17
+//#define CDC_ACTIVE_PIN                      17
 
 // The most servos we can control
 #define MAX_NUMBER_OF_SERVOS                8
@@ -44,7 +44,7 @@ typedef uint64_t u64;
 #define STATUS_LIGHTS_TIME_MS               20
 #define STATUS_LIGHTS_PIO                   pio1
 
-#define STATUS_LIGHTS_LOGIC_BOARD_PIN       5
+#define STATUS_LIGHTS_LOGIC_BOARD_PIN       17
 #define STATUS_LIGHTS_LOGIC_BOARD_IS_RGBW   false
 
 // Max brightness of the lights on the servo modules. Max is 255.
@@ -142,12 +142,12 @@ typedef uint64_t u64;
 #define UART_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH  255
 
 #define UART_DEVICE_NAME                        uart1
-#define UART_RX_PIN                             21
-#define UART_TX_PIN                             20
+#define UART_RX_PIN                             5
+#define UART_TX_PIN                             4
 #define UART_BAUD_RATE                          115200
 
 // Used by the controller to signal that we need to reset
-#define CONTROLLER_RESET_PIN                    22
+#define CONTROLLER_RESET_PIN                    2
 #define CONTROLLER_RESET_SIGNAL_PERIOD_MS       250
 
 

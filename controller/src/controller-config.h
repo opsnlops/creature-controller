@@ -33,7 +33,7 @@ using u64 = std::uint64_t;
 
 // GPIO
 #define GPIO_DEVICE                         "/dev/gpiomem"
-#define FIRMWARE_RESET_PIN                  8
+#define FIRMWARE_RESET_PIN                  26
 
 // These are from the server. They aren't used here, but just to note
 // which ones are used over there.
