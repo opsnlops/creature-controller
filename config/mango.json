@@ -1,0 +1,107 @@
+{
+  "name": "Mango",
+  "version": "0.1.0",
+  "description": "The world's smallest MangoDB fan!",
+  "starting_dmx_channel": 10,
+  "dmx_universe": 1,
+  "position_min": 0,
+  "position_max": 1023,
+  "head_offset_max": 0.4,
+  "servo_frequency": 50,
+  "type": "parrot",
+  "motors": [
+    {
+      "type": "servo",
+      "id": "neck_left",
+      "name": "Neck Left",
+      "output_location": "A0",
+      "min_pulse_us": 1250,
+      "max_pulse_us": 2250,
+      "smoothing_value": 0.90,
+      "inverted": false,
+      "default_position": "center"
+    },
+    {
+      "type": "servo",
+      "id": "neck_right",
+      "name": "Neck Right",
+      "output_location": "A1",
+      "min_pulse_us": 800,
+      "max_pulse_us": 1800,
+      "smoothing_value": 0.90,
+      "inverted": true,
+      "default_position": "center"
+    },
+    {
+      "type": "servo",
+      "id": "neck_rotate",
+      "name": "Neck Rotate",
+      "output_location": "A3",
+      "min_pulse_us": 1450,
+      "max_pulse_us": 1970,
+      "smoothing_value": 0.95,
+      "inverted": false,
+      "default_position": "center"
+    },
+    {
+      "type": "servo",
+      "id": "body_lean",
+      "name": "Body Lean",
+      "output_location": "B0",
+      "min_pulse_us": 1475,
+      "max_pulse_us": 1950,
+      "smoothing_value": 0.96,
+      "inverted": true,
+      "default_position": "min"
+    },
+    {
+      "type": "servo",
+      "id": "beak",
+      "name": "Beak",
+      "output_location": "A2",
+      "min_pulse_us": 1600,
+      "max_pulse_us": 2350,
+      "smoothing_value": 0.4,
+      "inverted": true,
+      "default_position": "min"
+    }
+  ],
+  "inputs": [
+    {
+      "name": "head_tilt",
+      "slot": 0,
+      "width": 1
+    },
+    {
+      "name": "head_height",
+      "slot": 1,
+      "width": 1
+    },
+    {
+      "name": "neck_rotate",
+      "slot": 2,
+      "width": 1
+    },
+    {
+      "name": "stand_rotate",
+      "slot": 3,
+      "width": 1
+    },
+    {
+      "name": "body_lean",
+      "slot": 4,
+      "width": 1
+    },
+    {
+      "name": "beak",
+      "slot": 5,
+      "width": 1
+    },
+    {
+      "name": "chest",
+      "slot": 6,
+      "width": 1
+    }
+  ]
+}
+
