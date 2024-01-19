@@ -1,8 +1,7 @@
 cmake_minimum_required(VERSION 3.18)
 
-
 project(creature-controller
-        VERSION "1.0.0"
+        VERSION "2.0.1"
         DESCRIPTION "April's Creature Workshop Controller"
         HOMEPAGE_URL https://github.com/opsnlops/creature-controller
         LANGUAGES C CXX)
@@ -11,6 +10,7 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(PACKAGE_AUTHOR "April White")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
 
@@ -163,6 +163,14 @@ target_link_libraries(creature-controller
         nlohmann_json::nlohmann_json
 )
 
+install(TARGETS creature-controller
+        COMPONENT creature-controller
+        RUNTIME DESTINATION "/bin"
+        LIBRARY DESTINATION "/lib"
+        DESTINATION "/bin"
+)
+
+
 #
 # Set up testing
 #
@@ -217,3 +225,7 @@ set_property(TARGET creature-controller-test PROPERTY FOLDER "tests")
 # Register the test with CTest
 include(GoogleTest)
 gtest_discover_tests(creature-controller-test)
+
+# where to find our CMake modules
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+include(Package)

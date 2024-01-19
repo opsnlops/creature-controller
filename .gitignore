@@ -3,4 +3,5 @@ build/
 cmake-*/
 firmware/build/
 controller/build/
+controller/package/
 .DS_Store

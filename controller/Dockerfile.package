@@ -1,0 +1,19 @@
+FROM debian:bookworm AS build
+
+RUN apt update -y && apt upgrade -y
+
+RUN apt install -y build-essential cmake ninja-build locales-all pkgconf git file
+
+WORKDIR /build
+COPY . .
+
+ENV CMAKE_GENERATOR=Ninja
+
+# Make the build directory and the output directory
+RUN mkdir build /package
+
+# Build it
+RUN cd build && cmake .. && ninja
+
+# Make the package
+RUN cd build && cpack -G DEB && cp *.deb /package

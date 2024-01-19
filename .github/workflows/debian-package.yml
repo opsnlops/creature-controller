@@ -1,0 +1,71 @@
+name: Create Debian Package
+
+on: [push, pull_request]
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - buildjet-4vcpu-ubuntu-2204
+          - buildjet-8vcpu-ubuntu-2204-arm
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get upgrade
+          sudo apt-get install -y docker.io
+
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: 'true'
+
+      - name: Build in container
+        run: docker build -f ${{github.workspace}}/controller/Dockerfile.package  . -t temp-image
+
+      - name: Build temp container
+        run: docker create --name temp-container temp-image
+
+      - name: Copy Package
+        run: mkdir ${{github.workspace}}/package && docker cp temp-container:/package/ ${{github.workspace}}/package
+
+      - name: Save artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: creature-controller-package-${{ matrix.os }}
+          path: ${{github.workspace}}/package/*.deb
+
+      - name: Upload test log
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs-${{ matrix.os }}
+          path: test_output.log
+
+      - name: Post to Slack
+        id: slack
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          channel-id: 'C06BCHT371A'
+          # For posting a rich message using Block Kit
+          payload: |
+            {
+              "text": "Debian package build result: ${{ matrix.os }} ${{ job.status }}\n${{ github.event.pull_request.html_url || github.event.head_commit.url }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "Debian package build result:: ${{ matrix.os }} ${{ job.status }}\n${{ github.event.pull_request.html_url || github.event.head_commit.url }}"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
