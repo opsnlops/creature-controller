@@ -16,10 +16,7 @@ jobs:
           - buildjet-4vcpu-ubuntu-2204
           - buildjet-8vcpu-ubuntu-2204-arm
     steps:
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y docker.io
+
 
       - name: Checkout
         uses: actions/checkout@v3
