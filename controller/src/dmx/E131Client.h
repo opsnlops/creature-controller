@@ -12,11 +12,11 @@
 
 namespace creatures::dmx {
 
-    class E131Server {
+    class E131Client {
 
     public:
-        E131Server(const std::shared_ptr<creatures::Logger>& logger);
-        ~E131Server();
+        E131Client(const std::shared_ptr<creatures::Logger>& logger);
+        ~E131Client();
 
         void init(const std::shared_ptr<creatures::creature::Creature>& creature, const std::shared_ptr<Controller>& controller);
         void start();

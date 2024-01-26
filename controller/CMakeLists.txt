@@ -83,7 +83,7 @@ add_library(creature_lib
         src/creature/Parrot.cpp
         src/device/Servo.cpp
         src/device/Stepper.cpp
-        src/dmx/E131Server.cpp
+        src/dmx/E131Client.cpp
         src/util/fast_hsv2rgb_32bit.cpp
         src/util/ranges.cpp
         src/device/ServoException.h

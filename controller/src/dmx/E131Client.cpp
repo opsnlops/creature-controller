@@ -6,7 +6,7 @@
 
 #include "creature/Creature.h"
 #include "dmx/E131Exception.h"
-#include "dmx/E131Server.h"
+#include "dmx/E131Client.h"
 #include "logging/Logger.h"
 #include "util/thread_name.h"
 
@@ -14,24 +14,22 @@
 #include "controller-config.h"
 
 
-
-
 namespace creatures::dmx {
 
 
-    E131Server::E131Server(const std::shared_ptr<creatures::Logger>& logger) : logger(logger) {
+    E131Client::E131Client(const std::shared_ptr<creatures::Logger>& logger) : logger(logger) {
 
         this->logger->info("e1.31 server created");
 
     }
 
-    E131Server::~E131Server() {
+    E131Client::~E131Client() {
         if(workerThread.joinable()) {
             workerThread.join(); // Clean up!
         }
     }
 
-    void E131Server::init(const std::shared_ptr<creatures::creature::Creature>& _creature, const std::shared_ptr<Controller>& _controller) {
+    void E131Client::init(const std::shared_ptr<creatures::creature::Creature>& _creature, const std::shared_ptr<Controller>& _controller) {
         this->creature = _creature;
         this->controller = _controller;
 
@@ -48,7 +46,7 @@ namespace creatures::dmx {
 
 
 
-    void E131Server::start() {
+    void E131Client::start() {
 
         // Make sure we have our creature and controller
         if(this->creature == nullptr) {
@@ -69,7 +67,7 @@ namespace creatures::dmx {
 
     }
 
-    [[noreturn]] void E131Server::run() {
+    [[noreturn]] void E131Client::run() {
 
         setThreadName("E131Server::run");
 
@@ -129,7 +127,7 @@ namespace creatures::dmx {
 
     }
 
-    void E131Server::handlePacket(const e131_packet_t &packet) {
+    void E131Client::handlePacket(const e131_packet_t &packet) {
 
         std::string hexString = "";
 
