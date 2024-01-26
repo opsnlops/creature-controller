@@ -1,5 +1,6 @@
 
 #include <cstdlib>
+#include <csignal>
 #include <thread>
 
 #include "controller-config.h"
@@ -17,20 +18,39 @@
 #include "logging/Logger.h"
 #include "logging/SpdlogLogger.h"
 #include "util/thread_name.h"
+#include "Version.h"
 
-#include "controller/commands/SetServoPositions.h"
-#include "controller/commands/tokens/ServoPosition.h"
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "LoopDoesntUseConditionVariableInspection"
+bool shouldRun = true;
+
+// Signal handler to stop the event loop
+void signal_handler(int signal) {
+    if (signal == SIGINT) {
+        printf("stopping...\n\n");
+        shouldRun = false;
+    }
+}
+
 
 int main(int argc, char **argv) {
 
+    // Fire up the signal handlers
+    std::signal(SIGINT, signal_handler);
+
     // Name the thread so it shows up right!
     setThreadName("main");
+
+    std::string version = fmt::format("{}.{}.{}",
+                                      CREATURE_CONTROLLER_VERSION_MAJOR,
+                                      CREATURE_CONTROLLER_VERSION_MINOR,
+                                      CREATURE_CONTROLLER_VERSION_PATCH);
 
     // Get the logger up and running ASAP
     std::shared_ptr<creatures::Logger> logger = std::make_shared<creatures::SpdlogLogger>();
     logger->init("controller");
 
-    logger->info("Welcome to the Creature Controller! 🦜");
+    logger->info("Welcome to the Creature Controller! v{} 🦜", version);
 
     // Leave some version info to be found
     logger->debug("spdlog version {}.{}.{}", SPDLOG_VER_MAJOR, SPDLOG_VER_MINOR, SPDLOG_VER_PATCH);
@@ -75,11 +95,11 @@ int main(int argc, char **argv) {
     creature->start();
 
     // Create and start the servo controller
-    // Create and start the e1.13 server
-    logger->debug("starting the e1.13 server");
-    auto e131Server = std::make_shared<creatures::dmx::E131Client>(logger);
-    e131Server->init(creature, controller);
-    e131Server->start();
+    // Create and start the e1.13 client
+    logger->debug("starting the e1.13 client");
+    auto e131Client = std::make_shared<creatures::dmx::E131Client>(logger);
+    e131Client->init(creature, controller, config->getNetworkDevice());
+    e131Client->start();
 
     // Before we start sending pings, ask the controller to flush its buffer
     controller->sendFlushBufferRequest();
@@ -92,7 +112,7 @@ int main(int argc, char **argv) {
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "EndlessLoop"
-    for(EVER){
+    while(shouldRun) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 #pragma clang diagnostic pop
@@ -100,3 +120,5 @@ int main(int argc, char **argv) {
     logger->info("the main thread says bye! good luck little threads! 👋🏻");
     return EXIT_SUCCESS;
 }
+
+#pragma clang diagnostic pop

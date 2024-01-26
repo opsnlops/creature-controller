@@ -2,6 +2,7 @@
 
 #include <string>
 
+#include "controller-config.h"
 #include "logging/Logger.h"
 
 namespace creatures {
@@ -17,11 +18,13 @@ namespace creatures {
         std::string getConfigFileName() const;
         std::string getUsbDevice() const;
         bool getUseGPIO() const;
+        uint16_t getNetworkDevice() const;
 
     protected:
         void setConfigFileName(std::string _configFileName);
         void setUsbDevice(std::string _usbDevice);
         void setUseGPIO(bool _useGPIO);
+        void setNetworkDevice(uint16_t _networkDevice);
 
     private:
 
@@ -36,6 +39,8 @@ namespace creatures {
         // Should we use the GPIO pins?
         bool useGPIO = false;
 
+        // Network stuff
+        uint16_t networkDevice = DEFAULT_NETWORK_DEVICE_NUMBER;
     };
 
 

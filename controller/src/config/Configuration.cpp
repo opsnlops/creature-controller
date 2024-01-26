@@ -39,4 +39,11 @@ namespace creatures {
     void Configuration::setUseGPIO(bool _useGPIO) {
         this->useGPIO = _useGPIO;
     }
+
+    uint16_t Configuration::getNetworkDevice() const {
+        return this->networkDevice;
+    }
+    void Configuration::setNetworkDevice(uint16_t _networkDevice) {
+        this->networkDevice = _networkDevice;
+    }
 }

@@ -18,13 +18,15 @@ namespace creatures::dmx {
         E131Client(const std::shared_ptr<creatures::Logger>& logger);
         ~E131Client();
 
-        void init(const std::shared_ptr<creatures::creature::Creature>& creature, const std::shared_ptr<Controller>& controller);
+        void init(const std::shared_ptr<creatures::creature::Creature>& creature,
+                  const std::shared_ptr<Controller>& controller,
+                  const int networkDevice);
         void start();
 
 
     private:
 
-        [[noreturn]] void run();
+        void run();
         std::thread workerThread;
         std::shared_ptr<creatures::Logger> logger;
         std::shared_ptr<creatures::creature::Creature> creature;
@@ -38,6 +40,8 @@ namespace creatures::dmx {
 
         void handlePacket(const e131_packet_t & packet);
 
+
+        int networkDevice = DEFAULT_NETWORK_DEVICE_NUMBER;
     };
 
 } // creatures::dmx

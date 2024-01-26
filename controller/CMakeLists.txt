@@ -14,6 +14,9 @@ set(PACKAGE_AUTHOR "April White")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
 
+# Make our version available to the project
+configure_file(src/Version.h.in Version.h)
+
 
 include(FetchContent)
 set(FETCHCONTENT_QUIET OFF)
@@ -71,6 +74,7 @@ FetchContent_MakeAvailable(json)
 
 include_directories(
         src/
+        PRIVATE ${CMAKE_BINARY_DIR}
 )
 
 add_library(creature_lib

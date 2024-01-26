@@ -1,0 +1,6 @@
+
+#pragma once
+
+#define CREATURE_CONTROLLER_VERSION_MAJOR @creature-controller_VERSION_MAJOR@
+#define CREATURE_CONTROLLER_VERSION_MINOR @creature-controller_VERSION_MINOR@
+#define CREATURE_CONTROLLER_VERSION_PATCH @creature-controller_VERSION_PATCH@

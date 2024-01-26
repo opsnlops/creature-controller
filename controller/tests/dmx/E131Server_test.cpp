@@ -8,6 +8,8 @@
 #include "dmx/E131Exception.h"
 #include "mocks/logging/MockLogger.h"
 
+bool shouldRun = true;
+
 TEST(E131Server, Create) {
 
     auto logger = std::make_shared<creatures::NiceMockLogger>();

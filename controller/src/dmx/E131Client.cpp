@@ -14,12 +14,16 @@
 #include "controller-config.h"
 
 
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "LoopDoesntUseConditionVariableInspection"
+extern bool shouldRun;
+
 namespace creatures::dmx {
 
 
     E131Client::E131Client(const std::shared_ptr<creatures::Logger>& logger) : logger(logger) {
 
-        this->logger->info("e1.31 server created");
+        this->logger->info("e1.31 client created");
 
     }
 
@@ -29,9 +33,12 @@ namespace creatures::dmx {
         }
     }
 
-    void E131Client::init(const std::shared_ptr<creatures::creature::Creature>& _creature, const std::shared_ptr<Controller>& _controller) {
+    void E131Client::init(const std::shared_ptr<creatures::creature::Creature>& _creature,
+                          const std::shared_ptr<Controller>& _controller,
+                          const int _networkDevice) {
         this->creature = _creature;
         this->controller = _controller;
+        this->networkDevice = _networkDevice;
 
         // Create our input map
         for( const auto& input : this->creature->getInputs() ) {
@@ -40,7 +47,7 @@ namespace creatures::dmx {
             auto newInput = creatures::Input(input);
             this->inputMap.emplace(newInput.getSlot(), newInput);
         }
-        logger->debug("e1.31 server init'ed with {} inputs", this->inputMap.size());
+        logger->debug("e1.31 client init'ed with {} inputs", this->inputMap.size());
 
     }
 
@@ -50,14 +57,14 @@ namespace creatures::dmx {
 
         // Make sure we have our creature and controller
         if(this->creature == nullptr) {
-            throw E131Exception("Unable to start e1.31 server without a creature");
+            throw E131Exception("Unable to start e1.31 client without a creature");
         }
         if(this->controller == nullptr) {
-            throw E131Exception("Unable to start e1.31 server without a controller");
+            throw E131Exception("Unable to start e1.31 client without a controller");
         }
 
 
-        this->logger->info("e1.31 server started");
+        this->logger->info("e1.31 client started");
 
         workerThread = std::thread([this] {
             this->run();
@@ -67,9 +74,9 @@ namespace creatures::dmx {
 
     }
 
-    [[noreturn]] void E131Client::run() {
+    void E131Client::run() {
 
-        setThreadName("E131Server::run");
+        setThreadName("E131Client::run");
 
         this->logger->info("e1.31 worker thread going");
 
@@ -94,16 +101,18 @@ namespace creatures::dmx {
         }
 
         // Join the multicast group for this creature's DMX universe
-        if (e131_multicast_join_iface(sockfd, creature->getDmxUniverse(), 0) < 0) {
-            std::string errorMessage = fmt::format("Unable to join the multicast group for universe {}",
-                                                   creature->getDmxUniverse());
+        if (e131_multicast_join_iface(sockfd, creature->getDmxUniverse(), this->networkDevice) < 0) {
+            std::string errorMessage = fmt::format("Unable to join the multicast group for universe {} on interface {}",
+                                                   creature->getDmxUniverse(), this->networkDevice);
             this->logger->critical(errorMessage);
             throw E131Exception(errorMessage);
         }
 
         // loop to receive E1.31 packets
-        this->logger->info("waiting for E1.31 packets!");
-        for (EVER) {
+        this->logger->info("waiting for E1.31 packets on network device {}!", this->networkDevice);
+        while (shouldRun) {
+
+            logger->critical("PACKET: {}", creature->getDmxUniverse());
             if (e131_recv(sockfd, &packet) < 0) {
                 std::string errorMessage = "Unable to receive an e1.31 packet";
                 this->logger->critical(errorMessage);
@@ -125,11 +134,13 @@ namespace creatures::dmx {
             last_seq = packet.frame.seq_number;
         }
 
+        logger->critical("I SHOULDn'T BE HERE");
+
     }
 
     void E131Client::handlePacket(const e131_packet_t &packet) {
 
-        std::string hexString = "";
+        std::string hexString;
 
         // TODO: Don't do this unless verbose is on
         for(u16 i = creature->getStartingDmxChannel(); i < creature->getNumberOfServos(); i++) {
@@ -137,9 +148,7 @@ namespace creatures::dmx {
         }
         logger->trace("Received e1.31 packet: {}", hexString);
 
-
         std::vector<creatures::Input> inputs;
-
 
         // Walk the input map
         for( auto& input : this->inputMap ) {
@@ -159,3 +168,5 @@ namespace creatures::dmx {
     }
 
 } // namespace creatures::dmx
+
+#pragma clang diagnostic pop
