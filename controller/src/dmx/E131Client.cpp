@@ -80,7 +80,6 @@ namespace creatures::dmx {
 
         this->logger->info("e1.31 worker thread going");
 
-
         int sockfd;
         e131_packet_t packet;
         e131_error_t error;
@@ -112,7 +111,6 @@ namespace creatures::dmx {
         this->logger->info("waiting for E1.31 packets on network device {}!", this->networkDevice);
         while (shouldRun) {
 
-            logger->critical("PACKET: {}", creature->getDmxUniverse());
             if (e131_recv(sockfd, &packet) < 0) {
                 std::string errorMessage = "Unable to receive an e1.31 packet";
                 this->logger->critical(errorMessage);
@@ -134,7 +132,8 @@ namespace creatures::dmx {
             last_seq = packet.frame.seq_number;
         }
 
-        logger->critical("I SHOULDn'T BE HERE");
+        logger->info("e1.31 client shutting down");
+        close(sockfd);
 
     }
 

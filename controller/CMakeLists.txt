@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.18)
 
 project(creature-controller
-        VERSION "2.0.1"
+        VERSION "2.1.0"
         DESCRIPTION "April's Creature Workshop Controller"
         HOMEPAGE_URL https://github.com/opsnlops/creature-controller
         LANGUAGES C CXX)
@@ -16,7 +16,6 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
 
 # Make our version available to the project
 configure_file(src/Version.h.in Version.h)
-
 
 include(FetchContent)
 set(FETCHCONTENT_QUIET OFF)
