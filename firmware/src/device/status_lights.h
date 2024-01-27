@@ -16,5 +16,5 @@ void put_pixel(u32 pixel_grb, u8 state_machine);
 u16 interpolateHue(u16 oldHue, u16 newHue, u8 totalSteps, u8 currentStep);
 
 // Gets the next color in a fairly random order using the golden ratio
-double getNextColor(double oldColor);
+double getNextRandomColor(double oldColor);
 

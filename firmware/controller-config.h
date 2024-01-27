@@ -69,6 +69,8 @@ typedef uint64_t u64;
 #define STATUS_LIGHTS_RUNNING_BRIGHTNESS    0.1
 #define STATUS_LIGHTS_RUNNING_FRAME_CHANGE  100
 
+#define IO_LIGHT_COLOR_CYCLE_SPEED          2.3
+
 
 
 // Stepper

@@ -17,15 +17,21 @@
 /*
  *
  * Status Light Order:
+ *  0 = Firmware State
+ *  1 = Running
+ *  2 = USB
+ *  3 = UART
  *
- * 0 = Firmware State
- * 1 = Running
- * 2 = Servo 0
- * 3..n = Each servo after that
+ *
+ * Servo Order (per module):
+ *  0 = Servo 0
+ *  1..n = Each servo after that
  */
 
 
 extern volatile u64 position_messages_processed;
+extern volatile u64 uart_characters_received;
+extern volatile u64 usb_serial_characters_received;
 
 u8 logic_board_state_machine;
 u8 module_a_state_machine;
@@ -101,13 +107,33 @@ u16 interpolateHue(u16 oldHue, u16 newHue, u8 totalSteps, u8 currentStep) {
 
 }
 
-
-double getNextColor(double oldColor) {
+/**
+ * Get a random color based on the golden ratio
+ *
+ * @param oldColor the old color
+ * @return a new random color that's pleasing to the eye
+ */
+double getNextRandomColor(double oldColor) {
 
     // https://martin.ankerl.com/2009/12/09/how-to-create-random-colors-programmatically/
     double tempColor = oldColor + GOLDEN_RATIO_CONJUGATE;
     tempColor = fmod(tempColor, 1.0);
     return tempColor;
+}
+
+/**
+ * Get the next color in the HSV rainbow
+ *
+ * @param oldColor the old color
+ * @return oldColor + IO_LIGHT_COLOR_CYCLE_SPEED or 0.0 if it's past 360
+ */
+double getNextRainbowColor(double oldColor) {
+    double nextColor = oldColor + IO_LIGHT_COLOR_CYCLE_SPEED;
+    if(nextColor > 359.9) {
+        return 0.0;
+    }
+
+   return  (oldColor + IO_LIGHT_COLOR_CYCLE_SPEED);
 }
 
 // Read from the queue and print it to the screen for now
@@ -119,15 +145,19 @@ portTASK_FUNCTION(status_lights_task, pvParameters) {
     hsv_t running_color =               {127.0, 1.0, STATUS_LIGHTS_SYSTEM_STATE_STATUS_BRIGHTNESS};     // Green
     hsv_t running_but_no_data_color =   {241.0, 1.0, STATUS_LIGHTS_SYSTEM_STATE_STATUS_BRIGHTNESS};     // Blue
     hsv_t error_color =                 {0.0, 1.0, STATUS_LIGHTS_SYSTEM_STATE_STATUS_BRIGHTNESS};       // Red
+    hsv_t off_color =                   {0.0, 0.0, 0.0};                                                // Off
 
     TickType_t lastDrawTime;
 
     // What frame are we on?
     u64 frame = 0;
 
-    u32 currentIOFrameNumber = 0;
-    u32 lastIOFrameNumber = 0;
+    u64 currentIOFrameNumber = 0;
+    u64 lastIOFrameNumber = 0;
     u64 lastIOFrame = 0;
+
+    u64 lastUARTCharacter = 0;
+    u64 lastUSBCharacter = 0;
 
     // Are we currently getting data?
     bool ioActive = false;
@@ -135,6 +165,8 @@ portTASK_FUNCTION(status_lights_task, pvParameters) {
 
     u32 statusLightColor;
     u32 runningLightColor;
+    u32 uartLightColor;
+    u32 usbLightColor;
 
     // Start up with two random colors
     u16 currentRunningLightHue = convertRange(get_rand_32(), 0, UINT32_MAX, 1000, 360 * 100);
@@ -154,7 +186,13 @@ portTASK_FUNCTION(status_lights_task, pvParameters) {
     u32 systemStatusRunningColor = hsv_to_urgb(running_color);
     u32 systemStatusRunningButNoDataColor = hsv_to_urgb(running_but_no_data_color);
     u32 systemStatusErrorColor = hsv_to_urgb(error_color);
+    u32 offColor = hsv_to_urgb(off_color);
 
+    double uartLightHue = 0.0;
+    double usbLightHue = 0.0;
+
+    lastUARTCharacter = uart_characters_received;
+    lastUSBCharacter = usb_serial_characters_received;
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "EndlessLoop"
@@ -234,9 +272,38 @@ portTASK_FUNCTION(status_lights_task, pvParameters) {
         if(runningLightFadeStep > STATUS_LIGHTS_RUNNING_FRAME_CHANGE)
         {
             oldRunningLightHue = currentRunningLightHue;
-            currentRunningLightHue = (u16)(getNextColor(currentRunningLightHue / 36000.0) * 36000);
+            currentRunningLightHue = (u16)(getNextRandomColor(currentRunningLightHue / 36000.0) * 36000);
             runningLightFadeStep = 0;
         }
+
+
+        /*
+         * The third light is a "have I seen stuff on the USB lately" light
+         */
+        if((usb_serial_characters_received > lastUSBCharacter))
+        {
+            usbLightHue = getNextRainbowColor(usbLightHue);
+            hsv_t tempHsv = {usbLightHue, 1.0, STATUS_LIGHTS_SYSTEM_STATE_STATUS_BRIGHTNESS};
+            usbLightColor = hsv_to_urgb(tempHsv);
+        } else {
+            usbLightColor = offColor;
+        }
+        lastUSBCharacter = usb_serial_characters_received;
+
+
+        /*
+         * The fourth light is a "have I seen stuff on the UART lately" light
+         */   // 60                             50
+        if((uart_characters_received > lastUARTCharacter))
+        {
+            uartLightHue = getNextRainbowColor(uartLightHue);
+            hsv_t tempHsv = {uartLightHue, 1.0, STATUS_LIGHTS_SYSTEM_STATE_STATUS_BRIGHTNESS};
+            uartLightColor = hsv_to_urgb(tempHsv);
+        } else {
+            uartLightColor = offColor;
+        }
+        lastUARTCharacter = uart_characters_received;
+
 
 
 
@@ -292,6 +359,8 @@ portTASK_FUNCTION(status_lights_task, pvParameters) {
         // Now write out the colors of the lights in one big chunk
         put_pixel(statusLightColor, logic_board_state_machine);
         put_pixel(runningLightColor, logic_board_state_machine);
+        put_pixel(usbLightColor, logic_board_state_machine);
+        put_pixel(uartLightColor, logic_board_state_machine);
 
         // Dump out the lights to the various modules
         for(u8 i = 0; i < MOTOR_MAP_SIZE; i++) {
