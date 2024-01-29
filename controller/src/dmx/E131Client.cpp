@@ -100,9 +100,9 @@ namespace creatures::dmx {
         }
 
         // Join the multicast group for this creature's DMX universe
-        if (e131_multicast_join_iface(sockfd, creature->getDmxUniverse(), this->networkDevice) < 0) {
+        if (e131_multicast_join_iface(sockfd, creature->getUniverse(), this->networkDevice) < 0) {
             std::string errorMessage = fmt::format("Unable to join the multicast group for universe {} on interface {}",
-                                                   creature->getDmxUniverse(), this->networkDevice);
+                                                   creature->getUniverse(), this->networkDevice);
             this->logger->critical(errorMessage);
             throw E131Exception(errorMessage);
         }
@@ -142,7 +142,7 @@ namespace creatures::dmx {
         std::string hexString;
 
         // TODO: Don't do this unless verbose is on
-        for(u16 i = creature->getStartingDmxChannel(); i < creature->getNumberOfServos(); i++) {
+        for(u16 i = creature->getChannelOffset(); i < creature->getNumberOfServos() + creature->getChannelOffset(); i++) {
             hexString += fmt::format("{:#04x} ", packet.dmp.prop_val[i]);
         }
         logger->trace("Received e1.31 packet: {}", hexString);
@@ -152,7 +152,7 @@ namespace creatures::dmx {
         // Walk the input map
         for( auto& input : this->inputMap ) {
 
-            u16 slot = input.first + creature->getStartingDmxChannel();
+            u16 slot = input.first + creature->getChannelOffset();
             u8 value = packet.dmp.prop_val[slot];
 
             auto inputToSend = creatures::Input(input.second);
@@ -160,6 +160,7 @@ namespace creatures::dmx {
 
             inputs.push_back(inputToSend);
 
+            logger->trace("Setting input slot {} ({})to value {}", slot, inputToSend.getName(), value);
         }
 
         this->controller->acceptInput(inputs);

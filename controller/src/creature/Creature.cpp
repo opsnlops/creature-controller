@@ -187,20 +187,20 @@ namespace creatures::creature {
         Creature::servoUpdateFrequencyHz = hertz;
     }
 
-    u8 Creature::getStartingDmxChannel() const {
-        return startingDmxChannel;
+    u16 Creature::getChannelOffset() const {
+        return channelOffset;
     }
 
-    void Creature::setStartingDmxChannel(u8 _startingDmxChannel) {
-        Creature::startingDmxChannel = _startingDmxChannel;
+    void Creature::setChannelOffset(u16 _channelOffset) {
+        Creature::channelOffset = _channelOffset;
     }
 
-    u16 Creature::getDmxUniverse() const {
-        return dmxUniverse;
+    u16 Creature::getUniverse() const {
+        return universe;
     }
 
-    void Creature::setDmxUniverse(u16 _dmxUniverse) {
-        Creature::dmxUniverse = _dmxUniverse;
+    void Creature::setUniverse(u16 _universe) {
+        Creature::universe = _universe;
     }
 
     u16 Creature::getPositionMin() const {

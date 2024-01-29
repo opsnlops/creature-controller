@@ -149,9 +149,9 @@ namespace creatures::creature {
 
         creature_type getType() const;
 
-        u8 getStartingDmxChannel() const;
+        u16 getChannelOffset() const;
 
-        u16 getDmxUniverse() const;
+        u16 getUniverse() const;
 
         u16 getPositionMin() const;
 
@@ -178,9 +178,9 @@ namespace creatures::creature {
 
         void setType(creature_type type);
 
-        void setStartingDmxChannel(u8 startingDmxChannel);
+        void setChannelOffset(u16 channelOffset);
 
-        void setDmxUniverse(u16 dmxUniverse);
+        void setUniverse(u16 universe);
 
         void setPositionMin(u16 positionMin);
 
@@ -207,8 +207,8 @@ namespace creatures::creature {
         float headOffsetMax;
         u16 servoUpdateFrequencyHz;
 
-        u16 dmxUniverse;
-        u8 startingDmxChannel;
+        u16 universe;
+        u16 channelOffset;
 
         /**
          * Inputs as defined in the config file for this creature

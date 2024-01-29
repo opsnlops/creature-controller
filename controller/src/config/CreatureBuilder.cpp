@@ -39,7 +39,7 @@ namespace creatures {
 
         // Define the required config file fields
         requiredTopLevelFields = {
-                "type", "name", "version", "starting_dmx_channel", "dmx_universe", "motors",
+                "type", "name", "version", "channel_offset", "universe", "motors",
                 "head_offset_max", "servo_frequency", "position_min", "position_max",
                 "description",
         };
@@ -110,8 +110,8 @@ namespace creatures {
         creature->setName(j["name"]);
         creature->setVersion(j["version"]);
         creature->setDescription(j["description"]);
-        creature->setStartingDmxChannel(j["starting_dmx_channel"]);
-        creature->setDmxUniverse(j["dmx_universe"]);
+        creature->setChannelOffset(j["channel_offset"]);
+        creature->setUniverse(j["universe"]);
         creature->setPositionMin(j["position_min"]);
         creature->setPositionMax(j["position_max"]);
         creature->setHeadOffsetMax(j["head_offset_max"]);
@@ -120,7 +120,7 @@ namespace creatures {
 
         // Log that we've gotten this far
         logger->info("creature name is {} (version {}), at channel offset {}",
-             creature->getName(), creature->getVersion(), creature->getStartingDmxChannel());
+             creature->getName(), creature->getVersion(), creature->getChannelOffset());
 
         for(auto& motor : j["motors"]) {
 

@@ -18,8 +18,8 @@ TEST(CreatureBuilder, BuildsCorrectlyWithValidData) {
     const std::string validJsonData = R"({  "name": "Test Creature",
       "version": "0.1.0",
       "description": "This is a fake creature for testing",
-      "starting_dmx_channel": 1,
-      "dmx_universe": 234,
+      "channel_offset": 1,
+      "universe": 234,
       "position_min": 0,
       "position_max": 1023,
       "head_offset_max": 0.4,
@@ -70,8 +70,8 @@ TEST(CreatureBuilder, BuildsCorrectlyWithValidData) {
     // Assertions to validate the built creature
     EXPECT_EQ("Test Creature", creature->getName());
     EXPECT_EQ("This is a fake creature for testing", creature->getDescription());
-    EXPECT_EQ(1, creature->getStartingDmxChannel());
-    EXPECT_EQ(234, creature->getDmxUniverse());
+    EXPECT_EQ(1, creature->getChannelOffset());
+    EXPECT_EQ(234, creature->getUniverse());
     EXPECT_EQ(0, creature->getPositionMin());
     EXPECT_EQ(1023, creature->getPositionMax());
     EXPECT_NEAR(expectedHeadOffsetMax, creature->getHeadOffsetMax(), tolerance);
@@ -187,8 +187,8 @@ TEST(CreatureBuilder, BuildFails_MissingInputs) {
     const std::string badJsonData = R"({  "name": "Test Creature",
         "version": "0.1.0",
         "description": "This is a fake creature for testing",
-        "starting_dmx_channel": 1,
-        "dmx_universe": 234,
+        "channel_offset": 1,
+        "universe": 234,
         "position_min": 0,
         "position_max": 666,
         "head_offset_max": 0.4,
@@ -227,8 +227,8 @@ TEST(CreatureBuilder, BuildFails_InputSlotOutOfRange) {
     const std::string badJsonData = R"({  "name": "Test Creature",
         "version": "0.1.0",
         "description": "This is a fake creature for testing",
-        "starting_dmx_channel": 1,
-        "dmx_universe": 234,
+        "channel_offset": 1,
+        "universe": 234,
         "position_min": 0,
         "position_max": 666,
         "head_offset_max": 0.4,

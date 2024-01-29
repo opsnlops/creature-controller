@@ -28,7 +28,7 @@ namespace creatures {
 
         auto config = std::make_shared<Configuration>(logger);
 
-        argparse::ArgumentParser program("creature-controller");
+        argparse::ArgumentParser program("creature-controller", getVersion());
 
         program.add_argument("-c", "--creature-config")
                 .help("JSON file for this creature")

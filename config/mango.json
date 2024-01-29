@@ -2,8 +2,8 @@
   "name": "Mango",
   "version": "0.1.0",
   "description": "The world's smallest MangoDB fan!",
-  "starting_dmx_channel": 10,
-  "dmx_universe": 1,
+  "channel_offset": 10,
+  "universe": 1,
   "position_min": 0,
   "position_max": 1023,
   "head_offset_max": 0.4,
@@ -104,4 +104,3 @@
     }
   ]
 }
-
