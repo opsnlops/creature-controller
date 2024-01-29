@@ -160,7 +160,7 @@ namespace creatures::dmx {
 
             inputs.push_back(inputToSend);
 
-            logger->trace("Setting input slot {} ({})to value {}", slot, inputToSend.getName(), value);
+            //logger->trace("Setting input slot {} ({})to value {}", slot, inputToSend.getName(), value);
         }
 
         this->controller->acceptInput(inputs);
