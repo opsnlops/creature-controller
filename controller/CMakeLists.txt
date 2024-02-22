@@ -77,70 +77,85 @@ include_directories(
 )
 
 add_library(creature_lib
+        # Configuration Sources
         src/config/CommandLine.cpp
         src/config/Configuration.cpp
         src/config/CreatureBuilder.cpp
+
+        # Controller Sources
         src/controller/Controller.cpp
         src/controller/StepperHandler.cpp
+        src/controller/commands/ICommand.h
+        src/controller/commands/SetServoPositions.cpp
+        src/controller/commands/SetServoPositions.h
+        src/controller/commands/CommandException.h
+        src/controller/commands/Ping.cpp
+        src/controller/commands/Ping.h
+        src/controller/commands/tokens/ServoPosition.cpp
+        src/controller/commands/tokens/ServoPosition.h
+        src/controller/commands/tokens/ServoConfig.cpp
+        src/controller/commands/tokens/ServoConfig.h
+        src/controller/commands/CreatureConfiguration.cpp
+        src/controller/commands/CreatureConfiguration.h
+        src/controller/commands/FlushBuffer.cpp
+        src/controller/commands/FlushBuffer.h
+        src/controller/tasks/PingTask.cpp
+        src/controller/tasks/PingTask.h
+        src/controller/Input.cpp
+        src/controller/Input.h
+        src/controller/ControllerException.h
+        src/controller/CommandSendException.h
+
+        # Creature Sources
         src/creature/Creature.cpp
         src/creature/Parrot.cpp
+        src/creature/CreatureException.h
+
+        # Device Sources
         src/device/Servo.cpp
         src/device/Stepper.cpp
-        src/dmx/E131Client.cpp
-        src/util/fast_hsv2rgb_32bit.cpp
-        src/util/ranges.cpp
+        src/device/GPIO.cpp
+        src/device/GPIO.h
         src/device/ServoException.h
-        src/creature/CreatureException.h
+        src/device/GPIOException.h
+
+        # DMX Sources
+        src/dmx/E131Client.cpp
+        src/dmx/E131Exception.h
+
+        # IO Sources
         src/io/SerialHandler.cpp
         src/io/SerialHandler.h
-        src/util/MessageQueue.h
         src/io/SerialException.h
-        src/util/thread_name.h
-        src/util/thread_name.cpp
         src/io/MessageProcessor.cpp
         src/io/MessageProcessor.h
         src/io/handlers/IMessageHandler.h
         src/io/handlers/StatsHandler.cpp
         src/io/handlers/StatsHandler.h
-        src/io/handlers/LogHandler.h
         src/io/handlers/LogHandler.cpp
+        src/io/handlers/LogHandler.h
+        src/io/handlers/StatsMessage.cpp
+        src/io/handlers/StatsMessage.h
+        src/io/handlers/PongHandler.cpp
+        src/io/handlers/PongHandler.h
+        src/io/handlers/InitHandler.cpp
+        src/io/handlers/InitHandler.h
+        src/io/handlers/ReadyHandler.cpp
+        src/io/handlers/ReadyHandler.h
+
+        # Logging Sources
         src/logging/Logger.h
         src/logging/SpdlogLogger.h
         src/logging/LoggingException.h
-        src/controller/commands/tokens/ServoPosition.cpp
-        src/controller/commands/tokens/ServoPosition.h
-        src/controller/commands/ICommand.h
-        src/controller/commands/SetServoPositions.cpp
-        src/controller/commands/SetServoPositions.h
-        src/controller/commands/CommandException.h
-        src/controller/CommandSendException.h
-        src/io/handlers/StatsMessage.cpp
-        src/io/handlers/StatsMessage.h
-        src/util/string_utils.h
+
+        # Utility Sources
+        src/util/fast_hsv2rgb_32bit.cpp
+        src/util/ranges.cpp
+        src/util/MessageQueue.h
+        src/util/thread_name.cpp
+        src/util/thread_name.h
         src/util/string_utils.cpp
-        src/controller/commands/Ping.h
-        src/controller/commands/Ping.cpp
-        src/controller/tasks/PingTask.cpp
-        src/controller/tasks/PingTask.h
-        src/io/handlers/PongHandler.h
-        src/io/handlers/PongHandler.cpp
-        src/dmx/E131Exception.h
-        src/controller/Input.cpp
-        src/controller/Input.h
-        src/io/handlers/InitHandler.cpp
-        src/io/handlers/InitHandler.h
-        src/controller/ControllerException.h
-        src/controller/commands/tokens/ServoConfig.cpp
-        src/controller/commands/tokens/ServoConfig.h
-        src/controller/commands/CreatureConfiguration.cpp
-        src/controller/commands/CreatureConfiguration.h
-        src/io/handlers/ReadyHandler.cpp
-        src/io/handlers/ReadyHandler.h
-        src/device/GPIO.cpp
-        src/device/GPIO.h
-        src/device/GPIOException.h
-        src/controller/commands/FlushBuffer.h
-        src/controller/commands/FlushBuffer.cpp
+        src/util/string_utils.h
 )
 
 target_include_directories(creature_lib PUBLIC
