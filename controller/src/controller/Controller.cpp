@@ -96,7 +96,7 @@ void Controller::firmwareReadyForInitialization(u32 firmwareVersion) {
 
     // Make sure we got the version of the firmware we were built against
     if(firmwareVersion != FIRMWARE_VERSION) {
-        std::string errorMessage = fmt::format("Firmware version mismatch! Excepted {}, got {}", firmwareVersion, FIRMWARE_VERSION);
+        std::string errorMessage = fmt::format("Firmware version mismatch! Expected {}, got {}",  FIRMWARE_VERSION, firmwareVersion);
         logger->critical(errorMessage);
         throw creatures::ControllerException(errorMessage);
     }
