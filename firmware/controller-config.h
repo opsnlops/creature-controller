@@ -154,6 +154,15 @@ typedef uint64_t u64;
 
 
 /*
+ * I2C Config
+ */
+#define SERVO_MODULE_I2C_BUS                    i2c0
+#define SERVO_MODULE_I2C_FREQ                   400000
+#define SERVO_MODULE_I2C_ADDRESS                0x40
+#define SERVO_MODULE_I2C_SDA_PIN                20
+#define SERVO_MODULE_I2C_SCL_PIN                21
+
+/*
  * Servo <-> GPIO Pin Mappings
  */
 #define SERVO_0_GPIO_PIN            6               // Pin 9,  PMW  3A

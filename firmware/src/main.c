@@ -23,6 +23,7 @@
 #include "device/status_lights.h"
 #include "debug/remote_logging.h"
 #include "debug/stats_reporter.h"
+#include "io/i2c.h"
 #include "io/message_processor.h"
 #include "io/usb_serial.h"
 #include "io/uart_serial.h"
@@ -48,6 +49,7 @@ int main() {
     bi_decl(bi_1pin_with_name(STATUS_LIGHTS_MOD_B_PIN, "Status Lights Module B"));
     bi_decl(bi_1pin_with_name(STATUS_LIGHTS_MOD_C_PIN, "Status Lights Module C"));
     bi_decl(bi_2pins_with_func(UART_TX_PIN, UART_RX_PIN, GPIO_FUNC_UART));
+    bi_decl(bi_2pins_with_func(SERVO_MODULE_I2C_SDA_PIN, SERVO_MODULE_I2C_SCL_PIN, GPIO_FUNC_I2C));
     bi_decl(bi_1pin_with_name(SERVO_0_GPIO_PIN, "Servo 0"));
     bi_decl(bi_1pin_with_name(SERVO_1_GPIO_PIN, "Servo 1"));
     bi_decl(bi_1pin_with_name(SERVO_2_GPIO_PIN, "Servo 2"));
@@ -90,6 +92,9 @@ int main() {
     // Turn on the status lights
     status_lights_init();
     status_lights_start();
+
+    // Configure i2c for our needs
+    setup_i2c();
 
     // Queue up the startup task for right after the scheduler starts
     TaskHandle_t startup_task_handle;

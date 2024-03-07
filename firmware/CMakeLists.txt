@@ -63,13 +63,17 @@ add_executable(firmware
         src/device/status_lights.c
         src/device/colors.h
         src/device/colors.c
+        src/device/pca9685.h
         src/messaging/processors/config_message.c
         src/device/power_relay.h
         src/device/power_relay.c
+        src/io/i2c.c
+        src/io/i2c.h
         src/io/uart_serial.c
         src/io/uart_serial.h
         src/io/message_processor.h
         src/io/message_processor.c
+        src/device/pca9685.c
 )
 
 
@@ -88,6 +92,7 @@ target_include_directories(firmware PRIVATE
 # pull in common dependencies
 target_link_libraries(firmware
         hardware_dma
+        hardware_i2c
         hardware_gpio
         hardware_pio
         hardware_pwm
