@@ -125,7 +125,6 @@ namespace creatures {
 
         for(auto& motor : j["motors"]) {
 
-            std::string motor_string = j["motors"];
             std::string id_string = motor["id"];
             std::string type_string = motor["type"];
 
