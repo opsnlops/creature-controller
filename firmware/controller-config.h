@@ -23,7 +23,7 @@ typedef uint64_t u64;
  * This is the version that's sent to the controller. The controller is expected to know what
  * do to with this version.
  */
-#define FIRMWARE_VERSION                    "2"
+#define FIRMWARE_VERSION                    3
 #define INIT_REQUEST_TIME_MS                1000
 
 
