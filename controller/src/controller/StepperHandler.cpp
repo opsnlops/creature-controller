@@ -137,7 +137,8 @@ bool StepperHandler::stepper_timer_handler(struct repeating_timer *t) {
         if(state->isAwake && state->updatedFrame + state->sleepAfterIdleFrames < stepper_frame_count) {
             state->isAwake = false;
             state->startedSleepingAt = stepper_frame_count;
-            logger->debug("sleeping stepper {} at frame {}", slot, stepper_frame_count);
+            u64 _frame = stepper_frame_count; // this is an atomic, so copy what it is right now
+            logger->debug("sleeping stepper {} at frame {}", slot, _frame);
             goto transmit;
 
         }
@@ -151,7 +152,8 @@ bool StepperHandler::stepper_timer_handler(struct repeating_timer *t) {
         if(!state->isAwake) {
             state->isAwake = true;
             state->awakeAt = stepper_frame_count + state->framesRequiredToWakeUp;
-            logger->debug("waking up stepper {} at frame {}", slot, stepper_frame_count);
+            u64 _frame = stepper_frame_count; // this is an atomic, so copy what it is right now
+            logger->debug("waking up stepper {} at frame {}", slot, _frame);
             goto transmit;
         }
 

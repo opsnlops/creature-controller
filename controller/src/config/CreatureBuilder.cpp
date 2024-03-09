@@ -85,9 +85,10 @@ namespace creatures {
 
         // Validate the creature type
         creatures::creature::Creature::creature_type type = creatures::creature::Creature::stringToCreatureType(j["type"]);
+        std::string string_type = j["type"]; // Render the type to a string so fmt can print it
         if(type == creatures::creature::Creature::invalid_creature) {
-            logger->error("invalid creature type: {}", j["type"]);
-            throw CreatureBuilderException(fmt::format("invalid creature type: {}", j["type"]));
+            logger->error("invalid creature type: {}", string_type);
+            throw CreatureBuilderException(fmt::format("invalid creature type: {}", string_type));
         }
 
         std::shared_ptr<creatures::creature::Creature> creature;
@@ -97,7 +98,7 @@ namespace creatures {
                 creature = std::make_shared<Parrot>(logger);
                 break;
             default:
-                logger->error("unimplemented creature type: {}", j["type"]);
+                logger->error("unimplemented creature type: {}", string_type);
                 std::exit(1);
                 break;
         }
@@ -124,11 +125,15 @@ namespace creatures {
 
         for(auto& motor : j["motors"]) {
 
+            std::string motor_string = j["motors"];
+            std::string id_string = motor["id"];
+            std::string type_string = motor["type"];
+
             // Validate the fields in this object
             for (const auto& fieldName : requiredServoFields) {
                 checkJsonField(motor, fieldName);
             }
-            logger->debug("looking at motor {}", motor["id"]);
+            logger->debug("looking at motor {}", id_string);
 
             // Make sure we have a valid type for this motor
             creatures::creature::Creature::motor_type motorType = creatures::creature::Creature::stringToMotorType(motor["type"]);
@@ -142,8 +147,8 @@ namespace creatures {
                     break;
                 }
                 default:
-                    logger->error("invalid motor type: {}", motor["type"]);
-                    throw CreatureBuilderException(fmt::format("invalid motor type: {}", motor["type"]));
+                    logger->error("invalid motor type: {}", type_string);
+                    throw CreatureBuilderException(fmt::format("invalid motor type: {}", type_string));
 
             }
 
@@ -188,7 +193,8 @@ namespace creatures {
 
         creatures::creature::Creature::motor_type type = creatures::creature::Creature::stringToMotorType(j["type"]);
         if(type == creatures::creature::Creature::invalid_motor) {
-            throw CreatureBuilderException(fmt::format("invalid motor type: {}", j["type"]));
+            std::string type_string = j["type"];
+            throw CreatureBuilderException(fmt::format("invalid motor type: {}", type_string));
         }
 
         std::string id = j["id"];

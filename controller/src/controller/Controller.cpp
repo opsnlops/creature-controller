@@ -175,7 +175,8 @@ void Controller::worker() {
         number_of_frames = number_of_frames + 1;
 
         if(number_of_frames % 100 == 0) {
-            logger->info("frames: {}", number_of_frames);
+            u64 _frames = number_of_frames; // copy the atomic value
+            logger->info("frames: {}", _frames);
         }
 
         // If we haven't received a frame yet, don't do anything
