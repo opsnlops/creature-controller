@@ -20,7 +20,7 @@ namespace creatures::dmx {
 
         void init(const std::shared_ptr<creatures::creature::Creature>& creature,
                   const std::shared_ptr<Controller>& controller,
-                  const int networkDevice);
+                  const char* networkDeviceName);
         void start();
 
 
@@ -40,8 +40,8 @@ namespace creatures::dmx {
 
         void handlePacket(const e131_packet_t & packet);
 
-
-        int networkDevice = DEFAULT_NETWORK_DEVICE_NUMBER;
+        int networkDeviceIndex = -1;
+        std::string networkDeviceName = DEFAULT_NETWORK_DEVICE_NAME;
     };
 
 } // creatures::dmx

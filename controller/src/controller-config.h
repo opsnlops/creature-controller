@@ -78,7 +78,7 @@ using u64 = std::uint64_t;
 #define USE_STEPPERS                1
 
 
-#define DEFAULT_NETWORK_DEVICE_NUMBER   1
+#define DEFAULT_NETWORK_DEVICE_NAME   "eth0"
 
 /**
  * These allow more than one creature to be controlled on the same

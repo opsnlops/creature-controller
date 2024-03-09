@@ -18,13 +18,13 @@ namespace creatures {
         std::string getConfigFileName() const;
         std::string getUsbDevice() const;
         bool getUseGPIO() const;
-        uint16_t getNetworkDevice() const;
+        std::string getNetworkDevice() const;
 
     protected:
         void setConfigFileName(std::string _configFileName);
         void setUsbDevice(std::string _usbDevice);
         void setUseGPIO(bool _useGPIO);
-        void setNetworkDevice(uint16_t _networkDevice);
+        void setNetworkDevice(std::string _networkDevice);
 
     private:
 
@@ -40,7 +40,7 @@ namespace creatures {
         bool useGPIO = false;
 
         // Network stuff
-        uint16_t networkDevice = DEFAULT_NETWORK_DEVICE_NUMBER;
+        std::string networkDevice = DEFAULT_NETWORK_DEVICE_NAME;
     };
 
 

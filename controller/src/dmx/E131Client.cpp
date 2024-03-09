@@ -1,4 +1,5 @@
 
+#include <net/if.h>
 #include <thread>
 #include <unordered_map>
 
@@ -35,10 +36,21 @@ namespace creatures::dmx {
 
     void E131Client::init(const std::shared_ptr<creatures::creature::Creature>& _creature,
                           const std::shared_ptr<Controller>& _controller,
-                          const int _networkDevice) {
+                          const char* _networkDeviceName) {
         this->creature = _creature;
         this->controller = _controller;
-        this->networkDevice = _networkDevice;
+        this->networkDeviceName = _networkDeviceName;
+
+        // Look up the network device index
+        this->networkDeviceIndex = if_nametoindex(this->networkDeviceName.c_str());
+        if( this->networkDeviceIndex  == 0 ) {
+            std::string errorMessage = fmt::format("Unable to find network device index for name {}", this->networkDeviceName);
+            logger->error(errorMessage);
+            throw E131Exception(errorMessage);
+        } else {
+            logger->debug("Found network device index {} for name {}", this->networkDeviceIndex, this->networkDeviceName);
+        }
+
 
         // Create our input map
         for( const auto& input : this->creature->getInputs() ) {
@@ -64,7 +76,7 @@ namespace creatures::dmx {
         }
 
 
-        this->logger->info("e1.31 client started");
+        this->logger->info("✨e1.31 client started with {} inputs ✨", this->inputMap.size());
 
         workerThread = std::thread([this] {
             this->run();
@@ -99,16 +111,16 @@ namespace creatures::dmx {
             throw E131Exception(errorMessage);
         }
 
-        // Join the multicast group for this creature's DMX universe
-        if (e131_multicast_join_iface(sockfd, creature->getUniverse(), this->networkDevice) < 0) {
-            std::string errorMessage = fmt::format("Unable to join the multicast group for universe {} on interface {}",
-                                                   creature->getUniverse(), this->networkDevice);
+        // Join the multicast group for this creature's ACN universe
+        if (e131_multicast_join_iface(sockfd, creature->getUniverse(), this->networkDeviceIndex) < 0) {
+            std::string errorMessage = fmt::format("Unable to join the multicast group for universe {} on interface {} ({})",
+                                                   creature->getUniverse(), this->networkDeviceIndex, this->networkDeviceName);
             this->logger->critical(errorMessage);
             throw E131Exception(errorMessage);
         }
 
         // loop to receive E1.31 packets
-        this->logger->info("waiting for E1.31 packets on network device {}!", this->networkDevice);
+        this->logger->info("🕰️waiting for E1.31 packets on network device {}! ({})", this->networkDeviceIndex, this->networkDeviceName);
         while (shouldRun) {
 
             if (e131_recv(sockfd, &packet) < 0) {

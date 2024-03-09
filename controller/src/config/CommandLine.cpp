@@ -1,10 +1,13 @@
 
-#include <cstdio>
+#include <algorithm>
+#include <arpa/inet.h>
 #include <ifaddrs.h>
 #include <iostream>
 #include <net/if.h>
+#include <netinet/in.h>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include <argparse/argparse.hpp>
 
@@ -42,9 +45,8 @@ namespace creatures {
 
         program.add_argument("-n", "--network-device")
                 .help("network device to use")
-                .default_value(DEFAULT_NETWORK_DEVICE_NUMBER)
-                .nargs(1)
-                .scan<'i', int>();
+                .default_value(DEFAULT_NETWORK_DEVICE_NAME)
+                .nargs(1);
 
         program.add_argument("-g", "--use-gpio")
                 .help("Use the GPIO pins? (RPI only!)")
@@ -100,9 +102,9 @@ namespace creatures {
             logger->info("set our use GPIO to {}", useGPIO);
         }
 
-        auto networkDevice = program.get<int>("-n");
+        auto networkDevice = program.get<std::string>("-n");
         logger->debug("read network device {} from command line", networkDevice);
-        if(networkDevice > 0) {
+        if(!networkDevice.empty()) {
             config->setNetworkDevice(networkDevice);
             logger->debug("set our network device to {}", networkDevice);
         }
@@ -112,31 +114,55 @@ namespace creatures {
     }
 
     void CommandLine::listNetworkDevices() {
-
         struct ifaddrs *ifaddr, *ifa;
+        char addrBuff[INET6_ADDRSTRLEN];
 
         if (getifaddrs(&ifaddr) == -1) {
             logger->critical("Unable to get network devices: {}", strerror(errno));
+            return;
         }
 
-        std::cout << "List of network devices:" << std::endl;
+        // Map to store device name, index, and IP addresses
+        std::map<std::string, std::pair<int, std::vector<std::string>>> interfaces;
 
-        int n;
-
-        // Walk the list
-        for (ifa = ifaddr, n = 0; ifa != nullptr; ifa = ifa->ifa_next, n++) {
+        for (ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next) {
             if (ifa->ifa_addr == nullptr)
                 continue;
 
-            // Could be used to limit it to IPv4 or IPv6
-            //int family = ifa->ifa_addr->sa_family;
+            void *tmpAddrPtr = nullptr;
+            bool isIPv4 = false;
 
-            // Print out the name and index
-            std::cout << " Device: " << if_nametoindex(ifa->ifa_name) << ", Name: " << ifa->ifa_name << std::endl;
+            // Check if it is IP4 or IP6 and set tmpAddrPtr accordingly
+            if (ifa->ifa_addr->sa_family == AF_INET) { // IPv4
+                tmpAddrPtr = &((struct sockaddr_in *)ifa->ifa_addr)->sin_addr;
+                isIPv4 = true;
+            } else if (ifa->ifa_addr->sa_family == AF_INET6) { // IPv6
+                tmpAddrPtr = &((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr;
+            }
+
+            if (tmpAddrPtr) {
+                inet_ntop(ifa->ifa_addr->sa_family, tmpAddrPtr, addrBuff, sizeof(addrBuff));
+                // Prioritize IPv4 by inserting at the beginning of the vector
+                if (isIPv4) {
+                    interfaces[ifa->ifa_name].second.insert(interfaces[ifa->ifa_name].second.begin(), addrBuff);
+                } else {
+                    interfaces[ifa->ifa_name].second.push_back(addrBuff);
+                }
+                interfaces[ifa->ifa_name].first = if_nametoindex(ifa->ifa_name);
+            }
         }
 
         freeifaddrs(ifaddr);
 
+        std::cout << "List of network devices:" << std::endl;
+        for (const auto &iface : interfaces) {
+            std::cout << " Name: " << iface.first;
+            std::cout << ", IPs: ";
+            for (const auto &ip : iface.second.second) {
+                std::cout << ip << " ";
+            }
+            std::cout << std::endl;
+        }
     }
 
     std::string CommandLine::getVersion() {
