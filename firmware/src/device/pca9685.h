@@ -54,7 +54,7 @@
 #define MODE2_OCH 0x08    /**< Outputs change on ACK vs STOP */
 #define MODE2_INVRT 0x10  /**< Output logic state inverted */
 
-#define FREQUENCY_OSCILLATOR 25000000 /**< Int. osc. frequency in datasheet */
+#define PCA9685_FREQUENCY_OSCILLATOR 25000000 /**< Int. osc. frequency in datasheet */
 
 #define PCA9685_PRESCALE_MIN 3   /**< minimum prescale value */
 #define PCA9685_PRESCALE_MAX 255 /**< maximum prescale value */
@@ -73,10 +73,8 @@ u16 pca9685_getPWM(i2c_inst_t *i2c_interface, u8 num, bool off);
 u8 pca9685_setPWM(i2c_inst_t *i2c_interface, u8 num, u16 on, u16 off);
 void pca9685_setPin(i2c_inst_t *i2c_interface, u8 num, u16 val, bool invert);
 u8 pca9685_readPrescale(i2c_inst_t *i2c_interface);
-void pca9685_writeMicroseconds(i2c_inst_t *i2c_interface, u8 num, u16 Microseconds);
 
-void pca9685_setOscillatorFrequency(u32 freq);
-u32 pca9685_getOscillatorFrequency(void);
+void pca9685_set_prescale(i2c_inst_t *i2c_interface, u8 prescale);
 
 /*
  * Create a tiny HAL interface for the PCA9685, the same way

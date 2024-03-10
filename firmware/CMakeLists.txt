@@ -74,6 +74,8 @@ add_executable(firmware
         src/io/message_processor.h
         src/io/message_processor.c
         src/device/pca9685.c
+        src/controller/i2c_servo_module.h
+        src/controller/i2c_servo_module.c
 )
 
 

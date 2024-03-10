@@ -27,6 +27,10 @@ typedef uint64_t u64;
 #define INIT_REQUEST_TIME_MS                1000
 
 
+// We always want to be at 50Hz
+#define SERVO_FREQUENCY                      50
+
+
 // Light to flash when commands are being received
 //#define CDC_ACTIVE_PIN                      17
 

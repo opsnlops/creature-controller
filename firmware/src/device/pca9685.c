@@ -9,6 +9,8 @@
 
 #include "device/pca9685.h"
 
+
+
 /*
  * This is an interface to the PCA9685 PWM controller
  *
@@ -22,14 +24,11 @@
  *
  */
 
-u32 pca9685_oscillator_freq = FREQUENCY_OSCILLATOR;
 
 #define PCA9685_MIN(a, b) (((a) < (b)) ? (a) : (b))
+#define PCA_PULSE_LENGTH 1000000
 
 bool pca9685_begin(i2c_inst_t *i2c_interface, u8 prescale) {
-
-    // set the default internal frequency
-    pca9685_setOscillatorFrequency(FREQUENCY_OSCILLATOR);
 
     if (prescale != 0) {
         pca9685_setExtClk(i2c_interface, prescale);
@@ -59,6 +58,24 @@ void pca9685_wakeup(i2c_inst_t *i2c_interface) {
     u8 wakeup = sleep & ~MODE1_SLEEP; // set sleep bit low
     pca9685_write8(i2c_interface, PCA9685_MODE1, wakeup);
 }
+
+void pca9685_set_prescale(i2c_inst_t *i2c_interface, u8 prescale) {
+
+    u8 old_mode = pca9685_read8(i2c_interface, PCA9685_MODE1);
+    u8 new_mode = (old_mode & ~MODE1_RESTART) | MODE1_SLEEP; // sleep
+    pca9685_write8(i2c_interface, PCA9685_MODE1, new_mode);                            // go to sleep
+    pca9685_write8(i2c_interface, PCA9685_PRESCALE, prescale); // set the prescaler
+    pca9685_write8(i2c_interface, PCA9685_MODE1, old_mode);
+    vTaskDelay(pdMS_TO_TICKS(5));
+
+    // This sets the MODE1 register to turn on auto increment.
+    pca9685_write8(i2c_interface, PCA9685_MODE1, old_mode | MODE1_RESTART | MODE1_AI);
+
+    // Get the new mode from the PCA9685
+    u8 mode_from_pca9685 = pca9685_read8(i2c_interface, PCA9685_MODE1);
+    info("pca9685_setPWMFreq: mode is now 0x%02X", mode_from_pca9685);
+}
+
 
 void pca9685_setExtClk(i2c_inst_t *i2c_interface, u8 prescale) {
 
@@ -95,7 +112,7 @@ void pca9685_setPWMFreq(i2c_inst_t *i2c_interface, float freq) {
     if (freq > 3500)
         freq = 3500; // Datasheet limit is 3052=50MHz/(4*4096)
 
-    float prescaleval = ((pca9685_oscillator_freq / (freq * 4096.0)) + 0.5) - 1;
+    float prescaleval = ((PCA9685_FREQUENCY_OSCILLATOR / (freq * 4096.0)) + 0.5) - 1;
     if (prescaleval < PCA9685_PRESCALE_MIN)
         prescaleval = PCA9685_PRESCALE_MIN;
     if (prescaleval > PCA9685_PRESCALE_MAX)
@@ -150,7 +167,7 @@ u16 pca9685_getPWM(i2c_inst_t *i2c_interface, u8 num, bool off) {
 
 u8 pca9685_setPWM(i2c_inst_t *i2c_interface, u8 num, u16 on, u16 off) {
 
-    debug("Setting PWM %u: %u->%u", num, on, off);
+    verbose("Setting PWM %u to: on: %u, off: %u", num, on, off);
 
     u8 buffer[5];
     buffer[0] = PCA9685_LED0_ON_L + 4 * num;
@@ -194,45 +211,6 @@ void pca9685_setPin(i2c_inst_t *i2c_interface, u8 num, u16 val, bool invert) {
 
 u8 pca9685_readPrescale(i2c_inst_t *i2c_interface) {
     return pca9685_read8(i2c_interface, PCA9685_PRESCALE);
-}
-
-void pca9685_writeMicroseconds(i2c_inst_t *i2c_interface, u8 num, u16 Microseconds) {
-
-    debug("Setting PWM Via Microseconds on output %u: %u", num, Microseconds);
-
-    double pulse = Microseconds;
-    double pulselength;
-    pulselength = 1000000; // 1,000,000 us per second
-
-    // TODO: Wow why are they doing this
-
-    // Read prescale
-    uint16_t prescale = pca9685_readPrescale(i2c_interface);
-
-    debug("PCA9685 chip prescale: %u", prescale);
-
-    // Calculate the pulse for PWM based on Equation 1 from the datasheet section
-    // 7.3.5
-    prescale += 1;
-    pulselength *= prescale;
-    pulselength /= pca9685_oscillator_freq;
-
-    debug("Pulselength: %f", pulselength);
-
-    pulse /= pulselength;
-
-    debug("Pulse for PWM: %f", pulse);
-
-    pca9685_setPWM(i2c_interface,num, 0, pulse);
-}
-
-
-void pca9685_setOscillatorFrequency(u32 freq) {
-    pca9685_oscillator_freq = freq;
-}
-
-u32 pca9685_getOscillatorFrequency(void) {
-    return pca9685_oscillator_freq;
 }
 
 
