@@ -98,7 +98,7 @@ int main(int argc, char **argv) {
     // Create and start the e1.13 client
     logger->debug("starting the e1.13 client");
     auto e131Client = std::make_shared<creatures::dmx::E131Client>(logger);
-    e131Client->init(creature, controller, config->getNetworkDevice().c_str());
+    e131Client->init(creature, controller, config->getNetworkDeviceIPAddress());
     e131Client->start();
 
     // Before we start sending pings, ask the controller to flush its buffer

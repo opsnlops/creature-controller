@@ -20,7 +20,7 @@ namespace creatures::dmx {
 
         void init(const std::shared_ptr<creatures::creature::Creature>& creature,
                   const std::shared_ptr<Controller>& controller,
-                  const char* networkDeviceName);
+                  const std::string networkDeviceIPAddress);
         void start();
 
 
@@ -40,8 +40,7 @@ namespace creatures::dmx {
 
         void handlePacket(const e131_packet_t & packet);
 
-        int networkDeviceIndex = -1;
-        std::string networkDeviceName = DEFAULT_NETWORK_DEVICE_NAME;
+        std::string networkDeviceIPAddress = DEFAULT_NETWORK_DEVICE_IP_ADDRESS;
     };
 
 } // creatures::dmx

@@ -40,10 +40,10 @@ namespace creatures {
         this->useGPIO = _useGPIO;
     }
 
-    std::string Configuration::getNetworkDevice() const {
-        return this->networkDevice;
+    std::string Configuration::getNetworkDeviceIPAddress() const {
+        return this->networkDeviceIPAddress;
     }
-    void Configuration::setNetworkDevice(std::string _networkDevice) {
-        this->networkDevice = _networkDevice;
+    void Configuration::setNetworkDeviceIPAddress(std::string _networkDeviceIPAddress) {
+        this->networkDeviceIPAddress = _networkDeviceIPAddress;
     }
 }

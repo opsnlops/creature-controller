@@ -43,9 +43,9 @@ namespace creatures {
                 .nargs(1)
                 .required();
 
-        program.add_argument("-n", "--network-device")
-                .help("network device to use")
-                .default_value(DEFAULT_NETWORK_DEVICE_NAME)
+        program.add_argument("-i", "--network-ip-address")
+                .help("host IP address to bind to")
+                .default_value(DEFAULT_NETWORK_DEVICE_IP_ADDRESS)
                 .nargs(1);
 
         program.add_argument("-g", "--use-gpio")
@@ -102,11 +102,11 @@ namespace creatures {
             logger->info("set our use GPIO to {}", useGPIO);
         }
 
-        auto networkDevice = program.get<std::string>("-n");
-        logger->debug("read network device {} from command line", networkDevice);
-        if(!networkDevice.empty()) {
-            config->setNetworkDevice(networkDevice);
-            logger->debug("set our network device to {}", networkDevice);
+        auto networkDeviceIPAddress = program.get<std::string>("-i");
+        logger->debug("read network IP {} from command line", networkDeviceIPAddress);
+        if(!networkDeviceIPAddress.empty()) {
+            config->setNetworkDeviceIPAddress(networkDeviceIPAddress);
+            logger->debug("set our network IP to {}", networkDeviceIPAddress);
         }
 
 
