@@ -22,7 +22,7 @@ jobs:
           sudo apt-get install -y clang locales-all ninja-build cmake pkgconf git file libi2c-dev
 
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: 'true'
 
