@@ -19,7 +19,6 @@
 #include "pico/stdlib.h"
 
 #include "controller/controller.h"
-#include "controller/i2c_servo_module.h"
 #include "device/power_relay.h"
 #include "device/status_lights.h"
 #include "debug/remote_logging.h"

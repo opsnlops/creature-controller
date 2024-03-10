@@ -63,7 +63,6 @@ add_executable(firmware
         src/device/status_lights.c
         src/device/colors.h
         src/device/colors.c
-        src/device/pca9685.h
         src/messaging/processors/config_message.c
         src/device/power_relay.h
         src/device/power_relay.c

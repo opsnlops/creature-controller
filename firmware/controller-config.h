@@ -167,7 +167,7 @@ typedef uint64_t u64;
 
 
 // Various I2C devices
-#define SERVO_MODULE_I2C_ADDRESS                0x40
+
 
 /*
  * Servo <-> GPIO Pin Mappings
