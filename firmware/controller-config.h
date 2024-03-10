@@ -160,11 +160,14 @@ typedef uint64_t u64;
 /*
  * I2C Config
  */
-#define SERVO_MODULE_I2C_BUS                    i2c0
-#define SERVO_MODULE_I2C_FREQ                   400000
+#define SENSORS_I2C_BUS                         i2c0
+#define SENSORS_I2C_FREQ                        400000
+#define SENSORS_I2C_SDA_PIN                     20
+#define SENSORS_I2C_SCL_PIN                     21
+
+
+// Various I2C devices
 #define SERVO_MODULE_I2C_ADDRESS                0x40
-#define SERVO_MODULE_I2C_SDA_PIN                20
-#define SERVO_MODULE_I2C_SCL_PIN                21
 
 /*
  * Servo <-> GPIO Pin Mappings

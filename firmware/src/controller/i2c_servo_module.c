@@ -20,7 +20,7 @@ extern volatile bool controller_safe_to_run;
 
 
 /*
- * There's really no need to calculate out the prescaler and evrything each time. It's not going to
+ * There's really no need to calculate out the pre-scaler and everything each time. It's not going to
  * change. The value to use is 121 for 50 Hz.
  */
 
@@ -66,11 +66,11 @@ portTASK_FUNCTION(i2c_servo_module_task, pvParameters) {
 
     // Wake up the controller board
     debug("resetting the i2c servo module");
-    pca9685_reset(SERVO_MODULE_I2C_BUS);
+    pca9685_reset(SENSORS_I2C_BUS);
     //pca9685_begin(SERVO_MODULE_I2C_BUS, 0); // No pre-scale means use the internal clock
 
     // Set the prescaler
-    pca9685_set_prescale(SERVO_MODULE_I2C_BUS, PRESCALE_VALUE);
+    pca9685_set_prescale(SENSORS_I2C_BUS, PRESCALE_VALUE);
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "EndlessLoop"
@@ -80,7 +80,7 @@ portTASK_FUNCTION(i2c_servo_module_task, pvParameters) {
             for (size_t i = 0; i < sizeof(motor_map) / sizeof(motor_map[0]); ++i) {
 
                 u16 ticks = calculate_ticks_for_pulse(motor_map[i].current_microseconds);
-                pca9685_setPWM(SERVO_MODULE_I2C_BUS, motor_map[i].gpio_pin - 6, 0, ticks);
+                pca9685_setPWM(SENSORS_I2C_BUS, motor_map[i].gpio_pin - 6, 0, ticks);
 
                 //pca9685_setPWM(SERVO_MODULE_I2C_BUS, motor_map[i].gpio_pin - 6, 0, 2048);
             }
