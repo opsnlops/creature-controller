@@ -1,33 +1,34 @@
 #pragma once
 
+#include <atomic>
 #include <thread>
 
 #include "controller/Controller.h"
 #include "creature/Creature.h"
 #include "logging/Logger.h"
 #include "controller-config.h"
+#include "util/StoppableThread.h"
 
 
 #include "e131.h"
 
 namespace creatures::dmx {
 
-    class E131Client {
+    class E131Client : public StoppableThread {
 
     public:
-        E131Client(const std::shared_ptr<creatures::Logger>& logger);
-        ~E131Client();
+        explicit E131Client(const std::shared_ptr<creatures::Logger>& logger);
+        ~E131Client() override;
 
         void init(const std::shared_ptr<creatures::creature::Creature>& creature,
                   const std::shared_ptr<Controller>& controller,
-                  const std::string networkDeviceIPAddress);
-        void start();
+                  std::string networkDeviceIPAddress);
+        void start() override;
+        void run() override;
 
 
     private:
 
-        void run();
-        std::thread workerThread;
         std::shared_ptr<creatures::Logger> logger;
         std::shared_ptr<creatures::creature::Creature> creature;
         std::shared_ptr<Controller> controller;

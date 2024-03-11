@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <csignal>
 #include <thread>
+#include <vector>
 
 #include "controller-config.h"
 
@@ -18,17 +19,21 @@
 #include "logging/Logger.h"
 #include "logging/SpdlogLogger.h"
 #include "util/thread_name.h"
+#include "util/StoppableThread.h"
 #include "Version.h"
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "LoopDoesntUseConditionVariableInspection"
-bool shouldRun = true;
+
+// Default to not shutting down
+std::atomic<bool> shutdown_requested(false);
+
 
 // Signal handler to stop the event loop
 void signal_handler(int signal) {
     if (signal == SIGINT) {
         printf("stopping...\n\n");
-        shouldRun = false;
+        shutdown_requested.store(true);
     }
 }
 
@@ -75,11 +80,21 @@ int main(int argc, char **argv) {
     gpio->init();
     gpio->toggleFirmwareReset();
 
+    // Keep track of our threads
+    std::vector<std::shared_ptr<creatures::StoppableThread>> workerThreads;
+
+
     // Start up the SerialHandler
     auto outgoingQueue = std::make_shared<creatures::MessageQueue<std::string>>();
     auto incomingQueue = std::make_shared<creatures::MessageQueue<std::string>>();
     auto serialHandler = std::make_shared<creatures::SerialHandler>(logger, config->getUsbDevice(), outgoingQueue, incomingQueue);
     serialHandler->start();
+
+    // Add the SerialHandler's threads to the list of threads
+    for( const auto& thread : serialHandler->threads ) {
+        workerThreads.push_back(thread);
+    }
+
 
     // Fire up the controller
     auto controller = std::make_shared<Controller>(logger);
@@ -94,12 +109,12 @@ int main(int argc, char **argv) {
     creature->init(controller);
     creature->start();
 
-    // Create and start the servo controller
     // Create and start the e1.13 client
     logger->debug("starting the e1.13 client");
-    auto e131Client = std::make_shared<creatures::dmx::E131Client>(logger);
+    auto e131Client = std::make_unique<creatures::dmx::E131Client>(logger);
     e131Client->init(creature, controller, config->getNetworkDeviceIPAddress());
     e131Client->start();
+    workerThreads.push_back(std::move(e131Client));
 
     // Before we start sending pings, ask the controller to flush its buffer
     controller->sendFlushBufferRequest();
@@ -112,10 +127,17 @@ int main(int argc, char **argv) {
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "EndlessLoop"
-    while(shouldRun) {
+    while(!shutdown_requested.load()) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 #pragma clang diagnostic pop
+
+
+
+    // Shut down the threads
+    for (auto& thread : workerThreads) {
+        thread->shutdown();
+    }
 
     logger->info("the main thread says bye! good luck little threads! 👋🏻");
     return EXIT_SUCCESS;

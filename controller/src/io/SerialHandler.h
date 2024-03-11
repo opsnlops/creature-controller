@@ -6,7 +6,9 @@
 
 #include "controller-config.h"
 #include "logging/Logger.h"
+#include "io/SerialReader.h"
 #include "util/MessageQueue.h"
+#include "util/StoppableThread.h"
 
 namespace creatures {
 
@@ -29,10 +31,14 @@ namespace creatures {
         ~SerialHandler() = default;
 
         void start();
-        void stop();
 
         std::shared_ptr<MessageQueue<std::string>> getOutgoingQueue();
         std::shared_ptr<MessageQueue<std::string>> getIncomingQueue();
+
+        /*
+         * This is public so that the threads can be registered with the main loop
+         */
+        std::vector<std::shared_ptr<creatures::StoppableThread>> threads;
 
     private:
         std::string deviceNode;
@@ -42,18 +48,9 @@ namespace creatures {
         std::shared_ptr<MessageQueue<std::string>> outgoingQueue;
         std::shared_ptr<MessageQueue<std::string>> incomingQueue;
 
-        // Our threads
-        std::thread readerThread;
-        std::thread writerThread;
-
         static bool isDeviceNodeAccessible(std::shared_ptr<Logger> logger, const std::string& deviceNode);
 
         bool setupSerialPort();
-
-        // Our threads
-        void reader();
-
-        [[noreturn]] void writer();
 
         std::shared_ptr<Logger> logger;
 

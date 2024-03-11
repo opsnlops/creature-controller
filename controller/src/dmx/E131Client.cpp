@@ -17,26 +17,20 @@
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "LoopDoesntUseConditionVariableInspection"
-extern bool shouldRun;
 
 namespace creatures::dmx {
 
-
     E131Client::E131Client(const std::shared_ptr<creatures::Logger>& logger) : logger(logger) {
-
         this->logger->info("e1.31 client created");
-
     }
 
     E131Client::~E131Client() {
-        if(workerThread.joinable()) {
-            workerThread.join(); // Clean up!
-        }
+        this->logger->info("e1.31 client destroyed");
     }
 
     void E131Client::init(const std::shared_ptr<creatures::creature::Creature>& _creature,
                           const std::shared_ptr<Controller>& _controller,
-                          const std::string _networkDeviceIPAddress) {
+                          std::string _networkDeviceIPAddress) {
         this->creature = _creature;
         this->controller = _controller;
         this->networkDeviceIPAddress = _networkDeviceIPAddress;
@@ -67,12 +61,8 @@ namespace creatures::dmx {
 
         this->logger->info("✨e1.31 client started with {} inputs ✨", this->inputMap.size());
 
-        workerThread = std::thread([this] {
-            this->run();
-        });
-
-        workerThread.detach();
-
+        // Start the worker
+        creatures::StoppableThread::start();
     }
 
     void E131Client::run() {
@@ -110,7 +100,7 @@ namespace creatures::dmx {
 
         // loop to receive E1.31 packets
         this->logger->info("🕰️waiting for E1.31 packets on network device {}!", this->networkDeviceIPAddress);
-        while (shouldRun) {
+        while (!stop_requested.load()) {
 
             if (e131_recv(sockfd, &packet) < 0) {
                 std::string errorMessage = "Unable to receive an e1.31 packet";
@@ -135,7 +125,6 @@ namespace creatures::dmx {
 
         logger->info("e1.31 client shutting down");
         close(sockfd);
-
     }
 
     void E131Client::handlePacket(const e131_packet_t &packet) {

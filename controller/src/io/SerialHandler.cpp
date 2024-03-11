@@ -11,6 +11,8 @@
 
 #include "util/thread_name.h"
 #include "SerialHandler.h"
+#include "SerialReader.h"
+#include "SerialWriter.h"
 #include "SerialException.h"
 
 namespace creatures {
@@ -25,9 +27,7 @@ namespace creatures {
     SerialHandler::SerialHandler(const std::shared_ptr<Logger>& logger,
                                  std::string deviceNode,
                                  const std::shared_ptr<MessageQueue<std::string>> &outgoingQueue,
-                                 const std::shared_ptr<MessageQueue<std::string>> &incomingQueue) {
-
-        this->logger = logger;
+                                 const std::shared_ptr<MessageQueue<std::string>> &incomingQueue) : logger(logger) {
 
         this->logger->info("creating a new SerialHandler for device {}", deviceNode);
 
@@ -132,84 +132,18 @@ namespace creatures {
         }
         this->logger->debug("setupSerialPort done");
 
-        this->writerThread = std::thread(&SerialHandler::writer, this);
-        this->readerThread = std::thread(&SerialHandler::reader, this);
+        std::shared_ptr<creatures::StoppableThread> reader = std::make_shared<creatures::io::SerialReader>(this->logger, this->deviceNode, this->fileDescriptor, this->incomingQueue);
+        reader->start();
 
-        this->writerThread.detach();
-        this->readerThread.detach();
+        std::shared_ptr<creatures::StoppableThread> writer = std::make_shared<creatures::io::SerialWriter>(this->logger, this->deviceNode, this->fileDescriptor, this->outgoingQueue);
+        writer->start();
+
+        // Store the workers
+        this->threads.push_back(reader);
+        this->threads.push_back(writer);
 
         this->logger->debug("done starting SerialHandler for device {}", deviceNode);
-    }
 
-    [[noreturn]] void SerialHandler::writer() {
-        setThreadName("SerialHandler::writer");
-
-        this->logger->info("hello from the writer thread");
-
-        std::string outgoingMessage;
-        for (EVER) {
-            outgoingMessage = outgoingQueue->pop();
-            this->logger->trace("message to write to {}: {}", deviceNode, outgoingMessage);
-
-            // Append a newline character to the message
-            outgoingMessage += '\n';
-
-            ssize_t bytesWritten = write(this->fileDescriptor, outgoingMessage.c_str(), outgoingMessage.length());
-
-            if (bytesWritten < 0) {
-                // Handle write error
-                this->logger->error("Error writing to {}: {}", deviceNode, strerror(errno));
-                // Consider adding error handling like retry mechanism or breaking the loop
-            } else {
-                this->logger->trace("Written {} bytes to {}", bytesWritten, deviceNode);
-            }
-        }
-    }
-
-    void SerialHandler::reader() {
-        this->logger->info("hello from the reader thread 🔍");
-
-        setThreadName("SerialHandler::reader");
-
-        struct pollfd fds[1];
-        int timeout_msecs = 21000; // 21 seconds in milliseconds
-
-        fds[0].fd = this->fileDescriptor;
-        fds[0].events = POLLIN;
-
-        std::string tempBuffer; // Temporary buffer to store incomplete messages
-
-        for (EVER) {
-            int ret = poll(fds, 1, timeout_msecs);
-
-            if (ret < 0) {
-                this->logger->error("Error on poll: {}", strerror(errno));
-                break;
-            } else if (ret == 0) {
-                this->logger->debug("Poll timeout. No data received.");
-                continue;
-            }
-
-            if (fds[0].revents & POLLIN) {
-                char readBuf[256];
-                memset(&readBuf, '\0', sizeof(readBuf));
-
-                int numBytes = read(this->fileDescriptor, &readBuf, sizeof(readBuf) - 1); // Leave space for null terminator
-                if (numBytes < 0) {
-                    this->logger->error("Error reading: {}", strerror(errno));
-                    break;
-                } else if (numBytes > 0) {
-                    tempBuffer.append(readBuf, numBytes); // Append new data to tempBuffer
-                    size_t newlinePos;
-                    while ((newlinePos = tempBuffer.find('\n')) != std::string::npos) {
-                        std::string message = tempBuffer.substr(0, newlinePos);
-                        this->logger->trace("adding message '{}' to the incoming queue", message);
-                        this->incomingQueue->push(message); // Push the message to the queue
-                        tempBuffer.erase(0, newlinePos + 1); // Remove the processed message from tempBuffer
-                    }
-                }
-            }
-        }
     }
 
 
