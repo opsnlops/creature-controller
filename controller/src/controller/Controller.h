@@ -17,6 +17,7 @@
 #include "logging/Logger.h"
 #include "io/SerialHandler.h"
 #include "util/MessageQueue.h"
+#include "util/StoppableThread.h"
 
 #if USE_STEPPERS
 #include "device/Stepper.h"
@@ -29,14 +30,14 @@ namespace creatures::creature {
 }
 
 
-class Controller {
+class Controller : public creatures::StoppableThread {
 
 public:
-    explicit Controller(std::shared_ptr<creatures::Logger> logger);
+    explicit Controller(std::shared_ptr<creatures::Logger> logger,
+                        std::shared_ptr<creatures::creature::Creature> creature,
+                        std::shared_ptr<creatures::SerialHandler> serialHandler);
 
-
-    void init(std::shared_ptr<creatures::creature::Creature> creature, std::shared_ptr<creatures::SerialHandler> serialHandler);
-    void start();
+    void start() override;
 
 
     /**
@@ -115,11 +116,16 @@ public:
     void requestStepperPosition(u8 stepperIndexNumber, u32 requestedPosition);
 #endif
 
+protected:
+    void run() override;
+
 private:
 
     std::shared_ptr<creatures::creature::Creature> creature;
     std::shared_ptr<creatures::Logger> logger;
     std::shared_ptr<creatures::SerialHandler> serialHandler;
+
+    std::atomic<u64> number_of_frames = 0UL;
 
     /**
      * Our queue of inputs from the I/O handlers. A reference to this
@@ -159,12 +165,7 @@ private:
     // How many channels we're expecting from the I/O handler
     u16 numberOfChannels;
 
-    /**
-     * Our worker thread!
-     */
-    void worker();
-    std::thread workerThread;
-    std::atomic<bool> workerRunning = false;
-    std::atomic<u64> number_of_frames = 0UL;
+
+
 
 };

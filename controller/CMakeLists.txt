@@ -161,6 +161,7 @@ add_library(creature_lib
         src/io/SerialReader.cpp
         src/io/SerialWriter.h
         src/io/SerialWriter.cpp
+        src/util/CountingThread.h
 )
 
 target_include_directories(creature_lib PUBLIC
@@ -222,6 +223,7 @@ add_executable(creature-controller-test
         tests/dmx/E131Server_test.cpp
         tests/mocks/creature/MockCreature.h
         tests/creature/Input_test.cpp
+        tests/util/StoppableThread_test.cpp
 )
 
 target_link_libraries(creature-controller-test

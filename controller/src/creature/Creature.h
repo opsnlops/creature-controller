@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <climits>
 #include <memory>
 #include <unistd.h>
@@ -73,12 +74,11 @@ namespace creatures::creature {
         void start();
 
         /**
-         * Returns a task to be notified when there is a new frame to process
-         *
-         * @return a `TaskHandle_t` pointing to the task
+         * Request that the creature stop running
          */
-        // TODO This is a thread now
-        std::thread getWorkerTaskHandle();
+         void shutdown();
+
+
 
         /**
          * Converts a value that input handlers speaks (0-255) to one the servo controller
@@ -196,6 +196,7 @@ namespace creatures::creature {
 
 
     protected:
+        std::atomic<bool> stop_requested = false;
         std::string name;
         std::string version;
         std::string description;

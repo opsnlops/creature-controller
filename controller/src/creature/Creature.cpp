@@ -41,6 +41,11 @@ namespace creatures::creature {
 
     }
 
+    void Creature::shutdown() {
+        logger->info("asking the creature worker thread to stop");
+        stop_requested.store(true);
+    }
+
     u16 Creature::convertInputValueToServoValue(u8 inputValue) {
 
         // TODO: Play with the results if we do bit shifts instead (8 -> 10)
