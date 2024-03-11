@@ -3,6 +3,7 @@
 
 #include <string>
 #include <thread>
+#include <vector>
 
 #include "controller-config.h"
 #include "logging/Logger.h"
