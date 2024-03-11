@@ -156,6 +156,11 @@ add_library(creature_lib
         src/util/thread_name.h
         src/util/string_utils.cpp
         src/util/string_utils.h
+        src/util/StoppableThread.h
+        src/io/SerialReader.h
+        src/io/SerialReader.cpp
+        src/io/SerialWriter.h
+        src/io/SerialWriter.cpp
 )
 
 target_include_directories(creature_lib PUBLIC
