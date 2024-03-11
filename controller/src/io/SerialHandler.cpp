@@ -6,6 +6,7 @@
 #include <fcntl.h>    // File control definitions
 #include <termios.h>  // POSIX terminal control definitions
 #include <poll.h>
+#include <vector>
 
 #include "controller-config.h"
 
