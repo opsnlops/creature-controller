@@ -97,9 +97,9 @@ int main(int argc, char **argv) {
 
 
     // Fire up the controller
-    auto controller = std::make_shared<Controller>(logger);
-    controller->init(creature, serialHandler);
+    auto controller = std::make_shared<Controller>(logger, creature, serialHandler);
     controller->start();
+    workerThreads.push_back(controller);
 
     // Fire up the MessageProcessor
     auto messageProcessor = std::make_shared<creatures::MessageProcessor>(logger, serialHandler, controller);
@@ -120,21 +120,22 @@ int main(int argc, char **argv) {
     controller->sendFlushBufferRequest();
 
     // Fire up the ping task
-    auto pingTask = std::make_shared<creatures::tasks::PingTask>(logger);
-    pingTask->init(serialHandler);
+    auto pingTask = std::make_unique<creatures::tasks::PingTask>(logger, serialHandler);
     pingTask->start();
+    workerThreads.push_back(std::move(pingTask));
 
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "EndlessLoop"
     while(!shutdown_requested.load()) {
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+        std::this_thread::sleep_for(std::chrono::milliseconds (500));
     }
 #pragma clang diagnostic pop
 
+    // Stop the creature first
+    creature->shutdown();
 
-
-    // Shut down the threads
+    // Shut down the worker threads
     for (auto& thread : workerThreads) {
         thread->shutdown();
     }

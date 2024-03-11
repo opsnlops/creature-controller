@@ -82,6 +82,6 @@ private:
     u16 headOffsetMax;
 
     // Our worker thread
-    [[noreturn]] void worker() override;
+    void worker() override;
 
 };

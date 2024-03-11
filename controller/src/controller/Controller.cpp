@@ -23,24 +23,22 @@
 u64 number_of_moves = 0UL;
 
 
-Controller::Controller(std::shared_ptr<creatures::Logger> logger): logger(logger) {
+Controller::Controller(std::shared_ptr<creatures::Logger> logger,
+                       std::shared_ptr<creatures::creature::Creature> creature,
+                       std::shared_ptr<creatures::SerialHandler> serialHandler):
+                       logger(logger), creature(creature), serialHandler(serialHandler){
 
     logger->debug("setting up the controller");
 
     online = true;
     receivedFirstFrame = false;
+    this->numberOfChannels = DMX_NUMBER_OF_CHANNELS;
 
     // Create our input queue
     inputQueue = std::make_shared<creatures::MessageQueue<std::unordered_map<std::string, creatures::Input>>>();
     logger->debug("created the input queue");
 
-}
 
-void Controller::init(std::shared_ptr<creatures::creature::Creature> creature, std::shared_ptr<creatures::SerialHandler> serialHandler) {
-
-    this->creature = creature;
-    this->serialHandler = serialHandler;
-    this->numberOfChannels = DMX_NUMBER_OF_CHANNELS;
 
     logger->info("Controller for {} initialized", creature->getName());
 
@@ -55,10 +53,7 @@ void Controller::sendCommand(const std::shared_ptr<creatures::ICommand>& command
 
 void Controller::start() {
     logger->info("starting controller!");
-
-    // Start the worker
-    workerThread = std::thread(&Controller::worker, this);
-    workerThread.detach();
+    creatures::StoppableThread::start();
 }
 
 
@@ -158,19 +153,17 @@ void Controller::firmwareReadyToOperate() {
 
 
 
-void Controller::worker() {
+void Controller::run() {
 
     using namespace std::chrono;
 
     logger->info("controller worker now running");
 
-    // Mark ourselves as running
-    workerRunning = true;
 
     auto target_delta = microseconds( 1000000 / creature->getServoUpdateFrequencyHz());
     auto next_target_time = high_resolution_clock::now() + target_delta;
 
-    while (workerRunning) {
+    while (!stop_requested.load()) {
 
         number_of_frames = number_of_frames + 1;
 

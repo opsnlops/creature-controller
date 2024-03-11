@@ -61,14 +61,13 @@ head_position_t Parrot::calculateHeadPosition(uint16_t height, int32_t offset) {
 
 }
 
-[[noreturn]] void Parrot::worker() {
+void Parrot::worker() {
 
     setThreadName("Parrot::worker");
 
      logger->info("Parrot reporting for duty!  📣🦜");
 
-
-     for(EVER) {
+     while(!stop_requested.load()) {
 
          auto incoming = inputQueue->pop();
 
@@ -96,103 +95,6 @@ head_position_t Parrot::calculateHeadPosition(uint16_t height, int32_t offset) {
 
      }
 
+    logger->info("Parrot worker thread stopped");
+
  }
-
-/**
- * This task is the main worker task for the parrot itself!
- *
- * It's an event loop. It pauses and waits for a signal from the controller
- * that a new frame has been received, and then does whatever it needs to do
- * to make magic.
- *
- * @param pvParameters
- */
- // TODO: This is an imporant thing that should be a Thread
- /*
-portTASK_FUNCTION(creature_worker_task, pvParameters) {
-
-auto info = (ParrotInfo *) pvParameters;
-Controller* controller = info->controller;
-Parrot *parrot = info->parrot;
-
-// And give this small amount of memory back! :)
-vPortFree(info);
-
-uint32_t ulNotifiedValue;
-uint8_t *currentFrame;
-uint8_t numberOfJoints = parrot->getNumberOfJoints();
-CreatureConfig* runningConfig;
-
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "EndlessLoop"
-
-for (EVER) {
-
-// Wait for the controller to signal to us that a new frame has been
-// received off the wire
-xTaskNotifyWait(0x00, ULONG_MAX, &ulNotifiedValue, portMAX_DELAY);
-
-// Fetch the current frame and configuration
-currentFrame = controller->getCurrentFrame();
-runningConfig = parrot->getRunningConfig();
-
-#if DEBUG_CREATURE_POSITIONING
-
-debug("Raw: {}", currentFrame[5]);
-
-#endif
-
-
-
-uint8_t height = currentFrame[INPUT_HEAD_HEIGHT];
-uint8_t tilt = currentFrame[INPUT_HEAD_TILT];
-
-uint16_t headHeight = parrot->convertToHeadHeight(Parrot::convertInputValueToServoValue(height));
-int32_t headTilt = parrot->configToHeadTilt(Parrot::convertInputValueToServoValue(tilt));
-
-verbose("head height: {}, head tilt: {}", headHeight, headTilt);
-
-head_position_t headPosition = parrot->calculateHeadPosition(headHeight, headTilt);
-
-parrot->joints[JOINT_NECK_LEFT] = headPosition.left;
-parrot->joints[JOINT_NECK_RIGHT] = headPosition.right;
-parrot->joints[JOINT_NECK_ROTATE] = Parrot::convertInputValueToServoValue(currentFrame[INPUT_NECK_ROTATE]);
-parrot->joints[JOINT_BODY_LEAN] = Parrot::convertInputValueToServoValue(currentFrame[INPUT_BODY_LEAN]);
-parrot->joints[JOINT_BEAK] = Parrot::convertInputValueToServoValue(currentFrame[INPUT_BEAK]);
-parrot->joints[JOINT_CHEST] = Parrot::convertInputValueToServoValue(currentFrame[INPUT_CHEST]);
-
-/ *
-parrot->joints[JOINT_NECK_ROTATE] = Parrot::convertRange(currentFrame[INPUT_NECK_ROTATE],
-                                                         0,
-                                                         UCHAR_MAX,
-                                                       0,
-                                                       runningConfig->getStepperConfig(STEPPER_NECK_ROTATE)->maxSteps);
-
-parrot->joints[JOINT_BODY_LEAN] = Parrot::convertRange(currentFrame[INPUT_BODY_LEAN],
-                                                         0,
-                                                         UCHAR_MAX,
-                                                         0,
-                                                         runningConfig->getStepperConfig(STEPPER_BODY_LEAN)->maxSteps);
-
-parrot->joints[JOINT_STAND_ROTATE] = Parrot::convertRange(currentFrame[INPUT_STAND_ROTATE],
-                                                         0,
-                                                         UCHAR_MAX,
-                                                         0,
-                                                         runningConfig->getStepperConfig(STEPPER_STAND_ROTATE)->maxSteps);
-* /
-
-// Request these positions from the controller
-controller->requestServoPosition(SERVO_NECK_LEFT, parrot->joints[JOINT_NECK_LEFT]);
-controller->requestServoPosition(SERVO_NECK_RIGHT, parrot->joints[JOINT_NECK_RIGHT]);
-controller->requestServoPosition(SERVO_NECK_ROTATE, parrot->joints[JOINT_NECK_ROTATE]);
-controller->requestServoPosition(SERVO_BODY_LEAN, parrot->joints[JOINT_BODY_LEAN]);
-controller->requestServoPosition(SERVO_BEAK, parrot->joints[JOINT_BEAK]);
-controller->requestServoPosition(SERVO_CHEST, parrot->joints[JOINT_CHEST]);
-
-//controller->requestStepperPosition(STEPPER_NECK_ROTATE, parrot->joints[JOINT_NECK_ROTATE]);
-//controller->requestStepperPosition(STEPPER_BODY_LEAN, parrot->joints[JOINT_BODY_LEAN]);
-//controller->requestStepperPosition(STEPPER_STAND_ROTATE, parrot->joints[JOINT_STAND_ROTATE]);
-}
-#pragma clang diagnostic pop
-}
-*/
