@@ -49,7 +49,7 @@ namespace creatures {
         std::shared_ptr<MessageQueue<std::string>> outgoingQueue;
         std::shared_ptr<MessageQueue<std::string>> incomingQueue;
 
-        static bool isDeviceNodeAccessible(std::shared_ptr<Logger> logger, const std::string& deviceNode);
+        static bool isDeviceNodeAccessible(const std::shared_ptr<Logger>& logger, const std::string& deviceNode);
 
         bool setupSerialPort();
 

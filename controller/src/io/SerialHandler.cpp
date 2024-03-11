@@ -1,20 +1,17 @@
 
 
 #include <filesystem>
-#include <iostream>
-#include <unistd.h>   // UNIX standard function definitions
-#include <fcntl.h>    // File control definitions
-#include <termios.h>  // POSIX terminal control definitions
-#include <poll.h>
-#include <vector>
+
+#include <fcntl.h>
+#include <termios.h>
+
 
 #include "controller-config.h"
 
-#include "util/thread_name.h"
-#include "SerialHandler.h"
-#include "SerialReader.h"
-#include "SerialWriter.h"
-#include "SerialException.h"
+#include "io/SerialHandler.h"
+#include "io/SerialReader.h"
+#include "io/SerialWriter.h"
+#include "io/SerialException.h"
 
 namespace creatures {
 
@@ -76,7 +73,7 @@ namespace creatures {
             std::exit(1);
 
         } else {
-            struct termios tty;
+            struct termios tty{};
             if (tcgetattr(this->fileDescriptor, &tty) != 0) {
 
                 // Handle error in tcgetattr
@@ -155,7 +152,7 @@ namespace creatures {
      * @return true if all is well
      * @throws SerialException if it's not
      */
-    bool SerialHandler::isDeviceNodeAccessible(std::shared_ptr<Logger> _logger, const std::string &node) {
+    bool SerialHandler::isDeviceNodeAccessible(const std::shared_ptr<Logger>& _logger, const std::string &node) {
         namespace fs = std::filesystem;
 
         // Check if the file exists
