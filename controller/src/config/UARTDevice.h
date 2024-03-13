@@ -3,10 +3,10 @@
 
 #include <string>
 
-#include "controller-config.h"
 #include "logging/Logger.h"
+#include "controller-config.h"
 
-namespace creatures {
+namespace creatures :: config {
 
     /**
      * UART Device Configuration
@@ -23,7 +23,7 @@ namespace creatures {
 
         UARTDevice(const UARTDevice &other);
 
-        friend class CommandLine;
+        friend class ConfigurationBuilder;
 
         enum module_name {
             A,
@@ -31,12 +31,16 @@ namespace creatures {
             C,
             D,
             E,
-            F
+            F,
+            invalid_module
         };
 
         std::string getDeviceNode() const;
         module_name getModule() const;
         bool getEnabled() const;
+
+        // Convert a string into a module name
+        static module_name stringToModuleName(const std::string &typeStr);
 
     protected:
         void setDeviceNode(std::string _deviceNode);
@@ -50,4 +54,5 @@ namespace creatures {
 
         std::shared_ptr <Logger> logger;
     };
-}
+
+} // creatures :: config

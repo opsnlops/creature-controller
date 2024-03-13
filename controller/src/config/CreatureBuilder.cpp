@@ -44,7 +44,7 @@ namespace creatures :: config {
 
     std::shared_ptr<creatures::creature::Creature> CreatureBuilder::build() {
 
-        logger->info("about to try to parse the config file");
+        logger->info("about to try to parse the creature config file");
 
         std::string content((std::istreambuf_iterator<char>(*configFile)), std::istreambuf_iterator<char>());
         logger->debug("JSON file contents: {}", content);

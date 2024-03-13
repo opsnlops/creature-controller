@@ -78,7 +78,8 @@ using u64 = std::uint64_t;
 #define USE_STEPPERS                1
 
 
-#define DEFAULT_NETWORK_DEVICE_IP_ADDRESS "10.1.1.1"
+#define DEFAULT_NETWORK_DEVICE_IP_ADDRESS   "10.1.1.1"
+#define DEFAULT_UNIVERSE                    3000
 
 /**
  * These allow more than one creature to be controlled on the same

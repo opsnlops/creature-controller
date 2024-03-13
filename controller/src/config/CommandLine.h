@@ -13,7 +13,7 @@ namespace creatures {
 
     public:
         explicit CommandLine(std::shared_ptr<Logger> logger);
-        std::shared_ptr<Configuration> parseCommandLine(int argc, char **argv);
+        std::shared_ptr<config::Configuration> parseCommandLine(int argc, char **argv);
 
         void listNetworkDevices();
         std::string getVersion();

@@ -3,7 +3,7 @@
 
 #include "config/UARTDevice.h"
 
-namespace creatures {
+namespace creatures :: config {
 
     UARTDevice::UARTDevice(std::shared_ptr<Logger> logger) : logger(logger) {
         logger->debug("creating a new UARTDevice");
@@ -18,6 +18,16 @@ namespace creatures {
         this->enabled = other.enabled;
         this->deviceNode = other.deviceNode;
         this->module = other.module;
+    }
+
+    UARTDevice::module_name UARTDevice::stringToModuleName(const std::string &typeStr) {
+        if (typeStr == "A") return A;
+        if (typeStr == "B") return B;
+        if (typeStr == "C") return C;
+        if (typeStr == "D") return D;
+        if (typeStr == "E") return E;
+        if (typeStr == "F") return F;
+        return invalid_module;
     }
 
     std::string UARTDevice::getDeviceNode() const {
@@ -44,4 +54,4 @@ namespace creatures {
         this->enabled = _enabled;
     }
 
-}
+} // creatures :: config

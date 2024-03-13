@@ -12,6 +12,7 @@
 #include <argparse/argparse.hpp>
 
 #include "Configuration.h"
+#include "ConfigurationBuilder.h"
 #include "CommandLine.h"
 #include "Version.h"
 #include "logging/Logger.h"
@@ -27,31 +28,19 @@ namespace creatures {
     CommandLine::CommandLine(std::shared_ptr<Logger> logger) : logger(logger) {}
 
 
-    std::shared_ptr<Configuration> CommandLine::parseCommandLine(int argc, char **argv) {
-
-        auto config = std::make_shared<Configuration>(logger);
+    std::shared_ptr<config::Configuration> CommandLine::parseCommandLine(int argc, char **argv) {
 
         argparse::ArgumentParser program("creature-controller", getVersion());
 
-        program.add_argument("-c", "--creature-config")
+        program.add_argument("--creature-config")
                 .help("JSON file for this creature")
-                .required();
-
-        program.add_argument("-u", "--usb-device")
-                .help("USB device for this creature")
-                .default_value("/dev/tty.usbmodem101")
                 .nargs(1)
                 .required();
 
-        program.add_argument("-i", "--network-ip-address")
-                .help("host IP address to bind to")
-                .default_value(DEFAULT_NETWORK_DEVICE_IP_ADDRESS)
-                .nargs(1);
-
-        program.add_argument("-g", "--use-gpio")
-                .help("Use the GPIO pins? (RPI only!)")
-                .default_value(false)
-                .implicit_value(true);
+        program.add_argument("--config")
+                .help("Our configuration file")
+                .nargs(1)
+                .required();
 
         program.add_argument("--list-network-devices")
                 .help("list available network devices and exit")
@@ -81,33 +70,15 @@ namespace creatures {
 
 
         // Parse out the creature config file
-        auto creatureFile = program.get<std::string>("-c");
+        auto creatureFile = program.get<std::string>("--creature-config");
         logger->debug("read creature file {} from command line", creatureFile);
         if(!creatureFile.empty()) {
-            config->setConfigFileName(creatureFile);
             logger->info("set our creature config file to {}", creatureFile);
         }
 
-        auto usbDevice = program.get<std::string>("-u");
-        logger->debug("read usb device {} from command line", usbDevice);
-        if(!usbDevice.empty()) {
-            config->setUsbDevice(usbDevice);
-            logger->info("set our usb device to {}", usbDevice);
-        }
 
-        auto useGPIO = program.get<bool>("-g");
-        logger->debug("read use GPIO {} from command line", useGPIO);
-        if(useGPIO) {
-            config->setUseGPIO(useGPIO);
-            logger->info("set our use GPIO to {}", useGPIO);
-        }
-
-        auto networkDeviceIPAddress = program.get<std::string>("-i");
-        logger->debug("read network IP {} from command line", networkDeviceIPAddress);
-        if(!networkDeviceIPAddress.empty()) {
-            config->setNetworkDeviceIPAddress(networkDeviceIPAddress);
-            logger->debug("set our network IP to {}", networkDeviceIPAddress);
-        }
+        // Make the builder
+        auto creatureBuilder = std::make_unique<creatures::config::CreatureBuilder>(logger);
 
 
         return config;
