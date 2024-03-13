@@ -25,7 +25,7 @@ namespace creatures :: config {
     class CreatureBuilder : public BaseBuilder {
 
     public:
-        CreatureBuilder(std::shared_ptr<Logger> logger, std::unique_ptr<std::istream> configFile);
+        CreatureBuilder(std::shared_ptr<Logger> logger, std::string configFile);
         ~CreatureBuilder() = default;
 
         /**

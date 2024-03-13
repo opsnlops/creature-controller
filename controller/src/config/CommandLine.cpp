@@ -11,7 +11,7 @@
 
 #include <argparse/argparse.hpp>
 
-#include "Configuration.h"
+
 #include "ConfigurationBuilder.h"
 #include "CommandLine.h"
 #include "Version.h"
@@ -24,6 +24,8 @@
 
 
 namespace creatures {
+
+    class Configuration; // Forward declaration
 
     CommandLine::CommandLine(std::shared_ptr<Logger> logger) : logger(logger) {}
 
@@ -69,17 +71,26 @@ namespace creatures {
         }
 
 
+        // Parse out the  config file
+        auto configFile = program.get<std::string>("--config");
+        logger->debug("config file {} from command line", configFile);
+        if(!configFile.empty()) {
+            logger->info("set our config file to {}", configFile);
+        }
+
         // Parse out the creature config file
-        auto creatureFile = program.get<std::string>("--creature-config");
-        logger->debug("read creature file {} from command line", creatureFile);
-        if(!creatureFile.empty()) {
-            logger->info("set our creature config file to {}", creatureFile);
+        auto creatureConfigFile = program.get<std::string>("--creature-config");
+        logger->debug("read creature file {} from command line", creatureConfigFile);
+        if(!creatureConfigFile.empty()) {
+            logger->info("set our creature config file to {}", creatureConfigFile);
         }
 
 
         // Make the builder
-        auto creatureBuilder = std::make_unique<creatures::config::CreatureBuilder>(logger);
+        auto configBuilder = std::make_unique<creatures::config::ConfigurationBuilder>(logger, configFile);
+        auto config = configBuilder->build();
 
+        config->setCreatureConfigFile(creatureConfigFile);
 
         return config;
     }

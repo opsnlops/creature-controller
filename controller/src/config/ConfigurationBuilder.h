@@ -6,8 +6,8 @@
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
+#include "config/CommandLine.h"
 #include "config/BaseBuilder.h"
-#include "config/Configuration.h"
 #include "config/UARTDevice.h"
 #include "logging/Logger.h"
 
@@ -17,21 +17,26 @@ using namespace creatures::config;
 
 namespace creatures :: config {
 
+    class Configuration; // Forward declaration
+
     /**
      * This file loads in our configuration from a JSON file and returns a `Configuration` object
      */
     class ConfigurationBuilder : public BaseBuilder {
 
-    public:
-        ConfigurationBuilder(std::shared_ptr<Logger> logger, std::unique_ptr<std::istream> configFile);
-        ~ConfigurationBuilder() = default;
+        friend class Configuration;
+        friend class CommandLine;
 
+    public:
         /**
          * Parses out the creature configuration from the JSON file
          *
          * @return a shared_ptr to our prize
          */
         std::shared_ptr<Configuration> build();
+
+        ConfigurationBuilder(std::shared_ptr<Logger> logger, std::string configFileName);
+        ~ConfigurationBuilder() = default;
 
     private:
         std::vector<std::string> requiredTopLevelFields;

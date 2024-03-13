@@ -11,6 +11,8 @@ namespace creatures {
 
     class CommandLine {
 
+        class Configuration; // Forward declaration
+
     public:
         explicit CommandLine(std::shared_ptr<Logger> logger);
         std::shared_ptr<config::Configuration> parseCommandLine(int argc, char **argv);

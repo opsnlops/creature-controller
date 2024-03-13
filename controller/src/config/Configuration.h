@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 
+#include "config/CommandLine.h"
 #include "config/ConfigurationBuilder.h"
 #include "config/UARTDevice.h"
 #include "creature/Creature.h"
@@ -22,19 +23,22 @@ namespace creatures::config {
         Configuration(std::shared_ptr<Logger> logger);
 
         friend class ConfigurationBuilder;
+        friend class CommandLine;
+        friend class Configuration;
 
         bool getUseGPIO() const;
         std::string getNetworkDeviceIPAddress() const;
         u16 getUniverse() const;
         std::vector<UARTDevice> getUARTDevices() const;
         std::shared_ptr<creatures::creature::Creature> getCreature() const;
+        std::string getCreatureConfigFile() const;
 
-    protected:
         void setUseGPIO(bool _useGPIO);
         void setNetworkDeviceIPAddress(std::string _networkDeviceIPAddress);
         void setUniverse(u16 _universe);
         void addUARTDevice(UARTDevice _uartDevice);
         void setCreature(std::shared_ptr<creatures::creature::Creature> _creature);
+        void setCreatureConfigFile(std::string _creatureConfigFile);
 
     private:
 
@@ -53,6 +57,8 @@ namespace creatures::config {
         std::shared_ptr<Logger> logger;
 
         std::shared_ptr<creatures::creature::Creature> creature;
+
+        std::string creatureConfigFile;
 
     };
 

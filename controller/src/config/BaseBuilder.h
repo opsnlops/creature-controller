@@ -18,13 +18,14 @@ namespace creatures :: config {
     class BaseBuilder {
 
     public:
-        BaseBuilder(std::shared_ptr<Logger> logger, std::unique_ptr<std::istream> configFile);
+        BaseBuilder(std::shared_ptr<Logger> logger, std::string fileName);
+        ~BaseBuilder() = default;
 
         // Convert a file to an istream
-        static std::unique_ptr<std::istream> fileToStream(std::shared_ptr<Logger> logger, std::string filename);
+        static std::unique_ptr<std::istream> fileToStream(std::shared_ptr<Logger> logger, std::string fileName);
 
     protected:
-        std::unique_ptr<std::istream> configFile;
+        std::string fileName;
 
         // Make sure the file is both readable and accessible
         static bool isFileAccessible(std::shared_ptr<Logger> logger, const std::string& filename);

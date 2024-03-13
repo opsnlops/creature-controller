@@ -16,8 +16,8 @@ using json = nlohmann::json;
 namespace creatures :: config {
 
     ConfigurationBuilder::ConfigurationBuilder(std::shared_ptr<Logger> logger,
-                                     std::unique_ptr<std::istream> configFile) :
-                                     BaseBuilder(logger, std::move(configFile)) {
+                                     std::string configFileName) :
+                                     BaseBuilder(logger, std::move(configFileName)) {
 
         // Define the required config file fields
         requiredTopLevelFields = {
@@ -34,9 +34,17 @@ namespace creatures :: config {
 
         logger->info("about to try to parse the main config file");
 
+        // Make sure the file is accessible
+        if (!isFileAccessible(logger, fileName)) {
+            throw BuilderException(fmt::format("File {} is not accessible", fileName));
+        }
+
+        // Okay we have a valid-ish config! Let's start building the Configuration object
+        std::unique_ptr<std::istream> configFile = fileToStream(logger, fileName);
+
         std::string content((std::istreambuf_iterator<char>(*configFile)), std::istreambuf_iterator<char>());
         logger->debug("JSON file contents: {}", content);
-        configFile->seekg(0);
+        configFile->seekg(0); // Rewind to the start
 
         json j;
         try {

@@ -89,8 +89,12 @@ include_directories(
 add_library(creature_lib
         # Configuration Sources
         src/config/CommandLine.cpp
+        src/config/CommandLine.h
         src/config/Configuration.cpp
+        src/config/Configuration.h
         src/config/CreatureBuilder.cpp
+        src/config/CreatureBuilder.h
+
 
         # Controller Sources
         src/controller/Controller.cpp
