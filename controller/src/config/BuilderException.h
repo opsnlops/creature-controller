@@ -16,4 +16,4 @@ namespace creatures {
         }
     };
 
-} // creatures
+} // creatures :: config

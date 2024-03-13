@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 
-
+#include "config/BuilderException.h"
 #include "config/CreatureBuilder.h"
 #include "config/CreatureBuilderException.h"
 #include "mocks/logging/MockLogger.h"
@@ -98,7 +98,7 @@ TEST(CreatureBuilder, BuildFails_EmptyJson) {
     EXPECT_THROW({
                      creatures::config::CreatureBuilder builder(logger, std::move(jsonStream));
                      builder.build();
-                 }, creatures::CreatureBuilderException);
+                 }, creatures::BuilderException);
 
 }
 
@@ -128,7 +128,7 @@ TEST(CreatureBuilder, BuildFails_MeaningLessJson) {
     EXPECT_THROW({
                      creatures::config::CreatureBuilder builder(logger, std::move(jsonStream));
                      builder.build();
-                 }, creatures::CreatureBuilderException);
+                 }, creatures::BuilderException);
 
 }
 
@@ -142,7 +142,7 @@ TEST(CreatureBuilder, BuildFails_InvalidType) {
     EXPECT_THROW({
                      creatures::config::CreatureBuilder builder(logger, std::move(jsonStream));
                      builder.build();
-                 }, creatures::CreatureBuilderException);
+                 }, creatures::BuilderException);
 
 }
 
@@ -175,7 +175,7 @@ TEST(CreatureBuilder, BuildFails_MissingMotors) {
     EXPECT_THROW({
                      creatures::config::CreatureBuilder builder(logger, std::move(jsonStream));
                      builder.build();
-                 }, creatures::CreatureBuilderException);
+                 }, creatures::BuilderException);
 
 }
 
