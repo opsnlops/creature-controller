@@ -16,25 +16,7 @@ using json = nlohmann::json;
 namespace creatures :: config {
 
     BaseBuilder::BaseBuilder(std::shared_ptr<Logger> logger,
-                                     std::unique_ptr<std::istream> configFile) : logger(logger) {
-
-        // First check if the stream is valid before moving it
-        if (!configFile || !(*configFile)) {
-            logger->error("Invalid or empty configuration stream provided");
-            throw BuilderException("Invalid or empty configuration stream provided");
-        }
-
-        // Now that we've confirmed it's valid, we can safely move it
-        this->configFile = std::move(configFile);
-
-        if(!this->configFile->good()) {
-            logger->error("config file isn't good");
-            throw BuilderException("good() returned false while reading config file");
-        }
-
-    }
-
-
+                             std::string fileName) : logger(logger), fileName(std::move(fileName)) {}
 
     /**
      * Ensures that a give file is both readable and accessible

@@ -35,6 +35,9 @@ namespace creatures :: config {
         return this->creature;
     }
 
+    std::string Configuration::getCreatureConfigFile() const {
+        return this->creatureConfigFile;
+    }
 
 
 
@@ -60,6 +63,10 @@ namespace creatures :: config {
 
     void Configuration::setCreature(std::shared_ptr<creatures::creature::Creature> _creature) {
         this->creature = _creature;
+    }
+
+    void Configuration::setCreatureConfigFile(std::string _creatureConfigFile) {
+        this->creatureConfigFile = _creatureConfigFile;
     }
 
 } // creatures :: config
