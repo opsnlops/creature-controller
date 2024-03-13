@@ -8,13 +8,12 @@
 using ::testing::_;
 using ::testing::NiceMock;
 using namespace creatures;
+using namespace creatures::config;
 
 class TestableConfiguration : public Configuration {
 public:
     using Configuration::Configuration; // Inherit constructors
     // Expose protected methods for testing
-    using Configuration::setConfigFileName;
-    using Configuration::setUsbDevice;
     using Configuration::setUseGPIO;
     using Configuration::setNetworkDeviceIPAddress;
     using Configuration::addUARTDevice;

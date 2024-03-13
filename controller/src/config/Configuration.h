@@ -3,12 +3,17 @@
 #include <string>
 #include <vector>
 
+#include "config/ConfigurationBuilder.h"
 #include "config/UARTDevice.h"
+#include "creature/Creature.h"
 
 #include "controller-config.h"
 #include "logging/Logger.h"
 
-namespace creatures {
+using namespace creatures;
+using namespace creatures::config;
+
+namespace creatures::config {
 
     class Configuration {
 
@@ -16,39 +21,39 @@ namespace creatures {
 
         Configuration(std::shared_ptr<Logger> logger);
 
-        friend class CommandLine;
+        friend class ConfigurationBuilder;
 
-        std::string getConfigFileName() const;
-        std::string getUsbDevice() const;
         bool getUseGPIO() const;
         std::string getNetworkDeviceIPAddress() const;
+        u16 getUniverse() const;
         std::vector<UARTDevice> getUARTDevices() const;
+        std::shared_ptr<creatures::creature::Creature> getCreature() const;
 
     protected:
-        void setConfigFileName(std::string _configFileName);
-        void setUsbDevice(std::string _usbDevice);
         void setUseGPIO(bool _useGPIO);
         void setNetworkDeviceIPAddress(std::string _networkDeviceIPAddress);
+        void setUniverse(u16 _universe);
         void addUARTDevice(UARTDevice _uartDevice);
+        void setCreature(std::shared_ptr<creatures::creature::Creature> _creature);
 
     private:
-
-        // The device node of our USB device
-        std::string usbDevice;
-
-        // The location of our JSON config file
-        std::string configFileName;
-
-        std::shared_ptr<Logger> logger;
 
         // Should we use the GPIO pins?
         bool useGPIO = false;
 
-        // Network stuff
+        // Which IP address to bind to?
         std::string networkDeviceIPAddress = DEFAULT_NETWORK_DEVICE_IP_ADDRESS;
+
+        // Which e1.31 universe are we using?
+        u16 universe = DEFAULT_UNIVERSE;
 
         // UARTs
         std::vector<UARTDevice> uartDevices;
+
+        std::shared_ptr<Logger> logger;
+
+        std::shared_ptr<creatures::creature::Creature> creature;
+
     };
 
-}
+} // creatures :: config

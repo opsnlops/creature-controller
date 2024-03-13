@@ -177,6 +177,8 @@ add_library(creature_lib
         src/config/BaseBuilder.h
         src/config/BaseBuilder.cpp
         src/config/BuilderException.h
+        src/config/ConfigurationBuilder.h
+        src/config/ConfigurationBuilder.cpp
 )
 
 target_include_directories(creature_lib PUBLIC

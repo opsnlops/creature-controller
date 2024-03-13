@@ -8,6 +8,7 @@ using ::testing::_;
 using ::testing::NiceMock;
 using ::testing::StrEq;
 using namespace creatures;
+using namespace creatures::config;
 
 class TestableUARTDevice : public UARTDevice {
 public:
