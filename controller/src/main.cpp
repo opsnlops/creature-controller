@@ -66,7 +66,8 @@ int main(int argc, char **argv) {
     auto commandLine = std::make_unique<creatures::CommandLine>(logger);
     auto config = commandLine->parseCommandLine(argc, argv);
 
-    auto builder = creatures::CreatureBuilder(logger, creatures::CreatureBuilder::fileToStream(logger, config->getConfigFileName()));
+    auto builder = creatures::config::CreatureBuilder(logger,
+                                                      creatures::config::CreatureBuilder::fileToStream(logger, config->getConfigFileName()));
     auto creature = builder.build();
 
 

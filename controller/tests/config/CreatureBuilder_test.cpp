@@ -9,7 +9,6 @@
 #include "config/CreatureBuilderException.h"
 #include "mocks/logging/MockLogger.h"
 
-
 TEST(CreatureBuilder, BuildsCorrectlyWithValidData) {
 
     std::shared_ptr<creatures::Logger> logger = std::make_shared<creatures::NiceMockLogger>();
@@ -58,7 +57,7 @@ TEST(CreatureBuilder, BuildsCorrectlyWithValidData) {
     )";
     auto jsonStream = std::make_unique<std::istringstream>(validJsonData);
 
-    creatures::CreatureBuilder builder(logger, std::move(jsonStream));
+    creatures::config::CreatureBuilder builder(logger, std::move(jsonStream));
     auto creature = builder.build();
 
     // 😡 floating point!
@@ -97,7 +96,7 @@ TEST(CreatureBuilder, BuildFails_EmptyJson) {
 
 
     EXPECT_THROW({
-                     creatures::CreatureBuilder builder(logger, std::move(jsonStream));
+                     creatures::config::CreatureBuilder builder(logger, std::move(jsonStream));
                      builder.build();
                  }, creatures::CreatureBuilderException);
 
@@ -112,7 +111,7 @@ TEST(CreatureBuilder, BuildFails_BrokenJson) {
 
 
     EXPECT_THROW({
-                     creatures::CreatureBuilder builder(logger, std::move(jsonStream));
+                     creatures::config::CreatureBuilder builder(logger, std::move(jsonStream));
                      builder.build();
                  }, creatures::CreatureBuilderException);
 
@@ -127,7 +126,7 @@ TEST(CreatureBuilder, BuildFails_MeaningLessJson) {
 
 
     EXPECT_THROW({
-                     creatures::CreatureBuilder builder(logger, std::move(jsonStream));
+                     creatures::config::CreatureBuilder builder(logger, std::move(jsonStream));
                      builder.build();
                  }, creatures::CreatureBuilderException);
 
@@ -141,7 +140,7 @@ TEST(CreatureBuilder, BuildFails_InvalidType) {
     auto jsonStream = std::make_unique<std::istringstream>(badJsonData);
 
     EXPECT_THROW({
-                     creatures::CreatureBuilder builder(logger, std::move(jsonStream));
+                     creatures::config::CreatureBuilder builder(logger, std::move(jsonStream));
                      builder.build();
                  }, creatures::CreatureBuilderException);
 
@@ -174,7 +173,7 @@ TEST(CreatureBuilder, BuildFails_MissingMotors) {
     auto jsonStream = std::make_unique<std::istringstream>(badJsonData);
 
     EXPECT_THROW({
-                     creatures::CreatureBuilder builder(logger, std::move(jsonStream));
+                     creatures::config::CreatureBuilder builder(logger, std::move(jsonStream));
                      builder.build();
                  }, creatures::CreatureBuilderException);
 
@@ -213,7 +212,7 @@ TEST(CreatureBuilder, BuildFails_MissingInputs) {
     auto jsonStream = std::make_unique<std::istringstream>(badJsonData);
 
     EXPECT_THROW({
-                     creatures::CreatureBuilder builder(logger, std::move(jsonStream));
+                     creatures::config::CreatureBuilder builder(logger, std::move(jsonStream));
                      builder.build();
                  }, creatures::CreatureBuilderException);
 
@@ -260,7 +259,7 @@ TEST(CreatureBuilder, BuildFails_InputSlotOutOfRange) {
     auto jsonStream = std::make_unique<std::istringstream>(badJsonData);
 
     EXPECT_THROW({
-                     creatures::CreatureBuilder builder(logger, std::move(jsonStream));
+                     creatures::config::CreatureBuilder builder(logger, std::move(jsonStream));
                      builder.build();
                  }, creatures::CreatureBuilderException);
 

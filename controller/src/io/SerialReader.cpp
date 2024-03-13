@@ -1,10 +1,6 @@
 
-
-#include <filesystem>
 #include <iostream>
-#include <unistd.h>   // UNIX standard function definitions
-#include <fcntl.h>    // File control definitions
-#include <termios.h>  // POSIX terminal control definitions
+#include <unistd.h>
 #include <poll.h>
 
 #include "controller-config.h"
@@ -14,7 +10,6 @@
 #include "util/thread_name.h"
 
 namespace creatures :: io {
-
 
     SerialReader::SerialReader(const std::shared_ptr<Logger>& logger,
                  std::string deviceNode,

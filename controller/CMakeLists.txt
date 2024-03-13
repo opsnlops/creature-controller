@@ -10,6 +10,12 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Overshadowed declarations keep biting me in the butt 😅
+add_compile_options(-Wshadow)
+add_compile_options(-Wall)
+add_compile_options(-Wextra)
+add_compile_options(-Wpedantic)
+
 set(PACKAGE_AUTHOR "April White")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
@@ -59,6 +65,10 @@ FetchContent_MakeAvailable(googletest)
 add_library(libe131 STATIC
         lib/libe131/src/e131.c
 )
+
+# Not much I can do about warnings in this library
+set_source_files_properties(lib/libe131/src/e131.c PROPERTIES COMPILE_FLAGS "-w")
+
 
 target_include_directories(libe131
         PUBLIC
@@ -162,6 +172,11 @@ add_library(creature_lib
         src/io/SerialWriter.h
         src/io/SerialWriter.cpp
         src/util/CountingThread.h
+        src/config/UARTDevice.h
+        src/config/UARTDevice.cpp
+        src/config/BaseBuilder.h
+        src/config/BaseBuilder.cpp
+        src/config/BuilderException.h
 )
 
 target_include_directories(creature_lib PUBLIC
@@ -224,6 +239,8 @@ add_executable(creature-controller-test
         tests/mocks/creature/MockCreature.h
         tests/creature/Input_test.cpp
         tests/util/StoppableThread_test.cpp
+        tests/config/UARTDevice_test.cpp
+        tests/config/Configuation_test.cpp
 )
 
 target_link_libraries(creature-controller-test
