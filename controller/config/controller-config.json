@@ -1,0 +1,18 @@
+{
+  "useGPIO": false,
+  "UARTs":
+    [
+      {
+        "enabled": true,
+        "deviceNode": "/dev/tty.usbmodem1301",
+        "module": "A"
+      },
+      {
+        "enabled": true,
+        "deviceNode": "/dev/tty.usbmodem1201",
+        "module": "B"
+      }
+    ],
+  "ipAddress:": "10.19.63.11",
+  "universe": 1
+}

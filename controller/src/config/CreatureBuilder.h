@@ -6,11 +6,13 @@
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
-#include "logging/Logger.h"
+#include "config/BaseBuilder.h"
 #include "creature/Creature.h"
+#include "logging/Logger.h"
 
 
-namespace creatures {
+
+namespace creatures :: config {
 
     /**
      * This class reads in a JSON file from the file system and returns a
@@ -20,7 +22,7 @@ namespace creatures {
      * a pain to tweak things when I'm having to do the build -> flash dance over
      * and over again.
      */
-    class CreatureBuilder {
+    class CreatureBuilder : public BaseBuilder {
 
     public:
         CreatureBuilder(std::shared_ptr<Logger> logger, std::unique_ptr<std::istream> configFile);
@@ -33,25 +35,13 @@ namespace creatures {
          */
         std::shared_ptr<creatures::creature::Creature> build();
 
-        // Convert a file to an istream
-        static std::unique_ptr<std::istream> fileToStream(std::shared_ptr<Logger> logger, std::string filename);
-
     private:
-        std::unique_ptr<std::istream> configFile;
         std::vector<std::string> requiredTopLevelFields;
         std::vector<std::string> requiredServoFields;
         std::vector<std::string> requiredInputFields;
 
         std::shared_ptr<Servo> createServo(const json& j, u16 servo_frequency);
 
-        // Make sure the file is both readable and accessible
-        static bool isFileAccessible(std::shared_ptr<Logger> logger, const std::string& filename);
-
-        // Make sure a JSON field is present
-        static void checkJsonField(const json& jsonObj, const std::string& fieldName);
-
-        std::shared_ptr<Logger> logger;
-
     };
 
-} // creatures
+} // creatures :: config

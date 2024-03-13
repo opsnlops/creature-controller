@@ -1,17 +1,18 @@
 
+#include <string>
+#include <vector>
+#include <utility>
 
 #include "logging/Logger.h"
 
-#include "Configuration.h"
+#include "config/Configuration.h"
 
-#include <utility>
+
 
 namespace creatures {
 
     Configuration::Configuration(std::shared_ptr<Logger> logger) : logger(logger) {
-
         logger->debug("creating a new Configuration");
-
     }
 
     std::string Configuration::getConfigFileName() const {
@@ -25,6 +26,11 @@ namespace creatures {
     bool Configuration::getUseGPIO() const {
         return this->useGPIO;
     }
+
+    std::vector<UARTDevice> Configuration::getUARTDevices() const {
+        return this->uartDevices;
+    }
+
 
     void Configuration::setConfigFileName(std::string _configFileName) {
         this->configFileName = std::move(_configFileName);
@@ -43,7 +49,12 @@ namespace creatures {
     std::string Configuration::getNetworkDeviceIPAddress() const {
         return this->networkDeviceIPAddress;
     }
+
     void Configuration::setNetworkDeviceIPAddress(std::string _networkDeviceIPAddress) {
         this->networkDeviceIPAddress = _networkDeviceIPAddress;
+    }
+
+    void Configuration::addUARTDevice(UARTDevice _uartDevice) {
+        this->uartDevices.push_back(_uartDevice);
     }
 }
