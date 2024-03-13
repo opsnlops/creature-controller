@@ -174,7 +174,7 @@ namespace creatures::creature {
 
         void setVersion(const std::string &version);
 
-        void setDescription(const std::string &description);;
+        void setDescription(const std::string &description);
 
         void setType(creature_type type);
 
