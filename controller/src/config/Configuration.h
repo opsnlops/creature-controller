@@ -3,8 +3,6 @@
 #include <string>
 #include <vector>
 
-#include "config/CommandLine.h"
-#include "config/ConfigurationBuilder.h"
 #include "config/UARTDevice.h"
 #include "creature/Creature.h"
 

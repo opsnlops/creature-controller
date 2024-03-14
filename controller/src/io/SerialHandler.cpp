@@ -1,5 +1,4 @@
 
-
 #include <filesystem>
 
 #include <fcntl.h>
@@ -7,7 +6,7 @@
 
 
 #include "controller-config.h"
-
+#include "config/UARTDevice.h"
 #include "io/SerialHandler.h"
 #include "io/SerialReader.h"
 #include "io/SerialWriter.h"
@@ -15,17 +14,22 @@
 
 namespace creatures {
 
+    using creatures::config::UARTDevice;
+    using creatures::io::Message;
+
     /**
-         * Creates a new SerialHandler
-         *
-         * @param deviceNode the device node to open up
-         * @param outgoingQueue A `MessageQueue<std::string>` for outgoing messages TO the remote device
-         * @param incomingQueue A `MessageQueue<std::string>` for incoming messages FROM the remote device
-         */
+     * Creates a new SerialHandler
+     *
+     * @param deviceNode the device node to open up
+     * @param outgoingQueue A `MessageQueue<Message>` for outgoing messages TO the remote device
+     * @param incomingQueue A `MessageQueue<Message>` for incoming messages FROM the remote device
+     */
     SerialHandler::SerialHandler(const std::shared_ptr<Logger>& logger,
                                  std::string deviceNode,
-                                 const std::shared_ptr<MessageQueue<std::string>> &outgoingQueue,
-                                 const std::shared_ptr<MessageQueue<std::string>> &incomingQueue) : logger(logger) {
+                                 UARTDevice::module_name moduleName,
+                                 const std::shared_ptr<MessageQueue<Message>> &outgoingQueue,
+                                 const std::shared_ptr<MessageQueue<Message>> &incomingQueue) :
+                                 deviceNode(std::move(deviceNode)), moduleName(moduleName), logger(logger) {
 
         this->logger->info("creating a new SerialHandler for device {}", deviceNode);
 
@@ -44,8 +48,6 @@ namespace creatures {
 
         this->outgoingQueue = outgoingQueue;
         this->incomingQueue = incomingQueue;
-
-        this->deviceNode = deviceNode;
         this->fileDescriptor = -1;
 
         this->logger->debug("new SerialHandler created");
@@ -53,10 +55,10 @@ namespace creatures {
 
 
     // Access to our queues
-    std::shared_ptr<MessageQueue<std::string>> SerialHandler::getOutgoingQueue() {
+    std::shared_ptr<MessageQueue<Message>> SerialHandler::getOutgoingQueue() {
         return this->outgoingQueue;
     }
-    std::shared_ptr<MessageQueue<std::string>> SerialHandler::getIncomingQueue() {
+    std::shared_ptr<MessageQueue<Message>> SerialHandler::getIncomingQueue() {
         return this->incomingQueue;
     }
 
@@ -69,18 +71,21 @@ namespace creatures {
         if (this->fileDescriptor == -1) {
 
             // Handle error - unable to open serial port
-            this->logger->critical("Error opening {}: {}", this->deviceNode.c_str(), strerror(errno));
-            std::exit(1);
+            std::string errorMessage = fmt::format("Error opening {}: {}", this->deviceNode.c_str(), strerror(errno));
+            this->logger->critical(errorMessage);
+            throw SerialException(errorMessage);
 
         } else {
             struct termios tty{};
             if (tcgetattr(this->fileDescriptor, &tty) != 0) {
 
                 // Handle error in tcgetattr
-                this->logger->error("Error from tcgetattr: {}", strerror(errno));
+                std::string errorMessage = fmt::format("Error from tcgetattr while opening the port: {}", strerror(errno));
+                this->logger->critical(errorMessage);
+                throw SerialException(errorMessage);
             }
 
-            // 8 bits per byte (most common)
+            // 8 bits per byte
             tty.c_cflag &= ~PARENB; // No parity bit
             tty.c_cflag &= ~CSTOPB; // Only one stop bit
             tty.c_cflag &= ~CSIZE;  // Clear all the size bits
@@ -110,8 +115,9 @@ namespace creatures {
             cfsetospeed(&tty, BAUD_RATE);      // Set out baud rate
 
             if (tcsetattr(this->fileDescriptor, TCSANOW, &tty) != 0) {
-                this->logger->error("Error from tcsetattr: {}", strerror(errno));
-                return false;
+                std::string errorMessage = fmt::format("Error from tcsetattr while configuring the port: {}", strerror(errno));
+                this->logger->critical(errorMessage);
+                throw SerialException(errorMessage);
             }
 
             this->logger->debug("serial port {} is open", this->deviceNode);

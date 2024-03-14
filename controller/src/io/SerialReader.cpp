@@ -1,23 +1,26 @@
 
-#include <iostream>
-#include <unistd.h>
 #include <poll.h>
+#include <unistd.h>
 
-#include "controller-config.h"
-
-
+#include "config/UARTDevice.h"
+#include "io/Message.h"
 #include "io/SerialReader.h"
 #include "util/thread_name.h"
 
 namespace creatures :: io {
 
+    using creatures::config::UARTDevice;
+    using creatures::io::Message;
+
     SerialReader::SerialReader(const std::shared_ptr<Logger>& logger,
                  std::string deviceNode,
+                 UARTDevice::module_name moduleName,
                  int fileDescriptor,
-                 const std::shared_ptr<MessageQueue<std::string>>& incomingQueue) : logger(logger) {
+                 const std::shared_ptr<MessageQueue<Message>>& incomingQueue) : logger(logger) {
 
-        this->logger->info("creating a new SerialReader for device {}", deviceNode);
+        this->logger->info("creating a new SerialReader for module {} on {}", deviceNode);
         this->deviceNode = deviceNode;
+        this->moduleName = moduleName;
         this->fileDescriptor = fileDescriptor;
         this->incomingQueue = incomingQueue;
 
@@ -30,9 +33,9 @@ namespace creatures :: io {
 
 
     void SerialReader::run() {
-        this->logger->info("hello from the reader thread 🔍");
+        this->logger->info("hello from the reader thread for {} 👓", this->deviceNode);
 
-        setThreadName("SerialReader::run");
+        setThreadName("SerialReader::run for " + this->deviceNode);
 
         struct pollfd fds[1];
         int timeout_msecs = 21000; // 21 seconds in milliseconds
@@ -58,21 +61,20 @@ namespace creatures :: io {
                 memset(&readBuf, '\0', sizeof(readBuf));
 
                 size_t numBytes = read(this->fileDescriptor, &readBuf, sizeof(readBuf) - 1); // Leave space for null terminator
-                if (numBytes < 0) {
-                    this->logger->error("Error reading: {}", strerror(errno));
-                    break;
-                } else if (numBytes > 0) {
-                    tempBuffer.append(readBuf, numBytes); // Append new data to tempBuffer
-                    size_t newlinePos;
-                    while ((newlinePos = tempBuffer.find('\n')) != std::string::npos) {
-                        std::string message = tempBuffer.substr(0, newlinePos);
-                        this->logger->trace("adding message '{}' to the incoming queue", message);
-                        this->incomingQueue->push(message); // Push the message to the queue
-                        tempBuffer.erase(0, newlinePos + 1); // Remove the processed message from tempBuffer
-                    }
+                tempBuffer.append(readBuf, numBytes); // Append new data to tempBuffer
+
+                size_t newlinePos;
+                while ((newlinePos = tempBuffer.find('\n')) != std::string::npos) {
+
+                    // Create the message and SEND IT
+                    Message incomingMessage = Message(this->moduleName, tempBuffer.substr(0, newlinePos));
+
+                    this->logger->trace("adding message '{}' to the incoming queue", incomingMessage.payload);
+                    this->incomingQueue->push(incomingMessage); // Push the message to the queue
+                    tempBuffer.erase(0, newlinePos + 1); // Remove the processed message from tempBuffer
                 }
+
             }
         }
     }
-
 }

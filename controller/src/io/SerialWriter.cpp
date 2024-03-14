@@ -1,30 +1,26 @@
 
+#include <unistd.h>
 
-#include <filesystem>
-#include <iostream>
-#include <unistd.h>   // UNIX standard function definitions
-#include <fcntl.h>    // File control definitions
-#include <termios.h>  // POSIX terminal control definitions
-#include <poll.h>
-
-#include "controller-config.h"
-
-
+#include "logging/Logger.h"
+#include "io/Message.h"
 #include "io/SerialWriter.h"
 #include "util/thread_name.h"
 
 namespace creatures :: io {
 
+    using creatures::io::Message;
 
     SerialWriter::SerialWriter(const std::shared_ptr<Logger>& logger,
                  std::string deviceNode,
+                 UARTDevice::module_name moduleName,
                  int fileDescriptor,
-                 const std::shared_ptr<MessageQueue<std::string>>& outgoingQueue) : logger(logger) {
+                 const std::shared_ptr<MessageQueue<Message>>& outgoingQueue) :  logger(logger),
+                                                                                 outgoingQueue(outgoingQueue),
+                                                                                 deviceNode(std::move(deviceNode)),
+                                                                                 moduleName(moduleName),
+                                                                                 fileDescriptor(fileDescriptor) {
 
         this->logger->info("creating a new SerialWriter for device {}", deviceNode);
-        this->deviceNode = deviceNode;
-        this->fileDescriptor = fileDescriptor;
-        this->outgoingQueue = outgoingQueue;
 
     }
 
@@ -35,27 +31,26 @@ namespace creatures :: io {
 
 
     void SerialWriter::run() {
-        setThreadName("SerialHandler::writer");
+        setThreadName("SerialHandler::writer for " + this->deviceNode);
 
-        this->logger->info("hello from the writer thread ✏️");
+        this->logger->info("hello from the writer thread for {} 📝", this->deviceNode);
 
-        std::string outgoingMessage;
         while(!stop_requested.load()) {
-            outgoingMessage = outgoingQueue->pop();
-            this->logger->trace("message to write to {}: {}", deviceNode, outgoingMessage);
+            Message outgoingMessage = outgoingQueue->pop();
+            this->logger->trace("message to write to module {} on {}: {}",
+                                UARTDevice::moduleNameToString(outgoingMessage.module),
+                                deviceNode,
+                                outgoingMessage.payload);
 
             // Append a newline character to the message
-            outgoingMessage += '\n';
+            outgoingMessage.payload += '\n';
 
-            size_t bytesWritten = write(this->fileDescriptor, outgoingMessage.c_str(), outgoingMessage.length());
+            size_t bytesWritten = write(this->fileDescriptor, outgoingMessage.payload.c_str(), outgoingMessage.payload.length());
 
-            if (bytesWritten < 0) {
-                // Handle write error
-                this->logger->error("Error writing to {}: {}", deviceNode, strerror(errno));
-                // Consider adding error handling like retry mechanism or breaking the loop
-            } else {
-                this->logger->trace("Written {} bytes to {}", bytesWritten, deviceNode);
-            }
+            this->logger->trace("Written {} bytes to module {} on {}",
+                                UARTDevice::moduleNameToString(outgoingMessage.module),
+                                bytesWritten,
+                                deviceNode);
         }
     }
 

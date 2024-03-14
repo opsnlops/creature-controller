@@ -183,6 +183,7 @@ add_library(creature_lib
         src/config/BuilderException.h
         src/config/ConfigurationBuilder.h
         src/config/ConfigurationBuilder.cpp
+        src/io/Message.h
 )
 
 target_include_directories(creature_lib PUBLIC
@@ -247,6 +248,7 @@ add_executable(creature-controller-test
         tests/util/StoppableThread_test.cpp
         tests/config/UARTDevice_test.cpp
         tests/config/Configuation_test.cpp
+        tests/io/Message_test.cpp
 )
 
 target_link_libraries(creature-controller-test

@@ -6,6 +6,9 @@
 
 namespace creatures {
 
+    /**
+     * A simple thread class that can be stopped
+     */
     class StoppableThread {
     public:
         StoppableThread() : stop_requested(false) {}
@@ -24,7 +27,7 @@ namespace creatures {
         }
 
     protected:
-        virtual void run() = 0; // Work to be done by the thread
+        virtual void run() = 0; // This is the method that will be called when the thread starts
 
         std::atomic<bool> stop_requested;
 
