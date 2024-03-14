@@ -1,6 +1,7 @@
 
 #include <cstdlib>
 #include <csignal>
+#include <ranges>
 #include <thread>
 #include <vector>
 
@@ -14,16 +15,15 @@
 #include "creature/Creature.h"
 #include "device/GPIO.h"
 #include "dmx/E131Client.h"
-#include "io/SerialHandler.h"
+#include "io/Message.h"
 #include "io/MessageProcessor.h"
+#include "io/SerialHandler.h"
 #include "logging/Logger.h"
 #include "logging/SpdlogLogger.h"
 #include "util/thread_name.h"
 #include "util/StoppableThread.h"
 #include "Version.h"
 
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "LoopDoesntUseConditionVariableInspection"
 
 // Default to not shutting down
 std::atomic<bool> shutdown_requested(false);
@@ -40,11 +40,10 @@ void signal_handler(int signal) {
 
 int main(int argc, char **argv) {
 
+    using creatures::io::Message;
+
     // Fire up the signal handlers
     std::signal(SIGINT, signal_handler);
-
-    // Name the thread so it shows up right!
-    setThreadName("main");
 
     std::string version = fmt::format("{}.{}.{}",
                                       CREATURE_CONTROLLER_VERSION_MAJOR,
@@ -67,8 +66,7 @@ int main(int argc, char **argv) {
     auto config = commandLine->parseCommandLine(argc, argv);
 
 
-    auto builder = creatures::config::CreatureBuilder(logger,
-                                                      creatures::config::CreatureBuilder::fileToStream(logger, config->getConfigFileName()));
+    auto builder = creatures::config::CreatureBuilder(logger, config->getCreatureConfigFile());
     auto creature = builder.build();
 
 
@@ -76,6 +74,10 @@ int main(int argc, char **argv) {
     logger->info("working with {}! ({})", creature->getName(), creature->getDescription());
     logger->debug("{} has {} servos and {} steppers", creature->getName(),
           creature->getNumberOfServos(), creature->getNumberOfSteppers());
+
+    // Label the thread so it shows up in ps
+    setThreadName("main for " + creature->getName());
+
 
     // Bring up the GPIO pins if enabled on the command line
     auto gpio = std::make_shared<creatures::device::GPIO>(logger, config->getUseGPIO());
@@ -87,14 +89,24 @@ int main(int argc, char **argv) {
 
 
     // Start up the SerialHandler
-    auto outgoingQueue = std::make_shared<creatures::MessageQueue<std::string>>();
-    auto incomingQueue = std::make_shared<creatures::MessageQueue<std::string>>();
-    auto serialHandler = std::make_shared<creatures::SerialHandler>(logger, config->getUsbDevice(), outgoingQueue, incomingQueue);
-    serialHandler->start();
+    auto topLevelOutgoingQueue = std::make_shared<creatures::MessageQueue<Message>>();
+    auto topLevelIncomingQueue = std::make_shared<creatures::MessageQueue<Message>>();
 
-    // Add the SerialHandler's threads to the list of threads
-    for( const auto& thread : serialHandler->threads ) {
-        workerThreads.push_back(thread);
+    for( const auto& uart : config->getUARTDevices() ) {
+
+        // Create this UART's queues
+        auto outgoingQueue = std::make_shared<creatures::MessageQueue<Message>>();
+        auto incomingQueue = std::make_shared<creatures::MessageQueue<Message>>();
+
+        // Create the SerialHandler and start it
+        auto serialHandler = std::make_shared<creatures::SerialHandler>(logger, uart.getDeviceNode(), uart.getModule(),
+                                                                        outgoingQueue, incomingQueue);
+        serialHandler->start();
+
+        // Add this SerialHandler's threads to the list of threads
+        for( const auto& thread : serialHandler->threads ) {
+            workerThreads.push_back(thread);
+        }
     }
 
 
@@ -127,23 +139,19 @@ int main(int argc, char **argv) {
     workerThreads.push_back(std::move(pingTask));
 
 
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "EndlessLoop"
     while(!shutdown_requested.load()) {
         std::this_thread::sleep_for(std::chrono::milliseconds (500));
     }
-#pragma clang diagnostic pop
 
     // Stop the creature first
     creature->shutdown();
 
-    // Shut down the worker threads
-    for (auto& thread : workerThreads) {
-        thread->shutdown();
+    // Shut down the worker threads in LIFO order
+    for (auto & workerThread : std::ranges::reverse_view(workerThreads)) {
+        workerThread->shutdown();
     }
 
     logger->info("the main thread says bye! good luck little threads! 👋🏻");
     return EXIT_SUCCESS;
 }
 
-#pragma clang diagnostic pop

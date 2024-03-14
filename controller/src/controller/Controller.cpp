@@ -25,8 +25,8 @@ u64 number_of_moves = 0UL;
 
 Controller::Controller(std::shared_ptr<creatures::Logger> logger,
                        std::shared_ptr<creatures::creature::Creature> creature,
-                       std::shared_ptr<creatures::SerialHandler> serialHandler):
-                       logger(logger), creature(creature), serialHandler(serialHandler){
+                       std::shared_ptr<creatures::MessageQueue<creatures::io::Message>> outgoingQueue):
+                       creature(creature), logger(logger), outgoingQueue(outgoingQueue) {
 
     logger->debug("setting up the controller");
 
@@ -47,7 +47,7 @@ Controller::Controller(std::shared_ptr<creatures::Logger> logger,
 
 void Controller::sendCommand(const std::shared_ptr<creatures::ICommand>& command) {
     logger->trace("sending command {}", command->toMessageWithChecksum());
-    serialHandler->getOutgoingQueue()->push(command->toMessageWithChecksum());
+    this->outgoingQueue->push(command->toMessageWithChecksum());
 }
 
 
@@ -103,7 +103,7 @@ void Controller::firmwareReadyForInitialization(u32 firmwareVersion) {
     creatureConfigCommand.getServoConfigurations(creature);
 
     // ...and toss it to the serial handler
-    serialHandler->getOutgoingQueue()->push(creatureConfigCommand.toMessageWithChecksum());
+    this->outgoingQueue->push(creatureConfigCommand.toMessageWithChecksum());
 
 }
 
@@ -113,7 +113,7 @@ void Controller::sendFlushBufferRequest() {
     // This is a special message that doesn't have a checksum. It's a magic character
     // that the firmware is looking for to know it's time to reset the buffer.
     auto flushBufferCommand = creatures::commands::FlushBuffer(logger);
-    serialHandler->getOutgoingQueue()->push(flushBufferCommand.toMessage()); // No checksum, only 🔔
+    this->outgoingQueue->push(flushBufferCommand.toMessage()); // No checksum, only 🔔
 }
 
 
@@ -137,7 +137,7 @@ uint16_t Controller::getNumberOfDMXChannels() {
 }
 
 void Controller::setOnline(bool onlineValue) {
-    logger->info("setting online to{}", onlineValue ? "true" : "false");
+    logger->info("setting online to {}", onlineValue ? "true" : "false");
     this->online = onlineValue;
 }
 
@@ -215,67 +215,3 @@ void Controller::run() {
     logger->info("controller worker stopped");
 
 }
-
-/*
-portTASK_FUNCTION(controller_housekeeper_task, pvParameters) {
-auto controller = (Controller *) pvParameters;
-
-uint32_t ulNotifiedValue;
-
-debug("controller housekeeper running");
-
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "EndlessLoop"
-
-for (EVER) {
-
-// Wait for the ISR to signal us to go
-xTaskNotifyWait(0x00, ULONG_MAX, &ulNotifiedValue, portMAX_DELAY);
-
-for (int i = 0; i < controller->getNumberOfServosInUse(); i++) {
-
-// Do housekeeping on each servo
-controller->getServo(i)->calculateNextTick();
-
-}
-}
-#pragma clang diagnostic pop
-}
-*/
-
-
-/**
- * Motor setup task
- *
- * This is in a task so that we have access to the full functionality of the
- * Creature Controller while doing this process. (Logging, debug shell, etc.)
- *
- * When it's done it will start ISRs and repeating tasks needed for the
- * controller to actually function, and then terminate itself.
- *
- * @param pvParameters
- */
-/*
-portTASK_FUNCTION(controller_motor_setup_task, pvParameters) {
-
-auto controller = (Controller *) pvParameters;
-
-info("---> controller motor setup running");
-
-// Install the IRQ handler for the servos
-pwm_set_irq_enabled(controller->getServo(0)->getSlice(), true);
-irq_set_exclusive_handler(PWM_IRQ_WRAP, Controller::on_pwm_wrap_handler);
-irq_set_enabled(PWM_IRQ_WRAP, true);
-
-#if USE_STEPPERS
-// Set up the stepper timer
-home_stepper(0);
-controller->getStepper(0)->state->currentMicrostep = controller->getStepper(0)->maxMicrosteps;
-add_repeating_timer_us(STEPPER_LOOP_PERIOD_IN_US, stepper_timer_handler, nullptr, &stepper_timer);
-#endif
-
-info("stopping the motor setup task");
-vTaskDelete(nullptr);
-
-}
- */

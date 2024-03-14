@@ -17,7 +17,7 @@ namespace creatures :: config {
     class UARTDevice {
     public:
 
-        UARTDevice(std::shared_ptr <Logger> logger);
+        explicit UARTDevice(std::shared_ptr <Logger> logger);
 
         ~UARTDevice();
 
@@ -35,12 +35,20 @@ namespace creatures :: config {
             invalid_module
         };
 
-        std::string getDeviceNode() const;
-        module_name getModule() const;
-        bool getEnabled() const;
+        [[nodiscard]] std::string getDeviceNode() const;
+        [[nodiscard]] module_name getModule() const;
+        [[nodiscard]] bool getEnabled() const;
 
         // Convert a string into a module name
         static module_name stringToModuleName(const std::string &typeStr);
+
+        // A constexpr function to convert module_name to string
+        static constexpr std::string_view moduleNameToString(module_name mod) {
+            constexpr std::array<std::string_view, 7> names = {
+                    "A", "B", "C", "D", "E", "F", "invalid_module"
+            };
+            return (static_cast<std::size_t>(mod) < names.size()) ? names[mod] : "unknown";
+        }
 
     protected:
         void setDeviceNode(std::string _deviceNode);
