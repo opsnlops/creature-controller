@@ -23,8 +23,8 @@
 u64 number_of_moves = 0UL;
 
 
-Controller::Controller(std::shared_ptr<creatures::Logger> logger,
-                       std::shared_ptr<creatures::creature::Creature> creature,
+Controller::Controller(const std::shared_ptr<creatures::Logger>& logger,
+                       const std::shared_ptr<creatures::creature::Creature>& creature,
                        std::shared_ptr<creatures::io::MessageRouter> messageRouter):
                        creature(creature), logger(logger), messageRouter(messageRouter) {
 

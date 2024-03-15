@@ -34,8 +34,8 @@ namespace creatures::creature {
 class Controller : public creatures::StoppableThread {
 
 public:
-    explicit Controller(std::shared_ptr<creatures::Logger> logger,
-                        std::shared_ptr<creatures::creature::Creature> creature,
+    explicit Controller(const std::shared_ptr<creatures::Logger>& logger,
+                        const std::shared_ptr<creatures::creature::Creature>& creature,
                         std::shared_ptr<creatures::io::MessageRouter> messageRouter);
 
     void start() override;
