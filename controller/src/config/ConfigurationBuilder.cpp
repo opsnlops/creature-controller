@@ -49,7 +49,7 @@ namespace creatures :: config {
         json j;
         try {
             j = json::parse(content);
-            logger->debug("file was parsed!");
+            logger->debug("JSON file was valid JSON! Now let's see if it's got what we need... 🤔");
         } catch (json::parse_error& e) {
             logger->error("JSON parse error: {}", e.what());
             throw BuilderException(fmt::format("JSON parse error: {}", e.what()));
@@ -61,6 +61,7 @@ namespace creatures :: config {
         }
 
         // Make sure the top level fields we need are present
+        logger->debug("checking for required top level fields");
         for (const auto& fieldName : requiredTopLevelFields) {
             checkJsonField(j, fieldName);
         }

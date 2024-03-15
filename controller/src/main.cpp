@@ -1,6 +1,7 @@
 
 #include <cstdlib>
 #include <csignal>
+#include <future>
 #include <thread>
 #include <vector>
 
@@ -35,6 +36,16 @@ void signal_handler(int signal) {
     }
 }
 
+void timedShutdown(std::shared_ptr<creatures::StoppableThread> &workerThread, unsigned long timeout_ms) {
+    auto shutdownTask = std::async(std::launch::async, [&]{
+        workerThread->shutdown();
+    });
+
+    if(shutdownTask.wait_for(std::chrono::milliseconds(timeout_ms)) == std::future_status::timeout) {
+        // Timeout reached, thread didn't shut down in time
+        // Move on to the next thread
+    }
+}
 
 int main(int argc, char **argv) {
 
@@ -92,6 +103,10 @@ int main(int argc, char **argv) {
 
     for( const auto& uart : config->getUARTDevices() ) {
 
+        logger->debug("creating a SerialHandler for module {} on {}",
+                      UARTDevice::moduleNameToString(uart.getModule()),
+                      uart.getDeviceNode());
+
         // Create this UART's queues
         auto outgoingQueue = std::make_shared<creatures::MessageQueue<Message>>();
         auto incomingQueue = std::make_shared<creatures::MessageQueue<Message>>();
@@ -147,8 +162,9 @@ int main(int argc, char **argv) {
     creature->shutdown();
 
     // Shut down the worker threads in LIFO order
+    const unsigned long timeout_ms = 150;
     for (auto & workerThread : std::ranges::reverse_view(workerThreads)) {
-        workerThread->shutdown();
+        timedShutdown(workerThread, timeout_ms);
     }
 
     logger->info("the main thread says bye! good luck little threads! 👋🏻");
