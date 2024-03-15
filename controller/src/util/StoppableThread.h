@@ -18,6 +18,10 @@ namespace creatures {
             }
         }
 
+        bool isThreadJoinable() {
+            return thread.joinable();
+        }
+
         virtual void start() {
             thread = std::thread(&StoppableThread::run, this);
         }

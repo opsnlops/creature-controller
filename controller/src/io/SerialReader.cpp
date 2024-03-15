@@ -16,14 +16,12 @@ namespace creatures :: io {
                  std::string deviceNode,
                  UARTDevice::module_name moduleName,
                  int fileDescriptor,
-                 const std::shared_ptr<MessageQueue<Message>>& incomingQueue) : logger(logger) {
+                 const std::shared_ptr<MessageQueue<Message>>& incomingQueue) :
+                 logger(logger), incomingQueue(incomingQueue), deviceNode(deviceNode),
+                 moduleName(moduleName), fileDescriptor(fileDescriptor) {
 
-        this->logger->info("creating a new SerialReader for module {} on {}", deviceNode);
-        this->deviceNode = deviceNode;
-        this->moduleName = moduleName;
-        this->fileDescriptor = fileDescriptor;
-        this->incomingQueue = incomingQueue;
-
+        this->logger->info("creating a new SerialReader for module {} on {}",
+                           UARTDevice::moduleNameToString(moduleName), deviceNode);
     }
 
     void SerialReader::start() {

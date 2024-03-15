@@ -29,9 +29,10 @@ namespace creatures {
                                  UARTDevice::module_name moduleName,
                                  const std::shared_ptr<MessageQueue<Message>> &outgoingQueue,
                                  const std::shared_ptr<MessageQueue<Message>> &incomingQueue) :
-                                 deviceNode(std::move(deviceNode)), moduleName(moduleName), logger(logger) {
+                                 deviceNode(deviceNode), moduleName(moduleName), logger(logger) {
 
-        this->logger->info("creating a new SerialHandler for device {}", deviceNode);
+        this->logger->info("creating a new SerialHandler for device {} on node {} ",
+                           UARTDevice::moduleNameToString(moduleName), deviceNode);
 
         // Do some error checking
         if (!outgoingQueue) {
