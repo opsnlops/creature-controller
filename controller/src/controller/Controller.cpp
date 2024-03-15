@@ -25,8 +25,8 @@ u64 number_of_moves = 0UL;
 
 Controller::Controller(std::shared_ptr<creatures::Logger> logger,
                        std::shared_ptr<creatures::creature::Creature> creature,
-                       std::shared_ptr<creatures::MessageQueue<creatures::io::Message>> outgoingQueue):
-                       creature(creature), logger(logger), outgoingQueue(outgoingQueue) {
+                       std::shared_ptr<creatures::io::MessageRouter> messageRouter):
+                       creature(creature), logger(logger), messageRouter(messageRouter) {
 
     logger->debug("setting up the controller");
 
@@ -47,7 +47,8 @@ Controller::Controller(std::shared_ptr<creatures::Logger> logger,
 
 void Controller::sendCommand(const std::shared_ptr<creatures::ICommand>& command) {
     logger->trace("sending command {}", command->toMessageWithChecksum());
-    this->outgoingQueue->push(command->toMessageWithChecksum());
+#warning Fix this
+    //this->outgoingQueue->push(command->toMessageWithChecksum());
 }
 
 
@@ -103,7 +104,8 @@ void Controller::firmwareReadyForInitialization(u32 firmwareVersion) {
     creatureConfigCommand.getServoConfigurations(creature);
 
     // ...and toss it to the serial handler
-    this->outgoingQueue->push(creatureConfigCommand.toMessageWithChecksum());
+#warning Fix this
+    //this->outgoingQueue->push(creatureConfigCommand.toMessageWithChecksum());
 
 }
 
@@ -113,7 +115,7 @@ void Controller::sendFlushBufferRequest() {
     // This is a special message that doesn't have a checksum. It's a magic character
     // that the firmware is looking for to know it's time to reset the buffer.
     auto flushBufferCommand = creatures::commands::FlushBuffer(logger);
-    this->outgoingQueue->push(flushBufferCommand.toMessage()); // No checksum, only 🔔
+    this->messageRouter->broadcastMessageToAllModules(flushBufferCommand.toMessage()); // No checksum, only 🔔
 }
 
 

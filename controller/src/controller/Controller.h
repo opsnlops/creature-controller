@@ -16,6 +16,7 @@
 #include "device/Servo.h"
 #include "logging/Logger.h"
 #include "io/Message.h"
+#include "io/MessageRouter.h"
 #include "util/MessageQueue.h"
 #include "util/StoppableThread.h"
 
@@ -35,7 +36,7 @@ class Controller : public creatures::StoppableThread {
 public:
     explicit Controller(std::shared_ptr<creatures::Logger> logger,
                         std::shared_ptr<creatures::creature::Creature> creature,
-                        std::shared_ptr<creatures::MessageQueue<creatures::io::Message>> outgoingQueue);
+                        std::shared_ptr<creatures::io::MessageRouter> messageRouter);
 
     void start() override;
 
@@ -123,7 +124,7 @@ private:
 
     std::shared_ptr<creatures::creature::Creature> creature;
     std::shared_ptr<creatures::Logger> logger;
-    std::shared_ptr<creatures::MessageQueue<creatures::io::Message>> outgoingQueue;
+    std::shared_ptr<creatures::io::MessageRouter> messageRouter;
 
     std::atomic<u64> number_of_frames = 0UL;
 

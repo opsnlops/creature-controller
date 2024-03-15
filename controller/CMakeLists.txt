@@ -184,6 +184,9 @@ add_library(creature_lib
         src/config/ConfigurationBuilder.h
         src/config/ConfigurationBuilder.cpp
         src/io/Message.h
+        src/io/MessageRouter.h
+        src/io/UnknownMessageDestintationException.h
+        src/io/MessageRouter.cpp
 )
 
 target_include_directories(creature_lib PUBLIC

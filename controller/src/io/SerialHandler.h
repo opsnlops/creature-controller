@@ -44,6 +44,14 @@ namespace creatures {
         std::shared_ptr<MessageQueue<Message>> getOutgoingQueue();
         std::shared_ptr<MessageQueue<Message>> getIncomingQueue();
 
+        /**
+         * Get the module name for this serial handler
+         *
+         * @return a `UARTDevice::module_name` for this serial handler
+         */
+        UARTDevice::module_name getModuleName();
+
+
         /*
          * This is public so that the threads can be registered with the main loop
          */
