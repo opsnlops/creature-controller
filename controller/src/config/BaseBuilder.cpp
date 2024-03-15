@@ -16,7 +16,7 @@ using json = nlohmann::json;
 namespace creatures :: config {
 
     BaseBuilder::BaseBuilder(std::shared_ptr<Logger> logger,
-                             std::string fileName) : logger(logger), fileName(std::move(fileName)) {}
+                             std::string fileName) : fileName(std::move(fileName)), logger(logger) {}
 
     /**
      * Ensures that a give file is both readable and accessible

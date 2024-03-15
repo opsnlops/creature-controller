@@ -1,6 +1,4 @@
 // Don't yell at me at the pass-by-value on the logger
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "performance-unnecessary-value-param"
 
 #include <chrono>
 
@@ -34,4 +32,3 @@ namespace creatures::commands {
 
 } // creatures::commands
 
-#pragma clang diagnostic pop
