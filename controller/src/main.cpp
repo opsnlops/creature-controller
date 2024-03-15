@@ -1,22 +1,20 @@
 
 #include <cstdlib>
 #include <csignal>
-#include <ranges>
 #include <thread>
 #include <vector>
 
 #include "controller-config.h"
 
 #include "config/CommandLine.h"
-#include "config/Configuration.h"
 #include "config/CreatureBuilder.h"
 #include "controller/Controller.h"
 #include "controller/tasks/PingTask.h"
-#include "creature/Creature.h"
 #include "device/GPIO.h"
 #include "dmx/E131Client.h"
 #include "io/Message.h"
 #include "io/MessageProcessor.h"
+#include "io/MessageRouter.h"
 #include "io/SerialHandler.h"
 #include "logging/Logger.h"
 #include "logging/SpdlogLogger.h"
@@ -109,14 +107,16 @@ int main(int argc, char **argv) {
         }
     }
 
+    // Make the MessageRouter
+    auto messageRouter = std::make_shared<creatures::io::MessageRouter>(logger);
 
     // Fire up the controller
-    auto controller = std::make_shared<Controller>(logger, creature, serialHandler);
+    auto controller = std::make_shared<Controller>(logger, creature, messageRouter);
     controller->start();
     workerThreads.push_back(controller);
 
     // Fire up the MessageProcessor
-    auto messageProcessor = std::make_shared<creatures::MessageProcessor>(logger, serialHandler, controller);
+    auto messageProcessor = std::make_shared<creatures::MessageProcessor>(logger, messageRouter, controller);
     messageProcessor->start();
 
     // Now that the controller is running, we can start the creature
@@ -134,7 +134,7 @@ int main(int argc, char **argv) {
     controller->sendFlushBufferRequest();
 
     // Fire up the ping task
-    auto pingTask = std::make_unique<creatures::tasks::PingTask>(logger, serialHandler);
+    auto pingTask = std::make_unique<creatures::tasks::PingTask>(logger, messageRouter);
     pingTask->start();
     workerThreads.push_back(std::move(pingTask));
 

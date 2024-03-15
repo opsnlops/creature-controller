@@ -54,6 +54,10 @@ namespace creatures {
     }
 
 
+    UARTDevice::module_name SerialHandler::getModuleName() {
+        return this->moduleName;
+    }
+
     // Access to our queues
     std::shared_ptr<MessageQueue<Message>> SerialHandler::getOutgoingQueue() {
         return this->outgoingQueue;
@@ -136,10 +140,18 @@ namespace creatures {
         }
         this->logger->debug("setupSerialPort done");
 
-        std::shared_ptr<creatures::StoppableThread> reader = std::make_shared<creatures::io::SerialReader>(this->logger, this->deviceNode, this->fileDescriptor, this->incomingQueue);
+        std::shared_ptr<creatures::StoppableThread> reader = std::make_shared<creatures::io::SerialReader>(this->logger,
+                                                                                                           this->deviceNode,
+                                                                                                           this->moduleName,
+                                                                                                           this->fileDescriptor,
+                                                                                                           this->incomingQueue);
         reader->start();
 
-        std::shared_ptr<creatures::StoppableThread> writer = std::make_shared<creatures::io::SerialWriter>(this->logger, this->deviceNode, this->fileDescriptor, this->outgoingQueue);
+        std::shared_ptr<creatures::StoppableThread> writer = std::make_shared<creatures::io::SerialWriter>(this->logger,
+                                                                                                           this->deviceNode,
+                                                                                                           this->moduleName,
+                                                                                                           this->fileDescriptor,
+                                                                                                           this->outgoingQueue);
         writer->start();
 
         // Store the workers

@@ -1,4 +1,3 @@
-
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 #include "config/Configuration.h"
@@ -31,17 +30,13 @@ protected:
     }
 };
 
-TEST_F(ConfigurationTest, SetAndGetConfigFileName) {
-    std::string fileName = "config.json";
-    config->setConfigFileName(fileName);
-    ASSERT_EQ(config->getConfigFileName(), fileName);
+TEST_F(ConfigurationTest, SetAndGetCreatureConfigFile) {
+    std::string fileName = "creature_config.json";
+    config->setCreatureConfigFile(fileName);
+    ASSERT_EQ(config->getCreatureConfigFile(), fileName);
 }
 
-TEST_F(ConfigurationTest, SetAndGetUsbDevice) {
-    std::string usbDevice = "/dev/ttyUSB0";
-    config->setUsbDevice(usbDevice);
-    ASSERT_EQ(config->getUsbDevice(), usbDevice);
-}
+// Removed SetAndGetUsbDevice test since it doesn't match existing methods in Configuration
 
 TEST_F(ConfigurationTest, SetAndGetUseGPIO) {
     config->setUseGPIO(true);

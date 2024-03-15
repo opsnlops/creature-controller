@@ -1,9 +1,10 @@
 
 #include <chrono>
 
-#include "logging/Logger.h"
 #include "controller/commands/Ping.h"
 #include "controller/tasks/PingTask.h"
+#include "io/MessageRouter.h"
+#include "logging/Logger.h"
 #include "util/thread_name.h"
 
 
@@ -14,6 +15,7 @@ std::chrono::time_point<std::chrono::high_resolution_clock> lastPingSentAt = std
 
 namespace creatures::tasks {
 
+    using creatures::io::MessageRouter;
 
     PingTask::~PingTask() {
         this->logger->info("ping task destroyed");
@@ -43,10 +45,10 @@ namespace creatures::tasks {
             // don't ping each time 😅
             if(totalMilliseconds % (PING_SECONDS * PING_LOOP_TIME) == 0) {
                 auto pingCommand = creatures::commands::Ping(logger);
-                serialHandler->getOutgoingQueue()->push(pingCommand.toMessageWithChecksum());
+                messageRouter->broadcastMessageToAllModules(pingCommand.toMessageWithChecksum());
                 lastPingSentAt  = std::chrono::high_resolution_clock::now();
 
-                logger->debug("sent ping");
+                logger->debug("sent pings");
             }
 
             totalMilliseconds += PING_LOOP_TIME;

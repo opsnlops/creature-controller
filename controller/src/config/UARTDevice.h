@@ -42,12 +42,12 @@ namespace creatures :: config {
         // Convert a string into a module name
         static module_name stringToModuleName(const std::string &typeStr);
 
-        // A constexpr function to convert module_name to string
-        static constexpr std::string_view moduleNameToString(module_name mod) {
-            constexpr std::array<std::string_view, 7> names = {
+        // A constexpr function to convert module_name to a char*
+        static constexpr const char* moduleNameToString(module_name mod) {
+            constexpr const char* names[] = {
                     "A", "B", "C", "D", "E", "F", "invalid_module"
             };
-            return (static_cast<std::size_t>(mod) < names.size()) ? names[mod] : "unknown";
+            return (static_cast<std::size_t>(mod) < std::size(names)) ? names[mod] : "unknown";
         }
 
     protected:

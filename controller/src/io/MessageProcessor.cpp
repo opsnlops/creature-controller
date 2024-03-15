@@ -1,7 +1,6 @@
 
 #include <string>
 #include <unordered_map>
-#include <functional>
 #include <sstream>
 #include <utility>
 #include <vector>
@@ -9,11 +8,12 @@
 #include "controller-config.h"
 
 #include "logging/Logger.h"
-#include "logging/SpdlogLogger.h"
 #include "io/handlers/InitHandler.h"
 #include "io/handlers/LogHandler.h"
 #include "io/handlers/PongHandler.h"
 #include "io/handlers/StatsHandler.h"
+#include "io/Message.h"
+#include "io/MessageRouter.h"
 #include "util/thread_name.h"
 
 #include "MessageProcessor.h"
@@ -21,12 +21,15 @@
 
 namespace creatures {
 
+    using creatures::io::Message;
+    using creatures::io::MessageRouter;
+
     MessageProcessor::MessageProcessor(std::shared_ptr<Logger> _logger,
-                                       std::shared_ptr<SerialHandler> serialHandler,
+                                       std::shared_ptr<MessageRouter> messageRouter,
                                        std::shared_ptr<Controller> controller) :
-                                       logger(_logger),
-                                       serialHandler(std::move(serialHandler)),
-                                       controller(controller) {
+                                       messageRouter(messageRouter),
+                                       controller(controller),
+                                       logger(_logger) {
 
         /*
         // Make a new logger just for us
@@ -34,7 +37,7 @@ namespace creatures {
         logger->init("rp2040");
         */
         logger->info("Message Processor created!");
-        this->incomingQueue = this->serialHandler->getIncomingQueue();
+        this->incomingQueue = this->messageRouter->getIncomingQueue();
 
         createHandlers();
 
@@ -77,7 +80,7 @@ namespace creatures {
      *
      * @return the next message
      */
-    std::string MessageProcessor::waitForMessage() {
+    Message MessageProcessor::waitForMessage() {
         logger->trace("waiting for a message");
         auto incomingMessage = this->incomingQueue->pop();
         logger->trace("got one!");
@@ -89,7 +92,7 @@ namespace creatures {
      *
      * @param message the message to process
      */
-    void MessageProcessor::processMessage(const std::string& message) {
+    void MessageProcessor::processMessage(const Message& message) {
 
 #if DEBUG_MESSAGE_PROCESSING
         this->logger->debug("pulled message off queue: {}", incomingMessage);
@@ -102,7 +105,7 @@ namespace creatures {
         }
 
         // Tokenize message
-        std::istringstream iss(message);
+        std::istringstream iss(message.payload);
         std::vector<std::string> tokens;
         std::string token;
         while (std::getline(iss, token, '\t')) {

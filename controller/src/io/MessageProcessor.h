@@ -15,26 +15,30 @@
 #include "io/handlers/PongHandler.h"
 #include "io/handlers/ReadyHandler.h"
 #include "io/handlers/StatsHandler.h"
-#include "io/SerialHandler.h"
+#include "io/Message.h"
+#include "io/MessageRouter.h"
 #include "util/MessageQueue.h"
 #include "logging/Logger.h"
 
 
 namespace creatures {
 
+    using creatures::io::Message;
+    using creatures::io::MessageRouter;
+
     class MessageProcessor {
 
     public:
         MessageProcessor(std::shared_ptr<Logger> logger,
-                         std::shared_ptr<SerialHandler> serialHandler,
+                         std::shared_ptr<MessageRouter> messageRouter,
                          std::shared_ptr<Controller> controller);
         ~MessageProcessor() = default;
 
         void registerHandler(std::string messageType, std::shared_ptr<IMessageHandler> handler);
         void start();
 
-        std::string waitForMessage();
-        void processMessage(const std::string& message);
+        Message waitForMessage();
+        void processMessage(const Message& message);
 
     private:
 
@@ -43,8 +47,8 @@ namespace creatures {
          */
         void createHandlers();
 
-        std::shared_ptr<SerialHandler> serialHandler;
-        std::shared_ptr<MessageQueue<std::string>> incomingQueue;
+        std::shared_ptr<MessageRouter> messageRouter;
+        std::shared_ptr<MessageQueue<Message>> incomingQueue;
         std::unordered_map<std::string, std::shared_ptr<IMessageHandler>> handlers;
 
         std::thread workerThread;

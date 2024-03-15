@@ -2,7 +2,7 @@
 #pragma once
 
 #include "logging/Logger.h"
-#include "io/SerialHandler.h"
+#include "io/MessageRouter.h"
 #include "util/StoppableThread.h"
 
 #include "controller-config.h"
@@ -11,11 +11,13 @@
 
 namespace creatures::tasks {
 
+    using creatures::io::MessageRouter;
+
     class PingTask : public StoppableThread {
 
     public:
-        PingTask(std::shared_ptr<Logger> logger, std::shared_ptr<SerialHandler> serialHandler) :
-            logger(logger), serialHandler(serialHandler) { }
+        PingTask(std::shared_ptr<Logger> logger, const std::shared_ptr<MessageRouter>& messageRouter) :
+            logger(logger), messageRouter(messageRouter) { }
         ~PingTask();
 
         void start() override;
@@ -25,7 +27,7 @@ namespace creatures::tasks {
 
     private:
         std::shared_ptr<Logger> logger;
-        std::shared_ptr<SerialHandler> serialHandler;
+        std::shared_ptr<MessageRouter> messageRouter;
 
     };
 
