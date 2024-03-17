@@ -71,7 +71,7 @@ namespace creatures {
 
         this->logger->info("attempting to open {}", this->deviceNode);
         this->fileDescriptor = open(this->deviceNode.c_str(), O_RDWR | O_NONBLOCK | O_NOCTTY);
-        this->logger->debug("serial point is open, fileDescriptor = {}", this->fileDescriptor);
+        this->logger->debug("serial port is open, fileDescriptor = {}", this->fileDescriptor);
 
         if (this->fileDescriptor == -1) {
 

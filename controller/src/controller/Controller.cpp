@@ -1,8 +1,5 @@
 
 
-#include <climits>
-#include <utility>
-
 #include "controller-config.h"
 
 #include "device/Servo.h"
@@ -15,6 +12,7 @@
 #include "controller/commands/CreatureConfiguration.h"
 #include "controller/commands/FlushBuffer.h"
 #include "controller/commands/SetServoPositions.h"
+#include "util/thread_name.h"
 
 // Exceptions
 #include "controller/ControllerException.h"
@@ -159,7 +157,12 @@ void Controller::run() {
 
     using namespace std::chrono;
 
+    this->threadName = "Controller::run";
+    setThreadName(this->threadName);
+
     logger->info("controller worker now running");
+
+
 
 
     auto target_delta = microseconds( 1000000 / creature->getServoUpdateFrequencyHz());

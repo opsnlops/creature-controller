@@ -10,7 +10,7 @@
 namespace creatures::commands {
 
     /**
-     * This is a very simple simple message that contains only a single chartacter. It's
+     * This is a very simple simple message that contains only a single character. It's
      * a magic signal to the firmware to flush its buffer and get ready to start over.
      * That magic character is `\a`, a bell character. 🔔
      */

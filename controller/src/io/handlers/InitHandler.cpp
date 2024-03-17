@@ -1,12 +1,12 @@
 
-#include <chrono>
 #include <string>
 #include <vector>
 
-#include "controller-config.h"
-
-#include "logging/Logger.h"
 #include "io/handlers/InitHandler.h"
+
+#include "controller/ServoModuleHandler.h"
+#include "logging/Logger.h"
+
 #include "util/string_utils.h"
 
 
@@ -15,8 +15,8 @@
 
 namespace creatures {
 
-    InitHandler::InitHandler(std::shared_ptr<Logger> logger, std::shared_ptr<Controller> controller) :
-    controller(controller) {
+    InitHandler::InitHandler(std::shared_ptr<Logger> logger, std::shared_ptr<ServoModuleHandler> servoModuleHandler) :
+            servoModuleHandler(servoModuleHandler) {
 
         logger->info("InitHandler created!");
     }
@@ -34,7 +34,8 @@ namespace creatures {
         logger->info("Firmware checked in and wants it's configuration! Version: {}", firmwareVersion);
 
         // Let the controller know it's time to party
-        controller->firmwareReadyForInitialization(firmwareVersion);
+#warning fix
+        //servoModuleHandler->firmwareReadyForInitialization(firmwareVersion);
 
     }
 

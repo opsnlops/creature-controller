@@ -56,12 +56,12 @@ namespace creatures :: io {
         void broadcastMessageToAllModules(const std::string &message);
 
         /**
-         * Receive a message from the creature
+         * Received a message from the creature
          *
          * @param message the inbound message from the creature
          * @throws UnknownMessageDestinationException if the message has an unroutable destination
          */
-        void receiveMessageFromCreature(const Message &message);
+        void receivedMessageFromCreature(const Message &message);
 
         // For the controller to read messages from the creature
         std::shared_ptr<MessageQueue<Message>> getIncomingQueue();

@@ -18,6 +18,10 @@ namespace creatures {
             }
         }
 
+        std::string getName() {
+            return threadName;
+        }
+
         bool isThreadJoinable() {
             return thread.joinable();
         }
@@ -34,6 +38,7 @@ namespace creatures {
         virtual void run() = 0; // This is the method that will be called when the thread starts
 
         std::atomic<bool> stop_requested;
+        std::string threadName = "unnamed thread";
 
     private:
         std::thread thread;

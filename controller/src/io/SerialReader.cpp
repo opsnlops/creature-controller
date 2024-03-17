@@ -33,7 +33,8 @@ namespace creatures :: io {
     void SerialReader::run() {
         this->logger->info("hello from the reader thread for {} 👓", this->deviceNode);
 
-        setThreadName("SerialReader::run for " + this->deviceNode);
+        this->threadName = fmt::format("SerialReader::run for {}", this->deviceNode);
+        setThreadName(threadName);
 
         struct pollfd fds[1];
         int timeout_msecs = 21000; // 21 seconds in milliseconds

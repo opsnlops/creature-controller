@@ -7,13 +7,15 @@
 
 #include "controller-config.h"
 
-#include "logging/Logger.h"
+#include "config/UARTDevice.h"
+#include "controller/ServoModuleHandler.h"
 #include "io/handlers/InitHandler.h"
 #include "io/handlers/LogHandler.h"
 #include "io/handlers/PongHandler.h"
 #include "io/handlers/StatsHandler.h"
 #include "io/Message.h"
 #include "io/MessageRouter.h"
+#include "logging/Logger.h"
 #include "util/thread_name.h"
 
 #include "MessageProcessor.h"
@@ -21,15 +23,12 @@
 
 namespace creatures {
 
-    using creatures::io::Message;
-    using creatures::io::MessageRouter;
-
     MessageProcessor::MessageProcessor(std::shared_ptr<Logger> _logger,
-                                       std::shared_ptr<MessageRouter> messageRouter,
-                                       std::shared_ptr<Controller> controller) :
-                                       messageRouter(messageRouter),
-                                       controller(controller),
-                                       logger(_logger) {
+                                       UARTDevice::module_name moduleId,
+                                       std::shared_ptr<ServoModuleHandler> servoModuleHandler) :
+                                       servoModuleHandler(servoModuleHandler),
+                                       logger(_logger),
+                                       moduleId(moduleId) {
 
         /*
         // Make a new logger just for us
@@ -37,7 +36,7 @@ namespace creatures {
         logger->init("rp2040");
         */
         logger->info("Message Processor created!");
-        this->incomingQueue = this->messageRouter->getIncomingQueue();
+        this->incomingQueue = this->servoModuleHandler->getIncomingQueue();
 
         createHandlers();
 
@@ -53,10 +52,10 @@ namespace creatures {
         logger->debug("creating the message handlers");
 
         this->logHandler = std::make_shared<LogHandler>();
-        this->initHandler = std::make_shared<InitHandler>(this->logger, this->controller);
+        this->initHandler = std::make_shared<InitHandler>(this->logger, this->servoModuleHandler);
         this->pongHandler = std::make_shared<PongHandler>();
         this->statsHandler = std::make_shared<StatsHandler>();
-        this->readyHandler = std::make_shared<ReadyHandler>(this->logger, this->controller);
+        this->readyHandler = std::make_shared<ReadyHandler>(this->logger, this->servoModuleHandler);
 
     }
 
@@ -69,10 +68,7 @@ namespace creatures {
     void MessageProcessor::start() {
 
         logger->info("Starting the message processor");
-
-        this->workerThread = std::thread(&MessageProcessor::processMessages, this);
-        this->workerThread.detach(); // Bye bye little thread!
-
+        creatures::StoppableThread::start();
     }
 
     /**
@@ -130,13 +126,14 @@ namespace creatures {
 
     }
 
-    [[noreturn]] void MessageProcessor::processMessages() {
+    void MessageProcessor::run() {
 
         setThreadName("MessageProcessor::processMessages");
 
         logger->debug("hello from the message processor thread! 👋🏻");
 
-        for(EVER) {
+        while(!this->stop_requested.load()) {
+
             auto message = waitForMessage();
 
             // Try to process the message, leaving an error if needed
@@ -146,8 +143,6 @@ namespace creatures {
                 logger->error(e.what());
             }
         }
-
-
     }
 
 } // creatures

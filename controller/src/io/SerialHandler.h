@@ -51,9 +51,8 @@ namespace creatures {
          */
         UARTDevice::module_name getModuleName();
 
-
         /*
-         * This is public so that the threads can be registered with the main loop
+         * This is public so that the threads can be registered with the servo module handler
          */
         std::vector<std::shared_ptr<creatures::StoppableThread>> threads;
 
