@@ -5,14 +5,17 @@
 
 #include "controller-config.h"
 
+#include "controller/ServoModuleHandler.h"
 #include "logging/Logger.h"
 #include "io/handlers/ReadyHandler.h"
 
 
 namespace creatures {
 
-    ReadyHandler::ReadyHandler(std::shared_ptr<Logger> logger, std::shared_ptr<Controller> controller) :
-            controller(controller) {
+    using creatures::ServoModuleHandler;
+
+    ReadyHandler::ReadyHandler(std::shared_ptr<Logger> logger, std::shared_ptr<ServoModuleHandler> servoModuleHandler) :
+            servoModuleHandler(servoModuleHandler) {
 
         logger->info("ReadyHandler created!");
     }
@@ -22,7 +25,7 @@ namespace creatures {
         // This is basically the most easy handler ever 😅
 
         logger->info("READY message received from the firmware!");
-        controller->firmwareReadyToOperate();
+        servoModuleHandler->firmwareReadyToOperate();
 
     }
 

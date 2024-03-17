@@ -8,7 +8,7 @@
 
 #include "controller-config.h"
 
-#include "controller/Controller.h"
+#include "controller/ServoModuleHandler.h"
 #include "io/handlers/IMessageHandler.h"
 #include "io/handlers/InitHandler.h"
 #include "io/handlers/LogHandler.h"
@@ -17,25 +17,26 @@
 #include "io/handlers/StatsHandler.h"
 #include "io/Message.h"
 #include "io/MessageRouter.h"
-#include "util/MessageQueue.h"
 #include "logging/Logger.h"
+#include "util/MessageQueue.h"
+#include "util/StoppableThread.h"
 
 
 namespace creatures {
 
-    using creatures::io::Message;
-    using creatures::io::MessageRouter;
 
-    class MessageProcessor {
+    class MessageProcessor : public StoppableThread {
 
     public:
         MessageProcessor(std::shared_ptr<Logger> logger,
-                         std::shared_ptr<MessageRouter> messageRouter,
-                         std::shared_ptr<Controller> controller);
+                         UARTDevice::module_name moduleId,
+                         std::shared_ptr<ServoModuleHandler> ServoModuleHandler);
         ~MessageProcessor() = default;
 
         void registerHandler(std::string messageType, std::shared_ptr<IMessageHandler> handler);
-        void start();
+        void start() override;
+
+        void run() override;
 
         Message waitForMessage();
         void processMessage(const Message& message);
@@ -47,16 +48,14 @@ namespace creatures {
          */
         void createHandlers();
 
-        std::shared_ptr<MessageRouter> messageRouter;
+        std::shared_ptr<ServoModuleHandler> servoModuleHandler;
         std::shared_ptr<MessageQueue<Message>> incomingQueue;
         std::unordered_map<std::string, std::shared_ptr<IMessageHandler>> handlers;
 
         std::thread workerThread;
 
-        [[noreturn]] void processMessages();
-
-        std::shared_ptr<Controller> controller;
         std::shared_ptr<Logger> logger;
+        UARTDevice::module_name moduleId;
 
         // Handlers
         std::shared_ptr<creatures::LogHandler> logHandler;

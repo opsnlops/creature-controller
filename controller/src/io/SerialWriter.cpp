@@ -31,7 +31,10 @@ namespace creatures :: io {
 
 
     void SerialWriter::run() {
-        setThreadName("SerialHandler::writer for " + this->deviceNode);
+
+        this->threadName = fmt::format("SerialWriter::run for {}", this->deviceNode);
+        setThreadName(threadName);
+
 
         this->logger->info("hello from the writer thread for {} 📝", this->deviceNode);
 

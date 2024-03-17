@@ -10,6 +10,7 @@
 #include "config/CommandLine.h"
 #include "config/CreatureBuilder.h"
 #include "controller/Controller.h"
+#include "controller/ServoModuleHandler.h"
 #include "controller/tasks/PingTask.h"
 #include "device/GPIO.h"
 #include "dmx/E131Client.h"
@@ -47,6 +48,12 @@ void timedShutdown(std::shared_ptr<creatures::StoppableThread> &workerThread, un
     }
 }
 
+std::shared_ptr<creatures::Logger> makeLogger(std::string name) {
+    auto logger = std::make_shared<creatures::SpdlogLogger>();
+    logger->init(name);
+    return logger;
+}
+
 int main(int argc, char **argv) {
 
     using creatures::io::Message;
@@ -60,8 +67,7 @@ int main(int argc, char **argv) {
                                       CREATURE_CONTROLLER_VERSION_PATCH);
 
     // Get the logger up and running ASAP
-    std::shared_ptr<creatures::Logger> logger = std::make_shared<creatures::SpdlogLogger>();
-    logger->init("controller");
+    std::shared_ptr<creatures::Logger> logger = makeLogger("main");
 
     logger->info("Welcome to the Creature Controller! v{} 🦜", version);
 
@@ -97,30 +103,9 @@ int main(int argc, char **argv) {
     std::vector<std::shared_ptr<creatures::StoppableThread>> workerThreads;
 
 
-    // Start up the SerialHandler
+    // Create the top level message queues
     auto topLevelOutgoingQueue = std::make_shared<creatures::MessageQueue<Message>>();
     auto topLevelIncomingQueue = std::make_shared<creatures::MessageQueue<Message>>();
-
-    for( const auto& uart : config->getUARTDevices() ) {
-
-        logger->debug("creating a SerialHandler for module {} on {}",
-                      UARTDevice::moduleNameToString(uart.getModule()),
-                      uart.getDeviceNode());
-
-        // Create this UART's queues
-        auto outgoingQueue = std::make_shared<creatures::MessageQueue<Message>>();
-        auto incomingQueue = std::make_shared<creatures::MessageQueue<Message>>();
-
-        // Create the SerialHandler and start it
-        auto serialHandler = std::make_shared<creatures::SerialHandler>(logger, uart.getDeviceNode(), uart.getModule(),
-                                                                        outgoingQueue, incomingQueue);
-        serialHandler->start();
-
-        // Add this SerialHandler's threads to the list of threads
-        for( const auto& thread : serialHandler->threads ) {
-            workerThreads.push_back(thread);
-        }
-    }
 
     // Make the MessageRouter
     auto messageRouter = std::make_shared<creatures::io::MessageRouter>(logger);
@@ -130,9 +115,30 @@ int main(int argc, char **argv) {
     controller->start();
     workerThreads.push_back(controller);
 
-    // Fire up the MessageProcessor
-    auto messageProcessor = std::make_shared<creatures::MessageProcessor>(logger, messageRouter, controller);
-    messageProcessor->start();
+
+
+    /**
+     * Create and start the ServoModuleHandler for the UART devices that were found in the config file
+     */
+    for( const auto& uart : config->getUARTDevices() ) {
+
+        logger->debug("creating a ServoModuleHandler for module {} on {}",
+                      UARTDevice::moduleNameToString(uart.getModule()),
+                      uart.getDeviceNode());
+
+        std::string loggerName = fmt::format("uart-{}", UARTDevice::moduleNameToString(uart.getModule()));
+        auto handler = std::make_shared<ServoModuleHandler>(makeLogger(loggerName), controller, uart.getModule(),
+                                                            uart.getDeviceNode(), messageRouter);
+
+        logger->debug("init'ing the ServoModuleHandler for module {}", UARTDevice::moduleNameToString(uart.getModule()));
+        handler->init();
+
+        logger->debug("starting the ServoModuleHandler for module {}", UARTDevice::moduleNameToString(uart.getModule()));
+        handler->start();
+
+        workerThreads.push_back(handler);
+
+    }
 
     // Now that the controller is running, we can start the creature
     creature->init(controller);

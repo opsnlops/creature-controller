@@ -21,7 +21,7 @@
 
 namespace creatures::device {
 
-    GPIO::GPIO(const std::shared_ptr<creatures::Logger>& logger, bool enabled) : logger(logger), enabled(enabled) {}
+    GPIO::GPIO(const std::shared_ptr<creatures::Logger>& logger, bool enabled) : enabled(enabled), logger(logger) {}
 
     void GPIO::init() {
 

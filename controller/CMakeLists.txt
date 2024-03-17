@@ -187,6 +187,8 @@ add_library(creature_lib
         src/io/MessageRouter.h
         src/io/UnknownMessageDestintationException.h
         src/io/MessageRouter.cpp
+        src/controller/ServoModuleHandler.h
+        src/controller/ServoModuleHandler.cpp
 )
 
 target_include_directories(creature_lib PUBLIC

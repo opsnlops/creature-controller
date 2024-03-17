@@ -67,7 +67,7 @@ namespace creatures :: io {
         }
     }
 
-    void MessageRouter::receiveMessageFromCreature(const Message &message) {
+    void MessageRouter::receivedMessageFromCreature(const Message &message) {
             incomingQueue->push(message);
     }
 

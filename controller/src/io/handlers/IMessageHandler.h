@@ -7,7 +7,7 @@
 #include "logging/Logger.h"
 
 namespace creatures {
-
+    class InitHandler;
     /**
      * Message Handler Interface
      */
