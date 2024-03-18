@@ -2,12 +2,8 @@
 
 #include <vector>
 #include <string>
-#include <numeric>
 
 #include <fmt/format.h>
-
-#include "controller-config.h"
-
 
 #include "controller/commands/tokens/ServoPosition.h"
 
@@ -19,14 +15,21 @@ namespace creatures::commands {
 
     SetServoPositions::SetServoPositions(std::shared_ptr<Logger> logger) : logger(logger) { // NOLINT(*-pass-by-value)
         this->servoPositions = std::vector<ServoPosition>();
+        this->filter = creatures::config::UARTDevice::invalid_module;
+    }
+
+    void SetServoPositions::setFilter(creatures::config::UARTDevice::module_name _filter) {
+        this->filter = _filter;
     }
 
     void SetServoPositions::addServoPosition(const creatures::ServoPosition &servoPosition) {
 
         // Make sure we're not putting the same outputPosition in twice
         for (const auto& existingServoPosition : servoPositions) {
-            if (existingServoPosition.getOutputPosition() == servoPosition.getOutputPosition()) {
-                std::string errorMessage = fmt::format("Unable to insert the same output position twice: {}", servoPosition.getOutputPosition());
+            if (existingServoPosition.getServoId() == servoPosition.getServoId()) {
+                std::string errorMessage = fmt::format("Unable to insert the same output position twice: module {}, pin {}",
+                                                       creatures::config::UARTDevice::moduleNameToString(servoPosition.getServoId().module),
+                                                       servoPosition.getServoId().pin);
                 logger->error(errorMessage);
                 throw CommandException(errorMessage);
             }
@@ -44,14 +47,21 @@ namespace creatures::commands {
             return "";
         }
 
+        // Make sure we have a valid filter
+        if(filter == creatures::config::UARTDevice::invalid_module) {
+            logger->error("attempted to call toMessage() on a SetServoPositions with an invalid filter");
+            return "";
+        }
+
         // Start the message with the 'POS' command prefix
         std::string message = "POS";
 
-        // Transform each ServoPosition to a string and accumulate with a tab separator
-        message = std::accumulate(servoPositions.begin(), servoPositions.end(), message,
-                                  [](const std::string& accumulator, const creatures::ServoPosition& position) {
-                                      return accumulator + '\t' + position.toString();
-                                  });
+        // Now go make the string
+        for (const auto& position : servoPositions) {
+            if (position.getServoId().module == filter) {
+                message += '\t' + position.toString();
+            }
+        }
 
         logger->trace("message is: {}", message);
         return message;

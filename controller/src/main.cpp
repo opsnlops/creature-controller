@@ -17,7 +17,6 @@
 #include "io/Message.h"
 #include "io/MessageProcessor.h"
 #include "io/MessageRouter.h"
-#include "io/SerialHandler.h"
 #include "logging/Logger.h"
 #include "logging/SpdlogLogger.h"
 #include "util/thread_name.h"
@@ -126,9 +125,19 @@ int main(int argc, char **argv) {
                       UARTDevice::moduleNameToString(uart.getModule()),
                       uart.getDeviceNode());
 
+        /*
+         * ServoModuleHandler(std::shared_ptr<Logger> logger,
+                           UARTDevice::module_name moduleId,
+                           std::string deviceNode,
+                           std::shared_ptr<creatures::io::MessageRouter> messageRouter);
+         */
+
+
         std::string loggerName = fmt::format("uart-{}", UARTDevice::moduleNameToString(uart.getModule()));
-        auto handler = std::make_shared<ServoModuleHandler>(makeLogger(loggerName), controller, uart.getModule(),
-                                                            uart.getDeviceNode(), messageRouter);
+        auto handler = std::make_shared<ServoModuleHandler>(makeLogger(loggerName),
+                                                            uart.getModule(),
+                                                            uart.getDeviceNode(),
+                                                            messageRouter);
 
         logger->debug("init'ing the ServoModuleHandler for module {}", UARTDevice::moduleNameToString(uart.getModule()));
         handler->init();

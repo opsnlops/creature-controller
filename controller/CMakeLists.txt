@@ -109,8 +109,8 @@ add_library(creature_lib
         src/controller/commands/tokens/ServoPosition.h
         src/controller/commands/tokens/ServoConfig.cpp
         src/controller/commands/tokens/ServoConfig.h
-        src/controller/commands/CreatureConfiguration.cpp
-        src/controller/commands/CreatureConfiguration.h
+        src/controller/commands/ServoModuleConfiguration.cpp
+        src/controller/commands/ServoModuleConfiguration.h
         src/controller/commands/FlushBuffer.cpp
         src/controller/commands/FlushBuffer.h
         src/controller/tasks/PingTask.cpp
@@ -189,6 +189,7 @@ add_library(creature_lib
         src/io/MessageRouter.cpp
         src/controller/ServoModuleHandler.h
         src/controller/ServoModuleHandler.cpp
+        src/device/ServoSpecifier.h
 )
 
 target_include_directories(creature_lib PUBLIC

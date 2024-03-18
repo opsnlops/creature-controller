@@ -14,10 +14,10 @@
 
 namespace creatures::commands {
 
-    class CreatureConfiguration : public ICommand  {
+    class ServoModuleConfiguration : public ICommand  {
 
     public:
-        CreatureConfiguration(std::shared_ptr<Logger> logger);
+        explicit ServoModuleConfiguration(std::shared_ptr<Logger> logger);
 
         /**
          * Go fetch the servo configurations from the creature

@@ -109,6 +109,8 @@ TEST_F(CreatureBuilderTest, BuildsCorrectlyWithValidData) {
     float tolerance = 0.0001f;
 
 
+    auto properLocation = ServoSpecifier(creatures::config::UARTDevice::A, 0);
+
     // Assertions to validate the built creature
     EXPECT_EQ("Test Creature", creature->getName());
     EXPECT_EQ("This is a fake creature for testing", creature->getDescription());
@@ -121,7 +123,7 @@ TEST_F(CreatureBuilderTest, BuildsCorrectlyWithValidData) {
     EXPECT_EQ(1, creature->getNumberOfServos());
     EXPECT_EQ("neck_left", creature->getServo("neck_left")->getId());
     EXPECT_EQ("Neck Left", creature->getServo("neck_left")->getName());
-    EXPECT_EQ("A0", creature->getServo("neck_left")->getOutputLocation());
+    EXPECT_EQ(properLocation, creature->getServo("neck_left")->getOutputLocation());
     EXPECT_EQ(1250, creature->getServo("neck_left")->getMinPulseUs());
     EXPECT_EQ(2250, creature->getServo("neck_left")->getMaxPulseUs());
     EXPECT_NEAR(expectedSmoothingValue, creature->getServo("neck_left")->getSmoothingValue(), tolerance);

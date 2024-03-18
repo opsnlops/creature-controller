@@ -3,16 +3,18 @@
 
 #include <fmt/format.h>
 
+
+#include "device/ServoSpecifier.h"
 #include "ServoPosition.h"
 
 namespace creatures {
 
 
-    ServoPosition::ServoPosition(std::string outputPosition, u32 requestedTicks) :
-            outputPosition(std::move(outputPosition)), requestedTicks(requestedTicks) {}
+    ServoPosition::ServoPosition(ServoSpecifier servoId, u32 requestedTicks) :
+            servoId(servoId), requestedTicks(requestedTicks) {}
 
-    std::string ServoPosition::getOutputPosition() const {
-        return outputPosition;
+    ServoSpecifier ServoPosition::getServoId() const {
+        return servoId;
     }
 
     u32 ServoPosition::getRequestedTicks() const {
@@ -20,7 +22,7 @@ namespace creatures {
     }
 
     std::string ServoPosition::toString() const {
-        return fmt::format("{} {}", outputPosition, requestedTicks);
+        return fmt::format("{} {}", servoId.pin, requestedTicks);
     }
 
 } // creatures

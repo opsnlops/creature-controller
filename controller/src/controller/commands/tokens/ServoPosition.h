@@ -3,7 +3,7 @@
 
 #include <string>
 
-#include "controller-config.h"
+#include "device/ServoSpecifier.h"
 
 namespace creatures {
 
@@ -20,19 +20,19 @@ namespace creatures {
         /**
          * Constructor!
          *
-         * @param outputPosition which pin the servo is connected to (A0, A1, B2, B3, etc)
+         * @param servoId the servo to move
          * @param requestedTicks the number of ticks to move the servo to
          */
-        ServoPosition(std::string outputPosition, u32 requestedTicks);
+        ServoPosition(ServoSpecifier servoId, u32 requestedTicks);
         ~ServoPosition() = default;
 
-        std::string getOutputPosition() const;
-        u32 getRequestedTicks() const;
+        [[nodiscard]] ServoSpecifier getServoId() const;
+        [[nodiscard]] u32 getRequestedTicks() const;
 
-        std::string toString() const;
+        [[nodiscard]] std::string toString() const;
 
     private:
-        std::string outputPosition;
+        ServoSpecifier servoId;
         u32 requestedTicks;
     };
 

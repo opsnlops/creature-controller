@@ -6,12 +6,14 @@
 #include "Controller.h"
 
 #include "creature/Creature.h"
+#include "config/UARTDevice.h"
 #include "controller/Input.h"
 #include "controller/CommandSendException.h"
 #include "controller/commands/ICommand.h"
-#include "controller/commands/CreatureConfiguration.h"
+#include "controller/commands/ServoModuleConfiguration.h"
 #include "controller/commands/FlushBuffer.h"
 #include "controller/commands/SetServoPositions.h"
+#include "io/Message.h"
 #include "util/thread_name.h"
 
 // Exceptions
@@ -43,9 +45,11 @@ Controller::Controller(const std::shared_ptr<creatures::Logger>& logger,
 }
 
 
-void Controller::sendCommand(const std::shared_ptr<creatures::ICommand>& command) {
+void Controller::sendCommand(const std::shared_ptr<creatures::ICommand>& command,
+                             creatures::config::UARTDevice::module_name destModule) {
     logger->trace("sending command {}", command->toMessageWithChecksum());
-#warning Fix this
+
+
     //this->outgoingQueue->push(command->toMessageWithChecksum());
 }
 
@@ -98,12 +102,13 @@ void Controller::firmwareReadyForInitialization(u32 firmwareVersion) {
     logger->debug("firmware is ready for initialization (version {})", firmwareVersion);
 
     // Go gather the configuration from the creature
-    auto creatureConfigCommand = creatures::commands::CreatureConfiguration(logger);
+    auto creatureConfigCommand = creatures::commands::ServoModuleConfiguration(logger);
     creatureConfigCommand.getServoConfigurations(creature);
 
     // ...and toss it to the serial handler
-#warning Fix this
-    //this->outgoingQueue->push(creatureConfigCommand.toMessageWithChecksum());
+#warning fix
+    creatures::io::Message message = creatures::io::Message( creatures::config::UARTDevice::module_name::A, creatureConfigCommand.toMessageWithChecksum());
+    this->messageRouter->sendMessageToCreature(message);
 
 }
 
@@ -181,7 +186,8 @@ void Controller::run() {
         if (receivedFirstFrame && firmwareReady) {
 
             // Go fetch the positions
-            std::vector<creatures::ServoPosition> requestedPositions = creature->getRequestedServoPositions();
+#warning fix
+            std::vector<creatures::ServoPosition> requestedPositions = creature->getRequestedServoPositions(creatures::config::UARTDevice::module_name::A);
 
             auto command = std::make_shared<creatures::commands::SetServoPositions>(logger);
             for (auto &position: requestedPositions) {
@@ -189,7 +195,8 @@ void Controller::run() {
             }
 
             // Fire this off to the controller
-            sendCommand(command);
+#warning fix
+            sendCommand(command, creatures::config::UARTDevice::module_name::A);
 
             // Tell the creature to get ready for next time
             creature->calculateNextServoPositions();

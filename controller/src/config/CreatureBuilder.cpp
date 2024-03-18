@@ -1,9 +1,5 @@
 
-
-
-
 #include <string>
-#include <filesystem>
 #include <fstream>
 #include <sstream>
 
@@ -13,11 +9,13 @@ using json = nlohmann::json;
 #include "CreatureBuilder.h"
 #include "CreatureBuilderException.h"
 
-#include "logging/Logger.h"
-#include "creature/Creature.h"
+#include "config/UARTDevice.h"
 #include "controller/Input.h"
+#include "creature/Creature.h"
 #include "creature/Parrot.h"
-
+#include "device/Servo.h"
+#include "device/ServoSpecifier.h"
+#include "logging/Logger.h"
 
 namespace creatures :: config {
 
@@ -33,7 +31,7 @@ namespace creatures :: config {
         };
 
         requiredServoFields = {
-                "type", "id", "name", "output_location", "min_pulse_us", "max_pulse_us",
+                "type", "id", "name", "output_module", "output_header", "min_pulse_us", "max_pulse_us",
                 "smoothing_value", "inverted", "default_position"
         };
 
@@ -97,7 +95,6 @@ namespace creatures :: config {
             default:
                 logger->error("unimplemented creature type: {}", string_type);
                 std::exit(1);
-                break;
         }
 
         // The servo frequency is shared. There can only be one per creature, so it's
@@ -138,8 +135,8 @@ namespace creatures :: config {
                 // Do this in its own context since there's a var being created
                 case creatures::creature::Creature::servo: {
                     std::shared_ptr<Servo> servo = createServo(motor, servo_frequency);
-                    logger->debug("adding servo {}", servo->getId());
-                    creature->addServo(servo->getId(), servo);
+                    logger->debug("adding servo {}", servo->getName());
+                    creature->addServo(servo->getName(), servo);
                     break;
                 }
                 default:
@@ -174,7 +171,6 @@ namespace creatures :: config {
         }
 
         return creature;
-
     }
 
 
@@ -195,7 +191,8 @@ namespace creatures :: config {
 
         std::string id = j["id"];
         std::string name = j["name"];
-        std::string output_location = j["output_location"];
+        std::string output_module_as_string = j["output_module"];
+        u16 output_header = j["output_header"];
         u16 min_pulse_us = j["min_pulse_us"];
         u16 max_pulse_us = j["max_pulse_us"];
         float smoothing_value = j["smoothing_value"];
@@ -205,6 +202,14 @@ namespace creatures :: config {
         // Figure out what the default position should be
         u16 default_position = 0;
         creatures::creature::Creature::default_position_type requestedDefault = creatures::creature::Creature::stringToDefaultPositionType(parseDefault);
+
+        // Convert the module string to our enum
+        UARTDevice::module_name output_location = UARTDevice::stringToModuleName(output_module_as_string);
+        if(output_location == creatures::config::UARTDevice::invalid_module) {
+            throw CreatureBuilderException(fmt::format("invalid servo module: {}", output_module_as_string));
+        }
+
+        ServoSpecifier output = {output_location, output_header};
 
         switch(requestedDefault) {
             case creatures::creature::Creature::center:
@@ -221,9 +226,15 @@ namespace creatures :: config {
                 break;
         }
 
+        /*
+         * Servo(std::shared_ptr<creatures::Logger> logger, std::string id, std::string name, ServoSpecifier outputLocation,
+          u16 min_pulse_us, u16 max_pulse_us, float smoothingValue, bool inverted, u16 servo_update_frequency_hz,
+          u16 default_position_microseconds)
+         */
+
         // Create the servo
-        return std::make_shared<Servo>(logger, id, output_location, name, min_pulse_us, max_pulse_us,
-                                       smoothing_value, inverted, servo_frequency, default_position);
+        return std::make_shared<Servo>(logger, id, name, output, min_pulse_us, max_pulse_us, smoothing_value,
+                                       inverted, servo_frequency, default_position);
 
     }
 

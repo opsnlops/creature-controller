@@ -30,7 +30,7 @@ namespace creatures {
             thread = std::thread(&StoppableThread::run, this);
         }
 
-        void shutdown() {
+        virtual void shutdown() {
             stop_requested.store(true);
         }
 
