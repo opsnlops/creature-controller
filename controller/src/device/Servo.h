@@ -7,6 +7,8 @@
 
 #include "controller-config.h"
 
+#include "config/UARTDevice.h"
+#include "device/ServoSpecifier.h"
 #include "logging/Logger.h"
 
 /**
@@ -20,12 +22,14 @@
 class Servo {
 
 public:
-    Servo(std::shared_ptr<creatures::Logger> logger, std::string id, std::string outputLocation, std::string name, u16 min_pulse_us, u16 max_pulse_us,
-          float smoothingValue, bool inverted, u16 servo_update_frequency_hz, u16 default_position_microseconds);
+    Servo(std::shared_ptr<creatures::Logger> logger, std::string id, std::string name, ServoSpecifier outputLocation,
+          u16 min_pulse_us, u16 max_pulse_us, float smoothingValue, bool inverted, u16 servo_update_frequency_hz,
+          u16 default_position_microseconds);
 
     void turnOn();
     void turnOff();
     std::string getId() const;
+    [[nodiscard]] ServoSpecifier getOutputLocation() const;
     [[nodiscard]] u16 getPosition() const;
     [[nodiscard]] u16 getDefaultMicroseconds() const;
 
@@ -40,7 +44,8 @@ public:
     void calculateNextTick();
 
     [[nodiscard]] bool isInverted() const;
-    [[nodiscard]] std::string getOutputLocation() const;
+    creatures::config::UARTDevice::module_name getOutputModule() const;
+    [[nodiscard]] u16 getOutputHeader() const;
     [[nodiscard]] u16 getMinPulseUs() const;
     [[nodiscard]] u16 getMaxPulseUs() const;
 
@@ -50,13 +55,14 @@ public:
 
 
 private:
-    std::string id;               // This servo's id
-    std::string outputLocation;     // Which servo board and pin is this servo on (ie, A0, A1, B0, etc.)
-    u16 min_pulse_us;      // Lower bound on the servo's pulse size in microseconds
-    u16 max_pulse_us;      // Upper bound on the servo's pulse size in microseconds
+
+    std::string id;
+    ServoSpecifier outputLocation; // This servo's output location
+    u16 min_pulse_us;               // Lower bound on the servo's pulse size in microseconds
+    u16 max_pulse_us;               // Upper bound on the servo's pulse size in microseconds
     u16 servo_update_frequency_hz;   // How fast should we tell the firmware to update the servo (usually 50Hz)
     u32 frame_length_microseconds;  // Calculated off the servo_update_frequency_hz
-    u16 current_position;  // Where we think the servo currently is in our position
+    u16 current_position;           // Where we think the servo currently is in our position
     u16 default_microseconds;   // The position to go to when there's nothing else
     bool on;                    // Is the servo active?
     bool inverted;              // Should the movements be inverted?
@@ -88,6 +94,5 @@ private:
      * @return a value near MIN_POSITION and MAX_POSITION
      */
     u16 microsecondsToPosition(u32 microseconds);
-
 
 };

@@ -20,10 +20,10 @@ namespace creatures {
     using creatures::io::Message;
     using creatures::io::MessageRouter;
 
-    ServoModuleHandler::ServoModuleHandler(std::shared_ptr<Logger> logger, std::shared_ptr<Controller> controller,
+    ServoModuleHandler::ServoModuleHandler(std::shared_ptr<Logger> logger,
                                            UARTDevice::module_name moduleId, std::string deviceNode,
                                            std::shared_ptr<MessageRouter> messageRouter) :
-                                           logger(logger), controller(controller), deviceNode(std::move(deviceNode)),
+                                           logger(logger), deviceNode(std::move(deviceNode)),
                                            moduleId(moduleId), messageRouter(messageRouter) {
 
         logger->info("creating a new ServoModuleHandler for module {} on node {}",
@@ -90,6 +90,10 @@ namespace creatures {
 
     void ServoModuleHandler::run() {
         logger->info("ServoModuleHandler thread started");
+    }
+
+    creatures::config::UARTDevice::module_name ServoModuleHandler::getModuleName() const {
+        return this->moduleId;
     }
 
 } // creatures

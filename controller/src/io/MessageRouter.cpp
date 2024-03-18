@@ -1,9 +1,5 @@
 
-
-#include <exception>
 #include <string>
-#include <vector>
-
 
 #include "config/UARTDevice.h"
 #include "io/Message.h"
@@ -29,12 +25,10 @@ namespace creatures :: io {
         this->logger->info("MessageRouter created");
     }
 
-    void MessageRouter::registerSerialHandler(const std::shared_ptr<SerialHandler>& serialHandler) {
-        this->serialHandlers.push_back(serialHandler);
-
-        logger->info("Registered serial handler for module: {}",
-                     UARTDevice::moduleNameToString(serialHandler->getModuleName()));
-
+    void MessageRouter::registerServoModuleHandler(creatures::config::UARTDevice::module_name moduleName,
+                                    std::shared_ptr<MessageQueue<Message>> _incomingQueue) {
+        this->moduleQueues[moduleName] = _incomingQueue;
+        this->logger->info("Registered module: {}", UARTDevice::moduleNameToString(moduleName));
     }
 
     void MessageRouter::sendMessageToCreature(const Message &message) {
@@ -43,27 +37,36 @@ namespace creatures :: io {
                       UARTDevice::moduleNameToString(message.module),
                       message.payload);
 
-        // Go looking for which module to send this message to
-        for (const auto& handler : this->serialHandlers) {
-            if (handler->getModuleName() == message.module) {
-                handler->getOutgoingQueue()->push(message);
+        for (const auto& pair : moduleQueues) {
+            creatures::config::UARTDevice::module_name key = pair.first;
+            std::shared_ptr<MessageQueue<Message>> queue = pair.second;
+
+            // Deliver the message to the appropriate module
+            if(message.module == key) {
+                queue->push(message);
                 return;
             }
+
+            // If we get here, that's bad
+            std::string errorMessage = fmt::format("Unknown destination into the message router: {}",
+                                                   UARTDevice::moduleNameToString(message.module));
+            this->logger->critical(errorMessage);
+            throw UnknownMessageDestinationException(errorMessage);
         }
 
-        // If we get here, we tried to send a message to a module we don't know about, so abort! ⛔️
-        std::string errorMessage = fmt::format("Unknown destination: {}",
-                                               UARTDevice::moduleNameToString(message.module));
-        logger->critical(errorMessage);
-        throw UnknownMessageDestinationException(errorMessage);
+
     }
 
     void MessageRouter::broadcastMessageToAllModules(const std::string &message) {
 
         logger->info("📣 Broadcasting message to all modules: {}", message);
 
-        for (const auto& handler : this->serialHandlers) {
-            handler->getOutgoingQueue()->push(Message(handler->getModuleName(), message));
+        for (const auto& pair : moduleQueues) {
+            creatures::config::UARTDevice::module_name key = pair.first;
+            std::shared_ptr<MessageQueue<Message>> queue = pair.second;
+
+            // Deliver this message in all it's glory
+            queue->push(Message(key, message));
         }
     }
 

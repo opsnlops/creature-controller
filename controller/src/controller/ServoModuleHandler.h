@@ -10,22 +10,26 @@
 #include "util/MessageQueue.h"
 #include "util/StoppableThread.h"
 
+namespace creatures :: io {
+    class MessageRouter;
+}
+
 namespace creatures {
     class MessageProcessor;
+
 
     class ServoModuleHandler : public StoppableThread, public std::enable_shared_from_this<ServoModuleHandler> {
 
     public:
         ServoModuleHandler(std::shared_ptr<Logger> logger,
-                           std::shared_ptr<Controller> controller,
                            UARTDevice::module_name moduleId,
                            std::string deviceNode,
                            std::shared_ptr<creatures::io::MessageRouter> messageRouter);
 
         void init();
 
-        void start();
-        void shutdown();
+        void start() override;
+        void shutdown() override;
 
         bool isReady() const;
         bool isConfigured() const;
@@ -52,6 +56,14 @@ namespace creatures {
 
         void firmwareReadyToOperate();
 
+
+        /**
+         * Get the module ID of the module we're controlling
+         *
+         * @return the module ID of the module we're controlling
+         */
+        creatures::config::UARTDevice::module_name getModuleName() const;
+
     protected:
         void run(); // This is the method that will be called when the thread starts
 
@@ -71,11 +83,6 @@ namespace creatures {
          * Our logger
          */
         std::shared_ptr<Logger> logger;
-
-        /**
-         * The controller we're working for
-         */
-        std::shared_ptr<Controller> controller;
 
         /**
          * The device node we're using to communicate with the module

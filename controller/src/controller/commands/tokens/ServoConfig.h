@@ -18,7 +18,7 @@ namespace creatures {
         ServoConfig(std::shared_ptr<Logger> logger, std::shared_ptr<Servo> servo);
         ~ServoConfig() = default;
 
-        std::string getOutputPosition() const;
+        u16 getOutputHeader() const;
 
         std::string toString() const;
 

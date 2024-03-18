@@ -60,14 +60,16 @@ namespace creatures::creature {
         return servoValue;
     }
 
-    std::vector<creatures::ServoPosition> Creature::getRequestedServoPositions() {
+    std::vector<creatures::ServoPosition> Creature::getRequestedServoPositions(creatures::config::UARTDevice::module_name module) {
 
+        // Create a vector to hold the filtered positions into
         std::vector<creatures::ServoPosition> positions;
-        positions.reserve(servos.size());
 
         // Quickly walk the servos and return the number of ticks we want next
         for (const auto &[key, servo]: servos) {
-            positions.emplace_back(servo->getOutputLocation(), servo->getCurrentMicroseconds());
+            if (servo->getOutputModule() == module) {
+                positions.emplace_back(servo->getOutputLocation(), servo->getCurrentMicroseconds());
+            }
         }
 
         return positions;
@@ -97,9 +99,8 @@ namespace creatures::creature {
         }
     }
 
-
-    std::shared_ptr<Servo> Creature::getServo(const std::string &id) {
-        return servos[id];
+    std::shared_ptr<Servo> Creature::getServo(std::string servoName) {
+        return servos[servoName];
     }
 
     u8 Creature::getNumberOfJoints() const {
@@ -138,17 +139,20 @@ namespace creatures::creature {
         return invalid_position;
     }
 
-    void Creature::addServo(std::string id, const std::shared_ptr<Servo> &servo) {
+    // Get a servo by name
+    void Creature::addServo(std::string servoName, const std::shared_ptr<Servo> &servo) {
 
         // Whoa there, this shouldn't happen
-        if (servos.contains(id)) {
-            std::string errorMessage = fmt::format("Servo with id {} already exists!", id);
+        if (servos.contains(servoName)) {
+            std::string errorMessage = fmt::format("Servo with name {} already exists!", servoName);
             logger->critical(errorMessage);
             throw creatures::CreatureException(errorMessage);
         }
 
-        logger->info("adding servo {} ({})", servo->getName(), id);
-        servos[id] = servo;
+        logger->info("adding servo on {} (mod {}, pin {})", servo->getName(),
+                     creatures::config::UARTDevice::moduleNameToString(servo->getOutputLocation().module),
+                     servo->getOutputLocation().pin);
+        servos[servoName] = servo;
     }
 
 

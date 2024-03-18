@@ -30,6 +30,10 @@ namespace creatures::creature {
     class Creature; // Forward declaration
 }
 
+namespace creatures::io {
+    class MessageRouter; // Forward declaration
+}
+
 
 class Controller : public creatures::StoppableThread {
 
@@ -45,8 +49,10 @@ public:
      * Enqueue a command to send to the creature
      *
      * @param command an instance of `ICommand` to send
+     * @param destModule the module to send the command to
      */
-    void sendCommand(const std::shared_ptr<creatures::ICommand>& command);
+    void sendCommand(const std::shared_ptr<creatures::ICommand>& command,
+                     creatures::config::UARTDevice::module_name destModule);
 
 
     /**
@@ -165,8 +171,5 @@ private:
 
     // How many channels we're expecting from the I/O handler
     u16 numberOfChannels;
-
-
-
 
 };

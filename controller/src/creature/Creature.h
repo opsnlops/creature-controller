@@ -11,12 +11,14 @@
 
 #include "controller-config.h"
 
+#include "config/UARTDevice.h"
 #include "controller/Controller.h"
 #include "controller/commands/tokens/ServoConfig.h"
 #include "controller/commands/tokens/ServoPosition.h"
 #include "creature/Creature.h"
 #include "controller/Input.h"
 #include "device/Servo.h"
+#include "device/ServoSpecifier.h"
 #include "device/Stepper.h"
 #include "logging/Logger.h"
 #include "util/MessageQueue.h"
@@ -30,7 +32,7 @@ namespace creatures::creature {
     public:
 
         // Allow our builder to touch us in ways only friends can
-        friend class CreatureBuilder;
+        //friend class CreatureBuilder;
 
         // Valid creature types
         enum creature_type {
@@ -56,12 +58,6 @@ namespace creatures::creature {
 
         explicit Creature(std::shared_ptr<creatures::Logger> logger);
 
-        /**
-         * Storage space for the joints!
-         *
-         * Initialize it to the size of the joints.
-         */
-        u16 *joints;
 
         /**
          * Set up the controller
@@ -96,7 +92,7 @@ namespace creatures::creature {
          */
         [[nodiscard]] u8 getNumberOfJoints() const;
 
-        void addServo(std::string id, const std::shared_ptr<Servo> &servo);
+        void addServo(std::string servoName, const std::shared_ptr<Servo> &servo);
 
         [[nodiscard]] u8 getNumberOfServos() const;
 
@@ -119,9 +115,11 @@ namespace creatures::creature {
          * that the creature would like the servos set to. This is called from the controller's
          * worker thread.
          *
+         * @param module the module to get the positions for
+         *
          * @return a `std::vector<creatures::ServoPosition>` of the requested positions
          */
-        std::vector<creatures::ServoPosition> getRequestedServoPositions();
+        std::vector<creatures::ServoPosition> getRequestedServoPositions(creatures::config::UARTDevice::module_name module);
 
         /**
          * @brief Gets a ServoConfig for each servo
@@ -165,7 +163,7 @@ namespace creatures::creature {
 
         std::vector<creatures::Input> getInputs() const;
 
-        std::shared_ptr<Servo> getServo(const std::string &id);
+        std::shared_ptr<Servo> getServo(std::string servoName);
 
         std::shared_ptr<Stepper> getStepper(std::string id);
 
@@ -223,7 +221,16 @@ namespace creatures::creature {
 
         std::vector<creatures::ServoPosition> servoPositions;
         std::shared_ptr<Controller> controller;
+
+        /**
+         * A map of the servos that this creature has, by id. This is used to look up the servos
+         * by name when we're setting their positions.
+         *
+         * It's by name to make it easier on me when programming creatures. This isn't a mistake
+         * that it's not a ServoSpecifier.
+         */
         std::unordered_map<std::string, std::shared_ptr<Servo>> servos;
+
         std::unordered_map<std::string, std::shared_ptr<Stepper>> steppers;
 
         std::thread workerThread;

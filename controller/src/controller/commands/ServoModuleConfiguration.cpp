@@ -12,16 +12,16 @@
 
 #include "controller/commands/CommandException.h"
 
-#include "CreatureConfiguration.h"
+#include "ServoModuleConfiguration.h"
 
 namespace creatures::commands {
 
-    CreatureConfiguration::CreatureConfiguration(std::shared_ptr<Logger> logger) :
+    ServoModuleConfiguration::ServoModuleConfiguration(std::shared_ptr<Logger> logger) :
                                                  logger(logger) { // NOLINT(*-pass-by-value)
         this->servoConfigurations = std::vector<ServoConfig>();
     }
 
-    void CreatureConfiguration::getServoConfigurations(std::shared_ptr<creatures::creature::Creature> creature) {
+    void ServoModuleConfiguration::getServoConfigurations(std::shared_ptr<creatures::creature::Creature> creature) {
 
         auto configs = creature->getServoConfigs();
         logger->debug("got the servo configurations ({} total)", configs.size());
@@ -32,12 +32,12 @@ namespace creatures::commands {
         }
     }
 
-    void CreatureConfiguration::addServoConfig(const ServoConfig &servoConfig) {
+    void ServoModuleConfiguration::addServoConfig(const ServoConfig &servoConfig) {
 
         // Make sure we're not putting the same outputPosition in twice
         for (const auto& existingConfigurations : servoConfigurations) {
-            if (existingConfigurations.getOutputPosition() == servoConfig.getOutputPosition()) {
-                std::string errorMessage = fmt::format("Unable to insert the same output position twice: {}", servoConfig.getOutputPosition());
+            if (existingConfigurations.getOutputHeader() == servoConfig.getOutputHeader()) {
+                std::string errorMessage = fmt::format("Unable to insert the same output position twice: {}", servoConfig.getOutputHeader());
                 logger->error(errorMessage);
                 throw CommandException(errorMessage);
             }
@@ -47,7 +47,7 @@ namespace creatures::commands {
         logger->trace("Add config for servo: {}", servoConfig.toString());
     }
 
-    std::string CreatureConfiguration::toMessage() {
+    std::string ServoModuleConfiguration::toMessage() {
 
         // Yell if we're doing this on a blank set of positions
         if (servoConfigurations.empty()) {
