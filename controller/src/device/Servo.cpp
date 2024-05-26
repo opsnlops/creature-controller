@@ -34,6 +34,8 @@ extern u64 number_of_moves;
  *
  * @param logger a shared pointer to our logger
  * @param id the id of this servo
+ * @param name the name of this servo
+ * @param outputLocation the location of the servo
  * @param min_pulse_us Min pulse length in microseconds
  * @param max_pulse_us Max pulse length in microseconds
  * @param smoothingValue how aggressive should our movement smoothing be
@@ -43,7 +45,7 @@ extern u64 number_of_moves;
  */
 Servo::Servo(std::shared_ptr<creatures::Logger> logger, std::string id, std::string name, ServoSpecifier outputLocation,
              u16 min_pulse_us, u16 max_pulse_us, float smoothingValue, bool inverted, u16 servo_update_frequency_hz,
-             u16 default_position_microseconds) : id(id), outputLocation(std::move(outputLocation)), min_pulse_us(min_pulse_us),
+             u16 default_position_microseconds) : id(id), outputLocation(outputLocation), min_pulse_us(min_pulse_us),
              max_pulse_us(max_pulse_us), servo_update_frequency_hz(servo_update_frequency_hz), default_microseconds(default_position_microseconds), inverted(inverted),
              name(name), smoothingValue(smoothingValue), logger(logger) {
 
