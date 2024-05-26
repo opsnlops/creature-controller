@@ -223,14 +223,7 @@ namespace creatures :: config {
                 break;
             case creatures::creature::Creature::invalid_position:
                 throw CreatureBuilderException(fmt::format("invalid default position: {}", parseDefault));
-                break;
         }
-
-        /*
-         * Servo(std::shared_ptr<creatures::Logger> logger, std::string id, std::string name, ServoSpecifier outputLocation,
-          u16 min_pulse_us, u16 max_pulse_us, float smoothingValue, bool inverted, u16 servo_update_frequency_hz,
-          u16 default_position_microseconds)
-         */
 
         // Create the servo
         return std::make_shared<Servo>(logger, id, name, output, min_pulse_us, max_pulse_us, smoothing_value,

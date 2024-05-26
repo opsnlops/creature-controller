@@ -117,5 +117,5 @@ TEST(SetServoPositions, ToMessageWithChecksum) {
                         setServoPositions->addServoPosition(creatures::ServoPosition(id4, 012));
                     });
 
-    EXPECT_EQ("POS\tA0 123\tA1 456\tA2 789\tA3 10\tCS 1438", setServoPositions->toMessageWithChecksum());
+    EXPECT_EQ("POS\t0 123\t1 456\t2 789\t3 10\tCS 1438", setServoPositions->toMessageWithChecksum());
 }
