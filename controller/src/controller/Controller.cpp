@@ -108,7 +108,11 @@ void Controller::firmwareReadyForInitialization(u32 firmwareVersion) {
     // ...and toss it to the serial handler
 #warning fix
     creatures::io::Message message = creatures::io::Message( creatures::config::UARTDevice::module_name::A, creatureConfigCommand.toMessageWithChecksum());
-    this->messageRouter->sendMessageToCreature(message);
+
+    auto sendResult = this->messageRouter->sendMessageToCreature(message);
+    if(!sendResult.isSuccess()) {
+        logger->critical("Failed to send the creature configuration to the firmware: {}", sendResult.getError()->getMessage());
+    }
 
 }
 

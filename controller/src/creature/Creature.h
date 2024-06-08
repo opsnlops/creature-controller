@@ -56,7 +56,7 @@ namespace creatures::creature {
             invalid_position
         };
 
-        explicit Creature(std::shared_ptr<creatures::Logger> logger);
+        explicit Creature(const std::shared_ptr<creatures::Logger>& logger);
 
 
         /**
@@ -163,7 +163,7 @@ namespace creatures::creature {
 
         std::vector<creatures::Input> getInputs() const;
 
-        std::shared_ptr<Servo> getServo(std::string servoName);
+        std::shared_ptr<Servo> getServo(const std::string& servoName);
 
         std::shared_ptr<Stepper> getStepper(std::string id);
 
@@ -193,6 +193,10 @@ namespace creatures::creature {
         void addInput(const creatures::Input &input);
 
 
+        // Perform a pre-flight check to make sure everything is set up correctly
+        virtual Result<std::string> performPreFlightCheck() = 0;
+
+
     protected:
         std::atomic<bool> stop_requested = false;
         std::string name;
@@ -213,6 +217,7 @@ namespace creatures::creature {
          * Inputs as defined in the config file for this creature
          */
         std::vector<creatures::Input> inputs;
+        std::vector<std::string> requiredInputs = {}; // Make sure this is set in the child class
 
         /**
          * Message queue to send inputs to the creature
@@ -230,6 +235,7 @@ namespace creatures::creature {
          * that it's not a ServoSpecifier.
          */
         std::unordered_map<std::string, std::shared_ptr<Servo>> servos;
+        std::vector<std::string> requiredServos = {}; // Must populate this in the child class
 
         std::unordered_map<std::string, std::shared_ptr<Stepper>> steppers;
 

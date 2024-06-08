@@ -3,6 +3,7 @@
 
 #include <fcntl.h>
 #include <termios.h>
+#include <unistd.h>
 
 
 #include "controller-config.h"
@@ -11,6 +12,7 @@
 #include "io/SerialReader.h"
 #include "io/SerialWriter.h"
 #include "io/SerialException.h"
+#include "util/Result.h"
 
 namespace creatures {
 
@@ -54,6 +56,10 @@ namespace creatures {
         this->logger->debug("new SerialHandler created");
     }
 
+    // Clean up the serial port
+    SerialHandler::~SerialHandler() {
+        closeSerialPort();
+    }
 
     UARTDevice::module_name SerialHandler::getModuleName() {
         return this->moduleName;
@@ -67,7 +73,7 @@ namespace creatures {
         return this->incomingQueue;
     }
 
-    bool SerialHandler::setupSerialPort() {
+    Result<bool> SerialHandler::setupSerialPort() {
 
         this->logger->info("attempting to open {}", this->deviceNode);
         this->fileDescriptor = open(this->deviceNode.c_str(), O_RDWR | O_NONBLOCK | O_NOCTTY);
@@ -78,7 +84,7 @@ namespace creatures {
             // Handle error - unable to open serial port
             std::string errorMessage = fmt::format("Error opening {}: {}", this->deviceNode.c_str(), strerror(errno));
             this->logger->critical(errorMessage);
-            throw SerialException(errorMessage);
+            return Result<bool>{ControllerError(ControllerError::IOError, errorMessage)};
 
         } else {
             struct termios tty{};
@@ -87,7 +93,7 @@ namespace creatures {
                 // Handle error in tcgetattr
                 std::string errorMessage = fmt::format("Error from tcgetattr while opening the port: {}", strerror(errno));
                 this->logger->critical(errorMessage);
-                throw SerialException(errorMessage);
+                return Result<bool>{ControllerError(ControllerError::IOError, errorMessage)};
             }
 
             // 8 bits per byte
@@ -122,22 +128,33 @@ namespace creatures {
             if (tcsetattr(this->fileDescriptor, TCSANOW, &tty) != 0) {
                 std::string errorMessage = fmt::format("Error from tcsetattr while configuring the port: {}", strerror(errno));
                 this->logger->critical(errorMessage);
-                throw SerialException(errorMessage);
+                return Result<bool>{ControllerError(ControllerError::IOError, errorMessage)};
             }
 
             this->logger->debug("serial port {} is open", this->deviceNode);
         }
 
-        return true;
+        return Result<bool>{true};
     }
 
-    void SerialHandler::start() {
+    Result<bool> SerialHandler::closeSerialPort() {
+        if(this->fileDescriptor != -1) {
+            this->logger->info("closing the serial port");
+            close(this->fileDescriptor);
+            this->fileDescriptor = -1;
+        }
+        return Result<bool>{true};
+    }
+
+    Result<bool> SerialHandler::start() {
 
         this->logger->info("starting SerialHandler for device {}", deviceNode);
 
-        if (!setupSerialPort()) {
-            this->logger->critical("unable to setupSerialPort");
-            throw SerialException("unable to setupSerialPort");
+        auto setupResult = setupSerialPort();
+        if (!setupResult.isSuccess()) {
+            auto errorMessage = fmt::format("unable to setupSerialPort: {}", setupResult.getError()->getMessage());
+            this->logger->critical(errorMessage);
+            return Result<bool>{ControllerError(ControllerError::IOError, errorMessage)};
         }
         this->logger->debug("setupSerialPort done");
 
@@ -161,6 +178,14 @@ namespace creatures {
 
         this->logger->debug("done starting SerialHandler for device {}", deviceNode);
 
+        return Result<bool>{true};
+
+    }
+
+    Result<bool> SerialHandler::shutdown() {
+        this->logger->info("shutting down SerialHandler for device {}", deviceNode);
+        closeSerialPort();
+        return Result<bool>{true};
     }
 
 

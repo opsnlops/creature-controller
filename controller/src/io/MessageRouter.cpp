@@ -31,7 +31,7 @@ namespace creatures :: io {
         this->logger->info("Registered module: {}", UARTDevice::moduleNameToString(moduleName));
     }
 
-    void MessageRouter::sendMessageToCreature(const Message &message) {
+    Result<bool> MessageRouter::sendMessageToCreature(const Message &message) {
 
         logger->trace("Sending message to creature on module {}: {}",
                       UARTDevice::moduleNameToString(message.module),
@@ -44,16 +44,18 @@ namespace creatures :: io {
             // Deliver the message to the appropriate module
             if(message.module == key) {
                 queue->push(message);
-                return;
+                Result<bool>(true);
             }
 
             // If we get here, that's bad
             std::string errorMessage = fmt::format("Unknown destination into the message router: {}",
                                                    UARTDevice::moduleNameToString(message.module));
             this->logger->critical(errorMessage);
-            throw UnknownMessageDestinationException(errorMessage);
+            return Result<bool>{ControllerError(ControllerError::DestinationUnknown, errorMessage)};
         }
 
+        // This isn't actually reachable in practice
+        return Result<bool>(false);
 
     }
 

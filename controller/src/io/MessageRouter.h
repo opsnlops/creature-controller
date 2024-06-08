@@ -8,6 +8,7 @@
 #include "io/Message.h"
 #include "logging/Logger.h"
 #include "util/MessageQueue.h"
+#include "util/Result.h"
 #include "util/StoppableThread.h"
 
 
@@ -50,9 +51,9 @@ namespace creatures :: io {
          * It will be routed to the appropriate serial handler based on the `message`.
          *
          * @param message the message to route
-         * @throws UnknownMessageDestinationException if the message has an unroutable destination
+         * @return a `Result` indicating success or failure
          */
-        void sendMessageToCreature(const Message &message);
+        Result<bool> sendMessageToCreature(const Message &message);
 
         /**
          * Broadcast a message to all creatures
