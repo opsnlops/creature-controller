@@ -9,6 +9,7 @@ using json = nlohmann::json;
 #include "config/BaseBuilder.h"
 #include "creature/Creature.h"
 #include "logging/Logger.h"
+#include "util/Result.h"
 
 
 
@@ -33,7 +34,7 @@ namespace creatures :: config {
          *
          * @return a shared_ptr to our prize
          */
-        std::shared_ptr<creatures::creature::Creature> build();
+        Result<std::shared_ptr<creatures::creature::Creature>> build();
 
     private:
         std::vector<std::string> requiredTopLevelFields;

@@ -11,6 +11,7 @@ using json = nlohmann::json;
 #include "config/BaseBuilder.h"
 #include "config/BuilderException.h"
 #include "logging/Logger.h"
+#include "util/Result.h"
 
 
 namespace creatures :: config {
@@ -24,19 +25,20 @@ namespace creatures :: config {
      * @param filename the file to check
      * @return true if the file is both readable and accessible
      */
-    bool BaseBuilder::isFileAccessible(std::shared_ptr<Logger> logger, const std::string& filename) {
+    Result<bool> BaseBuilder::isFileAccessible(std::shared_ptr<Logger> logger, const std::string& filename) {
 
         logger->debug("making sure that {} is accessible and readable", filename);
 
         // Check if the file exists
         if (!std::filesystem::exists(filename)) {
-            return false;
+            auto message = fmt::format("File {} does not exist", filename);
+            return Result<bool>{ControllerError(ControllerError::InvalidData, message)};
         }
         logger->debug("file exists");
 
         // Try to open the file for reading
         std::ifstream file(filename);
-        return file.good();
+        return Result<bool>(file.good());
     }
 
     /**
@@ -46,33 +48,44 @@ namespace creatures :: config {
      * @param jsonObj the json object to check
      * @param fieldName the field name we're looking for
      */
-    void BaseBuilder::checkJsonField(const nlohmann::json& jsonObj, const std::string& fieldName) {
+    Result<bool> BaseBuilder::checkJsonField(const nlohmann::json& jsonObj, const std::string& fieldName) {
         if (!jsonObj.contains(fieldName)) {
-            throw BuilderException("Missing required field: " + fieldName);
+            return Result<bool>(ControllerError(ControllerError::InvalidData, "Missing required field: " + fieldName));
         }
+
+        return Result<bool>(true);
     }
 
-    std::unique_ptr<std::istream> BaseBuilder::fileToStream(std::shared_ptr<Logger> logger, std::string filename) {
+    Result<std::string> BaseBuilder::loadFile(std::shared_ptr<Logger> logger, std::string filename) {
 
         logger->debug("turning {} into an istream", filename);
 
         // Make sure the file name is valid
         if(filename.empty()) {
             logger->error("no file name provided");
-            throw BuilderException("no file name provided");
+            return Result<std::string>(ControllerError(ControllerError::InvalidConfiguration, "no file name provided"));
         }
 
         // Make sure we can both access and read the file
-        if(!isFileAccessible(logger, filename)) {
-            logger->error("file {} is not accessible", filename);
-            throw BuilderException(fmt::format("file {} is not accessible", filename));
+        auto fileAccessibleResult = isFileAccessible(logger, filename);
+        if(!fileAccessibleResult.isSuccess()) {
+            auto errorMessage = fmt::format("Unable to determine if {} is accessible: {}", filename, fileAccessibleResult.getError().value().getMessage());
+            logger->error(errorMessage);
+            return Result<std::string>{ControllerError(ControllerError::InternalError, errorMessage)};
+        }
+        bool fileAccessible = fileAccessibleResult.getValue().value();
+        if(!fileAccessible) {
+            auto errorMessage = fmt::format("File {} is not accessible", filename);
+            logger->error(errorMessage);
+            return Result<std::string>{ControllerError(ControllerError::InvalidConfiguration, errorMessage)};
         }
 
         // Open the file and read its contents into a stringstream
         std::ifstream fileStream(filename);
         if (!fileStream) {
-            logger->error("Failed to open file {}", filename);
-            throw BuilderException(fmt::format("Failed to open file {}", filename));
+            auto errorMessage = fmt::format("Failed to open file {}", filename);
+            logger->error(errorMessage);
+            return Result<std::string>{ControllerError(ControllerError::InternalError, errorMessage)};
         }
 
         auto stringStream = std::make_unique<std::stringstream>();
@@ -87,7 +100,11 @@ namespace creatures :: config {
         stringStream->seekg(0);
         logger->debug("Opened file {} with size {} bytes", filename, size);
 
-        return stringStream;
+        // Load the contents of the file into a string
+        std::string content((std::istreambuf_iterator<char>(*stringStream)), std::istreambuf_iterator<char>());
+        logger->debug("loaded the contents of {} into a string", filename);
+
+        return Result<std::string>(content);
 
     }
 

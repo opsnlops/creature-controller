@@ -16,6 +16,7 @@
 #include "CommandLine.h"
 #include "Version.h"
 #include "logging/Logger.h"
+#include "util/Result.h"
 
 /*
  * This is using argparse:
@@ -30,7 +31,7 @@ namespace creatures {
     CommandLine::CommandLine(std::shared_ptr<Logger> logger) : logger(logger) {}
 
 
-    std::shared_ptr<config::Configuration> CommandLine::parseCommandLine(int argc, char **argv) {
+    Result<std::shared_ptr<config::Configuration>> CommandLine::parseCommandLine(int argc, char **argv) {
 
         argparse::ArgumentParser program("creature-controller", getVersion());
 
@@ -88,11 +89,18 @@ namespace creatures {
 
         // Make the builder
         auto configBuilder = std::make_unique<creatures::config::ConfigurationBuilder>(logger, configFile);
-        auto config = configBuilder->build();
+        auto configResult = configBuilder->build();
 
-        config->setCreatureConfigFile(creatureConfigFile);
+        // Since the creature config is also set on the command line (rather than in the main config file), pass
+        // it along to the Configuration object
 
-        return config;
+        // ... but only if we were successful parsing
+        if(!configResult.isSuccess()) {
+            return configResult;
+        }
+        configResult.getValue().value()->setCreatureConfigFile(creatureConfigFile);
+
+        return configResult;
     }
 
     void CommandLine::listNetworkDevices() {

@@ -10,6 +10,7 @@ using json = nlohmann::json;
 #include "config/BaseBuilder.h"
 #include "config/UARTDevice.h"
 #include "logging/Logger.h"
+#include "util/Result.h"
 
 
 using namespace creatures;
@@ -33,7 +34,7 @@ namespace creatures :: config {
          *
          * @return a shared_ptr to our prize
          */
-        std::shared_ptr<Configuration> build();
+        Result<std::shared_ptr<Configuration>> build();
 
         ConfigurationBuilder(std::shared_ptr<Logger> logger, std::string configFileName);
         ~ConfigurationBuilder() = default;
@@ -41,6 +42,8 @@ namespace creatures :: config {
     private:
         std::vector<std::string> requiredTopLevelFields;
         std::vector<std::string> requiredUARTFields;
+
+        Result<std::shared_ptr<Configuration>> makeError(const std::string &errorMessage);
 
     };
 

@@ -65,7 +65,7 @@ namespace creatures {
         creatures::config::UARTDevice::module_name getModuleName() const;
 
     protected:
-        void run(); // This is the method that will be called when the thread starts
+        void run() override; // This is the method that will be called when the thread starts
 
     private:
 

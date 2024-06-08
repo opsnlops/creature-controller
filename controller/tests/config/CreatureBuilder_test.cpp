@@ -102,7 +102,10 @@ TEST_F(CreatureBuilderTest, BuildsCorrectlyWithValidData) {
 
 
     creatures::config::CreatureBuilder builder(logger, tempValidFileName);
-    auto creature = builder.build();
+    auto creatureResult = builder.build();
+    EXPECT_TRUE(creatureResult.isSuccess());
+
+    auto creature = creatureResult.getValue().value();
 
     // 😡 floating point!
     float expectedHeadOffsetMax = 0.4f;

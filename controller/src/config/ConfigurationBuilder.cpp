@@ -11,6 +11,7 @@ using json = nlohmann::json;
 #include "config/ConfigurationBuilder.h"
 #include "config/UARTDevice.h"
 #include "logging/Logger.h"
+#include "util/Result.h"
 
 
 namespace creatures :: config {
@@ -30,40 +31,46 @@ namespace creatures :: config {
     }
 
 
-    std::shared_ptr<creatures::config::Configuration> ConfigurationBuilder::build() {
+    Result<std::shared_ptr<creatures::config::Configuration>> ConfigurationBuilder::build() {
 
         logger->info("about to try to parse the main config file");
 
         // Make sure the file is accessible
-        if (!isFileAccessible(logger, fileName)) {
-            throw BuilderException(fmt::format("File {} is not accessible", fileName));
+        auto fileResult = isFileAccessible(logger, fileName);
+        if(!fileResult.isSuccess()) {
+            return makeError(fmt::format("Unable to determine if {} is accessible", fileName));
+        }
+
+        if (!fileResult.getValue().value()) {
+            return makeError(fmt::format("File {} is not accessible", fileName));
         }
 
         // Okay we have a valid-ish config! Let's start building the Configuration object
-        std::unique_ptr<std::istream> configFile = fileToStream(logger, fileName);
-
-        std::string content((std::istreambuf_iterator<char>(*configFile)), std::istreambuf_iterator<char>());
-        logger->debug("JSON file contents: {}", content);
-        configFile->seekg(0); // Rewind to the start
+        auto configFileResult = loadFile(logger, fileName);
+        if(!configFileResult.isSuccess()) {
+            return makeError(fmt::format("Unable to open {} for reading", fileName));
+        }
+        auto configFile = std::move(configFileResult.getValue().value());
 
         json j;
         try {
-            j = json::parse(content);
+            j = json::parse(configFile);
             logger->debug("JSON file was valid JSON! Now let's see if it's got what we need... 🤔");
         } catch (json::parse_error& e) {
-            logger->error("JSON parse error: {}", e.what());
-            throw BuilderException(fmt::format("JSON parse error: {}", e.what()));
+            return makeError(fmt::format("JSON parse error: {}", e.what()));
         }
 
         if (!j.is_object()) {
-            logger->error("JSON is not an object");
-            throw BuilderException("JSON is not an object");
+            return makeError("JSON is not an object");
         }
 
         // Make sure the top level fields we need are present
         logger->debug("checking for required top level fields");
         for (const auto& fieldName : requiredTopLevelFields) {
-            checkJsonField(j, fieldName);
+            auto fieldResult = checkJsonField(j, fieldName);
+            if(!fieldResult.isSuccess()) {
+                return makeError(fmt::format("Missing required field: {}", fieldName));
+            }
         }
 
         // Okay we have a valid-ish config! Let's start building the Configuration object
@@ -99,9 +106,7 @@ namespace creatures :: config {
 
                 // Do this in its own context since there's a var being created
                 case creatures::config::UARTDevice::invalid_module:
-                    logger->error("invalid module ID: {}", moduleAsString);
-                    throw BuilderException(fmt::format("invalid module ID", moduleAsString));
-
+                    return makeError(fmt::format("invalid module ID: {}", moduleAsString));
                 default:
                     logger->debug("module ID is valid: {}", moduleAsString);
 
@@ -118,8 +123,18 @@ namespace creatures :: config {
         logger->debug("done processing uarts");
 
         logger->info("done parsing the main config file");
-        return config;
+        return Result<std::shared_ptr<creatures::config::Configuration>>{config};
+    }
 
+    /**
+     * Quick helper function to make error messages consistently
+     * @param errorMessage The error to create
+     * @return A Result object with the error message
+     */
+    Result<std::shared_ptr<creatures::config::Configuration>> ConfigurationBuilder::makeError(
+            const std::string &errorMessage) {
+        logger->error(errorMessage);
+        return Result<std::shared_ptr<creatures::config::Configuration>>{ControllerError(ControllerError::InvalidConfiguration, errorMessage)};
     }
 
 } // creatures :: config

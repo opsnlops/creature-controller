@@ -10,6 +10,7 @@
 #include "config/UARTDevice.h"
 #include "device/ServoSpecifier.h"
 #include "logging/Logger.h"
+#include "util/Result.h"
 
 /**
  * A representation of a servo that we are controlling with the controller
@@ -39,7 +40,7 @@ public:
 
     [[nodiscard]] float getSmoothingValue() const;
     [[nodiscard]] std::string getName() const;
-    void move(u16 position);
+    creatures::Result<std::string> move(u16 position);
 
     void calculateNextTick();
 
