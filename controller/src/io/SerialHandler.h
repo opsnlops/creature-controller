@@ -12,6 +12,7 @@
 #include "io/Message.h"
 #include "io/SerialReader.h"
 #include "util/MessageQueue.h"
+#include "util/Result.h"
 #include "util/StoppableThread.h"
 
 namespace creatures {
@@ -37,9 +38,11 @@ namespace creatures {
                       const std::shared_ptr<MessageQueue<Message>>& outgoingQueue,
                       const std::shared_ptr<MessageQueue<Message>>& incomingQueue);
 
-        ~SerialHandler() = default;
+        // Clean up the serial port
+        ~SerialHandler();
 
-        void start();
+        Result<bool> start();
+        Result<bool> shutdown();
 
         std::shared_ptr<MessageQueue<Message>> getOutgoingQueue();
         std::shared_ptr<MessageQueue<Message>> getIncomingQueue();
@@ -59,7 +62,7 @@ namespace creatures {
     private:
         std::string deviceNode;
         UARTDevice::module_name moduleName;
-        int fileDescriptor;
+        int fileDescriptor = -1;
 
         // A pointer to our shared MessageQueues
         std::shared_ptr<MessageQueue<Message>> outgoingQueue;
@@ -67,7 +70,8 @@ namespace creatures {
 
         static bool isDeviceNodeAccessible(const std::shared_ptr<Logger>& logger, const std::string& deviceNode);
 
-        bool setupSerialPort();
+        Result<bool> setupSerialPort();
+        Result<bool> closeSerialPort();
 
         std::shared_ptr<Logger> logger;
 

@@ -1,5 +1,4 @@
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "modernize-pass-by-value"
+
 #pragma once
 
 #include <variant>
@@ -15,7 +14,9 @@ namespace creatures {
         enum ErrorType {
             InvalidData,
             InternalError,
-            InvalidConfiguration
+            InvalidConfiguration,
+            DestinationUnknown,
+            IOError
         };
 
         ControllerError(ErrorType errorType, const std::string &message);
@@ -92,4 +93,3 @@ namespace creatures {
     }
 
 }
-#pragma clang diagnostic pop

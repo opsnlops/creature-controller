@@ -41,7 +41,7 @@ namespace creatures :: config {
         std::vector<std::string> requiredServoFields;
         std::vector<std::string> requiredInputFields;
 
-        std::shared_ptr<Servo> createServo(const json& j, u16 servo_frequency);
+        Result<std::shared_ptr<Servo>> createServo(const json& j, u16 servo_frequency);
 
     };
 

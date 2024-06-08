@@ -31,7 +31,7 @@ std::atomic<bool> shutdown_requested(false);
 // Signal handler to stop the event loop
 void signal_handler(int signal) {
     if (signal == SIGINT) {
-        printf("stopping...\n\n");
+        std::cerr << "Caught SIGINT, shutting down..." << std::endl;
         shutdown_requested.store(true);
     }
 }
@@ -68,7 +68,8 @@ int main(int argc, char **argv) {
     // Get the logger up and running ASAP
     std::shared_ptr<creatures::Logger> logger = makeLogger("main");
 
-    logger->info("Welcome to the Creature Controller! v{} 🦜", version);
+    // Print to the console as we start
+    std::cout << fmt::format("Welcome to the Creature Controller! v{} 🦜", version) << std::endl << std::endl;
 
     // Leave some version info to be found
     logger->debug("spdlog version {}.{}.{}", SPDLOG_VER_MAJOR, SPDLOG_VER_MINOR, SPDLOG_VER_PATCH);
@@ -82,7 +83,7 @@ int main(int argc, char **argv) {
     if(!configResult.isSuccess()) {
         auto errorMessage = fmt::format("Unable to build configuration in memory: {}", configResult.getError().value().getMessage());
         std::cerr << errorMessage << std::endl;
-        return EXIT_FAILURE;
+        std::exit(EXIT_FAILURE);
     }
 
     // Yay, we have a valid config
@@ -93,10 +94,20 @@ int main(int argc, char **argv) {
     if(!creatureResult.isSuccess()) {
         auto errorMessage = fmt::format("Unable to build the creature: {}", creatureResult.getError().value().getMessage());
         std::cerr << errorMessage << std::endl;
-        return EXIT_FAILURE;
+        std::exit(EXIT_FAILURE);
     }
 
+    // Define it
     auto creature = creatureResult.getValue().value();
+
+    // Make sure the creature believes it's ready to go
+    auto preFlightCheckResult = creature->performPreFlightCheck();
+    if(!preFlightCheckResult.isSuccess()) {
+        auto errorMessage = fmt::format("Pre-flight check failed: {}", preFlightCheckResult.getError().value().getMessage());
+        std::cerr << errorMessage << std::endl;
+        std::exit(EXIT_FAILURE);
+    }
+    logger->info("Pre-flight check passed: {}", preFlightCheckResult.getValue().value());
 
 
     // Hooray, we did it!
@@ -197,9 +208,11 @@ int main(int argc, char **argv) {
         timedShutdown(workerThread, timeout_ms);
     }
 
-    logger->info("the main thread says bye! good luck little threads!");
+    logger->debug("waiting for a few seconds to let everyone clean up");
+    std::this_thread::sleep_for(std::chrono::seconds(5));
 
-    std::cout << "👋🏻" << std::endl;
-    return EXIT_SUCCESS;
+    std::cout << "Bye! 🖖🏻" << std::endl;
+    std::exit(EXIT_SUCCESS);
+
 }
 

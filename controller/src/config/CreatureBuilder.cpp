@@ -150,9 +150,17 @@ namespace creatures :: config {
 
                 // Do this in its own context since there's a var being created
                 case creatures::creature::Creature::servo: {
-                    std::shared_ptr<Servo> servo = createServo(motor, servo_frequency);
-                    logger->debug("adding servo {}", servo->getName());
-                    creature->addServo(servo->getName(), servo);
+
+                    auto servoResult = createServo(motor, servo_frequency);
+                    if(!servoResult.isSuccess()) {
+                        auto errorMessage = servoResult.getError().value().getMessage();
+                        logger->error(errorMessage);
+                        return Result<std::shared_ptr<creatures::creature::Creature>>{ControllerError(ControllerError::InvalidConfiguration, errorMessage)};
+                    }
+
+                    auto servo = servoResult.getValue().value();
+                    logger->debug("adding servo id: {}, name: {}", servo->getId(), servo->getName());
+                    creature->addServo(servo->getId(), servo);
                     break;
                 }
                 default:
@@ -204,12 +212,13 @@ namespace creatures :: config {
      * @param j
      * @return a `std::shared_ptr<Servo>` to the new servo
      */
-    std::shared_ptr<Servo> CreatureBuilder::createServo(const json& j, u16 servo_frequency) {
+    Result<std::shared_ptr<Servo>> CreatureBuilder::createServo(const json& j, u16 servo_frequency) {
 
         creatures::creature::Creature::motor_type type = creatures::creature::Creature::stringToMotorType(j["type"]);
         if(type == creatures::creature::Creature::invalid_motor) {
-            std::string type_string = j["type"];
-            throw CreatureBuilderException(fmt::format("invalid motor type: {}", type_string));
+            auto errorMessage = fmt::format("invalid motor type: {}", j["type"]);
+            logger->error(errorMessage);
+            return Result<std::shared_ptr<Servo>>{ControllerError(ControllerError::InvalidConfiguration, errorMessage)};
         }
 
         std::string id = j["id"];
@@ -229,7 +238,9 @@ namespace creatures :: config {
         // Convert the module string to our enum
         UARTDevice::module_name output_location = UARTDevice::stringToModuleName(output_module_as_string);
         if(output_location == creatures::config::UARTDevice::invalid_module) {
-            throw CreatureBuilderException(fmt::format("invalid servo module: {}", output_module_as_string));
+            auto errorMessage = fmt::format("invalid servo module: {}", output_module_as_string);
+            logger->error(errorMessage);
+            return Result<std::shared_ptr<Servo>>{ControllerError(ControllerError::InvalidConfiguration, errorMessage)};
         }
 
         ServoSpecifier output = {output_location, output_header};
@@ -245,12 +256,15 @@ namespace creatures :: config {
                 default_position = max_pulse_us;
                 break;
             case creatures::creature::Creature::invalid_position:
-                throw CreatureBuilderException(fmt::format("invalid default position: {}", parseDefault));
+                auto errorMessage = fmt::format("invalid default position: {}", parseDefault);
+                logger->error(errorMessage);
+                return Result<std::shared_ptr<Servo>>{ControllerError(ControllerError::InvalidConfiguration, errorMessage)};
         }
 
         // Create the servo
-        return std::make_shared<Servo>(logger, id, name, output, min_pulse_us, max_pulse_us, smoothing_value,
+        auto servo = std::make_shared<Servo>(logger, id, name, output, min_pulse_us, max_pulse_us, smoothing_value,
                                        inverted, servo_frequency, default_position);
+        return Result<std::shared_ptr<Servo>>{servo};
 
     }
 

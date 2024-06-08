@@ -1,7 +1,5 @@
 
 #include <cmath>
-#include <utility>
-
 
 #include "controller-config.h"
 
@@ -11,10 +9,9 @@
 
 namespace creatures::creature {
 
-    Creature::Creature(std::shared_ptr<creatures::Logger> logger) : logger(logger) {
+    Creature::Creature(const std::shared_ptr<creatures::Logger>& logger) : logger(logger) {
 
         this->controller = nullptr;
-        //this->workerTaskHandle = nullptr;
         this->numberOfJoints = 0;
 
         // Wipe out the maps and init them
@@ -99,7 +96,7 @@ namespace creatures::creature {
         }
     }
 
-    std::shared_ptr<Servo> Creature::getServo(std::string servoName) {
+    std::shared_ptr<Servo> Creature::getServo(const std::string& servoName) {
         return servos[servoName];
     }
 
@@ -160,8 +157,8 @@ namespace creatures::creature {
         return name;
     }
 
-    void Creature::setName(const std::string &name) {
-        Creature::name = name;
+    void Creature::setName(const std::string &_name) {
+        Creature::name = _name;
     }
 
     const std::string &Creature::getVersion() const {
@@ -176,16 +173,16 @@ namespace creatures::creature {
         return description;
     }
 
-    void Creature::setDescription(const std::string &description) {
-        Creature::description = description;
+    void Creature::setDescription(const std::string &_description) {
+        Creature::description = _description;
     }
 
     Creature::creature_type Creature::getType() const {
         return type;
     }
 
-    void Creature::setType(Creature::creature_type type) {
-        Creature::type = type;
+    void Creature::setType(Creature::creature_type _type) {
+        Creature::type = _type;
     }
 
     u16 Creature::getServoUpdateFrequencyHz() const {
@@ -216,32 +213,32 @@ namespace creatures::creature {
         return positionMin;
     }
 
-    void Creature::setPositionMin(u16 positionMin) {
-        Creature::positionMin = positionMin;
+    void Creature::setPositionMin(u16 _positionMin) {
+        Creature::positionMin = _positionMin;
     }
 
     u16 Creature::getPositionMax() const {
         return positionMax;
     }
 
-    void Creature::setPositionMax(u16 positionMax) {
-        Creature::positionMax = positionMax;
+    void Creature::setPositionMax(u16 _positionMax) {
+        Creature::positionMax = _positionMax;
     }
 
     u16 Creature::getPositionDefault() const {
         return positionDefault;
     }
 
-    void Creature::setPositionDefault(u16 positionDefault) {
-        Creature::positionDefault = positionDefault;
+    void Creature::setPositionDefault(u16 _positionDefault) {
+        Creature::positionDefault = _positionDefault;
     }
 
     float Creature::getHeadOffsetMax() const {
         return headOffsetMax;
     }
 
-    void Creature::setHeadOffsetMax(float headOffsetMax) {
-        Creature::headOffsetMax = headOffsetMax;
+    void Creature::setHeadOffsetMax(float _headOffsetMax) {
+        Creature::headOffsetMax = _headOffsetMax;
     }
 
     void Creature::addInput(const creatures::Input &input) {

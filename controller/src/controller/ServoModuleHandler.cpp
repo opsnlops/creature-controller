@@ -62,6 +62,7 @@ namespace creatures {
             t->shutdown();
         }
 
+        this->serialHandler->shutdown();
         this->messageProcessor->shutdown();
     }
 

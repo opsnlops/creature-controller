@@ -9,6 +9,7 @@
 
 #include "device/Servo.h"
 #include "logging/Logger.h"
+#include "util/Result.h"
 
 
 // joint -> servo mappings
@@ -59,6 +60,7 @@ class Parrot : public creatures::creature::Creature {
 public:
 
     explicit Parrot(const std::shared_ptr<creatures::Logger>& logger);
+    ~Parrot() = default;
 
     /**
      * Convert a given y coordinate to where the head should be
@@ -76,6 +78,15 @@ public:
     [[nodiscard]] int32_t configToHeadTilt(u16 x) const;
 
     head_position_t calculateHeadPosition(u16 height, int32_t offset);
+
+
+    /**
+     * Make sure our configuration is correct before we fire up everything
+     *
+     * @return a `Result<std::string>` with an error message if something is wrong
+     */
+    creatures::Result<std::string> performPreFlightCheck() override;
+
 
 private:
 
