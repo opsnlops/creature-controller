@@ -19,6 +19,7 @@ namespace creatures::config {
     public:
 
         Configuration(std::shared_ptr<Logger> logger);
+        ~Configuration() = default;
 
         friend class ConfigurationBuilder;
         friend class CommandLine;
@@ -27,7 +28,7 @@ namespace creatures::config {
         bool getUseGPIO() const;
         std::string getNetworkDeviceIPAddress() const;
         u16 getUniverse() const;
-        std::vector<UARTDevice> getUARTDevices() const;
+        [[nodiscard]] std::vector<UARTDevice> getUARTDevices() const;
         std::shared_ptr<creatures::creature::Creature> getCreature() const;
         std::string getCreatureConfigFile() const;
 

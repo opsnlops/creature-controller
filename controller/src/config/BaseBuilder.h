@@ -4,12 +4,14 @@
 #include <string>
 
 #include <nlohmann/json.hpp>
+
 using json = nlohmann::json;
 
 #include "config/BuilderException.h"
 #include "logging/Logger.h"
+#include "util/Result.h"
 
-namespace creatures :: config {
+namespace creatures ::config {
 
     /**
      * This class is a base class for all builders. It provides some common functionality
@@ -21,17 +23,16 @@ namespace creatures :: config {
         BaseBuilder(std::shared_ptr<Logger> logger, std::string fileName);
         ~BaseBuilder() = default;
 
-        // Convert a file to an istream
-        static std::unique_ptr<std::istream> fileToStream(std::shared_ptr<Logger> logger, std::string fileName);
+        static Result<std::string> loadFile(std::shared_ptr<Logger> logger, std::string fileName);
 
     protected:
         std::string fileName;
 
         // Make sure the file is both readable and accessible
-        static bool isFileAccessible(std::shared_ptr<Logger> logger, const std::string& filename);
+        static Result<bool> isFileAccessible(std::shared_ptr<Logger> logger, const std::string &filename);
 
         // Make sure a JSON field is present
-        static void checkJsonField(const json& jsonObj, const std::string& fieldName);
+        static Result<bool> checkJsonField(const json &jsonObj, const std::string &fieldName);
 
         std::shared_ptr<Logger> logger;
 

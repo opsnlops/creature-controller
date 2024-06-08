@@ -13,6 +13,7 @@
 // Our modules
 #include "ServoException.h"
 #include "util/ranges.h"
+#include "util/Result.h"
 
 extern u64 number_of_moves;
 
@@ -121,15 +122,15 @@ void Servo::turnOff() {
  *
  * @param position The requested position
  */
-void Servo::move(u16 position) {
+creatures::Result<std::string> Servo::move(u16 position) {
 
     // Error checking. This could result in damage to a motor or
     // creature if not met, so this is a hard stop if it's wrong. 😱
     if(!(position >= MIN_POSITION && position <= MAX_POSITION)) {
-        logger->critical("Servo::move() called with invalid position! min: {}, max: {}, requested: {}",
+        auto errorMessage = fmt::format("Servo::move() called with invalid position! min: {}, max: {}, requested: {}",
                  MIN_POSITION, MAX_POSITION, position);
-        throw creatures::ServoException(fmt::format("Servo::move() called with invalid position! min: {}, max: {}, requested: {}",
-                                                    MIN_POSITION, MAX_POSITION, position));
+        logger->critical(errorMessage);
+        return creatures::Result<std::string>{creatures::ControllerError(creatures::ControllerError::InvalidData, errorMessage)};
     };
 
     // If this servo is inverted, do it now
@@ -141,13 +142,16 @@ void Servo::move(u16 position) {
     // Save the position for debugging
     current_position = position;
 
-    logger->trace("requesting servo on output module {}, pin {} to be set to position {} ({}us)",
+    std::string successMessage = fmt::format("requesting servo on output module {}, pin {} to be set to position {} ({}us)",
                   creatures::config::UARTDevice::moduleNameToString(outputLocation.module),
                   outputLocation.pin,
                   current_position,
                   desired_microseconds);
+    logger->trace(successMessage);
 
     number_of_moves = number_of_moves + 1;
+
+    return creatures::Result<std::string>{successMessage};
 }
 
 u32 Servo::positionToMicroseconds(u16 position) {

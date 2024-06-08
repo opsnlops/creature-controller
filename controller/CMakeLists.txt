@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.18)
 
 project(creature-controller
-        VERSION "2.4.0"
+        VERSION "2.4.1"
         DESCRIPTION "April's Creature Workshop Controller"
         HOMEPAGE_URL https://github.com/opsnlops/creature-controller
         LANGUAGES C CXX)
@@ -190,6 +190,7 @@ add_library(creature_lib
         src/controller/ServoModuleHandler.h
         src/controller/ServoModuleHandler.cpp
         src/device/ServoSpecifier.h
+        src/util/Result.h
 )
 
 target_include_directories(creature_lib PUBLIC

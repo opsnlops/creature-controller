@@ -77,11 +77,26 @@ int main(int argc, char **argv) {
 
     // Parse out the command line options
     auto commandLine = std::make_unique<creatures::CommandLine>(logger);
-    auto config = commandLine->parseCommandLine(argc, argv);
+    auto configResult = commandLine->parseCommandLine(argc, argv);
 
+    if(!configResult.isSuccess()) {
+        auto errorMessage = fmt::format("Unable to build configuration in memory: {}", configResult.getError().value().getMessage());
+        std::cerr << errorMessage << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    // Yay, we have a valid config
+    auto config = configResult.getValue().value();
 
     auto builder = creatures::config::CreatureBuilder(logger, config->getCreatureConfigFile());
-    auto creature = builder.build();
+    auto creatureResult = builder.build();
+    if(!creatureResult.isSuccess()) {
+        auto errorMessage = fmt::format("Unable to build the creature: {}", creatureResult.getError().value().getMessage());
+        std::cerr << errorMessage << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    auto creature = creatureResult.getValue().value();
 
 
     // Hooray, we did it!
@@ -182,7 +197,9 @@ int main(int argc, char **argv) {
         timedShutdown(workerThread, timeout_ms);
     }
 
-    logger->info("the main thread says bye! good luck little threads! 👋🏻");
+    logger->info("the main thread says bye! good luck little threads!");
+
+    std::cout << "👋🏻" << std::endl;
     return EXIT_SUCCESS;
 }
 
