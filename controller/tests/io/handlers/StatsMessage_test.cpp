@@ -41,6 +41,6 @@ TEST(StatsMessage, ToString) {
     statsMessage.positionMessagesProcessed = 2789;
     statsMessage.pwmWraps = 3000UL;
 
-    EXPECT_EQ("[firmware] heap: 36920, usb_chars: 123, usb_mesg_rec: 456, usb_mesg_sent: 789, uart_chars: 321, uart_mesg_rec: 654, uart_mesg_sent: 987, mp_recv: 1111, mp_sent: 222, parse_suc: 10, parse_fail: 20, cksum_fail: 30, pos_proc: 2789, pwm_wraps: 3000",
+    EXPECT_EQ("heap: 36920, usb_chars: 123, usb_mesg_rec: 456, usb_mesg_sent: 789, uart_chars: 321, uart_mesg_rec: 654, uart_mesg_sent: 987, mp_recv: 1111, mp_sent: 222, parse_suc: 10, parse_fail: 20, cksum_fail: 30, pos_proc: 2789, pwm_wraps: 3000",
               statsMessage.toString());
 }

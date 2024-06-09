@@ -1,7 +1,7 @@
 
 #pragma once
 
-
+#include "controller/ServoModuleHandler.h"
 #include "logging/Logger.h"
 #include "io/handlers/IMessageHandler.h"
 

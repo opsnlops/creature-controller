@@ -34,8 +34,7 @@ namespace creatures {
         logger->info("Firmware checked in and wants it's configuration! Version: {}", firmwareVersion);
 
         // Let the controller know it's time to party
-#warning fix
-        //servoModuleHandler->firmwareReadyForInitialization(firmwareVersion);
+        servoModuleHandler->firmwareReadyForInitialization(firmwareVersion);
 
     }
 

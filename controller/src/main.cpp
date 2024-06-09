@@ -3,6 +3,7 @@
 #include <csignal>
 #include <future>
 #include <thread>
+#include <unordered_map>
 #include <vector>
 
 #include "controller-config.h"
@@ -132,7 +133,7 @@ int main(int argc, char **argv) {
     auto topLevelOutgoingQueue = std::make_shared<creatures::MessageQueue<Message>>();
     auto topLevelIncomingQueue = std::make_shared<creatures::MessageQueue<Message>>();
 
-    // Make the MessageRouter
+    // Make the MessageRouter (it will be started later in the boot process)
     auto messageRouter = std::make_shared<creatures::io::MessageRouter>(logger);
 
     // Fire up the controller
@@ -161,9 +162,13 @@ int main(int argc, char **argv) {
 
         std::string loggerName = fmt::format("uart-{}", UARTDevice::moduleNameToString(uart.getModule()));
         auto handler = std::make_shared<ServoModuleHandler>(makeLogger(loggerName),
+                                                            controller,
                                                             uart.getModule(),
                                                             uart.getDeviceNode(),
                                                             messageRouter);
+
+        // Register the handler with the message router
+        messageRouter->registerServoModuleHandler(uart.getModule(), handler->getIncomingQueue(), handler->getOutgoingQueue());
 
         logger->debug("init'ing the ServoModuleHandler for module {}", UARTDevice::moduleNameToString(uart.getModule()));
         handler->init();
@@ -185,6 +190,10 @@ int main(int argc, char **argv) {
     e131Client->init(creature, controller, config->getNetworkDeviceIPAddress());
     e131Client->start();
     workerThreads.push_back(std::move(e131Client));
+
+    // Fire up the MessageRouter
+    messageRouter->start();
+    workerThreads.push_back(messageRouter);
 
     // Before we start sending pings, ask the controller to flush its buffer
     controller->sendFlushBufferRequest();
@@ -208,8 +217,10 @@ int main(int argc, char **argv) {
         timedShutdown(workerThread, timeout_ms);
     }
 
+    // Let's make sure we're fully cleaned up. Leaving the serial ports in a bad state really
+    // makes macOS mad. Like reboot-the-system mad.
     logger->debug("waiting for a few seconds to let everyone clean up");
-    std::this_thread::sleep_for(std::chrono::seconds(5));
+    std::this_thread::sleep_for(std::chrono::seconds(3));
 
     std::cout << "Bye! 🖖🏻" << std::endl;
     std::exit(EXIT_SUCCESS);

@@ -10,6 +10,9 @@
 #include "util/MessageQueue.h"
 #include "util/StoppableThread.h"
 
+
+class Controller;
+
 namespace creatures :: io {
     class MessageRouter;
 }
@@ -22,6 +25,7 @@ namespace creatures {
 
     public:
         ServoModuleHandler(std::shared_ptr<Logger> logger,
+                           std::shared_ptr<Controller> controller,
                            UARTDevice::module_name moduleId,
                            std::string deviceNode,
                            std::shared_ptr<creatures::io::MessageRouter> messageRouter);
@@ -30,9 +34,6 @@ namespace creatures {
 
         void start() override;
         void shutdown() override;
-
-        bool isReady() const;
-        bool isConfigured() const;
 
         void send(const Message& message);
         void resetServoModule();
@@ -54,13 +55,46 @@ namespace creatures {
          */
         std::shared_ptr<MessageQueue<Message>> getIncomingQueue();
 
-        void firmwareReadyToOperate();
+
+        /**
+         * Return a pointer to our incoming queue for the processor to use
+         *
+         * @return a `MessageQueue<Message>` for incoming messages TO the remote device
+         */
+        std::shared_ptr<MessageQueue<Message>> getOutgoingQueue();
 
 
         /**
-         * Get the module ID of the module we're controlling
+         * Send a message back to the controller
          *
-         * @return the module ID of the module we're controlling
+         * @param messagePayload the string to send
+         * @return a Result<bool> indicating success or failure
+         */
+        Result<bool> sendMessageToController(std::string messagePayload);
+
+
+
+        /**
+         * @brief Informs the controller that the firmware is ready for initialization
+         *
+         * This is called by the InitHandler when we get a message from the firmware that it's
+         * showtime!
+         */
+        Result<bool> firmwareReadyForInitialization(u32 firmwareVersion);
+
+        /**
+         * @brief Tells the controller that the firmware is ready to operate
+         *
+         * This is set by ReadyHandler.
+         */
+        void firmwareReadyToOperate();
+
+
+
+        /**
+         * Get the module name of the module we're controlling
+         *
+         * @return the module name of the module we're controlling
          */
         creatures::config::UARTDevice::module_name getModuleName() const;
 
@@ -83,6 +117,12 @@ namespace creatures {
          * Our logger
          */
         std::shared_ptr<Logger> logger;
+
+        /**
+         * Our controller
+         */
+         std::shared_ptr<Controller> controller;
+
 
         /**
          * The device node we're using to communicate with the module

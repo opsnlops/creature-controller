@@ -16,7 +16,8 @@ namespace creatures {
             InternalError,
             InvalidConfiguration,
             DestinationUnknown,
-            IOError
+            IOError,
+            UnprocessableMessage
         };
 
         ControllerError(ErrorType errorType, const std::string &message);

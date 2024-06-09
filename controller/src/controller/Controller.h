@@ -11,6 +11,7 @@
 #include "controller/Input.h"
 #include "controller/commands/ICommand.h"
 #include "controller/commands/SetServoPositions.h"
+#include "controller/commands/tokens/ServoConfig.h"
 #include "creature/Creature.h"
 
 #include "device/Servo.h"
@@ -18,6 +19,7 @@
 #include "io/Message.h"
 #include "io/MessageRouter.h"
 #include "util/MessageQueue.h"
+#include "util/Result.h"
 #include "util/StoppableThread.h"
 
 #if USE_STEPPERS
@@ -65,7 +67,7 @@ public:
     void powerToggle();
     [[nodiscard]] bool isPoweredOn();
 
-    [[nodiscard]] bool hasReceivedFirstFrame();
+    [[nodiscard]] bool hasReceivedFirstFrame() const;
     void confirmFirstFrameReceived();
 
 
@@ -87,7 +89,19 @@ public:
 
     u8 getNumberOfServosInUse();
 
-    [[nodiscard]] u16 getNumberOfDMXChannels();
+
+    /**
+     * Get the configurations of the servos that are connected to a specific module
+     *
+     * This is mostly just passed off to the creature, but I wanted to route the message via the controller, rather
+     * than directly to the creature.
+     *
+     * @return the position of the servo
+     */
+    creatures::Result<std::vector<creatures::ServoConfig>> getServoConfigs(creatures::config::UARTDevice::module_name module);
+
+
+    [[nodiscard]] u16 getNumberOfDMXChannels() const;
 
     [[nodiscard]] bool isOnline();
     void setOnline(bool onlineValue);
@@ -101,20 +115,6 @@ public:
     std::shared_ptr<creatures::creature::Creature> getCreature();
 
 
-    /**
-     * @brief Informs the controller that the firmware is ready for initialization
-     *
-     * This is called by the InitHandler when we get a message from the firmware that it's
-     * showtime!
-     */
-    void firmwareReadyForInitialization(u32 firmwareVersion);
-
-    /**
-     * @brief Tells the controller that the firmware is ready to operate
-     *
-     * This is set by ReadyHandler.
-     */
-    void firmwareReadyToOperate();
 
 #if USE_STEPPERS
     Stepper* getStepper(u8 index);
@@ -161,13 +161,6 @@ private:
      * anything that doesn't make sense, but do we really wanna trust it?
      */
     bool receivedFirstFrame = false;
-
-    /**
-     * Has the firmware told us that it's ready?
-     *
-     * This is set via a READY message from the firmware.
-     */
-    bool firmwareReady = false;
 
     // How many channels we're expecting from the I/O handler
     u16 numberOfChannels;

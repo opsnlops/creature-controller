@@ -3,14 +3,12 @@
 #include <string>
 #include <vector>
 
-#include "controller-config.h"
-
-#include "device/Servo.h"
-#include "logging/Logger.h"
-#include "controller/commands/ICommand.h"
+#include "controller/Controller.h"
 #include "controller/commands/tokens/ServoConfig.h"
+#include "config/UARTDevice.h"
+#include "logging/Logger.h"
+#include "util/Result.h"
 
-#include "controller/commands/CommandException.h"
 
 #include "ServoModuleConfiguration.h"
 
@@ -21,30 +19,44 @@ namespace creatures::commands {
         this->servoConfigurations = std::vector<ServoConfig>();
     }
 
-    void ServoModuleConfiguration::getServoConfigurations(std::shared_ptr<creatures::creature::Creature> creature) {
+    Result<bool> ServoModuleConfiguration::getServoConfigurations(const std::shared_ptr<Controller>& controller,
+                                                                 creatures::config::UARTDevice::module_name module) {
 
-        auto configs = creature->getServoConfigs();
-        logger->debug("got the servo configurations ({} total)", configs.size());
+        auto configResult = controller->getServoConfigs(module);
+        if(!configResult.isSuccess()) {
+            auto errorMessage = fmt::format("Failed to get servo configurations: {}", configResult.getError()->getMessage());
+            logger->warn(errorMessage);
+            return Result<bool>{ControllerError(ControllerError::InvalidConfiguration, errorMessage)};
+        }
+
+        auto configs = configResult.getValue().value();
+        logger->debug("got the servo configurations for module {} ({} total)",
+                      UARTDevice::moduleNameToString(module),
+                      configs.size());
 
         // Now add them to the vector
         for (const auto& config : configs) {
             this->addServoConfig(config);
         }
+
+        return Result<bool>{true};
     }
 
-    void ServoModuleConfiguration::addServoConfig(const ServoConfig &servoConfig) {
+    Result<bool> ServoModuleConfiguration::addServoConfig(const ServoConfig &servoConfig) {
 
         // Make sure we're not putting the same outputPosition in twice
         for (const auto& existingConfigurations : servoConfigurations) {
             if (existingConfigurations.getOutputHeader() == servoConfig.getOutputHeader()) {
                 std::string errorMessage = fmt::format("Unable to insert the same output position twice: {}", servoConfig.getOutputHeader());
                 logger->error(errorMessage);
-                throw CommandException(errorMessage);
+                return Result<bool>{ControllerError(ControllerError::InvalidConfiguration, errorMessage)};
             }
         }
 
         this->servoConfigurations.push_back(servoConfig);
         logger->trace("Add config for servo: {}", servoConfig.toString());
+
+        return Result<bool>{true};
     }
 
     std::string ServoModuleConfiguration::toMessage() {
