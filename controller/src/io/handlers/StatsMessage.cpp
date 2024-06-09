@@ -26,7 +26,7 @@ namespace creatures {
     }
 
     std::string StatsMessage::toString() const {
-        return fmt::format("[firmware] heap: {}, usb_chars: {}, usb_mesg_rec: {}, usb_mesg_sent: {}, "
+        return fmt::format("heap: {}, usb_chars: {}, usb_mesg_rec: {}, usb_mesg_sent: {}, "
                            "uart_chars: {}, uart_mesg_rec: {}, uart_mesg_sent: {}, "
                            "mp_recv: {}, mp_sent: {}, "
                            "parse_suc: {}, parse_fail: {}, cksum_fail: {}, pos_proc: {}, pwm_wraps: {}",

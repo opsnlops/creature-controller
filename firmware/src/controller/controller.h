@@ -16,14 +16,11 @@
 
 #include "controller-config.h"
 
-// These are the modules on the controller card (A and B, C is currently not used)
-#define CONTROLLER_NUM_MODULES 2
-
 // The max number of motors per module (0, 1, 2, 3)
-#define CONTROLLER_MOTORS_PER_MODULE 4
+#define CONTROLLER_MOTORS_PER_MODULE 8
 
 // Do the math to get the total number of motors
-#define MOTOR_MAP_SIZE (CONTROLLER_NUM_MODULES * CONTROLLER_MOTORS_PER_MODULE)
+#define MOTOR_MAP_SIZE (1 * CONTROLLER_MOTORS_PER_MODULE)
 
 
 

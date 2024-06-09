@@ -16,9 +16,6 @@
 #include "io/Message.h"
 #include "util/thread_name.h"
 
-// Exceptions
-#include "controller/ControllerException.h"
-
 
 u64 number_of_moves = 0UL;
 
@@ -49,8 +46,7 @@ void Controller::sendCommand(const std::shared_ptr<creatures::ICommand>& command
                              creatures::config::UARTDevice::module_name destModule) {
     logger->trace("sending command {}", command->toMessageWithChecksum());
 
-
-    //this->outgoingQueue->push(command->toMessageWithChecksum());
+    this->messageRouter->sendMessageToCreature(creatures::io::Message(destModule, command->toMessageWithChecksum()));
 }
 
 
@@ -90,31 +86,7 @@ bool Controller::acceptInput(const std::vector<creatures::Input>& inputs) {
     return true;
 }
 
-void Controller::firmwareReadyForInitialization(u32 firmwareVersion) {
 
-    // Make sure we got the version of the firmware we were built against
-    if(firmwareVersion != FIRMWARE_VERSION) {
-        std::string errorMessage = fmt::format("Firmware version mismatch! Expected {}, got {}",  FIRMWARE_VERSION, firmwareVersion);
-        logger->critical(errorMessage);
-        throw creatures::ControllerException(errorMessage);
-    }
-
-    logger->debug("firmware is ready for initialization (version {})", firmwareVersion);
-
-    // Go gather the configuration from the creature
-    auto creatureConfigCommand = creatures::commands::ServoModuleConfiguration(logger);
-    creatureConfigCommand.getServoConfigurations(creature);
-
-    // ...and toss it to the serial handler
-#warning fix
-    creatures::io::Message message = creatures::io::Message( creatures::config::UARTDevice::module_name::A, creatureConfigCommand.toMessageWithChecksum());
-
-    auto sendResult = this->messageRouter->sendMessageToCreature(message);
-    if(!sendResult.isSuccess()) {
-        logger->critical("Failed to send the creature configuration to the firmware: {}", sendResult.getError()->getMessage());
-    }
-
-}
 
 void Controller::sendFlushBufferRequest() {
     logger->info("Sending a request to the firmware to flush the buffer");
@@ -123,6 +95,22 @@ void Controller::sendFlushBufferRequest() {
     // that the firmware is looking for to know it's time to reset the buffer.
     auto flushBufferCommand = creatures::commands::FlushBuffer(logger);
     this->messageRouter->broadcastMessageToAllModules(flushBufferCommand.toMessage()); // No checksum, only 🔔
+}
+
+
+creatures::Result<std::vector<creatures::ServoConfig>> Controller::getServoConfigs(creatures::config::UARTDevice::module_name module) {
+
+    auto configs = creature->getServoConfigs(module);
+    if(configs.empty()) {
+        auto errorMessage = fmt::format("no servo configurations found for module {}",
+                                        creatures::config::UARTDevice::moduleNameToString(module));
+        logger->error(errorMessage);
+        return creatures::Result<std::vector<creatures::ServoConfig>>{
+            creatures::ControllerError(creatures::ControllerError::InvalidConfiguration,
+                                       errorMessage)};
+    }
+
+    return creatures::Result<std::vector<creatures::ServoConfig>>{configs};
 }
 
 
@@ -137,11 +125,11 @@ std::shared_ptr<creatures::creature::Creature> Controller::getCreature() {
 
 
 
-bool Controller::hasReceivedFirstFrame() {
+bool Controller::hasReceivedFirstFrame() const {
     return receivedFirstFrame;
 }
 
-uint16_t Controller::getNumberOfDMXChannels() {
+uint16_t Controller::getNumberOfDMXChannels() const {
     return numberOfChannels;
 }
 
@@ -154,10 +142,7 @@ bool Controller::isOnline() {
     return online;
 }
 
-void Controller::firmwareReadyToOperate() {
-    logger->info("firmware is ready to operate");
-    this->firmwareReady = true;
-}
+
 
 
 
@@ -187,20 +172,26 @@ void Controller::run() {
         }
 
         // If we haven't received a frame yet, don't do anything
-        if (receivedFirstFrame && firmwareReady) {
+        if (receivedFirstFrame && messageRouter->allHandlersReady()) {
 
             // Go fetch the positions
-#warning fix
-            std::vector<creatures::ServoPosition> requestedPositions = creature->getRequestedServoPositions(creatures::config::UARTDevice::module_name::A);
 
-            auto command = std::make_shared<creatures::commands::SetServoPositions>(logger);
-            for (auto &position: requestedPositions) {
-                command->addServoPosition(position);
+            // Look at each handler in the message router
+            for(auto& handlerId: messageRouter->getHandleIds()) {
+
+                std::vector<creatures::ServoPosition> requestedPositions = creature->getRequestedServoPositions(handlerId);
+
+                auto command = std::make_shared<creatures::commands::SetServoPositions>(logger);
+                for (auto &position: requestedPositions) {
+                    command->addServoPosition(position);
+                }
+
+                // Fire this off to the controller
+                sendCommand(command, handlerId);
+
             }
 
-            // Fire this off to the controller
-#warning fix
-            sendCommand(command, creatures::config::UARTDevice::module_name::A);
+
 
             // Tell the creature to get ready for next time
             creature->calculateNextServoPositions();
@@ -210,7 +201,7 @@ void Controller::run() {
             // If we're stalled, log why every few frames
             if(number_of_frames % 100 == 0) {
                 logger->warn("not sending frames because we're not ready! receivedFirstFrame: {}, firmwareReady: {}",
-                             receivedFirstFrame, firmwareReady);
+                             receivedFirstFrame, messageRouter->allHandlersReady());
 
             }
         }

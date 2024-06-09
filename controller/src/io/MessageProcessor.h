@@ -19,6 +19,7 @@
 #include "io/MessageRouter.h"
 #include "logging/Logger.h"
 #include "util/MessageQueue.h"
+#include "util/Result.h"
 #include "util/StoppableThread.h"
 
 
@@ -39,7 +40,7 @@ namespace creatures {
         void run() override;
 
         Message waitForMessage();
-        void processMessage(const Message& message);
+        Result<bool> processMessage(const Message& message);
 
     private:
 

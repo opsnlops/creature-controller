@@ -139,7 +139,7 @@ namespace creatures {
 
     Result<bool> SerialHandler::closeSerialPort() {
         if(this->fileDescriptor != -1) {
-            this->logger->info("closing the serial port");
+            this->logger->info("closing {}", this->deviceNode);
             close(this->fileDescriptor);
             this->fileDescriptor = -1;
         }

@@ -16,6 +16,7 @@
 #include "io/Message.h"
 #include "io/MessageRouter.h"
 #include "logging/Logger.h"
+#include "util/Result.h"
 #include "util/thread_name.h"
 
 #include "MessageProcessor.h"
@@ -53,7 +54,7 @@ namespace creatures {
 
         this->logHandler = std::make_shared<LogHandler>();
         this->initHandler = std::make_shared<InitHandler>(this->logger, this->servoModuleHandler);
-        this->pongHandler = std::make_shared<PongHandler>();
+        this->pongHandler = std::make_shared<PongHandler>(this->logger, this->servoModuleHandler);
         this->statsHandler = std::make_shared<StatsHandler>();
         this->readyHandler = std::make_shared<ReadyHandler>(this->logger, this->servoModuleHandler);
 
@@ -88,7 +89,7 @@ namespace creatures {
      *
      * @param message the message to process
      */
-    void MessageProcessor::processMessage(const Message& message) {
+    Result<bool> MessageProcessor::processMessage(const Message& message) {
 
 #if DEBUG_MESSAGE_PROCESSING
         this->logger->debug("pulled message off queue: {}", incomingMessage);
@@ -96,8 +97,9 @@ namespace creatures {
 
         // Make sure there's actually handlers registered
         if(handlers.empty()) {
-            logger->critical("There's no handlers registered and you're asking me to process a message!");
-            throw MessageProcessingException("No handlers registered!");
+            auto errorMessage = "There's no handlers registered and you're asking me to process a message!";
+            logger->critical(errorMessage);
+            return Result<bool>{ControllerError(ControllerError::UnprocessableMessage, errorMessage)};
         }
 
         // Tokenize message
@@ -121,26 +123,31 @@ namespace creatures {
             std::string safeToken = tokens[0];
             std::string errorMessage = fmt::format("Unknown message type: {}", safeToken);
             logger->error(errorMessage);
-            throw MessageProcessingException(errorMessage);
+            return Result<bool>{ControllerError(ControllerError::UnprocessableMessage, errorMessage)};
         }
+
+        return Result<bool>{true};
 
     }
 
     void MessageProcessor::run() {
 
-        setThreadName("MessageProcessor::processMessages");
+        auto threadName = fmt::format("MessageProcessor::{}", UARTDevice::moduleNameToString(this->moduleId));
+        setThreadName(threadName);
 
-        logger->debug("hello from the message processor thread! 👋🏻");
+        logger->debug("hello from the message processor thread for {}! 👋🏻", UARTDevice::moduleNameToString(servoModuleHandler->getModuleName()));
 
         while(!this->stop_requested.load()) {
 
             auto message = waitForMessage();
 
             // Try to process the message, leaving an error if needed
-            try {
-                processMessage(message);
-            } catch (const MessageProcessingException& e) {
-                logger->error(e.what());
+            auto processResult = processMessage(message);
+            if(!processResult.isSuccess()) {
+                auto errorMessage = fmt::format("Error processing message: {}", processResult.getError()->getMessage());
+                logger->error(errorMessage);
+
+                // Don't stop the thread, just log the error
             }
         }
     }

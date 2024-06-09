@@ -1,9 +1,6 @@
 
-#include <chrono>
 #include <string>
 #include <vector>
-
-#include "controller-config.h"
 
 #include "controller/ServoModuleHandler.h"
 #include "logging/Logger.h"
@@ -16,7 +13,6 @@ namespace creatures {
 
     ReadyHandler::ReadyHandler(std::shared_ptr<Logger> logger, std::shared_ptr<ServoModuleHandler> servoModuleHandler) :
             servoModuleHandler(servoModuleHandler) {
-
         logger->info("ReadyHandler created!");
     }
 
@@ -24,9 +20,10 @@ namespace creatures {
 
         // This is basically the most easy handler ever 😅
 
+        (void)tokens; // Unused
+
         logger->info("READY message received from the firmware!");
         servoModuleHandler->firmwareReadyToOperate();
-
     }
 
 } // creatures

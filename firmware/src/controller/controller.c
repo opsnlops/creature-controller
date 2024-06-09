@@ -2,7 +2,6 @@
 
 #include <limits.h>
 
-
 #include <FreeRTOS.h>
 #include <timers.h>
 
@@ -32,14 +31,14 @@ volatile u64 number_of_pwm_wraps = 0UL;
  *
  */
 MotorMap motor_map[MOTOR_MAP_SIZE] = {
-        {"A0", SERVO_0_GPIO_PIN, (SERVO_0_GPIO_PIN >> 1u) & 7u, SERVO_0_GPIO_PIN & 1u},
-        {"A1", SERVO_1_GPIO_PIN, (SERVO_1_GPIO_PIN >> 1u) & 7u, SERVO_1_GPIO_PIN & 1u},
-        {"A2", SERVO_2_GPIO_PIN, (SERVO_2_GPIO_PIN >> 1u) & 7u, SERVO_2_GPIO_PIN & 1u},
-        {"A3", SERVO_3_GPIO_PIN, (SERVO_3_GPIO_PIN >> 1u) & 7u, SERVO_3_GPIO_PIN & 1u},
-        {"B0", SERVO_4_GPIO_PIN, (SERVO_4_GPIO_PIN >> 1u) & 7u, SERVO_4_GPIO_PIN & 1u},
-        {"B1", SERVO_5_GPIO_PIN, (SERVO_5_GPIO_PIN >> 1u) & 7u, SERVO_5_GPIO_PIN & 1u},
-        {"B2", SERVO_6_GPIO_PIN, (SERVO_6_GPIO_PIN >> 1u) & 7u, SERVO_6_GPIO_PIN & 1u},
-        {"B3", SERVO_7_GPIO_PIN, (SERVO_7_GPIO_PIN >> 1u) & 7u, SERVO_7_GPIO_PIN & 1u}
+        {"0", SERVO_0_GPIO_PIN, (SERVO_0_GPIO_PIN >> 1u) & 7u, SERVO_0_GPIO_PIN & 1u},
+        {"1", SERVO_1_GPIO_PIN, (SERVO_1_GPIO_PIN >> 1u) & 7u, SERVO_1_GPIO_PIN & 1u},
+        {"2", SERVO_2_GPIO_PIN, (SERVO_2_GPIO_PIN >> 1u) & 7u, SERVO_2_GPIO_PIN & 1u},
+        {"3", SERVO_3_GPIO_PIN, (SERVO_3_GPIO_PIN >> 1u) & 7u, SERVO_3_GPIO_PIN & 1u},
+        {"4", SERVO_4_GPIO_PIN, (SERVO_4_GPIO_PIN >> 1u) & 7u, SERVO_4_GPIO_PIN & 1u},
+        {"5", SERVO_5_GPIO_PIN, (SERVO_5_GPIO_PIN >> 1u) & 7u, SERVO_5_GPIO_PIN & 1u},
+        {"6", SERVO_6_GPIO_PIN, (SERVO_6_GPIO_PIN >> 1u) & 7u, SERVO_6_GPIO_PIN & 1u},
+        {"7", SERVO_7_GPIO_PIN, (SERVO_7_GPIO_PIN >> 1u) & 7u, SERVO_7_GPIO_PIN & 1u}
 };
 
 
@@ -162,25 +161,30 @@ void controller_start() {
 }
 
 u8 getMotorMapIndex(const char *motor_id) {
-    if (motor_id == NULL || motor_id[1] == '\0') return INVALID_MOTOR_ID;
+    if (motor_id == NULL || motor_id[0] == '\0') {
+        warning("motor_id is null while getting motor map index");
+        return INVALID_MOTOR_ID;
+    }
 
-    u8 module = motor_id[0] - 'A';         // Convert 'A', 'B', 'C' to 0, 1, 2
-    u8 motor_number = motor_id[1] - '0';   // Convert '0', '1', ..., '3' to 0, 1, ..., 3
+    u8 motor_number = motor_id[0] - '0';   // Convert '0', '1', ..., '3' to 0, 1, ..., 3
 
     // Make sure the controller requested a valid motor
-    if (module < 0 || module >= CONTROLLER_NUM_MODULES || motor_number < 0 ||
+    if (motor_number < 0 ||
         motor_number >= CONTROLLER_MOTORS_PER_MODULE) {
         warning("Invalid motor ID: %s", motor_id);
         return INVALID_MOTOR_ID;
     }
 
-    u8 index = module * CONTROLLER_MOTORS_PER_MODULE + motor_number;
+    u8 index = motor_number;
     return index;
 }
 
 
 bool requestServoPosition(const char *motor_id, u16 requestedMicroseconds) {
-    if (motor_id == NULL || motor_id[1] == '\0') return false;
+    if (motor_id == NULL || motor_id[0] == '\0') {
+        warning("motor_id is null while requesting servo position");
+        return false;
+    }
 
     // Get the index in the array
     u8 motor_id_index = getMotorMapIndex(motor_id);
@@ -212,7 +216,10 @@ bool requestServoPosition(const char *motor_id, u16 requestedMicroseconds) {
 }
 
 bool configureServoMinMax(const char* motor_id, u16 minMicroseconds, u16 maxMicroseconds) {
-    if (motor_id == NULL || motor_id[1] == '\0') return false;
+    if (motor_id == NULL || motor_id[0] == '\0') {
+        debug("motor_id is null while setting configureServoMinMax");
+        return false;
+    }
 
     // Get the index in the array
     u8 motor_id_index = getMotorMapIndex(motor_id);

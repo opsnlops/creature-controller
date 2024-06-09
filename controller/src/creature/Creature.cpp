@@ -3,6 +3,7 @@
 
 #include "controller-config.h"
 
+#include "config/UARTDevice.h"
 #include "creature/Creature.h"
 #include "creature/CreatureException.h"
 #include "logging/Logger.h"
@@ -73,13 +74,19 @@ namespace creatures::creature {
 
     }
 
-    std::vector<creatures::ServoConfig> Creature::getServoConfigs() {
+    std::vector<creatures::ServoConfig> Creature::getServoConfigs(creatures::config::UARTDevice::module_name module) {
 
         std::vector<creatures::ServoConfig> servoConfigs;
         servoConfigs.reserve(servos.size());
 
         // Walk all of our servos and make a ServoConfig for each
         for (const auto &[key, servo]: servos) {
+
+            // If it's not on the module we're looking for, skip it
+            if(servo->getOutputModule() != module) {
+                continue;
+            }
+
             ServoConfig servoConfig = ServoConfig(logger, servo);
             servoConfigs.emplace_back(servoConfig);
         }

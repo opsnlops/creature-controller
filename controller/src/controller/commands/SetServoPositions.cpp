@@ -18,10 +18,6 @@ namespace creatures::commands {
         this->filter = creatures::config::UARTDevice::invalid_module;
     }
 
-    void SetServoPositions::setFilter(creatures::config::UARTDevice::module_name _filter) {
-        this->filter = _filter;
-    }
-
     void SetServoPositions::addServoPosition(const creatures::ServoPosition &servoPosition) {
 
         // Make sure we're not putting the same outputPosition in twice
@@ -47,20 +43,12 @@ namespace creatures::commands {
             return "";
         }
 
-        // Make sure we have a valid filter
-        if(filter == creatures::config::UARTDevice::invalid_module) {
-            logger->error("attempted to call toMessage() on a SetServoPositions with an invalid filter");
-            return "";
-        }
-
         // Start the message with the 'POS' command prefix
         std::string message = "POS";
 
         // Now go make the string
         for (const auto& position : servoPositions) {
-            if (position.getServoId().module == filter) {
-                message += '\t' + position.toString();
-            }
+            message += '\t' + position.toString();
         }
 
         logger->trace("message is: {}", message);

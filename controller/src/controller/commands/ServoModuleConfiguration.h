@@ -11,6 +11,7 @@
 #include "logging/Logger.h"
 #include "controller/commands/ICommand.h"
 #include "controller/commands/tokens/ServoConfig.h"
+#include "util/Result.h"
 
 namespace creatures::commands {
 
@@ -22,7 +23,8 @@ namespace creatures::commands {
         /**
          * Go fetch the servo configurations from the creature
          */
-        void getServoConfigurations(std::shared_ptr<creatures::creature::Creature> creature);
+        Result<bool> getServoConfigurations(const std::shared_ptr<Controller>& controller,
+                                            creatures::config::UARTDevice::module_name module);
 
         std::string toMessage() override;
 
@@ -30,7 +32,7 @@ namespace creatures::commands {
         std::vector<ServoConfig> servoConfigurations;
         std::shared_ptr<Logger> logger;
 
-        void addServoConfig(const ServoConfig &servoConfig);
+        Result<bool> addServoConfig(const ServoConfig &servoConfig);
 
     };
 

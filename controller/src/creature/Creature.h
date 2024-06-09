@@ -122,15 +122,15 @@ namespace creatures::creature {
         std::vector<creatures::ServoPosition> getRequestedServoPositions(creatures::config::UARTDevice::module_name module);
 
         /**
-         * @brief Gets a ServoConfig for each servo
+         * @brief Gets a ServoConfig for each servo on a module
          *
          * This is used to generate a configuration that's sent over to the firmware in response
          * to an INIT message. It allows the creature to tell the firmware the limits of each of
          * the servos so it can also do error checking on it's side.
          *
-         * @return `std::vector<creatures::ServoConfig>` of the servos this creature has
+         * @return `std::vector<creatures::ServoConfig>` of the servos that are connected to a specific module
          */
-        std::vector<creatures::ServoConfig> getServoConfigs();
+        std::vector<creatures::ServoConfig> getServoConfigs(creatures::config::UARTDevice::module_name module);
 
         /**
          * @brief Ask all of the servos to calculate their next positions
