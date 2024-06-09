@@ -7,6 +7,7 @@
 #include "io/MessageRouter.h"
 #include "io/SerialHandler.h"
 #include "logging/Logger.h"
+#include "util/thread_name.h"
 
 
 namespace creatures :: io {
@@ -28,6 +29,7 @@ namespace creatures :: io {
         this->handlerStates = std::unordered_map<creatures::config::UARTDevice::module_name,
                                                  MotorHandlerState>();
 
+        this->threadName = "MessageRouter::run";
         this->logger->info("MessageRouter created");
     }
 
@@ -111,6 +113,7 @@ namespace creatures :: io {
     }
 
     void MessageRouter::run() {
+        setThreadName(threadName);
         this->logger->info("MessageRouter running");
 
         while(!stop_requested.load()) {
@@ -152,6 +155,7 @@ namespace creatures :: io {
 
     std::vector<creatures::config::UARTDevice::module_name> MessageRouter::getHandleIds() {
         std::vector<creatures::config::UARTDevice::module_name> ids;
+        ids.reserve(servoHandlers.size());
         for (const auto& pair : servoHandlers) {
             ids.push_back(pair.first);
         }
