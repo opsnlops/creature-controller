@@ -17,6 +17,9 @@ pico_sdk_init()
 set(PICO_DEFAULT_FLOAT_IMPL pico_float_pico)
 set(PICO_DEFAULT_DOUBLE_IMPL pico_double_pico)
 
+# Add the ads1115 library
+add_subdirectory(lib/pico-ads1115/lib ads1115)
+
 
 # Set up our includes
 include_directories(
@@ -101,6 +104,7 @@ target_link_libraries(firmware
         pico_rand
         pico_unique_id
         pico_multicore
+        pico-ads1115
         FreeRTOS-Kernel
         FreeRTOS-Kernel-Heap4
 )
