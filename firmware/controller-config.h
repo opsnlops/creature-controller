@@ -76,24 +76,27 @@ typedef uint64_t u64;
 
 #define IO_LIGHT_COLOR_CYCLE_SPEED          2.3
 
-
+/*
+ * Steppers are currently totally disabled. Don't turn these back on without a
+ * lot of thought, because I stole the pins for SPI.
+ */
 
 // Stepper
-#define STEPPER_LOOP_PERIOD_IN_US   1000        // The A3967 wants 1us pluses at a min
-
-#define STEPPER_MUX_BITS            3
-#define STEPPER_STEP_PIN            26
-#define STEPPER_DIR_PIN             27
-#define STEPPER_MS1_PIN             16
-#define STEPPER_MS2_PIN             17
-#define STEPPER_A0_PIN              18
-#define STEPPER_A1_PIN              19
-#define STEPPER_A2_PIN              20
-#define STEPPER_LATCH_PIN           21
-#define STEPPER_SLEEP_PIN           4
-#define STEPPER_END_S_LOW_PIN       14
-#define STEPPER_END_S_HIGH_PIN      15
-#define STEPPER_FAULT_PIN           13
+//#define STEPPER_LOOP_PERIOD_IN_US   1000        // The A3967 wants 1us pluses at a min
+//
+//#define STEPPER_MUX_BITS            3
+//#define STEPPER_STEP_PIN            26
+//#define STEPPER_DIR_PIN             27
+//#define STEPPER_MS1_PIN             16
+//#define STEPPER_MS2_PIN             17
+//#define STEPPER_A0_PIN              18
+//#define STEPPER_A1_PIN              19
+//#define STEPPER_A2_PIN              20
+//#define STEPPER_LATCH_PIN           21
+//#define STEPPER_SLEEP_PIN           4
+//#define STEPPER_END_S_LOW_PIN       14
+//#define STEPPER_END_S_HIGH_PIN      15
+//#define STEPPER_FAULT_PIN           13
 
 /*
  * Microstepping configuration
@@ -102,11 +105,11 @@ typedef uint64_t u64;
  * know how to set this!
  *
  */
-#define STEPPER_MICROSTEP_MAX       8           // "8" means 1/8th step
-#define STEPPER_SPEED_0_MICROSTEPS  8           // At full speed, each step is 8 microsteps
-#define STEPPER_SPEED_1_MICROSTEPS  4           //                          ...4 microsteps
-#define STEPPER_SPEED_2_MICROSTEPS  2           //                          ...2 microsteps
-#define STEPPER_SPEED_3_MICROSTEPS  1
+//#define STEPPER_MICROSTEP_MAX       8           // "8" means 1/8th step
+//#define STEPPER_SPEED_0_MICROSTEPS  8           // At full speed, each step is 8 microsteps
+//#define STEPPER_SPEED_1_MICROSTEPS  4           //                          ...4 microsteps
+//#define STEPPER_SPEED_2_MICROSTEPS  2           //                          ...2 microsteps
+//#define STEPPER_SPEED_3_MICROSTEPS  1
 
 #define USE_STEPPERS                0
 
@@ -167,12 +170,31 @@ typedef uint64_t u64;
 #define SENSORS_I2C_SDA_PIN                     2
 #define SENSORS_I2C_SCL_PIN                     3
 
-#define SENSOR_TIMER_TIME_MS                    10  // Double the frequency of the servos (20ms)
+#define SENSORS_SPI_BUS                         spi0
+#define SENSORS_SPI_FREQ                        (1000 * 750)
+#define SENSORS_SPI_SCK_PIN                     18
+#define SENSORS_SPI_TX_PIN                      19
+#define SENSORS_SPI_RX_PIN                      20
+#define SENSORS_SPI_CS_PIN                      21
+
+
+#define SENSOR_I2C_TIMER_TIME_MS                100
+#define SENSOR_SPI_TIMER_TIME_MS                10
 //#define SENSOR_TIMER_TIME_MS                    500 // while testing since it's going to the logger
 
 // Various I2C devices
-#define ADS1115_I2C_ADDR                        0x48
 
+
+/**
+ * Analog Read Filter
+ *
+ * From the code:
+ *
+ *    SnapMultiplier is a value from 0 to 1 that controls the amount of easing. Increase this to lessen
+ *    the amount of easing (such as 0.1) and make the responsive values more responsive, but doing so may
+ *    cause more noise to seep through when sleep is not enabled.
+ */
+#define ANALOG_READ_FILTER_SNAP_VALUE 0.2
 
 
 /*
