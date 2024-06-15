@@ -75,6 +75,8 @@ add_executable(firmware
         src/io/uart_serial.h
         src/io/message_processor.h
         src/io/message_processor.c
+        src/sensor/sensor.h
+        src/sensor/sensor.c
 )
 
 

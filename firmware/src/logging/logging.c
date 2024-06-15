@@ -216,6 +216,9 @@ portTASK_FUNCTION(log_queue_reader_task, pvParameters) {
             snprintf(message, strlen(lm.message) + 32, "LOG\t%lu\t%s\t%s", time, levelBuffer, lm.message);
 
             send_to_controller(message);
+#if LOGGING_LOG_VIA_PRINTF
+            printf("%s\n", message);
+#endif
 
             vPortFree(message);
 

@@ -28,6 +28,7 @@
 #include "io/usb_serial.h"
 #include "io/uart_serial.h"
 #include "logging/logging.h"
+#include "sensor/sensor.h"
 #include "usb/usb.h"
 
 #include "tasks.h"
@@ -39,7 +40,7 @@ int main() {
 
     bi_decl(bi_program_name("controller-firmware"))
     bi_decl(bi_program_description("April's Creature Workshop Controller"))
-    bi_decl(bi_program_version_string("FIRMWARE_VERSION"))
+    bi_decl(bi_program_version_string("3"))
     bi_decl(bi_program_feature("FreeRTOS version " tskKERNEL_VERSION_NUMBER))
     bi_decl(bi_program_feature("Baud: 115200,N,8,1"))
     bi_decl(bi_program_url("https://creature.engineering/hardware/creature-controller/"))
@@ -95,6 +96,10 @@ int main() {
 
     // Configure i2c for our needs
     setup_i2c();
+
+    // Start monitoring our sensors
+    sensor_init();
+    sensor_start();
 
     // Queue up the startup task for right after the scheduler starts
     TaskHandle_t startup_task_handle;
