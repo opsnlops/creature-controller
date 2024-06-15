@@ -31,6 +31,7 @@ typedef uint64_t u64;
 #define SERVO_FREQUENCY                      50
 
 
+
 // Light to flash when commands are being received
 //#define CDC_ACTIVE_PIN                      17
 
@@ -118,6 +119,7 @@ typedef uint64_t u64;
 #define LOGGING_LEVEL               LOG_LEVEL_DEBUG
 #define LOGGING_QUEUE_LENGTH        100
 #define LOGGING_MESSAGE_MAX_LENGTH  256
+#define LOGGING_LOG_VIA_PRINTF      1           // Add a printf() in the logger. Useful when a debugger is attached
 
 /*
  * Message Processor Config
@@ -153,20 +155,24 @@ typedef uint64_t u64;
 #define UART_BAUD_RATE                          115200
 
 // Used by the controller to signal that we need to reset
-#define CONTROLLER_RESET_PIN                    2
+#define CONTROLLER_RESET_PIN                    22
 #define CONTROLLER_RESET_SIGNAL_PERIOD_MS       250
 
 
 /*
  * I2C Config
  */
-#define SENSORS_I2C_BUS                         i2c0
+#define SENSORS_I2C_BUS                         i2c1
 #define SENSORS_I2C_FREQ                        400000
-#define SENSORS_I2C_SDA_PIN                     20
-#define SENSORS_I2C_SCL_PIN                     21
+#define SENSORS_I2C_SDA_PIN                     2
+#define SENSORS_I2C_SCL_PIN                     3
 
+#define SENSOR_TIMER_TIME_MS                    10  // Double the frequency of the servos (20ms)
+//#define SENSOR_TIMER_TIME_MS                    500 // while testing since it's going to the logger
 
 // Various I2C devices
+#define ADS1115_I2C_ADDR                        0x48
+
 
 
 /*
