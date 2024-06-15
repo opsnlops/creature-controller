@@ -17,9 +17,6 @@ pico_sdk_init()
 set(PICO_DEFAULT_FLOAT_IMPL pico_float_pico)
 set(PICO_DEFAULT_DOUBLE_IMPL pico_double_pico)
 
-# Add the ads1115 library
-add_subdirectory(lib/pico-ads1115/lib ads1115)
-
 
 # Set up our includes
 include_directories(
@@ -71,6 +68,10 @@ add_executable(firmware
         src/device/power_relay.c
         src/io/i2c.c
         src/io/i2c.h
+        src/io/responsive_analog_read_filter.h
+        src/io/responsive_analog_read_filter.c
+        src/io/spi.h
+        src/io/spi.c
         src/io/uart_serial.c
         src/io/uart_serial.h
         src/io/message_processor.h
@@ -99,6 +100,7 @@ target_link_libraries(firmware
         hardware_gpio
         hardware_pio
         hardware_pwm
+        hardware_spi
         hardware_uart
         tinyusb_device
         tinyusb_board
@@ -106,7 +108,6 @@ target_link_libraries(firmware
         pico_rand
         pico_unique_id
         pico_multicore
-        pico-ads1115
         FreeRTOS-Kernel
         FreeRTOS-Kernel-Heap4
 )

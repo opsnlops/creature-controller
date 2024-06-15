@@ -12,6 +12,7 @@
 
 #include "device/power_relay.h"
 #include "io/message_processor.h"
+#include "io/responsive_analog_read_filter.h"
 #include "logging/logging.h"
 
 #include "controller-config.h"
@@ -40,6 +41,21 @@ MotorMap motor_map[MOTOR_MAP_SIZE] = {
         {"6", SERVO_6_GPIO_PIN, (SERVO_6_GPIO_PIN >> 1u) & 7u, SERVO_6_GPIO_PIN & 1u},
         {"7", SERVO_7_GPIO_PIN, (SERVO_7_GPIO_PIN >> 1u) & 7u, SERVO_7_GPIO_PIN & 1u}
 };
+
+/**
+ * The values we've read from the ADC for the position of our motors.
+ *
+ * Not every motor has a position sense pin, so it's not a good idea to assume that
+ * all of the values in this array are valid.
+ *
+ * I debated back and forth with myself if I could include this information in the `motor_map`,
+ * but decided not to. The reason is thread safety. The firmware code isn't "multithreaded," so
+ * to speak, but Pi Picos have more that on core, so it's possible that two "threads" could be
+ * touching things at once. I did not want to have to deal with things that might light inside
+ * of the ISR that runs to update the servos, so I decided to keep this separate.
+ */
+analog_filter sensed_motor_position[CONTROLLER_MOTORS_PER_MODULE];
+
 
 
 /**
@@ -99,6 +115,13 @@ volatile bool has_first_frame_been_received = false;
 
 void controller_init() {
     info("init-ing the controller");
+
+    // Create the analog filters for the sensed motor positions
+    for (size_t i = 0; i < CONTROLLER_MOTORS_PER_MODULE; i++) {
+        sensed_motor_position[i] = create_analog_filter(true, (float)ANALOG_READ_FILTER_SNAP_VALUE);
+    }
+    debug("created the analog filters for the sensed motor positions");
+
 
     // Create, but don't actually start the timer (it will be started when the CDC is connected)
     controller_init_request_timer = xTimerCreate(

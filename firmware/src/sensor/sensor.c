@@ -6,13 +6,14 @@
 #include <timers.h>
 
 #include "hardware/i2c.h"
+#include "hardware/spi.h"
 #include "pico/stdlib.h"
 
 #include "controller-config.h"
 
+#include "controller/controller.h"
+#include "io/responsive_analog_read_filter.h"
 #include "logging/logging.h"
-
-#include "ads1115.h"
 
 #include "sensor.h"
 
@@ -20,21 +21,28 @@
 // From i2c.c
 extern volatile bool i2c_setup_completed;
 
-struct ads1115_adc adc0;
+// From spi.c
+extern volatile bool spi_setup_completed;
+
+// From controller.c
+extern analog_filter sensed_motor_position[CONTROLLER_MOTORS_PER_MODULE];
+
+// Our metrics
+u64 i2c_timer_count = 0;
+u64 spi_timer_count = 0;
+
 
 
 /**
- * This timer is called to read the sensors and update our global state.
+ * This timer is called to read the i2c-based sensors and update our global state.
  *
- * This is a low priority timer, but it runs fairly often. It can be skipped every now
- * and then, but it's critical that it runs often enough to keep the sensors up to date.
- *
- * This timer is started in `sensor_start()`.
- *
- * As a first pass, I'm setting timer to run at double the rate of the servo loop.
+ * Due to the nature of i2c, this one isn't called as often as the SPI sensor loop. It
+ * reads the temperature and the amount of current our motors are drawing.
  */
-TimerHandle_t sensor_read_timer = NULL;
+TimerHandle_t i2c_sensor_read_timer = NULL;
 
+
+TimerHandle_t spi_sensor_read_timer = NULL;
 
 
 /**
@@ -46,23 +54,9 @@ void sensor_init() {
 
     debug("initializing sensors");
 
-    // If this isn't true, very bad things will happen
+    // If these aren't true, very bad things will happen
     configASSERT(i2c_setup_completed);
-
-    // Initialize the I2C bus
-    ads1115_init(SENSORS_I2C_BUS, ADS1115_I2C_ADDR, &adc0);
-
-    /*
-     * Configure the ADC. We use single ended, 4.096V, 475 SPS.
-     */
-    ads1115_set_input_mux(ADS1115_MUX_SINGLE_0, &adc0);
-    ads1115_set_pga(ADS1115_PGA_4_096, &adc0);
-    ads1115_set_data_rate(ADS1115_RATE_475_SPS, &adc0);
-
-    // Write the configuration for this to have an effect.
-    ads1115_write_config(&adc0);
-
-    info("configured adc0 on address 0x%02x", adc0.i2c_addr);
+    configASSERT(spi_setup_completed);
 
 }
 
@@ -70,53 +64,128 @@ void sensor_start() {
 
     debug("starting sensors");
 
-    // Create the timer that reads the sensors
-    sensor_read_timer = xTimerCreate(
-            "Sensor Read Timer",                    // Timer name
-            pdMS_TO_TICKS(SENSOR_TIMER_TIME_MS),    // Fire every SENSOR_TIMER_TIME_MS
-            pdTRUE,                                 // Auto-reload
-            (void *) 0,                             // Timer ID (not used here)
-            sensor_read_timer_callback              // Callback function
+    // Create the timer that reads the i2c sensors
+    i2c_sensor_read_timer = xTimerCreate(
+            "I2C Sensor Read Timer",                    // Timer name
+            pdMS_TO_TICKS(SENSOR_I2C_TIMER_TIME_MS),    // Fire every SENSOR_TIMER_TIME_MS
+            pdTRUE,                                     // Auto-reload
+            (void *) 0,                                 // Timer ID (not used here)
+            i2c_sensor_read_timer_callback              // Callback function
     );
 
     // Make sure this gets created
-    configASSERT(sensor_read_timer != NULL);
+    configASSERT(i2c_sensor_read_timer != NULL);
 
     // Start the timer
-    xTimerStart(sensor_read_timer, 5);
+    xTimerStart(i2c_sensor_read_timer, 50);
 
-    info("started sensor read timer");
+    info("started i2c sensor read timer");
 
+
+
+    // Create the timer that reads the spi sensors
+    spi_sensor_read_timer = xTimerCreate(
+            "SPI Sensor Read Timer",                    // Timer name
+            pdMS_TO_TICKS(SENSOR_SPI_TIMER_TIME_MS),    // Fire every SENSOR_SPI_TIMER_TIME_MS
+            pdTRUE,                                     // Auto-reload
+            (void *) 0,                                 // Timer ID (not used here)
+            spi_sensor_read_timer_callback              // Callback function
+    );
+
+    // Make sure this gets created
+    configASSERT(spi_sensor_read_timer != NULL);
+
+    // Start the timer, saying that it's okay to wait half the allowed time before starting
+    xTimerStart(spi_sensor_read_timer, pdMS_TO_TICKS(SENSOR_SPI_TIMER_TIME_MS) / 2);
+
+    info("started spi sensor read timer");
 }
 
-// State for the timer callback, so we're not allocating memory in each tick
-u16 adc0_value;
-u16 adc1_value;
-u16 adc2_value;
-u16 adc3_value;
 
-volatile u64 sensor_read_count = 0;
-
-void sensor_read_timer_callback(TimerHandle_t xTimer) {
+void i2c_sensor_read_timer_callback(TimerHandle_t xTimer) {
 
     // We don't use this on this timer
     (void) xTimer;
 
-    ads1115_set_input_mux(ADS1115_MUX_SINGLE_0, &adc0);
-    ads1115_read_adc(&adc0_value, &adc0);
 
-    ads1115_set_input_mux(ADS1115_MUX_SINGLE_1, &adc0);
-    ads1115_read_adc(&adc1_value, &adc0);
+    i2c_timer_count += 1;
 
-    ads1115_set_input_mux(ADS1115_MUX_SINGLE_2, &adc0);
-    ads1115_read_adc(&adc2_value, &adc0);
+}
 
-    ads1115_set_input_mux(ADS1115_MUX_SINGLE_3, &adc0);
-    ads1115_read_adc(&adc3_value, &adc0);
 
-    sensor_read_count = sensor_read_count + 1;
 
-    if(sensor_read_count % 50 == 0) {
-        debug("0: %u, 1: %u, 2: %u, 3: %u, count: %lld", adc0_value, adc1_value, adc2_value, adc3_value, sensor_read_count);
+void spi_sensor_read_timer_callback(TimerHandle_t xTimer) {
+
+    // We don't use this on this timer
+    (void) xTimer;
+
+    // Read all the pins and update the filter map
+    for(int i = 0; i < CONTROLLER_MOTORS_PER_MODULE; i++) {
+
+        // Read the ADC value
+        u16 adc_value = adc_read(i, SENSORS_SPI_CS_PIN);
+
+        // Update the filter
+        analog_filter_update(&sensed_motor_position[i], adc_value);
+
     }
+
+    spi_timer_count += 1;
+
+
+    if(spi_timer_count % 25 == 0) {
+        debug("sensed motor positions: %u %u %u %u",
+              analog_filter_get_value(&sensed_motor_position[0]),
+              analog_filter_get_value(&sensed_motor_position[1]),
+              analog_filter_get_value(&sensed_motor_position[2]),
+              analog_filter_get_value(&sensed_motor_position[3]));
+    }
+
+}
+
+
+
+
+
+
+u16 adc_read(uint8_t adc_channel, uint8_t adc_num_cs_pin) {
+
+    // Command to read from a specific channel in single-ended mode
+    // Start bit, SGL/DIFF, and D2 bit of the channel
+    uint8_t cmd0 = 0b00000110 | ((adc_channel & 0b100) >> 2);
+    uint8_t cmd1 = (adc_channel & 0b011) << 6; // Remaining channel bits positioned
+
+    uint8_t txBuffer[3] = {cmd0, cmd1, 0x00}; // The last byte doesn't matter, it's just to clock out the ADC data
+    uint8_t rxBuffer[3] = {0}; // To store the response
+
+    gpio_put(adc_num_cs_pin, 0); // Activate CS to start the transaction
+    spi_write_read_blocking(spi0, txBuffer, rxBuffer, 3); // Send the command and read the response
+    gpio_put(adc_num_cs_pin, 1); // Deactivate CS to end the transaction
+
+    // Now, interpret the response:
+    // Skip the first 6 bits of rxBuffer[1], then take the next 10 bits as the ADC value
+    uint16_t adcResult = ((rxBuffer[1] & 0x0F) << 8) | rxBuffer[2];
+
+    // Debug print
+    /*
+    if (adc_channel == 0)
+        debug("ADC Channel: %d, Raw SPI Data: %s %s %s, ADC Result: %u",
+               adc_channel,
+               to_binary_string(rxBuffer[0]),
+               to_binary_string(rxBuffer[1]),
+               to_binary_string(rxBuffer[2]),
+               adcResult);
+    */
+
+    return adcResult;
+}
+
+
+const char* to_binary_string(u8 value) {
+    static char bStr[9];
+    bStr[8] = '\0'; // Null terminator
+    for (int i = 7; i >= 0; i--) {
+        bStr[7 - i] = (value & (1 << i)) ? '1' : '0';
+    }
+    return bStr;
 }
