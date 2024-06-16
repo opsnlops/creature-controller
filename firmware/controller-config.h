@@ -178,11 +178,12 @@ typedef uint64_t u64;
 #define SENSORS_SPI_CS_PIN                      21
 
 
-#define SENSOR_I2C_TIMER_TIME_MS                100
+#define SENSOR_I2C_TIMER_TIME_MS                500
 #define SENSOR_SPI_TIMER_TIME_MS                10
-//#define SENSOR_TIMER_TIME_MS                    500 // while testing since it's going to the logger
+
 
 // Various I2C devices
+#define I2C_DEVICE_MCP9808                      0x18
 
 
 /**

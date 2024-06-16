@@ -42,6 +42,8 @@ extern volatile u64 usb_serial_characters_received;
 extern volatile u64 usb_serial_messages_received;
 extern volatile u64 usb_serial_messages_sent;
 
+// From the Sensors
+extern double board_temperature;
 
 void start_stats_reporter() {
 
@@ -64,7 +66,7 @@ void statsReportTimerCallback(TimerHandle_t xTimer) {
     memset(&message, '\0', USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH);
 
     snprintf(message, USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH,
-             "STATS\tHEAP_FREE %lu\tUSB_CRECV %lu\tUSB_MRECV %lu\tUSB_SENT %lu\tUART_CRECV %lu\tUART_MRECV %lu\tUART_SENT %lu\tMP_RECV %lu\tMP_SENT %lu\tS_PARSE %lu\tF_PARSE %lu\tCHKFAIL %lu\tPOS_PROC %lu\tPWM_WRAPS %lu",
+             "STATS\tHEAP_FREE %lu\tUSB_CRECV %lu\tUSB_MRECV %lu\tUSB_SENT %lu\tUART_CRECV %lu\tUART_MRECV %lu\tUART_SENT %lu\tMP_RECV %lu\tMP_SENT %lu\tS_PARSE %lu\tF_PARSE %lu\tCHKFAIL %lu\tPOS_PROC %lu\tPWM_WRAPS %lu\tTEMP %.2f",
              (unsigned long) xFreeHeapSpace,
              (unsigned long) usb_serial_characters_received,
              (unsigned long) usb_serial_messages_received,
@@ -78,7 +80,8 @@ void statsReportTimerCallback(TimerHandle_t xTimer) {
              (unsigned long) failed_messages_parsed,
              (unsigned long) checksum_errors,
              (unsigned long) position_messages_processed,
-             (unsigned long) number_of_pwm_wraps);
+             (unsigned long) number_of_pwm_wraps,
+             board_temperature);
 
     send_to_controller(message);
 

@@ -30,9 +30,4 @@ void spi_sensor_read_timer_callback(TimerHandle_t xTimer);
 
 
 
-u16 servo_feedback_read_adc(u8 adc_channel);
-u16 adc_read(u8 adc_channel, u8 adc_num_cs_pin);
 
-
-
-const char* to_binary_string(u8 value);
