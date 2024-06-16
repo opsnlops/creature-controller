@@ -45,3 +45,14 @@ u16 stringToU16(const char *str) {
 
     return (u16) value;
 }
+
+
+
+const char* to_binary_string(u8 value) {
+    static char bStr[9];
+    bStr[8] = '\0'; // Null terminator
+    for (int i = 7; i >= 0; i--) {
+        bStr[7 - i] = (value & (1 << i)) ? '1' : '0';
+    }
+    return bStr;
+}
