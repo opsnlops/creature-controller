@@ -19,7 +19,8 @@ TEST(StatsMessage, Create) {
                         statsMessage.parseFailures = 20;
                         statsMessage.checksumFailures = 30;
                         statsMessage.positionMessagesProcessed = 2789;
-                        statsMessage.pwmWraps = 3000UL;;
+                        statsMessage.pwmWraps = 3000UL;
+                        statsMessage.boardTemperature = 75.2;
                     });
 }
 
@@ -40,7 +41,8 @@ TEST(StatsMessage, ToString) {
     statsMessage.checksumFailures = 30;
     statsMessage.positionMessagesProcessed = 2789;
     statsMessage.pwmWraps = 3000UL;
+    statsMessage.boardTemperature = 75.2;
 
-    EXPECT_EQ("heap: 36920, usb_chars: 123, usb_mesg_rec: 456, usb_mesg_sent: 789, uart_chars: 321, uart_mesg_rec: 654, uart_mesg_sent: 987, mp_recv: 1111, mp_sent: 222, parse_suc: 10, parse_fail: 20, cksum_fail: 30, pos_proc: 2789, pwm_wraps: 3000",
+    EXPECT_EQ("heap: 36920, usb_chars: 123, usb_mesg_rec: 456, usb_mesg_sent: 789, uart_chars: 321, uart_mesg_rec: 654, uart_mesg_sent: 987, mp_recv: 1111, mp_sent: 222, parse_suc: 10, parse_fail: 20, cksum_fail: 30, pos_proc: 2789, pwm_wraps: 3000, temp: 75.20",
               statsMessage.toString());
 }
