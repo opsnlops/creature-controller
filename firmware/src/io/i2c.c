@@ -2,7 +2,8 @@
 #include "pico/stdlib.h"
 #include "pico/stdio.h"
 
-#include "device/mcp9908.h"
+#include "device/mcp9808.h"
+#include "device/pac1954.h"
 #include "logging/logging.h"
 
 #include "controller-config.h"
@@ -28,6 +29,9 @@ void setup_i2c() {
     i2c_setup_completed = true;
 
     // Initialize the MCP9908
-    init_mcp9908(SENSORS_I2C_BUS, I2C_DEVICE_MCP9808);
+    init_mcp9808(SENSORS_I2C_BUS, I2C_DEVICE_MCP9808);
+
+    // Initialize the PAC1954
+    init_pac1954(SENSORS_I2C_BUS, I2C_DEVICE_PAC1954);
 
 }

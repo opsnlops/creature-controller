@@ -36,6 +36,10 @@
 // PWM
 #define STATS_PWM_WRAPS                     "PWM_WRAPS"
 
+// Board sensors
+#define STATS_BOARD_TEMPERATURE             "TEMP"
+
+
 namespace creatures {
 
     class StatsMessage {
@@ -63,6 +67,8 @@ namespace creatures {
         u64 checksumFailures;
         u64 positionMessagesProcessed;
         u64 pwmWraps;
+
+        double boardTemperature;
 
     };
 

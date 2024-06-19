@@ -9,7 +9,7 @@
 
 #include "controller-config.h"
 
-#include "device/mcp9908.h"
+#include "device/mcp9808.h"
 
 /*
  * A lot of this code comes from Microchip's Arduino library for the MCP9808. I've ported it
@@ -22,29 +22,29 @@
 // From i2c.c
 extern volatile bool i2c_setup_completed;
 
-void init_mcp9908(i2c_inst_t *i2c, u8 address) {
+void init_mcp9808(i2c_inst_t *i2c, u8 address) {
 
-        configASSERT(i2c_setup_completed);
+    configASSERT(i2c_setup_completed);
 
-        // Gather some device information
-        u16 device_id = mcp9908_read_register(i2c, address, MCP9808_POINTER_DEVICE_ID);
-        u16 manufacturer_id = mcp9908_read_register(i2c, address, MCP9808_POINTER_MANUF_ID);
+    // Gather some device information
+    u16 device_id = mcp9808_read_register(i2c, address, MCP9808_POINTER_DEVICE_ID);
+    u16 manufacturer_id = mcp9808_read_register(i2c, address, MCP9808_POINTER_MANUF_ID);
 
-        debug("MCP9808 device ID: %u", device_id);
-        debug("MCP9808 manufacturer ID: %u", manufacturer_id);
+    debug("MCP9808 device ID: 0x%02X", device_id);
+    debug("MCP9808 manufacturer ID: 0x%02X", manufacturer_id);
 
-        // Set the MCP9808 to continuous conversion mode
-        mcp9908_write_register(i2c, address, MCP9808_POINTER_CONFIG, 0x0000);
+    // Set the MCP9808 to continuous conversion mode
+    mcp9808_write_register(i2c, address, MCP9808_POINTER_CONFIG, 0x0000);
 
-        // Set the MCP9808 to 0.125C resolution
-        mcp9808_set_resolution(i2c, address, res_0125);
+    // Set the MCP9808 to 0.125C resolution
+    mcp9808_set_resolution(i2c, address, res_0125);
 
-        debug("MCP9808 initialized");
+    debug("MCP9808 initialized");
 
 }
 
 
-u16 mcp9908_read_register(i2c_inst_t *i2c, u8 address, u8 register_address) {
+u16 mcp9808_read_register(i2c_inst_t *i2c, u8 address, u8 register_address) {
 
     configASSERT(i2c_setup_completed);
 
@@ -56,7 +56,7 @@ u16 mcp9908_read_register(i2c_inst_t *i2c, u8 address, u8 register_address) {
 
 }
 
-void mcp9908_write_register(i2c_inst_t *i2c, u8 address, u8 register_address, u16 value) {
+void mcp9808_write_register(i2c_inst_t *i2c, u8 address, u8 register_address, u16 value) {
 
     configASSERT(i2c_setup_completed);
 
@@ -69,11 +69,11 @@ void mcp9908_write_register(i2c_inst_t *i2c, u8 address, u8 register_address, u1
 }
 
 
-double mcp9908_read_temperature_c(i2c_inst_t *i2c, u8 address) {
+double mcp9808_read_temperature_c(i2c_inst_t *i2c, u8 address) {
 
     configASSERT(i2c_setup_completed);
 
-    u16 raw_temp = mcp9908_read_register(i2c, address, MCP9808_POINTER_AMBIENT_TEMP);
+    u16 raw_temp = mcp9808_read_register(i2c, address, MCP9808_POINTER_AMBIENT_TEMP);
 
     u8 upper_byte = raw_temp >> 8;
     u8 lower_byte = (raw_temp & 0xFF);
@@ -91,8 +91,8 @@ double mcp9908_read_temperature_c(i2c_inst_t *i2c, u8 address) {
 
 }
 
-double mcp9908_read_temperature_f(i2c_inst_t *i2c, u8 address) {
-    double celsius = mcp9908_read_temperature_c(i2c, address);
+double mcp9808_read_temperature_f(i2c_inst_t *i2c, u8 address) {
+    double celsius = mcp9808_read_temperature_c(i2c, address);
     return ((celsius * 1.8) + 32.0);
 }
 
@@ -100,7 +100,7 @@ u16 mcp9808_get_resolution(i2c_inst_t *i2c, u8 address) {
 
     configASSERT(i2c_setup_completed);
 
-    u16 config = mcp9908_read_register(i2c, address, MCP9808_POINTER_CONFIG);
+    u16 config = mcp9808_read_register(i2c, address, MCP9808_POINTER_CONFIG);
 
     /* Return resolution (factor x1e4) */
     switch (config) {
@@ -124,10 +124,10 @@ void mcp9808_set_resolution(i2c_inst_t *i2c, u8 address, mcp9808_res_t resolutio
 
         configASSERT(i2c_setup_completed);
 
-        u16 config = mcp9908_read_register(i2c, address, MCP9808_POINTER_CONFIG);
+        u16 config = mcp9808_read_register(i2c, address, MCP9808_POINTER_CONFIG);
         config = config & 0xFF9F; // Clear resolution bits
         config = config | (resolution << 5);
-        mcp9908_write_register(i2c, address, MCP9808_POINTER_CONFIG, config);
+    mcp9808_write_register(i2c, address, MCP9808_POINTER_CONFIG, config);
 
         debug("Set mcp9808 resolution to %d", resolution);
 }
