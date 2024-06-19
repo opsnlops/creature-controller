@@ -39,6 +39,17 @@ namespace creatures :: config {
         return this->creatureConfigFile;
     }
 
+    bool Configuration::isUsingServer() const {
+        return this->useServer;
+    }
+
+    std::string Configuration::getServerAddress() const {
+        return this->serverAddress;
+    }
+
+    u16 Configuration::getServerPort() const {
+        return this->serverPort;
+    }
 
 
 
@@ -67,6 +78,18 @@ namespace creatures :: config {
 
     void Configuration::setCreatureConfigFile(std::string _creatureConfigFile) {
         this->creatureConfigFile = _creatureConfigFile;
+    }
+
+    void Configuration::setUseServer(bool _useServer) {
+        this->useServer = _useServer;
+    }
+
+    void Configuration::setServerAddress(std::string _serverAddress) {
+        this->serverAddress = _serverAddress;
+    }
+
+    void Configuration::setServerPort(u16 _serverPort) {
+        this->serverPort = _serverPort;
     }
 
 } // creatures :: config

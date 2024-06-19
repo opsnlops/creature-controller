@@ -43,6 +43,9 @@ namespace creatures :: config {
         std::vector<std::string> requiredTopLevelFields;
         std::vector<std::string> requiredUARTFields;
 
+        const std::string serverNode = "creatureServer";
+        std::vector<std::string> requiredServerFields;
+
         Result<std::shared_ptr<Configuration>> makeError(const std::string &errorMessage);
 
     };

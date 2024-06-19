@@ -31,6 +31,9 @@ namespace creatures::config {
         [[nodiscard]] std::vector<UARTDevice> getUARTDevices() const;
         std::shared_ptr<creatures::creature::Creature> getCreature() const;
         std::string getCreatureConfigFile() const;
+        bool isUsingServer() const;
+        std::string getServerAddress() const;
+        u16 getServerPort() const;
 
         void setUseGPIO(bool _useGPIO);
         void setNetworkDeviceIPAddress(std::string _networkDeviceIPAddress);
@@ -38,6 +41,10 @@ namespace creatures::config {
         void addUARTDevice(UARTDevice _uartDevice);
         void setCreature(std::shared_ptr<creatures::creature::Creature> _creature);
         void setCreatureConfigFile(std::string _creatureConfigFile);
+        void setUseServer(bool _useServer);
+        void setServerAddress(std::string _serverAddress);
+        void setServerPort(u16 _serverPort);
+
 
     private:
 
@@ -57,7 +64,13 @@ namespace creatures::config {
 
         std::shared_ptr<creatures::creature::Creature> creature;
 
+        // The creature's configuration file
         std::string creatureConfigFile;
+
+        // The IP address of the server, if it's on
+        bool useServer = false;
+        std::string serverAddress;
+        u16 serverPort;
 
     };
 

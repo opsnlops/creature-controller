@@ -20,6 +20,7 @@
 #include "io/MessageRouter.h"
 #include "logging/Logger.h"
 #include "logging/SpdlogLogger.h"
+#include "server/ServerConnection.h"
 #include "util/thread_name.h"
 #include "util/StoppableThread.h"
 #include "Version.h"
@@ -120,13 +121,27 @@ int main(int argc, char **argv) {
     setThreadName("main for " + creature->getName());
 
 
+    // Keep track of our threads
+    std::vector<std::shared_ptr<creatures::StoppableThread>> workerThreads;
+
+
+    // Start talking to the server, if we're told to
+    auto serverConnection = std::make_shared<creatures::server::ServerConnection>(makeLogger("server"),
+                                                                                       config->isUsingServer(),
+                                                                                       config->getServerAddress(),
+                                                                                       config->getServerPort());
+    // Start up if we should
+    if(config->isUsingServer()) {
+        serverConnection->start();
+        workerThreads.push_back(serverConnection);
+    }
+
+
     // Bring up the GPIO pins if enabled on the command line
-    auto gpio = std::make_shared<creatures::device::GPIO>(logger, config->getUseGPIO());
+    auto gpio = std::make_shared<creatures::device::GPIO>(makeLogger("gpio"), config->getUseGPIO());
     gpio->init();
     gpio->toggleFirmwareReset();
 
-    // Keep track of our threads
-    std::vector<std::shared_ptr<creatures::StoppableThread>> workerThreads;
 
 
     // Create the top level message queues
@@ -134,10 +149,10 @@ int main(int argc, char **argv) {
     auto topLevelIncomingQueue = std::make_shared<creatures::MessageQueue<Message>>();
 
     // Make the MessageRouter (it will be started later in the boot process)
-    auto messageRouter = std::make_shared<creatures::io::MessageRouter>(logger);
+    auto messageRouter = std::make_shared<creatures::io::MessageRouter>(makeLogger("message-router"));
 
     // Fire up the controller
-    auto controller = std::make_shared<Controller>(logger, creature, messageRouter);
+    auto controller = std::make_shared<Controller>(makeLogger("controller"), creature, messageRouter);
     controller->start();
     workerThreads.push_back(controller);
 
@@ -151,14 +166,6 @@ int main(int argc, char **argv) {
         logger->debug("creating a ServoModuleHandler for module {} on {}",
                       UARTDevice::moduleNameToString(uart.getModule()),
                       uart.getDeviceNode());
-
-        /*
-         * ServoModuleHandler(std::shared_ptr<Logger> logger,
-                           UARTDevice::module_name moduleId,
-                           std::string deviceNode,
-                           std::shared_ptr<creatures::io::MessageRouter> messageRouter);
-         */
-
 
         std::string loggerName = fmt::format("uart-{}", UARTDevice::moduleNameToString(uart.getModule()));
         auto handler = std::make_shared<ServoModuleHandler>(makeLogger(loggerName),
@@ -186,7 +193,7 @@ int main(int argc, char **argv) {
 
     // Create and start the e1.13 client
     logger->debug("starting the e1.13 client");
-    auto e131Client = std::make_unique<creatures::dmx::E131Client>(logger);
+    auto e131Client = std::make_unique<creatures::dmx::E131Client>(makeLogger("e131-client"));
     e131Client->init(creature, controller, config->getNetworkDeviceIPAddress());
     e131Client->start();
     workerThreads.push_back(std::move(e131Client));
@@ -199,7 +206,7 @@ int main(int argc, char **argv) {
     controller->sendFlushBufferRequest();
 
     // Fire up the ping task
-    auto pingTask = std::make_unique<creatures::tasks::PingTask>(logger, messageRouter);
+    auto pingTask = std::make_unique<creatures::tasks::PingTask>(makeLogger("ping-task"), messageRouter);
     pingTask->start();
     workerThreads.push_back(std::move(pingTask));
 
