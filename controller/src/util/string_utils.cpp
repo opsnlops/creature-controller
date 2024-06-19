@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 #include <sstream>
-
+#include <cmath> // for std::isspace
 
 #include "string_utils.h"
 
@@ -71,6 +71,44 @@ u64 stringToU64(const std::string& str) {
 
     return value;
 }
+
+
+/**
+ * Convert a string into a double safely
+ *
+ * @param str the string to parse
+ * @return a double of the string, if possible, otherwise NaN
+ */
+double stringToDouble(const std::string& str) {
+
+    // Skip leading whitespace
+    const char* start = str.data();
+    const char* end = str.data() + str.size();
+    while (start < end && std::isspace(static_cast<unsigned char>(*start))) {
+        ++start;
+    }
+
+    // Handle potential empty string after trimming whitespace
+    if (start == end) {
+        return std::numeric_limits<double>::quiet_NaN();
+    }
+
+    // Reset errno before calling strtod
+    errno = 0;
+
+    // Convert string to double
+    char* endPtr;
+    double value = std::strtod(start, &endPtr);
+
+    // Check for conversion errors
+    if (errno == ERANGE || start == endPtr) {
+        return std::numeric_limits<double>::quiet_NaN();
+    }
+
+    return value;
+}
+
+
 
 /**
  * Split a string into pieces in a safe way

@@ -23,20 +23,22 @@ namespace creatures {
         checksumFailures = 0UL;
         positionMessagesProcessed = 0UL;
         pwmWraps = 0UL;
+
+        boardTemperature = 0.0;
     }
 
     std::string StatsMessage::toString() const {
         return fmt::format("heap: {}, usb_chars: {}, usb_mesg_rec: {}, usb_mesg_sent: {}, "
                            "uart_chars: {}, uart_mesg_rec: {}, uart_mesg_sent: {}, "
                            "mp_recv: {}, mp_sent: {}, "
-                           "parse_suc: {}, parse_fail: {}, cksum_fail: {}, pos_proc: {}, pwm_wraps: {}",
+                           "parse_suc: {}, parse_fail: {}, cksum_fail: {}, pos_proc: {}, pwm_wraps: {}, temp: {:.2f}",
             freeHeap,
             uSBCharactersReceived, uSBMessagesReceived, uSBMessagesSent,
             uARTCharactersReceived, uARTMessagesReceived, uARTMessagesSent,
             mPMessagesReceived, mPMessagesSent,
             parseSuccesses, parseFailures, checksumFailures,
             positionMessagesProcessed,
-            pwmWraps);
+            pwmWraps, boardTemperature);
     }
 
 } // creatures

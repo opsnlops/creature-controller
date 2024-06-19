@@ -99,6 +99,11 @@ namespace creatures {
                 statsMessage.pwmWraps = stringToU64(value);
             }
 
+            // Board sensors
+            else if(name == STATS_BOARD_TEMPERATURE) {
+                statsMessage.boardTemperature = stringToDouble(value);
+            }
+
             else {
                 logger->warn("unknown token in {} message: {}", STATS_MESSAGE, token);
             }

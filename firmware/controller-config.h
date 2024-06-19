@@ -184,6 +184,7 @@ typedef uint64_t u64;
 
 // Various I2C devices
 #define I2C_DEVICE_MCP9808                      0x18
+#define I2C_DEVICE_PAC1954                      0x10
 
 
 /**

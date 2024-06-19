@@ -65,8 +65,10 @@ add_executable(firmware
         src/device/colors.c
         src/device/mcp3304.h
         src/device/mcp3304.c
-        src/device/mcp9908.h
-        src/device/mcp9008.c
+        src/device/mcp9808.h
+        src/device/mcp9808.c
+        src/device/pac1954.h
+        src/device/pac1954.c
         src/messaging/processors/config_message.c
         src/device/power_relay.h
         src/device/power_relay.c

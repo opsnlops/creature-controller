@@ -29,33 +29,33 @@ typedef enum {
 } mcp9808_res_t;
 
 /**
- * Initialize the MCP9908
+ * Initialize the MCP9808
  *
  * @param i2c the i2c instance
- * @param address address of the MCP9908
+ * @param address address of the MCP9808
  */
-void init_mcp9908(i2c_inst_t *i2c, u8 address);
+void init_mcp9808(i2c_inst_t *i2c, u8 address);
 
 
 /**
- * Read a register from the MCP9908
+ * Read a register from the MCP9808
  *
  * @param i2c the i2c instance
- * @param address the address of the MCP9908
+ * @param address the address of the MCP9808
  * @param register_address the register to read
  * @return the value of the register
  */
-u16 mcp9908_read_register(i2c_inst_t *i2c, u8 address, u8 register_address);
+u16 mcp9808_read_register(i2c_inst_t *i2c, u8 address, u8 register_address);
 
 /**
- * Write a register to the MCP9908
+ * Write a register to the MCP9808
  *
  * @param i2c the i2c instance
- * @param address the address of the MCP9908
+ * @param address the address of the MCP9808
  * @param register_address the register to write
  * @param value the value to write
  */
-void mcp9908_write_register(i2c_inst_t *i2c, u8 address, u8 register_address, u16 value);
+void mcp9808_write_register(i2c_inst_t *i2c, u8 address, u8 register_address, u16 value);
 
 
 /**
@@ -78,19 +78,19 @@ void mcp9808_set_resolution(i2c_inst_t *i2c, u8 address, mcp9808_res_t resolutio
 u16 mcp9808_get_resolution(i2c_inst_t *i2c, u8 address);
 
 /**
- * Read the temperature from the MCP9908
+ * Read the temperature from the MCP9808
  *
  * @param i2c the i2c instance
- * @param address the address of the MCP9908
+ * @param address the address of the MCP9808
  * @return the temperature in degrees celsius
  */
-double mcp9908_read_temperature_c(i2c_inst_t *i2c, u8 address);
+double mcp9808_read_temperature_c(i2c_inst_t *i2c, u8 address);
 
 /**
- * Read the temperature from the MCP9908
+ * Read the temperature from the MCP9808
  *
  * @param i2c the i2c instance
- * @param address the address of the MCP9908
+ * @param address the address of the MCP9808
  * @return the temperature in freedom units
  */
-double mcp9908_read_temperature_f(i2c_inst_t *i2c, u8 address);
+double mcp9808_read_temperature_f(i2c_inst_t *i2c, u8 address);

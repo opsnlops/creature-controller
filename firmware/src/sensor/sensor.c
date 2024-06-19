@@ -13,7 +13,7 @@
 
 #include "controller/controller.h"
 #include "device/mcp3304.h"
-#include "device/mcp9908.h"
+#include "device/mcp9808.h"
 #include "io/responsive_analog_read_filter.h"
 #include "logging/logging.h"
 
@@ -120,7 +120,7 @@ void i2c_sensor_read_timer_callback(TimerHandle_t xTimer) {
     // We don't use this on this timer
     (void) xTimer;
 
-    board_temperature = mcp9908_read_temperature_f(SENSORS_I2C_BUS, I2C_DEVICE_MCP9808);
+    board_temperature = mcp9808_read_temperature_f(SENSORS_I2C_BUS, I2C_DEVICE_MCP9808);
     verbose("board temperature: %.1fF", board_temperature);
 
     i2c_timer_count += 1;
@@ -147,14 +147,13 @@ void spi_sensor_read_timer_callback(TimerHandle_t xTimer) {
 
     spi_timer_count += 1;
 
-    /*
-    if(spi_timer_count % 10 == 0) {
+    if(spi_timer_count % 500 == 0) {
         debug("sensed motor positions: %u %u %u %u",
               analog_filter_get_value(&sensed_motor_position[0]),
               analog_filter_get_value(&sensed_motor_position[1]),
               analog_filter_get_value(&sensed_motor_position[2]),
               analog_filter_get_value(&sensed_motor_position[3]));
     }
-    */
+
 
 }
