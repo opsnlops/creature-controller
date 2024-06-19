@@ -28,6 +28,12 @@ namespace creatures :: config {
         requiredUARTFields = {
                 "enabled", "deviceNode", "module",
         };
+
+        // Needed only if we're using the creature server. The controller can run without it if needed,
+        // using only the e1.31 protocol.
+        requiredServerFields = {
+                "enabled", "address", "port",
+        };
     }
 
 
@@ -121,6 +127,33 @@ namespace creatures :: config {
             logger->debug("added UART to the config: {}", deviceNode);
         }
         logger->debug("done processing uarts");
+
+
+        // Determine if the server is enabled
+        if(j.contains(serverNode)) {
+
+            logger->debug("found the server node, attempting to parse the server values");
+
+            // Validate the fields in this object
+            for (const auto& fieldName : requiredServerFields) {
+                checkJsonField(j[serverNode], fieldName);
+            }
+
+            bool enabled = j[serverNode]["enabled"];
+            std::string address = j[serverNode]["address"];
+            u16 port = j[serverNode]["port"];
+
+            logger->info("server is enabled: {}, address: {}, port: {}", enabled, address, port);
+
+            config->setUseServer(enabled);
+            config->setServerAddress(address);
+            config->setServerPort(port);
+        }
+        else {
+            logger->debug("server node ({}) not found, assuming server is disabled", serverNode);
+            config->setUseServer(false);
+        }
+
 
         logger->info("done parsing the main config file");
         return Result<std::shared_ptr<creatures::config::Configuration>>{config};

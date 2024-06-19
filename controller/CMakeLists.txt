@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.18)
 
 project(creature-controller
-        VERSION "2.4.3"
+        VERSION "2.5.0"
         DESCRIPTION "April's Creature Workshop Controller"
         HOMEPAGE_URL https://github.com/opsnlops/creature-controller
         LANGUAGES C CXX)
@@ -81,12 +81,22 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(json)
 
 
+FetchContent_Declare(
+        ixwebsocket
+        GIT_REPOSITORY https://github.com/machinezone/IXWebSocket.git
+        GIT_TAG        v11.4.5
+)
+FetchContent_MakeAvailable(ixwebsocket)
+
+
+
 include_directories(
         src/
         PRIVATE ${CMAKE_BINARY_DIR}
 )
 
 add_library(creature_lib
+
         # Configuration Sources
         src/config/CommandLine.cpp
         src/config/CommandLine.h
@@ -191,6 +201,10 @@ add_library(creature_lib
         src/controller/ServoModuleHandler.cpp
         src/device/ServoSpecifier.h
         src/util/Result.h
+
+        # Creature Server Connection
+        src/server/ServerConnection.h
+        src/server/ServerConnection.cpp
 )
 
 target_include_directories(creature_lib PUBLIC
@@ -200,10 +214,13 @@ target_include_directories(creature_lib PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/lib/libe131/src/
         ${nlohmann_json_SOURCE_DIR}/include
         ${spdlog_SOURCE_DIR}/include
+        ${ixwebsocket_SOURCE_DIR}
 )
 
 add_executable(creature-controller
         src/main.cpp
+        src/server/ServerConnection.h
+        src/server/ServerConnection.cpp
 )
 
 target_link_libraries(creature-controller
@@ -212,6 +229,7 @@ target_link_libraries(creature-controller
         libe131
         fmt::fmt
         argparse
+        ixwebsocket
         spdlog::spdlog $<$<BOOL:${MINGW}>:ws2_32>
         nlohmann_json::nlohmann_json
 )
