@@ -33,6 +33,8 @@ void init_mcp9808(i2c_inst_t *i2c, u8 address) {
     debug("MCP9808 device ID: 0x%02X", device_id);
     debug("MCP9808 manufacturer ID: 0x%02X", manufacturer_id);
 
+    configASSERT(device_id == I2C_DEVICE_MCP9808_PRODUCT_ID);
+
     // Set the MCP9808 to continuous conversion mode
     mcp9808_write_register(i2c, address, MCP9808_POINTER_CONFIG, 0x0000);
 

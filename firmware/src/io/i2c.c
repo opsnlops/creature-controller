@@ -32,6 +32,6 @@ void setup_i2c() {
     init_mcp9808(SENSORS_I2C_BUS, I2C_DEVICE_MCP9808);
 
     // Initialize the PAC1954
-    init_pac1954(SENSORS_I2C_BUS, I2C_DEVICE_PAC1954);
+    init_pac1954(I2C_DEVICE_PAC1954);
 
 }

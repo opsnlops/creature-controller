@@ -31,11 +31,6 @@ namespace creatures {
                                        logger(_logger),
                                        moduleId(moduleId) {
 
-        /*
-        // Make a new logger just for us
-        this->logger = std::make_shared<creatures::SpdlogLogger>();
-        logger->init("rp2040");
-        */
         logger->info("Message Processor created!");
         this->incomingQueue = this->servoModuleHandler->getIncomingQueue();
 
@@ -47,6 +42,7 @@ namespace creatures {
         registerHandler("PONG", this->pongHandler);
         registerHandler("INIT", this->initHandler);
         registerHandler("READY", this->readyHandler);
+        registerHandler("SENSOR", this->sensorHandler);
     }
 
     void MessageProcessor::createHandlers() {
@@ -57,6 +53,7 @@ namespace creatures {
         this->pongHandler = std::make_shared<PongHandler>(this->logger, this->servoModuleHandler);
         this->statsHandler = std::make_shared<StatsHandler>();
         this->readyHandler = std::make_shared<ReadyHandler>(this->logger, this->servoModuleHandler);
+        this->sensorHandler = std::make_shared<SensorHandler>();
 
     }
 

@@ -25,7 +25,7 @@ namespace creatures {
 
             // Make sure we have the right number of tokens
             if(split.empty() || split.size() > 2) {
-                logger->warn("invalid token in {} message: {}", STATS_MESSAGE, token);
+                logger->warn("invalid token in {} message: {}", SENSOR_MESSAGE, token);
                 continue;
             }
 

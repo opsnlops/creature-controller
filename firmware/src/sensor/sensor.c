@@ -14,6 +14,7 @@
 #include "controller/controller.h"
 #include "device/mcp3304.h"
 #include "device/mcp9808.h"
+#include "device/pac1954.h"
 #include "io/responsive_analog_read_filter.h"
 #include "logging/logging.h"
 
@@ -32,6 +33,7 @@ extern analog_filter sensed_motor_position[CONTROLLER_MOTORS_PER_MODULE];
 // Our metrics
 u64 i2c_timer_count = 0;
 u64 spi_timer_count = 0;
+motor_power_data_t motor_power_data[I2C_DEVICE_PAC1954_SENSOR_COUNT];
 
 
 /**
@@ -71,6 +73,16 @@ void sensor_init() {
 
     // Set up the filter for the board temperature
     board_temperature = 66.6;
+
+    // Initialize the motor power data metrics
+    for(int i = 0; i < I2C_DEVICE_PAC1954_SENSOR_COUNT; i++) {
+        motor_power_data[i].voltage = 0.0f;
+        motor_power_data[i].current = 0.0f;
+        motor_power_data[i].power = 0.0f;
+    }
+
+
+
 }
 
 void sensor_start() {
@@ -114,6 +126,16 @@ void sensor_start() {
     info("started spi sensor read timer");
 }
 
+/*
+ * Note to future me! 😅
+ *
+ * Remember that's there's only one I2C bus in use, and we can't have
+ * several things trying to use it at once.
+ *
+ * As tempting as it might seem, do not break the timer callback functions
+ * up into separate timers. It will not end well.
+ */
+
 
 void i2c_sensor_read_timer_callback(TimerHandle_t xTimer) {
 
@@ -121,8 +143,21 @@ void i2c_sensor_read_timer_callback(TimerHandle_t xTimer) {
     (void) xTimer;
 
     board_temperature = mcp9808_read_temperature_f(SENSORS_I2C_BUS, I2C_DEVICE_MCP9808);
-    verbose("board temperature: %.1fF", board_temperature);
+    verbose("board temperature: %.2fF", board_temperature);
 
+    for(int i = 0; i < I2C_DEVICE_PAC1954_SENSOR_COUNT; i++) {
+        motor_power_data[i].voltage = pac1954_read_voltage(i);
+        motor_power_data[i].current = pac1954_read_current(i);
+        motor_power_data[i].power = pac1954_read_power(i);
+    }
+    verbose("motor power data: %f %f %f %f",
+            motor_power_data[0].power,
+            motor_power_data[1].power,
+            motor_power_data[2].power,
+            motor_power_data[3].power);
+
+    // Send refresh command to get fresh data for next pass
+    pac1954_refresh();
     i2c_timer_count += 1;
 
 }
