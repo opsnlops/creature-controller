@@ -84,6 +84,8 @@ add_executable(firmware
         src/io/message_processor.c
         src/sensor/sensor.h
         src/sensor/sensor.c
+        src/debug/sensor_reporter.h
+        src/debug/sensor_reporter.c
 )
 
 

@@ -5,6 +5,9 @@
 #include "io/handlers/IMessageHandler.h"
 
 
+#define SENSOR_MESSAGE      "SENSOR"
+
+
 namespace creatures {
 
     class StatsHandler : public IMessageHandler {

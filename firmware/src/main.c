@@ -22,6 +22,7 @@
 #include "device/power_relay.h"
 #include "device/status_lights.h"
 #include "debug/remote_logging.h"
+#include "debug/sensor_reporter.h"
 #include "debug/stats_reporter.h"
 #include "io/i2c.h"
 #include "io/message_processor.h"
@@ -105,6 +106,9 @@ int main() {
     // Start monitoring our sensors
     sensor_init();
     sensor_start();
+
+    // Fire up the sensor reporter
+    start_sensor_reporter();
 
     // Queue up the startup task for right after the scheduler starts
     TaskHandle_t startup_task_handle;
