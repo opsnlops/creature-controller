@@ -4,6 +4,7 @@
 #include <future>
 #include <thread>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "controller-config.h"
@@ -21,6 +22,7 @@
 #include "logging/Logger.h"
 #include "logging/SpdlogLogger.h"
 #include "server/ServerConnection.h"
+#include "server/ServerMessage.h"
 #include "util/thread_name.h"
 #include "util/StoppableThread.h"
 #include "Version.h"
@@ -51,13 +53,14 @@ void timedShutdown(std::shared_ptr<creatures::StoppableThread> &workerThread, un
 
 std::shared_ptr<creatures::Logger> makeLogger(std::string name) {
     auto logger = std::make_shared<creatures::SpdlogLogger>();
-    logger->init(name);
+    logger->init(std::move(name));
     return logger;
 }
 
 int main(int argc, char **argv) {
 
     using creatures::io::Message;
+    using creatures::server::ServerConnection;
 
     // Fire up the signal handlers
     std::signal(SIGINT, signal_handler);
@@ -126,10 +129,13 @@ int main(int argc, char **argv) {
 
 
     // Start talking to the server, if we're told to
-    auto serverConnection = std::make_shared<creatures::server::ServerConnection>(makeLogger("server"),
-                                                                                       config->isUsingServer(),
-                                                                                       config->getServerAddress(),
-                                                                                       config->getServerPort());
+    auto websocketOutgoingQueue = std::make_shared<creatures::MessageQueue<creatures::server::ServerMessage>>();
+    auto serverConnection = std::make_shared<ServerConnection>(makeLogger("server"),
+                                                                              creature,
+                                                                              config->isUsingServer(),
+                                                                              config->getServerAddress(),
+                                                                              config->getServerPort(),
+                                                                              websocketOutgoingQueue);
     // Start up if we should
     if(config->isUsingServer()) {
         serverConnection->start();
@@ -172,7 +178,8 @@ int main(int argc, char **argv) {
                                                             controller,
                                                             uart.getModule(),
                                                             uart.getDeviceNode(),
-                                                            messageRouter);
+                                                            messageRouter,
+                                                            websocketOutgoingQueue);
 
         // Register the handler with the message router
         messageRouter->registerServoModuleHandler(uart.getModule(), handler->getIncomingQueue(), handler->getOutgoingQueue());

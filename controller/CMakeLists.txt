@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.18)
 
 project(creature-controller
-        VERSION "2.5.2"
+        VERSION "2.5.3"
         DESCRIPTION "April's Creature Workshop Controller"
         HOMEPAGE_URL https://github.com/opsnlops/creature-controller
         LANGUAGES C CXX)
@@ -207,6 +207,17 @@ add_library(creature_lib
         src/server/ServerConnection.cpp
         src/io/handlers/SensorHandler.h
         src/io/handlers/SensorHandler.cpp
+
+
+        src/server/ServerConnection.h
+        src/server/ServerConnection.cpp
+        src/server/handlers/ServerMessageHandler.h
+        src/server/ServerMessageProcessor.h
+        src/server/ServerMessage.h
+        src/server/ServerMessage.cpp
+        src/server/SensorReportMessage.h
+        src/server/WebsocketWriter.h
+        src/server/WebsocketWriter.cpp
 )
 
 target_include_directories(creature_lib PUBLIC
@@ -221,10 +232,6 @@ target_include_directories(creature_lib PUBLIC
 
 add_executable(creature-controller
         src/main.cpp
-        src/server/ServerConnection.h
-        src/server/ServerConnection.cpp
-        src/server/handlers/ServerMessageHandler.h
-        src/server/ServerMessageProcessor.h
 )
 
 target_link_libraries(creature-controller

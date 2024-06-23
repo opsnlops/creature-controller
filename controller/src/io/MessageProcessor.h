@@ -19,6 +19,7 @@
 #include "io/Message.h"
 #include "io/MessageRouter.h"
 #include "logging/Logger.h"
+#include "server/ServerMessage.h"
 #include "util/MessageQueue.h"
 #include "util/Result.h"
 #include "util/StoppableThread.h"
@@ -32,7 +33,8 @@ namespace creatures {
     public:
         MessageProcessor(std::shared_ptr<Logger> logger,
                          UARTDevice::module_name moduleId,
-                         std::shared_ptr<ServoModuleHandler> ServoModuleHandler);
+                         std::shared_ptr<ServoModuleHandler> ServoModuleHandler,
+                         std::shared_ptr<MessageQueue<creatures::server::ServerMessage>> websocketOutgoingQueue);
         ~MessageProcessor() = default;
 
         void registerHandler(std::string messageType, std::shared_ptr<IMessageHandler> handler);
@@ -58,6 +60,9 @@ namespace creatures {
 
         std::shared_ptr<Logger> logger;
         UARTDevice::module_name moduleId;
+
+
+        std::shared_ptr<MessageQueue<creatures::server::ServerMessage>> websocketOutgoingQueue;
 
         // Handlers
         std::shared_ptr<creatures::LogHandler> logHandler;

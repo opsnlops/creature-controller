@@ -6,7 +6,11 @@
 #include <ixwebsocket/IXWebSocket.h>
 
 
+#include "creature/Creature.h"
 #include "logging/Logger.h"
+#include "server/ServerMessage.h"
+#include "server/WebsocketWriter.h"
+#include "util/MessageQueue.h"
 #include "util/Result.h"
 #include "util/StoppableThread.h"
 
@@ -24,8 +28,23 @@ namespace creatures :: server {
     class ServerConnection : public StoppableThread {
 
     public:
-        ServerConnection(std::shared_ptr<Logger> logger, bool enabled, std::string address, u16 port) :
-            logger(logger), enabled(enabled), address(std::move(address)), port(port)  { }
+        ServerConnection(std::shared_ptr<Logger> logger,
+                         std::shared_ptr<creatures::creature::Creature> creature,
+                         bool enabled,
+                         std::string address,
+                         u16 port,
+                         std::shared_ptr<creatures::MessageQueue<creatures::server::ServerMessage>> outgoingMessagesQueue) :
+            logger(logger), enabled(enabled), address(std::move(address)),
+            port(port), outgoingMessagesQueue(outgoingMessagesQueue), creature(creature)  {
+
+            webSocket = std::make_shared<ix::WebSocket>();
+
+            websocketWriter = std::make_unique<WebsocketWriter>(logger,
+                                                                webSocket,
+                                                                outgoingMessagesQueue,
+                                                                creature->getId(),
+                                                                enabled);
+        }
         ~ServerConnection();
 
         void start() override;
@@ -43,8 +62,15 @@ namespace creatures :: server {
 
         std::string serverUrl;
 
+        std::shared_ptr<creatures::MessageQueue<creatures::server::ServerMessage>> outgoingMessagesQueue;
+
+        std::unique_ptr<WebsocketWriter> websocketWriter;
+
         // Our websocket connection
-        ix::WebSocket webSocket;
+        std::shared_ptr<ix::WebSocket> webSocket;
+
+        // The creature we're working on
+        std::shared_ptr<creatures::creature::Creature> creature;
 
         std::string makeUrl() {
             return fmt::format("ws://{}:{}/api/v1/websocket", address, port);

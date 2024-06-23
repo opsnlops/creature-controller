@@ -49,10 +49,16 @@ namespace creatures :: config {
      * @param fieldName the field name we're looking for
      */
     Result<bool> BaseBuilder::checkJsonField(const nlohmann::json& jsonObj, const std::string& fieldName) {
-        if (!jsonObj.contains(fieldName)) {
-            return Result<bool>(ControllerError(ControllerError::InvalidData, "Missing required field: " + fieldName));
-        }
+        try {
+            // Make sure it exists
+            if (!jsonObj.contains(fieldName)) {
+                return Result<bool>(ControllerError(ControllerError::InvalidData, "Missing required field: " + fieldName));
+            }
 
+        } catch (nlohmann::json::out_of_range& e) {
+            auto errorMessage = fmt::format("Error checking field {}: {}", fieldName, e.what());
+            return Result<bool>(ControllerError(ControllerError::InternalError, errorMessage));
+        }
         return Result<bool>(true);
     }
 

@@ -7,6 +7,7 @@
 #include "io/MessageRouter.h"
 #include "io/SerialHandler.h"
 #include "logging/Logger.h"
+#include "server/ServerMessage.h"
 #include "util/MessageQueue.h"
 #include "util/StoppableThread.h"
 
@@ -28,7 +29,8 @@ namespace creatures {
                            std::shared_ptr<Controller> controller,
                            UARTDevice::module_name moduleId,
                            std::string deviceNode,
-                           std::shared_ptr<creatures::io::MessageRouter> messageRouter);
+                           std::shared_ptr<creatures::io::MessageRouter> messageRouter,
+                           std::shared_ptr<MessageQueue<creatures::server::ServerMessage>> websocketOutgoingQueue);
 
         void init();
 
@@ -161,6 +163,11 @@ namespace creatures {
          * Our message processor
          */
         std::unique_ptr<creatures::MessageProcessor> messageProcessor;
+
+        /**
+         * Our websocket outgoing queue
+         */
+        std::shared_ptr<MessageQueue<creatures::server::ServerMessage>> websocketOutgoingQueue;
 
     };
 

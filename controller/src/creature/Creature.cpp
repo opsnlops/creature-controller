@@ -168,6 +168,14 @@ namespace creatures::creature {
         Creature::name = _name;
     }
 
+    const std::string &Creature::getId() const {
+        return id;
+    }
+
+    void Creature::setId(const std::string &_id) {
+        Creature::id = _id;
+    }
+
     const std::string &Creature::getVersion() const {
         return version;
     }
