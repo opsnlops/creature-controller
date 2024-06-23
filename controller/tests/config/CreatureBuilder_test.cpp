@@ -38,6 +38,7 @@ protected:
 
     void SetUp() override {
         const std::string validJsonData = R"({  "name": "Test Creature",
+      "id": "6365bf98-3112-11ef-ae71-bb9a570e1043",
       "version": "0.1.0",
       "description": "This is a fake creature for testing",
       "channel_offset": 1,

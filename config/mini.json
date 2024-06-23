@@ -1,5 +1,6 @@
 {
   "name": "Mini",
+  "id": "6b5113be-3104-11ef-a789-cbcf3b361d2f",
   "version": "0.1.0",
   "description": "Simple Creature Config for testing creatures",
   "channel_offset": 10,

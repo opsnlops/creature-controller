@@ -26,10 +26,12 @@ namespace creatures {
 
     MessageProcessor::MessageProcessor(std::shared_ptr<Logger> _logger,
                                        UARTDevice::module_name moduleId,
-                                       std::shared_ptr<ServoModuleHandler> servoModuleHandler) :
+                                       std::shared_ptr<ServoModuleHandler> servoModuleHandler,
+                                       std::shared_ptr<MessageQueue<creatures::server::ServerMessage>> websocketOutgoingQueue) :
                                        servoModuleHandler(servoModuleHandler),
                                        logger(_logger),
-                                       moduleId(moduleId) {
+                                       moduleId(moduleId),
+                                       websocketOutgoingQueue(websocketOutgoingQueue) {
 
         logger->info("Message Processor created!");
         this->incomingQueue = this->servoModuleHandler->getIncomingQueue();
@@ -53,7 +55,7 @@ namespace creatures {
         this->pongHandler = std::make_shared<PongHandler>(this->logger, this->servoModuleHandler);
         this->statsHandler = std::make_shared<StatsHandler>();
         this->readyHandler = std::make_shared<ReadyHandler>(this->logger, this->servoModuleHandler);
-        this->sensorHandler = std::make_shared<SensorHandler>();
+        this->sensorHandler = std::make_shared<SensorHandler>(this->logger, this->websocketOutgoingQueue);
 
     }
 

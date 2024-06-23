@@ -26,7 +26,7 @@ namespace creatures :: config {
 
         // Define the required config file fields
         requiredTopLevelFields = {
-                "type", "name", "version", "channel_offset", "universe", "motors",
+                "id", "type", "name", "version", "channel_offset", "universe", "motors",
                 "head_offset_max", "servo_frequency", "position_min", "position_max",
                 "description",
         };
@@ -87,7 +87,7 @@ namespace creatures :: config {
         for (const auto& fieldName : requiredTopLevelFields) {
             auto fieldResult = checkJsonField(j, fieldName);
             if(!fieldResult.isSuccess()) {
-                auto errorMessage = fileResult.getError().value().getMessage();
+                auto errorMessage = fieldResult.getError().value().getMessage();
                 logger->error(errorMessage);
                 return Result<std::shared_ptr<creatures::creature::Creature>>{ControllerError(ControllerError::InvalidData, errorMessage)};
             }
@@ -119,6 +119,7 @@ namespace creatures :: config {
         u16 servo_frequency = j["servo_frequency"];
 
         creature->setName(j["name"]);
+        creature->setId(j["id"]);
         creature->setVersion(j["version"]);
         creature->setDescription(j["description"]);
         creature->setChannelOffset(j["channel_offset"]);

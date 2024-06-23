@@ -20,6 +20,15 @@ namespace creatures::server {
 
     void ServerConnection::start() {
 
+        // We always need to make the writer, even if we're not enabled so that messages that get sent don't
+        // just sit in the queue forever and leak memory.
+        websocketWriter = std::make_unique<WebsocketWriter>(logger,
+                                                            webSocket,
+                                                            outgoingMessagesQueue,
+                                                            creature->getId(),
+                                                            enabled);
+        websocketWriter->start();
+
         if(!enabled) {
             logger->info("server connection is disabled, not starting");
             return;
@@ -27,9 +36,9 @@ namespace creatures::server {
 
         serverUrl = makeUrl();
         logger->info("server url: {}", serverUrl);
-        webSocket.setUrl(serverUrl);
+        webSocket->setUrl(serverUrl);
 
-        webSocket.setOnMessageCallback([this](auto && PH1) { onMessage(std::forward<decltype(PH1)>(PH1)); });
+        webSocket->setOnMessageCallback([this](auto && PH1) { onMessage(std::forward<decltype(PH1)>(PH1)); });
 
         logger->info("starting the server connection");
         creatures::StoppableThread::start();
@@ -47,16 +56,20 @@ namespace creatures::server {
         // How often should we see if we need to stop?
         std::chrono::milliseconds interval(SERVER_CONNECTION_LOOP_TIME);
 
-        webSocket.start();
-        webSocket.setPingInterval(10);
+        webSocket->start();
+        webSocket->setPingInterval(10);
 
         // Wait until we're told to stop
         while (!stop_requested.load()) {
             std::this_thread::sleep_for(interval);
         }
+        logger->debug("ServerConnection thread stopping");
 
-        webSocket.stop();
-        logger->info("Creature Server connection shutting down");
+        // Stop our threads (we need to do this ourselves since it's a unique ptr)
+        websocketWriter->shutdown();
+
+        webSocket->stop();
+        logger->info("Creature Server connection shut down");
     }
 
     void ServerConnection::onMessage(const ix::WebSocketMessagePtr& msg) {

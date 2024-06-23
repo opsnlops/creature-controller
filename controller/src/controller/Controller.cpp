@@ -36,7 +36,6 @@ Controller::Controller(const std::shared_ptr<creatures::Logger>& logger,
     logger->debug("created the input queue");
 
 
-
     logger->info("Controller for {} initialized", creature->getName());
 
 }

@@ -141,6 +141,8 @@ namespace creatures::creature {
         // Getters for all of the things
         const std::string &getName() const;
 
+        const std::string &getId() const;
+
         const std::string &getVersion() const;
 
         const std::string &getDescription() const;
@@ -169,6 +171,8 @@ namespace creatures::creature {
 
         // Setters for the things
         void setName(const std::string &name);
+
+        void setId(const std::string &id);
 
         void setVersion(const std::string &version);
 
@@ -199,6 +203,7 @@ namespace creatures::creature {
 
     protected:
         std::atomic<bool> stop_requested = false;
+        std::string id;
         std::string name;
         std::string version;
         std::string description;

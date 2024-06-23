@@ -7,6 +7,9 @@
 
 #include "logging/Logger.h"
 #include "io/handlers/SensorHandler.h"
+#include "server/SensorReportMessage.h"
+#include "server/ServerMessage.h"
+#include "util/MessageQueue.h"
 #include "util/string_utils.h"
 
 /*
@@ -20,12 +23,19 @@
 
 namespace creatures {
 
-    void SensorHandler::handle(std::shared_ptr<Logger> logger, const std::vector<std::string> &tokens) {
+    SensorHandler::SensorHandler(std::shared_ptr<Logger> logger,
+                                 std::shared_ptr<MessageQueue<creatures::server::ServerMessage>> websocketOutgoingQueue) :
+            websocketOutgoingQueue(websocketOutgoingQueue), logger(logger) {
+        logger->info("SensorHandler created!");
+    }
 
-        logger->debug("received sensor report");
+
+    void SensorHandler::handle(std::shared_ptr<Logger> handleLogger, const std::vector<std::string> &tokens) {
+
+        handleLogger->debug("received sensor report");
 
         if (tokens.size() < 5) {
-            logger->error("Invalid number of tokens in a sensor message message: {}", tokens.size());
+            handleLogger->error("Invalid number of tokens in a sensor message message: {}", tokens.size());
             return;
         }
 
@@ -34,18 +44,23 @@ namespace creatures {
 
         std::vector<std::string> split = splitString(temperature);
         if (split.size() != 2) {
-            logger->warn("expected two tokens in a temperature sensor report, got: {}", temperature);
+            handleLogger->warn("expected two tokens in a temperature sensor report, got: {}", temperature);
             return;
         }
         boardTemperature = stringToDouble(split[1]);
-        logger->info("Chassis temperature: {:.2f}F", boardTemperature);
+        handleLogger->info("Chassis temperature: {:.2f}F", boardTemperature);
+
+        json payloadJson = {
+                {"board_temperature", boardTemperature},
+        };
+
 
         // Surely this will not bite me in the butt
         for (int i = 2; i < 6; i++) {
             auto motorReport = tokens[i];
             split = splitString(motorReport);
             if (split.size() != 5) {
-                logger->warn("expected five tokens in a motor report, got: {}", motorReport);
+                handleLogger->warn("expected five tokens in a motor report, got: {}", motorReport);
                 continue;
             }
 
@@ -54,12 +69,26 @@ namespace creatures {
             auto motorCurrent = stringToDouble(split[3]);
             auto motorPower = stringToDouble(split[4]);
 
-            logger->info("Motor {} position: {}, voltage: {:.2f}V, current: {:.2f}A, power: {:.2f}W",
+
+            json motorInfo = {
+                    {"number", i - 2},
+                    {"position", motorPosition},
+                    {"voltage", motorVoltage},
+                    {"current", motorCurrent},
+                    {"power", motorPower},
+            };
+
+            payloadJson["motors"].push_back(motorInfo);
+
+            handleLogger->info("Motor {} position: {}, voltage: {:.2f}V, current: {:.2f}A, power: {:.2f}W",
                          i - 2, motorPosition,
                          motorVoltage, motorCurrent, motorPower);
 
         }
 
+        // Send the message to the websocket
+        auto message = creatures::server::SensorReportMessage(logger, payloadJson);
+        websocketOutgoingQueue->push(message);
     }
 
 } // creatures

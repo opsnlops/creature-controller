@@ -24,9 +24,10 @@ namespace creatures {
     ServoModuleHandler::ServoModuleHandler(std::shared_ptr<Logger> logger,
                                            std::shared_ptr<Controller> controller,
                                            UARTDevice::module_name moduleId, std::string deviceNode,
-                                           std::shared_ptr<MessageRouter> messageRouter) :
+                                           std::shared_ptr<MessageRouter> messageRouter,
+                                           std::shared_ptr<MessageQueue<creatures::server::ServerMessage>> websocketOutgoingQueue) :
                                            logger(logger), controller(controller), deviceNode(std::move(deviceNode)),
-                                           moduleId(moduleId), messageRouter(messageRouter) {
+                                           moduleId(moduleId), messageRouter(messageRouter), websocketOutgoingQueue(websocketOutgoingQueue) {
 
         logger->info("creating a new ServoModuleHandler for module {} on node {}",
                      UARTDevice::moduleNameToString(moduleId), this->deviceNode);
@@ -46,7 +47,7 @@ namespace creatures {
                      UARTDevice::moduleNameToString(this->moduleId), this->deviceNode);
 
         // Make our message processor
-        this->messageProcessor = std::make_unique<MessageProcessor>(logger, moduleId, shared_from_this());
+        this->messageProcessor = std::make_unique<MessageProcessor>(logger, moduleId, shared_from_this(), websocketOutgoingQueue);
 
         // Create the SerialHandler
         this->serialHandler = std::make_shared<SerialHandler>(logger, this->deviceNode, this->moduleId,
