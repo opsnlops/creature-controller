@@ -74,38 +74,45 @@
   "inputs": [
     {
       "name": "head_tilt",
-      "slot": 0,
-      "width": 1
+      "slot": 3,
+      "width": 1,
+      "joystick_axis": 3
     },
     {
       "name": "head_height",
-      "slot": 1,
-      "width": 1
+      "slot": 4,
+      "width": 1,
+      "joystick_axis": 4
     },
     {
       "name": "neck_rotate",
-      "slot": 2,
-      "width": 1
+      "slot": 5,
+      "width": 1,
+      "joystick_axis": 5
     },
     {
       "name": "stand_rotate",
-      "slot": 3,
-      "width": 1
+      "slot": 0,
+      "width": 1,
+      "joystick_axis": 0
     },
     {
       "name": "body_lean",
-      "slot": 4,
-      "width": 1
+      "slot": 6,
+      "width": 1,
+      "joystick_axis": 6
     },
     {
       "name": "beak",
-      "slot": 5,
-      "width": 1
+      "slot": 2,
+      "width": 1,
+      "joystick_axis": 2
     },
     {
       "name": "chest",
-      "slot": 6,
-      "width": 1
+      "slot": 7,
+      "width": 1,
+      "joystick_axis": 7
     }
   ]
 }

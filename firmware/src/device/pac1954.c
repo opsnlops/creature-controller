@@ -61,33 +61,34 @@ extern volatile bool i2c_setup_completed;
 #define PAC1954_FSR_PSENSE_W   800
 
 
-void init_pac1954(u8 address) {
+void init_pac1954(u8 device_address) {
 
-    debug("init'ing the PAC1954 at address 0x%02X (%s)", address, to_binary_string(address));
+    debug("init'ing the PAC1954 at address 0x%02X (%s)", device_address, to_binary_string(device_address));
 
     configASSERT(i2c_setup_completed);
 
     // Gather some device information
-    u8 device_id = pac1954_read_register_8bit(PAC1954_PRODUCT_ID_REGISTER);
-    u8 manufacturer_id = pac1954_read_register_8bit(PAC1954_PRODUCT_ID_REGISTER);
-    u8 revision_id = pac1954_read_register_8bit(PAC1954_REVISION_ID_REGISTER);
+    u8 device_id = pac1954_read_register_8bit(device_address, PAC1954_PRODUCT_ID_REGISTER);
+    u8 manufacturer_id = pac1954_read_register_8bit(device_address, PAC1954_PRODUCT_ID_REGISTER);
+    u8 revision_id = pac1954_read_register_8bit(device_address, PAC1954_REVISION_ID_REGISTER);
 
     info("pac1954 device id: 0x%02X, manufacturer id: 0x%02X, revision id: 0x%02X", device_id, manufacturer_id,
          revision_id);
 
     // Make sure we're talking to the pac1954
-    configASSERT(device_id == I2c_DEVICE_PAC1954_PRODUCT_ID);
+    configASSERT(device_id == I2C_PAC1954_PRODUCT_ID);
 
     // Set the PAC1954 to its default configuration
-    set_pac1954_default_config();
+    set_pac1954_default_config(device_address);
 
 }
 
 
-float pac1954_read_power(u8 input_number) {
+float pac1954_read_power(u8 device_address, u8 input_number) {
     float power;
 
-    pac1954_get_calc_measurement(PAC1954_MEAS_SEL_P_SENSE,
+    pac1954_get_calc_measurement(device_address,
+                                 PAC1954_MEAS_SEL_P_SENSE,
                                  PAC1954_CH_SEL_CH_1 + input_number,
                                  PAC1954_AVG_SEL_ENABLE,
                                  PAC1954_MEAS_MODE_UNIPOLAR_FSR,
@@ -97,10 +98,11 @@ float pac1954_read_power(u8 input_number) {
 
 }
 
-float pac1954_read_voltage(u8 input_number) {
+float pac1954_read_voltage(u8 device_address, u8 input_number) {
     float voltage;
 
-    pac1954_get_calc_measurement(PAC1954_MEAS_SEL_V_SOURCE,
+    pac1954_get_calc_measurement(device_address,
+                                 PAC1954_MEAS_SEL_V_SOURCE,
                                  PAC1954_CH_SEL_CH_1 + input_number,
                                  PAC1954_AVG_SEL_ENABLE,
                                  PAC1954_MEAS_MODE_UNIPOLAR_FSR,
@@ -109,10 +111,11 @@ float pac1954_read_voltage(u8 input_number) {
     return voltage;
 }
 
-float pac1954_read_current(u8 input_number) {
+float pac1954_read_current(u8 device_address, u8 input_number) {
     float current;
 
-    pac1954_get_calc_measurement(PAC1954_MEAS_SEL_I_SENSE,
+    pac1954_get_calc_measurement(device_address,
+                                 PAC1954_MEAS_SEL_I_SENSE,
                                  PAC1954_CH_SEL_CH_1 + input_number,
                                  PAC1954_AVG_SEL_ENABLE,
                                  PAC1954_MEAS_MODE_UNIPOLAR_FSR,
@@ -122,9 +125,9 @@ float pac1954_read_current(u8 input_number) {
 }
 
 
-void set_pac1954_default_config() {
+void set_pac1954_default_config(u8 device_address) {
 
-    debug("setting the PAC1954 to its default configuration");
+    debug("setting the PAC1954 at 0x%02X to its default configuration", device_address);
 
     u8 defaultConfig[2];
 
@@ -133,7 +136,7 @@ void set_pac1954_default_config() {
                        PAC1954_CTRLH_SLW_PIN_SLOW;
     defaultConfig[1] = PAC1954_CTRLL_ALL_CH_ON;
 
-    i2c_write_blocking(SENSORS_I2C_BUS, I2C_DEVICE_PAC1954, defaultConfig, 2, true);
+    i2c_write_blocking(SENSORS_I2C_BUS, device_address, defaultConfig, 2, true);
 
     defaultConfig[0] = (PAC1954_MEAS_MODE_BIPOLAR_FSR << PAC1954_NEG_PWR_FSR_CH1_OFFSET) |
                        (PAC1954_MEAS_MODE_BIPOLAR_HALF_FSR << PAC1954_NEG_PWR_FSR_CH2_OFFSET) |
@@ -144,28 +147,28 @@ void set_pac1954_default_config() {
                        (PAC1954_MEAS_MODE_UNIPOLAR_FSR << PAC1954_NEG_PWR_FSR_CH3_OFFSET) |
                        (PAC1954_MEAS_MODE_UNIPOLAR_FSR << PAC1954_NEG_PWR_FSR_CH4_OFFSET);
 
-    i2c_write_blocking(SENSORS_I2C_BUS, I2C_DEVICE_PAC1954, defaultConfig, 2, true);
+    i2c_write_blocking(SENSORS_I2C_BUS, device_address, defaultConfig, 2, true);
 
-    info("PAC1954 has been set to its default configuration");
+    info("PAC1954 at 0x%02X has been set to its default configuration", device_address);
 }
 
 
-void pac1954_refresh(void) {
-    pac1954_write_command(PAC1954_REFRESH_CMD);
+void pac1954_refresh(u8 device_address) {
+    pac1954_write_command(device_address, PAC1954_REG_REFRESH);
 
     // TODO: In the sample code, there's a 1ms delay here.
 
 }
 
-void pac1954_vol_refresh(void) {
-    pac1954_write_command(PAC1954_REG_REFRESH_V);
+void pac1954_vol_refresh(u8 device_address) {
+    pac1954_write_command(device_address, PAC1954_REG_REFRESH_V);
 
     // TODO: In the sample code, there's a 1ms delay here.
 
 }
 
 
-bool pac1954_get_measurement(u8 meas_sel, u8 ch_sel, u8 avg_sel, u32 *data_out) {
+bool pac1954_get_measurement(u8 device_address, u8 meas_sel, u8 ch_sel, u8 avg_sel, u32 *data_out) {
     u8 tmp_data[4] = {0};
     u8 n_bytes;
 
@@ -209,7 +212,7 @@ bool pac1954_get_measurement(u8 meas_sel, u8 ch_sel, u8 avg_sel, u32 *data_out) 
     tmp_data[0] += ch_sel;
 
 
-    pac1954_read_data(tmp_data[0], tmp_data, n_bytes);
+    pac1954_read_data(device_address, tmp_data[0], tmp_data, n_bytes);
 
 
     for (u8 cnt = 0; cnt < n_bytes; cnt++) {
@@ -226,12 +229,12 @@ bool pac1954_get_measurement(u8 meas_sel, u8 ch_sel, u8 avg_sel, u32 *data_out) 
 }
 
 
-void pac1954_get_acc_count(u32 *data_out) {
+void pac1954_get_acc_count(u8 device_address, u32 *data_out) {
     u8 tmp_data[4] = {0};
 
     tmp_data[0] = PAC1954_REG_ACC_COUNT;
 
-    pac1954_read_data(tmp_data[0], tmp_data, 4);
+    pac1954_read_data(device_address, tmp_data[0], tmp_data, 4);
 
     *data_out = tmp_data[0];
     *data_out <<= 8;
@@ -243,18 +246,18 @@ void pac1954_get_acc_count(u32 *data_out) {
 }
 
 
-bool pac1954_get_acc_output(u8 ch_sel, u8 *data_out) {
+bool pac1954_get_acc_output(u8 device_address, u8 ch_sel, u8 *data_out) {
     if ((ch_sel < PAC1954_CH_SEL_CH_1) || (ch_sel > PAC1954_CH_SEL_CH_4)) {
         warning("Invalid channel selection");
         return false;
     }
 
-    pac1954_read_data(ch_sel + 0x02, data_out, 7);
+    pac1954_read_data(device_address, ch_sel + 0x02, data_out, 7);
     return true;
 
 }
 
-bool pac1954_get_calc_measurement(u8 meas_sel, u8 ch_sel, u8 avg_sel, u8 meas_mode, float *data_out) {
+bool pac1954_get_calc_measurement(u8 device_address, u8 meas_sel, u8 ch_sel, u8 avg_sel, u8 meas_mode, float *data_out) {
     u32 ret_val = 0;
     volatile int16_t ret_val_16_sign;
     volatile int32_t ret_val_32_sign;
@@ -264,7 +267,7 @@ bool pac1954_get_calc_measurement(u8 meas_sel, u8 ch_sel, u8 avg_sel, u8 meas_mo
         return false;
     }
 
-    bool error_flag = pac1954_get_measurement(meas_sel, ch_sel, avg_sel, &ret_val);
+    bool error_flag = pac1954_get_measurement(device_address, meas_sel, ch_sel, avg_sel, &ret_val);
 
     switch (meas_sel) {
         case PAC1954_MEAS_SEL_V_SOURCE : {
@@ -334,18 +337,18 @@ bool pac1954_get_calc_measurement(u8 meas_sel, u8 ch_sel, u8 avg_sel, u8 meas_mo
 
 
 // Function to write a command to the PAC1954
-void pac1954_write_command(u8 command) {
+void pac1954_write_command(u8 device_address, u8 command) {
     configASSERT(i2c_setup_completed);
 
-    i2c_write_blocking(SENSORS_I2C_BUS, I2C_DEVICE_PAC1954, &command, 1, true);
+    i2c_write_blocking(SENSORS_I2C_BUS, device_address, &command, 1, true);
 }
 
 // Function to read data from the PAC1954
-void pac1954_read_data(u8 reg, u8 *buffer, size_t length) {
+void pac1954_read_data(u8 device_address, u8 reg, u8 *buffer, size_t length) {
     configASSERT(i2c_setup_completed);
 
-    i2c_write_blocking(SENSORS_I2C_BUS, I2C_DEVICE_PAC1954, &reg, 1, true);
-    i2c_read_blocking(SENSORS_I2C_BUS, I2C_DEVICE_PAC1954, buffer, length, false);
+    i2c_write_blocking(SENSORS_I2C_BUS, device_address, &reg, 1, true);
+    i2c_read_blocking(SENSORS_I2C_BUS, device_address, buffer, length, false);
 }
 
 
@@ -355,8 +358,8 @@ void pac1954_read_data(u8 reg, u8 *buffer, size_t length) {
  * @param register_address The register to read
  * @return the value of the register
  */
-u8 pac1954_read_register_8bit(u8 register_address) {
+u8 pac1954_read_register_8bit(u8 device_address, u8 register_address) {
     u8 data;
-    pac1954_read_data(register_address, &data, 1);
+    pac1954_read_data(device_address, register_address, &data, 1);
     return data;
 }

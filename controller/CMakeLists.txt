@@ -205,8 +205,10 @@ add_library(creature_lib
         # Creature Server Connection
         src/server/ServerConnection.h
         src/server/ServerConnection.cpp
-        src/io/handlers/SensorHandler.h
-        src/io/handlers/SensorHandler.cpp
+        src/io/handlers/BoardSensorHandler.h
+        src/io/handlers/BoardSensorHandler.cpp
+        src/io/handlers/MotorSensorHandler.h
+        src/io/handlers/MotorSensorHandler.cpp
 
 
         src/server/ServerConnection.h
@@ -215,7 +217,8 @@ add_library(creature_lib
         src/server/ServerMessageProcessor.h
         src/server/ServerMessage.h
         src/server/ServerMessage.cpp
-        src/server/SensorReportMessage.h
+        src/server/BoardSensorReportMessage.h
+        src/server/MotorSensorReportMessage.h
         src/server/WebsocketWriter.h
         src/server/WebsocketWriter.cpp
 )

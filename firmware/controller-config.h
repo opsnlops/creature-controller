@@ -143,6 +143,8 @@ typedef uint64_t u64;
 #define USB_SERIAL_OUTGOING_QUEUE_LENGTH        15
 #define USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH  255
 
+#define USB_MOUNTED_LED_PIN                     15
+
 /*
  * UART Serial Config
  */
@@ -178,17 +180,33 @@ typedef uint64_t u64;
 #define SENSORS_SPI_CS_PIN                      21
 
 
-#define SENSOR_I2C_TIMER_TIME_MS                100
-#define SENSOR_SPI_TIMER_TIME_MS                10
+#define SENSOR_I2C_TIMER_TIME_MS                200
+#define SENSOR_SPI_TIMER_TIME_MS                50
 
 
 // Various I2C devices
 #define I2C_DEVICE_MCP9808                      0x18
 #define I2C_DEVICE_MCP9808_PRODUCT_ID           0x400  // This is used to make sure we're talking to the right device
 
-#define I2C_DEVICE_PAC1954                      0x10
-#define I2c_DEVICE_PAC1954_PRODUCT_ID           0x7B    // This is used to make sure we're talking to the right device
-#define I2C_DEVICE_PAC1954_SENSOR_COUNT         4       // We have four channels
+
+#define I2C_PAC1954_SENSOR_COUNT                12
+#define I2C_PAC1954_PRODUCT_ID                  0x7B    // This is used to make sure we're talking to the right device
+
+#define I2C_MOTOR0_PAC1954                      0x10
+#define I2C_MOTOR0_PAC1954_SENSOR_COUNT         4
+
+#define I2C_MOTOR1_PAC1954                      0x11
+#define I2C_MOTOR1_PAC1954_SENSOR_COUNT         4
+
+#define I2C_BOARD_PAC1954                       0x12
+#define I2C_BOARD_PAC1954_SENSOR_COUNT          4
+
+
+#define V5_SENSOR_SLOT                          8
+#define VBUS_SENSOR_SLOT                        9
+#define INCOMING_MOTOR_POWER_SENSOR_SLOT        10
+#define V3v3_SENSOR_SLOT                        11
+
 
 /**
  * Analog Read Filter

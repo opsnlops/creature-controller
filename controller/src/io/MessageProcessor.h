@@ -14,7 +14,8 @@
 #include "io/handlers/LogHandler.h"
 #include "io/handlers/PongHandler.h"
 #include "io/handlers/ReadyHandler.h"
-#include "io/handlers/SensorHandler.h"
+#include "io/handlers/BoardSensorHandler.h"
+#include "io/handlers/MotorSensorHandler.h"
 #include "io/handlers/StatsHandler.h"
 #include "io/Message.h"
 #include "io/MessageRouter.h"
@@ -70,7 +71,8 @@ namespace creatures {
         std::shared_ptr<creatures::PongHandler> pongHandler;
         std::shared_ptr<creatures::ReadyHandler> readyHandler;
         std::shared_ptr<creatures::StatsHandler> statsHandler;
-        std::shared_ptr<creatures::SensorHandler> sensorHandler;
+        std::shared_ptr<creatures::BoardSensorHandler> boardSensorHandler;
+        std::shared_ptr<creatures::MotorSensorHandler> motorSensorHandler;
     };
 
 } // creatures
