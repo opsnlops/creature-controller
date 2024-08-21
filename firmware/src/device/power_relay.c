@@ -22,11 +22,11 @@ void init_power_relay() {
 }
 
 void power_relay_on() {
-    gpio_put(POWER_PIN, true);
+    gpio_put(POWER_PIN, false);
     info("turned on the power relay");
 }
 
 void power_relay_off() {
-    gpio_put(POWER_PIN, false);
+    gpio_put(POWER_PIN, true);
     info("turned off the power relay");
 }

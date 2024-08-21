@@ -62,6 +62,7 @@ int main() {
     bi_decl(bi_1pin_with_name(SERVO_5_GPIO_PIN, "Servo 5"))
     bi_decl(bi_1pin_with_name(SERVO_6_GPIO_PIN, "Servo 6"))
     bi_decl(bi_1pin_with_name(SERVO_7_GPIO_PIN, "Servo 7"))
+    bi_decl(bi_1pin_with_name(USB_MOUNTED_LED_PIN, "USB Mounted LED"))
     bi_decl(bi_1pin_with_name(CONTROLLER_RESET_PIN, "Controller Reset"))
 
     // All the SDK to bring up the stdio stuff, so we can write to the serial port

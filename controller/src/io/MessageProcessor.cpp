@@ -44,7 +44,8 @@ namespace creatures {
         registerHandler("PONG", this->pongHandler);
         registerHandler("INIT", this->initHandler);
         registerHandler("READY", this->readyHandler);
-        registerHandler("SENSOR", this->sensorHandler);
+        registerHandler("BSENSE", this->boardSensorHandler);
+        registerHandler("MSENSE", this->motorSensorHandler);
     }
 
     void MessageProcessor::createHandlers() {
@@ -55,7 +56,8 @@ namespace creatures {
         this->pongHandler = std::make_shared<PongHandler>(this->logger, this->servoModuleHandler);
         this->statsHandler = std::make_shared<StatsHandler>();
         this->readyHandler = std::make_shared<ReadyHandler>(this->logger, this->servoModuleHandler);
-        this->sensorHandler = std::make_shared<SensorHandler>(this->logger, this->websocketOutgoingQueue);
+        this->boardSensorHandler = std::make_shared<BoardSensorHandler>(this->logger, this->websocketOutgoingQueue);
+        this->motorSensorHandler = std::make_shared<MotorSensorHandler>(this->logger, this->websocketOutgoingQueue);
 
     }
 

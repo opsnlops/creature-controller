@@ -11,11 +11,11 @@ using json = nlohmann::json;
 
 namespace creatures :: server {
 
-    class SensorReportMessage : public ServerMessage {
+    class MotorSensorReportMessage : public ServerMessage {
     public:
-        SensorReportMessage(std::shared_ptr<Logger> logger, const json &message) {
+        MotorSensorReportMessage(std::shared_ptr<Logger> logger, const json &message) {
             this->logger = logger;
-            this->commandType = "sensor-report";
+            this->commandType = "motor-sensor-report";
             this->message = message;
         }
     };

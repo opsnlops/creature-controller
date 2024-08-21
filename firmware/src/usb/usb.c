@@ -30,9 +30,9 @@ void usb_init() {
     tud_init(BOARD_TUD_RHPORT);
 
     // Use the on-board LED to show when the device is active
-    gpio_init(PICO_DEFAULT_LED_PIN);
-    gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
-    gpio_put(PICO_DEFAULT_LED_PIN, false);
+    gpio_init(USB_MOUNTED_LED_PIN);
+    gpio_set_dir(USB_MOUNTED_LED_PIN, GPIO_OUT);
+    gpio_put(USB_MOUNTED_LED_PIN, false);
     cdc_connected = false;
 
 }
@@ -74,7 +74,7 @@ void is_cdc_connected_timer(TimerHandle_t xTimer) {
 
     if (tud_cdc_connected()) {
 
-        gpio_put(PICO_DEFAULT_LED_PIN, true);
+        gpio_put(USB_MOUNTED_LED_PIN, true);
 
         // Is this a change in state?
         if (!cdc_connected) {
@@ -85,7 +85,7 @@ void is_cdc_connected_timer(TimerHandle_t xTimer) {
         }
 
     } else {
-        gpio_put(PICO_DEFAULT_LED_PIN, false);
+        gpio_put(USB_MOUNTED_LED_PIN, false);
 
         if(cdc_connected) {
             debug("CDC disconnected");

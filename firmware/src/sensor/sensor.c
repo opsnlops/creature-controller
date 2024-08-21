@@ -33,7 +33,7 @@ extern analog_filter sensed_motor_position[CONTROLLER_MOTORS_PER_MODULE];
 // Our metrics
 u64 i2c_timer_count = 0;
 u64 spi_timer_count = 0;
-motor_power_data_t motor_power_data[I2C_DEVICE_PAC1954_SENSOR_COUNT];
+sensor_power_data_t sensor_power_data[I2C_PAC1954_SENSOR_COUNT];
 
 
 /**
@@ -75,10 +75,10 @@ void sensor_init() {
     board_temperature = 66.6;
 
     // Initialize the motor power data metrics
-    for(int i = 0; i < I2C_DEVICE_PAC1954_SENSOR_COUNT; i++) {
-        motor_power_data[i].voltage = 0.0f;
-        motor_power_data[i].current = 0.0f;
-        motor_power_data[i].power = 0.0f;
+    for(int i = 0; i < I2C_PAC1954_SENSOR_COUNT; i++) {
+        sensor_power_data[i].voltage = 0.0f;
+        sensor_power_data[i].current = 0.0f;
+        sensor_power_data[i].power = 0.0f;
     }
 
 
@@ -143,21 +143,47 @@ void i2c_sensor_read_timer_callback(TimerHandle_t xTimer) {
     (void) xTimer;
 
     board_temperature = mcp9808_read_temperature_f(SENSORS_I2C_BUS, I2C_DEVICE_MCP9808);
-    verbose("board temperature: %.2fF", board_temperature);
+//    verbose("board temperature: %.2fF", board_temperature);
 
-    for(int i = 0; i < I2C_DEVICE_PAC1954_SENSOR_COUNT; i++) {
-        motor_power_data[i].voltage = pac1954_read_voltage(i);
-        motor_power_data[i].current = pac1954_read_current(i);
-        motor_power_data[i].power = pac1954_read_power(i);
+    // Read the power data for all of our sensors
+
+    for(int i = 0; i < I2C_MOTOR0_PAC1954_SENSOR_COUNT; i++) {
+        sensor_power_data[i].voltage = pac1954_read_voltage(I2C_MOTOR0_PAC1954, i);
+        sensor_power_data[i].current = pac1954_read_current(I2C_MOTOR0_PAC1954,i);
+        sensor_power_data[i].power = pac1954_read_power(I2C_MOTOR0_PAC1954, i);
     }
-    verbose("motor power data: %f %f %f %f",
-            motor_power_data[0].power,
-            motor_power_data[1].power,
-            motor_power_data[2].power,
-            motor_power_data[3].power);
+//    verbose("motor0 power data: %f %f %f %f",
+//            sensor_power_data[0].power,
+//            sensor_power_data[1].power,
+//            sensor_power_data[2].power,
+//            sensor_power_data[3].power);
+
+    for(int i = 0; i < I2C_MOTOR1_PAC1954_SENSOR_COUNT; i++) {
+        sensor_power_data[4 + i].voltage = pac1954_read_voltage(I2C_MOTOR1_PAC1954, i);
+        sensor_power_data[4 + i].current = pac1954_read_current(I2C_MOTOR1_PAC1954,i);
+        sensor_power_data[4 + i].power = pac1954_read_power(I2C_MOTOR1_PAC1954, i);
+    }
+//    verbose("motor1 power data: %f %f %f %f",
+//            sensor_power_data[4].power,
+//            sensor_power_data[5].power,
+//            sensor_power_data[6].power,
+//            sensor_power_data[7].power);
+
+    for(int i = 0; i < I2C_BOARD_PAC1954_SENSOR_COUNT; i++) {
+        sensor_power_data[8 + i].voltage = pac1954_read_voltage(I2C_BOARD_PAC1954, i);
+        sensor_power_data[8 + i].current = pac1954_read_current(I2C_BOARD_PAC1954,i);
+        sensor_power_data[8 + i].power = pac1954_read_power(I2C_BOARD_PAC1954, i);
+    }
+//    verbose("board power data: %f %f %f %f",
+//            sensor_power_data[8].power,
+//            sensor_power_data[9].power,
+//            sensor_power_data[10].power,
+//            sensor_power_data[11].power);
 
     // Send refresh command to get fresh data for next pass
-    pac1954_refresh();
+    pac1954_refresh(I2C_MOTOR0_PAC1954);
+    pac1954_refresh(I2C_MOTOR1_PAC1954);
+    pac1954_refresh(I2C_BOARD_PAC1954);
     i2c_timer_count += 1;
 
 }
@@ -182,12 +208,16 @@ void spi_sensor_read_timer_callback(TimerHandle_t xTimer) {
 
     spi_timer_count += 1;
 
-    if(spi_timer_count % 500 == 0) {
-        debug("sensed motor positions: %u %u %u %u",
+    if(spi_timer_count % 700 == 0) {
+        debug("sensed motor positions: %u %u %u %u %u %u %u %u",
               analog_filter_get_value(&sensed_motor_position[0]),
               analog_filter_get_value(&sensed_motor_position[1]),
               analog_filter_get_value(&sensed_motor_position[2]),
-              analog_filter_get_value(&sensed_motor_position[3]));
+              analog_filter_get_value(&sensed_motor_position[3]),
+              analog_filter_get_value(&sensed_motor_position[4]),
+              analog_filter_get_value(&sensed_motor_position[5]),
+              analog_filter_get_value(&sensed_motor_position[6]),
+              analog_filter_get_value(&sensed_motor_position[7]));
     }
 
 

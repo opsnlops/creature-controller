@@ -22,14 +22,14 @@
 
 void init_pac1954(u8 address);
 
-float pac1954_read_voltage(u8 input_number);
-float pac1954_read_current(u8 input_number);
-float pac1954_read_power(u8 input_number);
+float pac1954_read_voltage(u8 device_address, u8 input_number);
+float pac1954_read_current(u8 device_address, u8 input_number);
+float pac1954_read_power(u8 device_address, u8 input_number);
 
 
-void pac1954_write_command(u8 command);
-void pac1954_read_data(u8 reg, u8 *buffer, size_t length);
-u8 pac1954_read_register_8bit(u8 register_address);
+void pac1954_write_command(u8 device_address, u8 command);
+void pac1954_read_data(u8 device_address, u8 reg, u8 *buffer, size_t length);
+u8 pac1954_read_register_8bit(u8 device_address, u8 register_address);
 
 
 /**
@@ -70,23 +70,24 @@ typedef struct {
     float voltage;
     float current;
     float power;
-} motor_power_data_t;
+} sensor_power_data_t;
 
 
 
-void set_pac1954_default_config();
 
-void pac1954_refresh(void);
+void set_pac1954_default_config(u8 device_address);
 
-void pac1954_vol_refresh(void);
+void pac1954_refresh(u8 device_address);
 
-bool pac1954_get_measurement(u8 meas_sel, u8 ch_sel, u8 avg_sel, u32 *data_out);
+void pac1954_vol_refresh(u8 device_address);
 
-void pac1954_get_acc_count(u32 *data_out);
+bool pac1954_get_measurement(u8 device_address, u8 meas_sel, u8 ch_sel, u8 avg_sel, u32 *data_out);
 
-bool pac1954_get_acc_output(u8 ch_sel, u8 *data_out);
+void pac1954_get_acc_count(u8 device_address, u32 *data_out);
 
-bool pac1954_get_calc_measurement(u8 meas_sel, u8 ch_sel, u8 avg_sel, u8 meas_mode, float *data_out);
+bool pac1954_get_acc_output(u8 device_address, u8 ch_sel, u8 *data_out);
+
+bool pac1954_get_calc_measurement(u8 device_address, u8 meas_sel, u8 ch_sel, u8 avg_sel, u8 meas_mode, float *data_out);
 
 
 
