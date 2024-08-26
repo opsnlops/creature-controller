@@ -1,14 +1,22 @@
 {
   "name": "Mango",
-  "version": "0.1.0",
+  "id": "e93b9a7a-1704-11ef-84b9-3b37dddeb225",
+  "version": "0.2.0",
   "description": "The world's smallest MangoDB fan!",
   "channel_offset": 10,
   "universe": 1,
+  "audio_channel": 2,
   "position_min": 0,
   "position_max": 1023,
   "head_offset_max": 0.4,
   "servo_frequency": 50,
   "type": "parrot",
+  "voice": {
+    "voice_id": "rEgA5sGDoUB0qgm6yQdR",
+    "model_id": "eleven_multilingual_v2",
+    "stability": 0.3,
+    "similarity_boost": 0.46
+  },
   "motors": [
     {
       "type": "servo",
@@ -42,16 +50,16 @@
       "output_header": 3,
       "min_pulse_us": 1450,
       "max_pulse_us": 1970,
-      "smoothing_value": 0.95,
-      "inverted": false,
+      "smoothing_value": 0.90,
+      "inverted": true,
       "default_position": "center"
     },
     {
       "type": "servo",
       "id": "body_lean",
       "name": "Body Lean",
-      "output_module": "B",
-      "output_header": 0,
+      "output_module": "A",
+      "output_header": 4,
       "min_pulse_us": 1475,
       "max_pulse_us": 1950,
       "smoothing_value": 0.96,
