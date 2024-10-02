@@ -9,10 +9,16 @@ env:
 jobs:
   build:
     # The CMake configure and build commands are platform agnostic and should work equally
-    # well on Windows or Mac.  You can convert this to a matrix build if you need
+    # well on Windows or Mac. You can convert this to a matrix build if you need
     # cross-platform coverage.
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
     runs-on: buildjet-4vcpu-ubuntu-2204
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - rp2040
+          - rp2350
 
     steps:
       - uses: actions/checkout@v4
@@ -23,7 +29,7 @@ jobs:
         run: sudo apt update && sudo apt install gcc-arm-none-eabi libnewlib-arm-none-eabi build-essential libzopfli-dev
 
       - name: Clone pico-sdk
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: raspberrypi/pico-sdk
           ref: 2.0.0
@@ -31,8 +37,8 @@ jobs:
           clean: false
           submodules: 'true'
 
-      - name: Clone FreeRTOS-Kermel
-        uses: actions/checkout@v3
+      - name: Clone FreeRTOS-Kernel
+        uses: actions/checkout@v4
         with:
           repository: raspberrypi/FreeRTOS-Kernel
           path: FreeRTOS-Kernel
@@ -60,10 +66,10 @@ jobs:
         working-directory: ${{github.workspace}}/firmware/build
         shell: bash
         # Execute the build.  You can specify a specific target with "--target <NAME>"
-        run: PICO_SDK_PATH=$GITHUB_WORKSPACE/pico-sdk FREERTOS_KERNEL_PATH=$GITHUB_WORKSPACE/FreeRTOS-Kernel cmake --build . --config $BUILD_TYPE --parallel 4
+        run: PICO_PLATFORM=${{ matrix.platform }} PICO_SDK_PATH=$GITHUB_WORKSPACE/pico-sdk FREERTOS_KERNEL_PATH=$GITHUB_WORKSPACE/FreeRTOS-Kernel cmake --build . --config $BUILD_TYPE --parallel 4
 
       - name: Save artifact
         uses: actions/upload-artifact@v4
         with:
-          name: firmware
+          name: firmware-bundle-${{ matrix.platform }}
           path: ${{github.workspace}}/firmware/build/*.uf2
