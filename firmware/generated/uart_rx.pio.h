@@ -14,6 +14,7 @@
 
 #define uart_rx_mini_wrap_target 0
 #define uart_rx_mini_wrap 3
+#define uart_rx_mini_pio_version 0
 
 static const uint16_t uart_rx_mini_program_instructions[] = {
             //     .wrap_target
@@ -29,6 +30,10 @@ static const struct pio_program uart_rx_mini_program = {
     .instructions = uart_rx_mini_program_instructions,
     .length = 4,
     .origin = -1,
+    .pio_version = 0,
+#if PICO_PIO_VERSION > 0
+    .used_gpio_ranges = 0x0
+#endif
 };
 
 static inline pio_sm_config uart_rx_mini_program_get_default_config(uint offset) {
@@ -63,6 +68,7 @@ static inline void uart_rx_mini_program_init(PIO pio, uint sm, uint offset, uint
 
 #define uart_rx_wrap_target 0
 #define uart_rx_wrap 8
+#define uart_rx_pio_version 0
 
 static const uint16_t uart_rx_program_instructions[] = {
             //     .wrap_target
@@ -83,6 +89,10 @@ static const struct pio_program uart_rx_program = {
     .instructions = uart_rx_program_instructions,
     .length = 9,
     .origin = -1,
+    .pio_version = 0,
+#if PICO_PIO_VERSION > 0
+    .used_gpio_ranges = 0x0
+#endif
 };
 
 static inline pio_sm_config uart_rx_program_get_default_config(uint offset) {

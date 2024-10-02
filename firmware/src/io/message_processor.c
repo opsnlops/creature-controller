@@ -92,8 +92,8 @@ bool send_to_controller(const char *message) {
         return false;
     }
 
-    // If the queue isn't full, send it
-    if (uxQueueSpacesAvailable(outgoing_messages) > 0) {
+    // If the queue isn't full (and it exists), send it
+    if (outgoing_messages && uxQueueSpacesAvailable(outgoing_messages) > 0) {
         xQueueSendToBack(outgoing_messages, message, (TickType_t) pdMS_TO_TICKS(10));
         return true;
     }

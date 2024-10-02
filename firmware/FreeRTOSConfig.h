@@ -100,10 +100,54 @@
 #define configNUMBER_OF_CORES                   2
 #define configTICK_CORE                         0
 #define configRUN_MULTIPLE_PRIORITIES           0
+#define configUSE_CORE_AFFINITY                 1
 
 /* RP2040 specific */
 #define configSUPPORT_PICO_SYNC_INTEROP         1
 #define configSUPPORT_PICO_TIME_INTEROP         1
+
+/* RP2350 Stuff */
+#define configENABLE_FPU                        1
+#define configENABLE_MPU                        0
+#define configTOTAL_MPU_REGIONS                                   8
+#define configENABLE_MVE                  0
+
+#define configENABLE_TRUSTZONE                  0
+#define configRUN_FREERTOS_SECURE_ONLY    0
+#define secureconfigMAX_SECURE_CONTEXTS        5
+
+
+
+
+#define configPRIO_BITS 3 /* 8 priority levels */
+
+
+/*  The lowest interrupt priority that can be used in a call to a "set priority"
+    function. */
+#ifndef configLIBRARY_LOWEST_INTERRUPT_PRIORITY
+#define configLIBRARY_LOWEST_INTERRUPT_PRIORITY 0x7
+#endif
+
+/*  The highest interrupt priority that can be used by any interrupt service
+    routine that makes calls to interrupt safe FreeRTOS API functions.  DO NOT CALL
+    INTERRUPT SAFE FREERTOS API FUNCTIONS FROM ANY INTERRUPT THAT HAS A HIGHER
+    PRIORITY THAN THIS! (higher priorities are lower numeric values. */
+#ifndef configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY
+#define configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY 5
+#endif
+
+/*  Interrupt priorities used by the kernel port layer itself.  These are generic
+    to all Cortex-M ports, and do not rely on any particular library functions. */
+#ifndef configKERNEL_INTERRUPT_PRIORITY
+#define configKERNEL_INTERRUPT_PRIORITY ( configLIBRARY_LOWEST_INTERRUPT_PRIORITY << (8 - configPRIO_BITS) )
+#endif
+/* !!!! configMAX_SYSCALL_INTERRUPT_PRIORITY must not be set to zero !!!!
+    See http://www.FreeRTOS.org/RTOS-Cortex-M3-M4.html. */
+#ifndef configMAX_SYSCALL_INTERRUPT_PRIORITY
+#define configMAX_SYSCALL_INTERRUPT_PRIORITY ( configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY << (8 - configPRIO_BITS) )
+#endif
+
+#define configSYSTEM_CALL_STACK_SIZE            128
 
 #include <assert.h>
 /* Define to trap errors during development. */

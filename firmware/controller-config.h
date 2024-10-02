@@ -49,7 +49,8 @@ typedef uint64_t u64;
 #define STATUS_LIGHTS_TIME_MS               20
 #define STATUS_LIGHTS_PIO                   pio1
 
-#define STATUS_LIGHTS_LOGIC_BOARD_PIN       17
+//#define STATUS_LIGHTS_LOGIC_BOARD_PIN       17
+#define STATUS_LIGHTS_LOGIC_BOARD_PIN       22
 #define STATUS_LIGHTS_LOGIC_BOARD_IS_RGBW   false
 
 // Max brightness of the lights on the servo modules. Max is 255.
@@ -58,7 +59,7 @@ typedef uint64_t u64;
 #define STATUS_LIGHTS_MOD_A_PIN             14
 #define STATUS_LIGHTS_MOD_A_IS_RGBW         false
 
-#define STATUS_LIGHTS_MOD_B_PIN             15
+#define STATUS_LIGHTS_MOD_B_PIN             17
 #define STATUS_LIGHTS_MOD_B_IS_RGBW         false
 
 #define STATUS_LIGHTS_MOD_C_PIN             16
@@ -122,7 +123,7 @@ typedef uint64_t u64;
 #define LOGGING_LEVEL               LOG_LEVEL_DEBUG
 #define LOGGING_QUEUE_LENGTH        100
 #define LOGGING_MESSAGE_MAX_LENGTH  256
-#define LOGGING_LOG_VIA_PRINTF      0           // Add a printf() in the logger. Useful when a debugger is attached
+#define LOGGING_LOG_VIA_PRINTF      1           // Add a printf() in the logger. Useful when a debugger is attached
 
 /*
  * Message Processor Config
@@ -162,6 +163,9 @@ typedef uint64_t u64;
 // Used by the controller to signal that we need to reset
 #define CONTROLLER_RESET_PIN                    22
 #define CONTROLLER_RESET_SIGNAL_PERIOD_MS       250
+
+
+#define USE_SENSORS                             0    // Set to 1 to enable sensors
 
 
 /*
