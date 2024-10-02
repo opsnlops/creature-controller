@@ -17,7 +17,7 @@
 #include "controller-config.h"
 
 
-extern TaskHandle_t log_queue_reader_task_handle;   // in tasks.cpp
+extern TaskHandle_t log_queue_reader_task_handle;   // in tasks.c
 
 QueueHandle_t creature_log_message_queue_handle;
 
@@ -68,7 +68,8 @@ void debug(const char *message, ...) {
     struct LogMessage lm = createMessageObject(LOG_LEVEL_DEBUG, message, args);
     va_end(args);
 
-    xQueueSendToBackFromISR(creature_log_message_queue_handle, &lm, NULL);
+    xQueueSendToBack(creature_log_message_queue_handle, &lm, 10);
+    //xQueueSendToBackFromISR(creature_log_message_queue_handle, &lm, NULL);
 
 #endif
 }

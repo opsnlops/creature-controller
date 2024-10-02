@@ -98,6 +98,7 @@ int main() {
     status_lights_init();
     status_lights_start();
 
+#if USE_SENSORS
     // Configure i2c for our needs
     setup_i2c();
 
@@ -110,6 +111,7 @@ int main() {
 
     // Fire up the sensor reporter
     start_sensor_reporter();
+#endif
 
     // Queue up the startup task for right after the scheduler starts
     TaskHandle_t startup_task_handle;
@@ -122,6 +124,7 @@ int main() {
 
     // And fire up the tasks!
     vTaskStartScheduler();
+
 }
 
 
