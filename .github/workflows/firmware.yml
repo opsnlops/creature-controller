@@ -1,10 +1,6 @@
 name: Build firmware
 
-on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+on: [push, pull_request]
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
@@ -30,7 +26,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: raspberrypi/pico-sdk
-          ref: 1.5.1
+          ref: 2.0.0
           path: pico-sdk
           clean: false
           submodules: 'true'
@@ -38,8 +34,7 @@ jobs:
       - name: Clone FreeRTOS-Kermel
         uses: actions/checkout@v3
         with:
-          repository: FreeRTOS/FreeRTOS-Kernel
-          ref: V10.6.2
+          repository: raspberrypi/FreeRTOS-Kernel
           path: FreeRTOS-Kernel
           clean: false
           submodules: 'true'
