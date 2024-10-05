@@ -125,25 +125,80 @@ set(COMMON_SOURCES
         src/util/string_utils.c
 )
 
+#
+# Per-binary configuration
+#
+
+# Controller
+set(CONTROLLER_ADDITIONAL_SOURCES
+        src/main.c
+)
+
+set(CONTROLLER_ADDITIONAL_LIBS
+)
+
+set(CONTROLLER_ADDITIONAL_INCLUDES
+)
+
+# USBC-PD Test (usbc_pd)
+set(USBC_PD_ADDITIONAL_SOURCES
+        src/usbc_pd/main.c
+)
+
+set(USBC_PD_ADDITIONAL_LIBS
+)
+
+set(USBC_PD_ADDITIONAL_INCLUDES
+)
+
+
+
+
+
+
+
 # Function to create firmware targets
-function(create_firmware TARGET_NAME MAIN_SOURCE)
+function(create_firmware TARGET_NAME ADDITIONAL_SOURCES ADDITIONAL_LIBS ADDITIONAL_INCLUDES)
     add_executable(${TARGET_NAME}
             ${COMMON_SOURCES}
+            ${ADDITIONAL_SOURCES} # Per-target sources
             FreeRTOSConfig.h
-            ${MAIN_SOURCE}
     )
 
     pico_generate_pio_header(${TARGET_NAME} ${CMAKE_CURRENT_LIST_DIR}/src/io/uart_rx.pio OUTPUT_DIR ${CMAKE_CURRENT_LIST_DIR}/generated)
     pico_generate_pio_header(${TARGET_NAME} ${CMAKE_CURRENT_LIST_DIR}/src/io/uart_tx.pio OUTPUT_DIR ${CMAKE_CURRENT_LIST_DIR}/generated)
     pico_generate_pio_header(${TARGET_NAME} ${CMAKE_CURRENT_LIST_DIR}/src/device/ws2812.pio OUTPUT_DIR ${CMAKE_CURRENT_LIST_DIR}/generated)
 
-    target_include_directories(${TARGET_NAME} PRIVATE ${COMMON_INCLUDES} ${CMAKE_CURRENT_LIST_DIR})
-    target_link_libraries(${TARGET_NAME} ${COMMON_LIBS})
+    target_include_directories(${TARGET_NAME} PRIVATE
+            ${COMMON_INCLUDES}
+            ${ADDITIONAL_INCLUDES}
+            ${CMAKE_CURRENT_LIST_DIR}
+    )
+
+    target_link_libraries(${TARGET_NAME}
+            ${COMMON_LIBS}
+            ${ADDITIONAL_LIBS}
+    )
+
     pico_enable_stdio_usb(${TARGET_NAME} 0)
     pico_enable_stdio_uart(${TARGET_NAME} 1)
     pico_add_extra_outputs(${TARGET_NAME})
 endfunction()
 
+
+
+
+
+
 # Create firmware targets
-create_firmware("controller-${PICO_PLATFORM}" src/main.c)
-create_firmware("usbc_pd-${PICO_PLATFORM}" src/usbc_pd/main.c)
+create_firmware("controller-${PICO_PLATFORM}"
+        "${CONTROLLER_ADDITIONAL_SOURCES}"
+        "${CONTROLLER_ADDITIONAL_LIBS}"
+        "${CONTROLLER_ADDITIONAL_INCLUDES}"
+)
+
+create_firmware("usbc_pd-${PICO_PLATFORM}"
+        "${USBC_PD_ADDITIONAL_SOURCES}"
+        "${USBC_PD_ADDITIONAL_LIBS}"
+        "${USBC_PD_ADDITIONAL_INCLUDES}"
+)
