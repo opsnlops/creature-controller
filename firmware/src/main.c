@@ -34,6 +34,7 @@
 #include "usb/usb.h"
 
 #include "tasks.h"
+#include "version.h"
 
 
 volatile size_t xFreeHeapSpace;
@@ -42,8 +43,9 @@ int main() {
 
     bi_decl(bi_program_name("controller-firmware"))
     bi_decl(bi_program_description("April's Creature Workshop Controller"))
-    bi_decl(bi_program_version_string("3"))
-    bi_decl(bi_program_feature("FreeRTOS version " tskKERNEL_VERSION_NUMBER))
+    bi_decl(bi_program_version_string(CREATURE_FIRMWARE_VERSION_STRING))
+    bi_decl(bi_program_feature("FreeRTOS Version: " tskKERNEL_VERSION_NUMBER))
+    bi_decl(bi_program_feature(CREATURE_PROTOCOL_VERSION_STRING))
     bi_decl(bi_program_feature("Baud: 115200,N,8,1"))
     bi_decl(bi_program_url("https://creature.engineering/hardware/creature-controller/"))
     bi_decl(bi_1pin_with_name(POWER_PIN, "Power Relay"))
