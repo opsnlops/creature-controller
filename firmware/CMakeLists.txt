@@ -1,9 +1,6 @@
 cmake_minimum_required(VERSION 3.25)
 
-# Select the heap port.  values between 1-4 will pick a heap.
 set(FREERTOS_HEAP "4" CACHE STRING "" FORCE)
-
-# Select the native compile PORT
 set(FREERTOS_PORT "TEMPLATE" CACHE STRING "" FORCE)
 
 # Pull in the Pico SDK
@@ -13,7 +10,6 @@ include($ENV{PICO_SDK_PATH}/external/pico_sdk_import.cmake)
 if (PICO_SDK_VERSION_STRING VERSION_LESS "2.0.0")
     message(FATAL_ERROR "Raspberry Pi Pico SDK version 2.0.0 (or later) required. Your version is ${PICO_SDK_VERSION_STRING}")
 endif()
-
 
 if (NOT PICO_PLATFORM AND NOT DEFINED ENV{PICO_PLATFORM})
     message("PICO_PLATFORM not defined, defaulting to rp2040")
@@ -31,9 +27,11 @@ else()
     endif()
 endif()
 
+# Log which version we're building
+message("Building for platform ${PICO_PLATFORM}")
+
 project(firmware C CXX ASM)
 set(CMAKE_C_STANDARD 11)
-
 
 # Initialize the SDK
 pico_sdk_init()
@@ -42,13 +40,7 @@ pico_sdk_init()
 set(PICO_DEFAULT_FLOAT_IMPL pico_float_pico)
 set(PICO_DEFAULT_DOUBLE_IMPL pico_double_pico)
 
-
-# Set up our includes
-include_directories(
-        src/
-        generated/
-)
-
+# Set up common includes and libraries
 set(COMMON_LIBS
         hardware_dma
         hardware_i2c
@@ -64,10 +56,13 @@ set(COMMON_LIBS
         pico_unique_id
         pico_multicore
         pico_async_context_freertos
-        #FreeRTOS-Kernel
         FreeRTOS-Kernel-Heap4
 )
 
+set(COMMON_INCLUDES
+        src/
+        generated/
+)
 
 set(COMMON_SOURCES
         src/tasks.h
@@ -130,68 +125,25 @@ set(COMMON_SOURCES
         src/util/string_utils.c
 )
 
+# Function to create firmware targets
+function(create_firmware TARGET_NAME MAIN_SOURCE)
+    add_executable(${TARGET_NAME}
+            ${COMMON_SOURCES}
+            FreeRTOSConfig.h
+            ${MAIN_SOURCE}
+    )
 
-add_executable(firmware
-        ${COMMON_SOURCES}
-        FreeRTOSConfig.h
-        src/main.c
-        src/tasks.h
-        src/tasks.c
-)
+    pico_generate_pio_header(${TARGET_NAME} ${CMAKE_CURRENT_LIST_DIR}/src/io/uart_rx.pio OUTPUT_DIR ${CMAKE_CURRENT_LIST_DIR}/generated)
+    pico_generate_pio_header(${TARGET_NAME} ${CMAKE_CURRENT_LIST_DIR}/src/io/uart_tx.pio OUTPUT_DIR ${CMAKE_CURRENT_LIST_DIR}/generated)
+    pico_generate_pio_header(${TARGET_NAME} ${CMAKE_CURRENT_LIST_DIR}/src/device/ws2812.pio OUTPUT_DIR ${CMAKE_CURRENT_LIST_DIR}/generated)
 
+    target_include_directories(${TARGET_NAME} PRIVATE ${COMMON_INCLUDES} ${CMAKE_CURRENT_LIST_DIR})
+    target_link_libraries(${TARGET_NAME} ${COMMON_LIBS})
+    pico_enable_stdio_usb(${TARGET_NAME} 0)
+    pico_enable_stdio_uart(${TARGET_NAME} 1)
+    pico_add_extra_outputs(${TARGET_NAME})
+endfunction()
 
-
-# PIO-based UART from the Pico examples
-pico_generate_pio_header(firmware ${CMAKE_CURRENT_LIST_DIR}/src/io/uart_rx.pio OUTPUT_DIR ${CMAKE_CURRENT_LIST_DIR}/generated)
-pico_generate_pio_header(firmware ${CMAKE_CURRENT_LIST_DIR}/src/io/uart_tx.pio OUTPUT_DIR ${CMAKE_CURRENT_LIST_DIR}/generated)
-
-# PIO-base NeoPixel control 😍
-pico_generate_pio_header(firmware ${CMAKE_CURRENT_LIST_DIR}/src/device/ws2812.pio OUTPUT_DIR ${CMAKE_CURRENT_LIST_DIR}/generated)
-
-target_include_directories(firmware PRIVATE
-        .
-        ${CMAKE_CURRENT_LIST_DIR}
-)
-
-# pull in common dependencies
-target_link_libraries(firmware
-        ${COMMON_LIBS}
-)
-
-# Enable the shell over UART (which is the picoprobe!)
-pico_enable_stdio_usb(firmware 0)
-pico_enable_stdio_uart(firmware 1)
-
-# Create all of the files
-pico_add_extra_outputs(firmware)
-
-
-
-
-
-
-add_executable(usbc_pd
-        ${COMMON_SOURCES}
-        FreeRTOSConfig.h
-        src/usbc_pd/main.c
-)
-
-
-# PIO-base NeoPixel control 😍
-pico_generate_pio_header(usbc_pd ${CMAKE_CURRENT_LIST_DIR}/src/device/ws2812.pio OUTPUT_DIR ${CMAKE_CURRENT_LIST_DIR}/generated)
-
-target_include_directories(usbc_pd PRIVATE
-        .
-        ${CMAKE_CURRENT_LIST_DIR}
-)
-
-# pull in common dependencies
-target_link_libraries(usbc_pd
-        ${COMMON_LIBS}
-)
-
-pico_enable_stdio_usb(usbc_pd 0)
-pico_enable_stdio_uart(usbc_pd 1)
-
-# Create all of the files
-pico_add_extra_outputs(usbc_pd)
+# Create firmware targets
+create_firmware("controller-${PICO_PLATFORM}" src/main.c)
+create_firmware("usbc_pd-${PICO_PLATFORM}" src/usbc_pd/main.c)
