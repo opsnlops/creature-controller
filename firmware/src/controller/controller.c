@@ -17,6 +17,7 @@
 
 #include "controller-config.h"
 #include "controller.h"
+#include "version.h"
 
 
 // Stats
@@ -284,7 +285,7 @@ void send_init_request(TimerHandle_t xTimer) {
     memset(&message, '\0', USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH);
 
     snprintf(message, USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH,
-             "INIT\t%u", FIRMWARE_VERSION);
+             "INIT\t%u", PROTOCOL_VERSION);
 
     send_to_controller(message);
     debug("sent init request");

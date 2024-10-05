@@ -30,8 +30,14 @@ endif()
 # Log which version we're building
 message("Building for platform ${PICO_PLATFORM}")
 
-project(firmware C CXX ASM)
+project(creature-firmware
+        VERSION "2.0.1"
+        DESCRIPTION "Pi Pico Firmwares for April's Creatures"
+        HOMEPAGE_URL https://github.com/opsnlops/creature-controller
+        LANGUAGES C CXX ASM)
+
 set(CMAKE_C_STANDARD 11)
+
 
 # Initialize the SDK
 pico_sdk_init()
@@ -62,6 +68,7 @@ set(COMMON_LIBS
 set(COMMON_INCLUDES
         src/
         generated/
+        ${CMAKE_BINARY_DIR}/generated/
 )
 
 set(COMMON_SOURCES
@@ -125,6 +132,10 @@ set(COMMON_SOURCES
         src/util/string_utils.c
 )
 
+
+# Configure version.h from version.h.in
+configure_file(src/version.h.in ${CMAKE_BINARY_DIR}/generated/version.h)
+
 #
 # Per-binary configuration
 #
@@ -161,7 +172,7 @@ set(USBC_PD_ADDITIONAL_INCLUDES
 function(create_firmware TARGET_NAME ADDITIONAL_SOURCES ADDITIONAL_LIBS ADDITIONAL_INCLUDES)
     add_executable(${TARGET_NAME}
             ${COMMON_SOURCES}
-            ${ADDITIONAL_SOURCES} # Per-target sources
+            ${ADDITIONAL_SOURCES}
             FreeRTOSConfig.h
     )
 

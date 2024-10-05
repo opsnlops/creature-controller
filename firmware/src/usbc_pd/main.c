@@ -33,7 +33,7 @@
 #include "debug/blinker.h"
 
 #include "tasks.h"
-
+#include "version.h"
 
 volatile size_t xFreeHeapSpace;
 
@@ -41,9 +41,8 @@ int main() {
 
     bi_decl(bi_program_name("usbc_pd"))
     bi_decl(bi_program_description("April's Creature Workshop USB-C PD Controller Test"))
-    bi_decl(bi_program_version_string("1"))
-    bi_decl(bi_program_feature("FreeRTOS version " tskKERNEL_VERSION_NUMBER))
-    bi_decl(bi_program_feature("Baud: 115200,N,8,1"))
+    bi_decl(bi_program_version_string(CREATURE_FIRMWARE_VERSION_STRING))
+    bi_decl(bi_program_feature("FreeRTOS Version: " tskKERNEL_VERSION_NUMBER))
     bi_decl(bi_1pin_with_name(STATUS_LIGHTS_LOGIC_BOARD_PIN, "Status Lights for Logic Board"))
 
 
