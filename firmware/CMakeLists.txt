@@ -3,6 +3,13 @@ cmake_minimum_required(VERSION 3.25)
 set(FREERTOS_HEAP "4" CACHE STRING "" FORCE)
 set(FREERTOS_PORT "TEMPLATE" CACHE STRING "" FORCE)
 
+#set(PICO_PLATFORM rp2350)
+if (NOT PICO_PLATFORM AND NOT DEFINED ENV{PICO_PLATFORM})
+    message("PICO_PLATFORM not defined, defaulting to rp2040")
+    set(PICO_PLATFORM rp2040)
+endif()
+
+
 # Pull in the Pico SDK
 include($ENV{PICO_SDK_PATH}/external/pico_sdk_import.cmake)
 
@@ -11,10 +18,6 @@ if (PICO_SDK_VERSION_STRING VERSION_LESS "2.0.0")
     message(FATAL_ERROR "Raspberry Pi Pico SDK version 2.0.0 (or later) required. Your version is ${PICO_SDK_VERSION_STRING}")
 endif()
 
-if (NOT PICO_PLATFORM AND NOT DEFINED ENV{PICO_PLATFORM})
-    message("PICO_PLATFORM not defined, defaulting to rp2040")
-    set(PICO_PLATFORM rp2040)
-endif()
 
 # Pull in FreeRTOS from RPI directly so we get the RP2350 support
 if(PICO_PLATFORM STREQUAL "rp2040")
@@ -31,7 +34,7 @@ endif()
 message("Building for platform ${PICO_PLATFORM}")
 
 project(creature-firmware
-        VERSION "2.0.1"
+        VERSION "2.0.2"
         DESCRIPTION "Pi Pico Firmwares for April's Creatures"
         HOMEPAGE_URL https://github.com/opsnlops/creature-controller
         LANGUAGES C CXX ASM)
@@ -154,6 +157,8 @@ set(CONTROLLER_ADDITIONAL_INCLUDES
 # USBC-PD Test (usbc_pd)
 set(USBC_PD_ADDITIONAL_SOURCES
         src/usbc_pd/main.c
+        src/usbc_pd/sensortest.h
+        src/usbc_pd/sensortest.c
 )
 
 set(USBC_PD_ADDITIONAL_LIBS
@@ -162,6 +167,20 @@ set(USBC_PD_ADDITIONAL_LIBS
 set(USBC_PD_ADDITIONAL_INCLUDES
 )
 
+
+# i2c EEPROM Programmer
+set(PROGRAMMER_ADDITIONAL_SOURCES
+        src/programmer/main.c
+        src/programmer/i2c_programmer.h
+        src/programmer/i2c_programmer.c
+        src/programmer/tps25750_15v.c
+)
+
+set(PROGRAMMER_ADDITIONAL_LIBS
+)
+
+set(PROGRAMMER_ADDITIONAL_INCLUDES
+)
 
 
 
@@ -212,4 +231,10 @@ create_firmware("usbc_pd-${PICO_PLATFORM}"
         "${USBC_PD_ADDITIONAL_SOURCES}"
         "${USBC_PD_ADDITIONAL_LIBS}"
         "${USBC_PD_ADDITIONAL_INCLUDES}"
+)
+
+create_firmware("programmer-${PICO_PLATFORM}"
+        "${PROGRAMMER_ADDITIONAL_SOURCES}"
+        "${PROGRAMMER_ADDITIONAL_LIBS}"
+        "${PROGRAMMER_ADDITIONAL_INCLUDES}"
 )

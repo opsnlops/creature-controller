@@ -40,17 +40,18 @@ void __unused verbose(const char *message, ...) {
 #if LOGGING_LEVEL > 4
 
     // If the logging queue if full, stop now
-    if(!_is_safe_to_log())
+    if (!_is_safe_to_log())
         return;
 
     // Copy the arguments to a new va_list
     va_list args;
-    va_start(args, messaging);
+    va_start(args, message);
 
-    struct LogMessage lm = createMessageObject(LOG_LEVEL_VERBOSE, messaging, args);
+    struct LogMessage lm = createMessageObject(LOG_LEVEL_VERBOSE, message, args);
     va_end(args);
 
-    xQueueSendToBackFromISR(creature_log_message_queue_handle, &lm, nullptr);
+    xQueueSendToBackFromISR(creature_log_message_queue_handle, &lm, NULL);
+
 #endif
 }
 
@@ -68,8 +69,7 @@ void debug(const char *message, ...) {
     struct LogMessage lm = createMessageObject(LOG_LEVEL_DEBUG, message, args);
     va_end(args);
 
-    xQueueSendToBack(creature_log_message_queue_handle, &lm, 10);
-    //xQueueSendToBackFromISR(creature_log_message_queue_handle, &lm, NULL);
+    xQueueSendToBackFromISR(creature_log_message_queue_handle, &lm, NULL);
 
 #endif
 }

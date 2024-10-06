@@ -35,6 +35,8 @@
 #include "tasks.h"
 #include "version.h"
 
+#include "usbc_pd/sensortest.h"
+
 volatile size_t xFreeHeapSpace;
 
 int main() {
@@ -58,6 +60,10 @@ int main() {
     // Turn on the status lights
     status_lights_init();
     status_lights_start();
+
+    // Set up our sensors
+    usbpd_sensor_init();
+    usbpd_sensor_start();
 
     start_debug_blinker();
 

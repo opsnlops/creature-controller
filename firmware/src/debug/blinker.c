@@ -24,8 +24,8 @@ extern TaskHandle_t debug_blinker_task_handle;
 
 void start_debug_blinker() {
 
-    gpio_init(15);
-    gpio_set_dir(15, GPIO_OUT);
+    gpio_init(PICO_DEFAULT_LED_PIN);
+    gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
 
     xTaskCreate(debug_blinker_task,
                 "debug_blinker_task",
@@ -52,8 +52,7 @@ portTASK_FUNCTION(debug_blinker_task, pvParameters) {
                 direction = 0;
             }
 
-
-            gpio_put(15, direction);
+            gpio_put(PICO_DEFAULT_LED_PIN, direction);
             isOn = !isOn;
 
              vTaskDelay(pdMS_TO_TICKS(250));
