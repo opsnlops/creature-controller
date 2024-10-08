@@ -29,12 +29,13 @@
 #include "sensor/sensor.h"
 #include "usb/usb.h"
 
-#include "tasks.h"
 #include "types.h"
 #include "version.h"
 
 
 volatile size_t xFreeHeapSpace;
+
+portTASK_FUNCTION_PROTO(startup_task, pvParameters);
 
 int main() {
 

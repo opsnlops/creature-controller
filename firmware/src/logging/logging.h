@@ -17,6 +17,7 @@
 #define LOG_LEVEL_FATAL 0
 
 
+
 struct LogMessage {
     uint8_t level;
     char message[LOGGING_MESSAGE_MAX_LENGTH];
@@ -39,7 +40,8 @@ void __unused fatal(const char *message, ...);
 
 struct LogMessage createMessageObject(uint8_t level, const char *message, va_list args);
 
-bool _is_safe_to_log();
-
+bool is_safe_to_log();
 
 void start_log_reader();
+
+portTASK_FUNCTION_PROTO(log_queue_reader_task, pvParameters);

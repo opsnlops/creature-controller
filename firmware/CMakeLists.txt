@@ -75,10 +75,8 @@ set(COMMON_INCLUDES
 )
 
 set(COMMON_SOURCES
-        src/tasks.h
-        src/tasks.c
-        src/types.h
 
+        src/types.h
         src/debug/blinker.h
         src/debug/blinker.c
         src/debug/remote_logging.h

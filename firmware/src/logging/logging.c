@@ -8,7 +8,6 @@
 #include <queue.h>
 #include "pico/time.h"
 
-#include "tasks.h"
 #include "logging.h"
 #include "logging_api.h"
 
@@ -16,8 +15,7 @@
 #include "controller-config.h"
 
 
-extern TaskHandle_t log_queue_reader_task_handle;   // in tasks.c
-
+TaskHandle_t log_queue_reader_task_handle;
 QueueHandle_t creature_log_message_queue_handle;
 bool volatile logging_queue_exists = false;
 
@@ -29,7 +27,7 @@ void logger_init() {
     start_log_reader();
 }
 
-bool inline _is_safe_to_log() {
+bool inline is_safe_to_log() {
     return (logging_queue_exists && !xQueueIsQueueFullFromISR(creature_log_message_queue_handle));
 }
 
@@ -56,7 +54,7 @@ void debug(const char *message, ...) {
 #if LOGGING_LEVEL > 3
 
     // If the logging queue if full, stop now
-    if (!_is_safe_to_log())
+    if (!is_safe_to_log())
         return;
 
     // Copy the arguments to a new va_list
@@ -75,7 +73,7 @@ void info(const char *message, ...) {
 #if LOGGING_LEVEL > 2
 
     // If the logging queue if full, stop now
-    if (!_is_safe_to_log())
+    if (!is_safe_to_log())
         return;
 
     // Copy the arguments to a new va_list
@@ -94,7 +92,7 @@ void warning(const char *message, ...) {
 #if LOGGING_LEVEL > 1
 
     // If the logging queue if full, stop now
-    if (!_is_safe_to_log())
+    if (!is_safe_to_log())
         return;
 
     // Copy the arguments to a new va_list
@@ -113,7 +111,7 @@ void error(const char *message, ...) {
 #if LOGGING_LEVEL > 0
 
     // If the logging queue if full, stop now
-    if (!_is_safe_to_log())
+    if (!is_safe_to_log())
         return;
 
     // Copy the arguments to a new va_list
@@ -131,7 +129,7 @@ void error(const char *message, ...) {
 void __unused fatal(const char *message, ...) {
 
     // If the logging queue if full, stop now
-    if (!_is_safe_to_log())
+    if (!is_safe_to_log())
         return;
 
     // Copy the arguments to a new va_list

@@ -29,6 +29,8 @@
  */
 
 
+volatile TaskHandle_t debug_blinker_task_handle;
+
 extern volatile u64 position_messages_processed;
 extern volatile u64 uart_characters_received;
 extern volatile u64 usb_serial_characters_received;

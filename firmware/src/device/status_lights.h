@@ -18,3 +18,4 @@ u16 interpolateHue(u16 oldHue, u16 newHue, u8 totalSteps, u8 currentStep);
 // Gets the next color in a fairly random order using the golden ratio
 double getNextRandomColor(double oldColor);
 
+portTASK_FUNCTION_PROTO(status_lights_task, pvParameters);

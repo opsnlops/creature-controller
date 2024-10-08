@@ -9,12 +9,6 @@
 * Main configuration for the controller
 */
 
-
-// Just because it's funny
-#define EVER ;;
-
-
-
 #define INIT_REQUEST_TIME_MS                1000
 
 
