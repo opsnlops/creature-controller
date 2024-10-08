@@ -58,8 +58,6 @@ set(COMMON_LIBS
         hardware_pwm
         hardware_spi
         hardware_uart
-        tinyusb_device
-        tinyusb_board
         pico_stdlib
         pico_rand
         pico_unique_id
@@ -150,6 +148,8 @@ set(CONTROLLER_ADDITIONAL_SOURCES
 )
 
 set(CONTROLLER_ADDITIONAL_LIBS
+        tinyusb_device
+        tinyusb_board
 )
 
 set(CONTROLLER_ADDITIONAL_INCLUDES

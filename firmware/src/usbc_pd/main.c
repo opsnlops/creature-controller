@@ -5,9 +5,6 @@
 #include <FreeRTOS.h>
 #include <task.h>
 
-// TinyUSB
-#include "bsp/board.h"
-#include "tusb.h"
 
 #include "pico/binary_info.h"
 #include "pico/stdlib.h"
@@ -44,9 +41,6 @@ int main() {
 
     logger_init();
     debug("Logging running!");
-
-    // Set up the board
-    board_init();
 
     // Turn on the status lights
     status_lights_init();
