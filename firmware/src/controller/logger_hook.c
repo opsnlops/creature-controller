@@ -1,6 +1,4 @@
 
-
-#include "logging/logging.h"
 #include "logging/logging_api.h"
 
 #include "io/message_processor.h"
@@ -17,6 +15,8 @@
  * @param message_length the length of the message that was logged
  */
 void acw_post_logging_hook(char *message, uint8_t message_length) {
+
+    (void) message_length;
 
     // Send the message to the controller
     send_to_controller(message);

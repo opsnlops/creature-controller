@@ -21,6 +21,8 @@ volatile size_t xFreeHeapSpace;
 
 void acw_post_logging_hook(char *message, uint8_t message_length) {
 
+    (void) message_length;
+
     // Send the message to the console
     printf("%s\n", message);
 
