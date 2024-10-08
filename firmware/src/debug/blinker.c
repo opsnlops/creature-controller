@@ -7,19 +7,13 @@
 #include "pico/stdlib.h"
 #include "pico/stdio.h"
 
+#include "debug/blinker.h"
 #include "logging/logging.h"
 
-#include "debug/blinker.h"
+#include "types.h"
 
-#include "tasks.h"
-
-#include "controller-config.h"
-
+// From blinker.h
 extern TaskHandle_t debug_blinker_task_handle;
-
-
-
-
 
 
 void start_debug_blinker() {

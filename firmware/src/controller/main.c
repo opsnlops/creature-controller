@@ -12,16 +12,12 @@
 #include "bsp/board.h"
 #include "tusb.h"
 
-
-#include "freertos_hooks.h"
-
 #include "pico/binary_info.h"
 #include "pico/stdlib.h"
 
 #include "controller/controller.h"
 #include "device/power_relay.h"
 #include "device/status_lights.h"
-#include "debug/remote_logging.h"
 #include "debug/sensor_reporter.h"
 #include "debug/stats_reporter.h"
 #include "io/i2c.h"
@@ -34,6 +30,7 @@
 #include "usb/usb.h"
 
 #include "tasks.h"
+#include "types.h"
 #include "version.h"
 
 

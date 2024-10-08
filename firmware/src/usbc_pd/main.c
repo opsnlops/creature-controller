@@ -9,35 +9,30 @@
 #include "bsp/board.h"
 #include "tusb.h"
 
-
-#include "freertos_hooks.h"
-
 #include "pico/binary_info.h"
 #include "pico/stdlib.h"
 
-#include "controller/controller.h"
-#include "device/power_relay.h"
 #include "device/status_lights.h"
-#include "debug/remote_logging.h"
-#include "debug/sensor_reporter.h"
-#include "debug/stats_reporter.h"
-#include "io/i2c.h"
-#include "io/message_processor.h"
-#include "io/spi.h"
-#include "io/usb_serial.h"
-#include "io/uart_serial.h"
+
 #include "logging/logging.h"
-#include "sensor/sensor.h"
-#include "usb/usb.h"
+#include "logging/logging_api.h"
+
 
 #include "debug/blinker.h"
 
-#include "tasks.h"
 #include "version.h"
 
 #include "usbc_pd/sensortest.h"
 
 volatile size_t xFreeHeapSpace;
+
+void acw_post_logging_hook(char *message, uint8_t message_length) {
+
+    // Send the message to the console
+    printf("%s\n", message);
+
+}
+
 
 int main() {
 

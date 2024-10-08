@@ -23,11 +23,11 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName) {
     // Halt the system on a stack overflow.
     taskDISABLE_INTERRUPTS();
 
-    // Log the overflow. Replace this with your logging method.
+    // Print to the console that something really bad happened
     printf("Stack overflow in task: %s\n", pcTaskName);
 
     // Assert to halt the system
-    configASSERT(true);
+    configASSERT((volatile void *) NULL);
 }
 
 void vApplicationIdleHook(void) {

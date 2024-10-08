@@ -12,7 +12,7 @@
  * we have.
  */
 
-portTASK_FUNCTION_PROTO(debug_blinker_task, pvParameters);
+
 
 
 portTASK_FUNCTION_PROTO(log_queue_reader_task, pvParameters);           // used in logging/logging.c

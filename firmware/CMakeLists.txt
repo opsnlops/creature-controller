@@ -34,7 +34,7 @@ endif()
 message("Building for platform ${PICO_PLATFORM}")
 
 project(creature-firmware
-        VERSION "2.0.2"
+        VERSION "2.0.3"
         DESCRIPTION "Pi Pico Firmwares for April's Creatures"
         HOMEPAGE_URL https://github.com/opsnlops/creature-controller
         LANGUAGES C CXX ASM)
@@ -77,8 +77,8 @@ set(COMMON_INCLUDES
 set(COMMON_SOURCES
         src/tasks.h
         src/tasks.c
-        src/controller/controller.h
-        src/controller/controller.c
+        src/types.h
+
         src/debug/blinker.h
         src/debug/blinker.c
         src/debug/remote_logging.h
@@ -99,7 +99,6 @@ set(COMMON_SOURCES
         src/device/power_relay.c
         src/device/status_lights.h
         src/device/status_lights.c
-        src/freertos_hooks.h
         src/freertos_hooks.c
         src/io/i2c.h
         src/io/i2c.c
@@ -145,7 +144,13 @@ configure_file(src/version.h.in ${CMAKE_BINARY_DIR}/generated/version.h)
 
 # Controller
 set(CONTROLLER_ADDITIONAL_SOURCES
-        src/main.c
+
+        # The star of the show
+        src/controller/main.c
+
+        src/controller/controller.h
+        src/controller/controller.c
+        src/controller/logger_hook.c
 )
 
 set(CONTROLLER_ADDITIONAL_LIBS
@@ -157,6 +162,11 @@ set(CONTROLLER_ADDITIONAL_INCLUDES
 # USBC-PD Test (usbc_pd)
 set(USBC_PD_ADDITIONAL_SOURCES
         src/usbc_pd/main.c
+
+        # We need the controller for the status lights only
+        src/controller/controller.h
+        src/controller/controller.c
+
         src/usbc_pd/sensortest.h
         src/usbc_pd/sensortest.c
 )

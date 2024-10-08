@@ -11,6 +11,7 @@
 #include "pico/stdlib.h"
 
 #include "controller-config.h"
+#include "types.h"
 
 #include "device/pac1954.h"
 #include "logging/logging.h"
@@ -36,9 +37,7 @@ void usbpd_sensor_init() {
     info("i2c has been set up! scl: %d, sda: %d", SENSORS_I2C_SCL_PIN, SENSORS_I2C_SDA_PIN);
     i2c_setup_completed = true;
 
-
-
-    // Initialize the PAC1954s
+    // Initialize the PAC1954
     init_pac1954(I2C_USBCPD_PAC1954);
 
 }
@@ -52,7 +51,7 @@ void usbpd_sensor_start() {
             pdMS_TO_TICKS(SENSOR_I2C_TIMER_TIME_MS),    // Fire every SENSOR_TIMER_TIME_MS
             pdTRUE,                                     // Auto-reload
             (void *) 0,                                 // Timer ID (not used here)
-            usbpd_i2c_sensor_read_timer_callback              // Callback function
+            usbpd_i2c_sensor_read_timer_callback        // Callback function
     );
 
     // Make sure this gets created

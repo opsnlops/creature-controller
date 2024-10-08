@@ -10,9 +10,8 @@
 
 #include "tasks.h"
 #include "logging.h"
-#include "io/message_processor.h"
-#include "io/usb_serial.h"
-#include "usb/usb.h"
+#include "logging_api.h"
+
 
 #include "controller-config.h"
 
@@ -20,9 +19,7 @@
 extern TaskHandle_t log_queue_reader_task_handle;   // in tasks.c
 
 QueueHandle_t creature_log_message_queue_handle;
-
-
-bool logging_queue_exists = false;
+bool volatile logging_queue_exists = false;
 
 
 void logger_init() {
@@ -212,14 +209,13 @@ portTASK_FUNCTION(log_queue_reader_task, pvParameters) {
             // Format our messaging
             u32 time = to_ms_since_boot(get_absolute_time());
 
+            // Create space on the heap for the message
             char *message = (char *) pvPortMalloc(strlen(lm.message) + 33);
             memset(message, '\0', strlen(lm.message) + 33);
             snprintf(message, strlen(lm.message) + 32, "LOG\t%lu\t%s\t%s", time, levelBuffer, lm.message);
 
-            send_to_controller(message);
-#if LOGGING_LOG_VIA_PRINTF
-            printf("%s\n", message);
-#endif
+            // Allow the running application to hook in
+            acw_post_logging_hook(message, strlen(message));
 
             vPortFree(message);
 

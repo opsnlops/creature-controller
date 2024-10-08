@@ -10,6 +10,7 @@
 
 
 #include "logging/logging.h"
+#include "logging/logging_api.h"
 
 #include "debug/blinker.h"
 
@@ -21,6 +22,15 @@
 #include "usbc_pd/sensortest.h"
 
 volatile size_t xFreeHeapSpace;
+
+/** Print the message to the console */
+void acw_post_logging_hook(char *message, uint8_t message_length) {
+
+    // Send the message to the console
+    printf("%s\n", message);
+
+}
+
 
 int main() {
 

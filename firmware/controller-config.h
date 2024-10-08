@@ -3,15 +3,12 @@
 
 #include <stdint.h>
 
+#include "types.h"
+
 /**
 * Main configuration for the controller
 */
 
-
-typedef uint8_t u8;
-typedef uint16_t u16;
-typedef uint32_t u32;
-typedef uint64_t u64;
 
 // Just because it's funny
 #define EVER ;;
@@ -119,7 +116,7 @@ typedef uint64_t u64;
 #define LOGGING_LEVEL               LOG_LEVEL_DEBUG
 #define LOGGING_QUEUE_LENGTH        100
 #define LOGGING_MESSAGE_MAX_LENGTH  256
-#define LOGGING_LOG_VIA_PRINTF      1           // Add a printf() in the logger. Useful when a debugger is attached
+#define LOGGING_LOG_VIA_PRINTF      0           // Add a printf() in the logger. Useful when a debugger is attached
 
 /*
  * Message Processor Config
@@ -161,7 +158,7 @@ typedef uint64_t u64;
 #define CONTROLLER_RESET_SIGNAL_PERIOD_MS       250
 
 
-#define USE_SENSORS                             0    // Set to 1 to enable sensors
+#define USE_SENSORS                             1    // Set to 1 to enable sensors
 
 
 /*
