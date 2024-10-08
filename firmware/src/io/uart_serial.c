@@ -11,9 +11,9 @@
 #include "controller-config.h"
 
 #include "logging/logging.h"
-#include "io/message_processor.h"
 #include "io/uart_serial.h"
 
+#include "types.h"
 
 
 // Stats

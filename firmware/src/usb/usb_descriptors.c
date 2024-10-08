@@ -25,8 +25,6 @@
 
 #include <stddef.h>
 
-#include "controller-config.h"
-
 #include <FreeRTOS.h>
 
 #include "tusb.h"
@@ -35,6 +33,7 @@
 #include "pico/unique_id.h"
 
 #include "logging/logging.h"
+#include "types.h"
 
 
 #define USB_VID                     0x0666

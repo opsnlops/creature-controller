@@ -6,11 +6,9 @@
 #include "pico/stdlib.h"
 
 #include "logging/logging.h"
-#include "util/string_utils.h"
 
-
-#include "controller-config.h"
 #include "mcp3304.h"
+#include "types.h"
 
 // From spi.c
 extern volatile bool spi_setup_completed;

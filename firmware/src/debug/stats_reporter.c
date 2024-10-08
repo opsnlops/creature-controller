@@ -11,6 +11,8 @@
 #include "debug/stats_reporter.h"
 #include "io/message_processor.h"
 
+#include "types.h"
+
 extern TaskHandle_t stats_reporter_task_handle;
 
 // Things to collect

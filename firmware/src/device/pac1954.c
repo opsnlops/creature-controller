@@ -30,22 +30,16 @@
 **  USE OR OTHER DEALINGS IN THE SOFTWARE.
 ****************************************************************************/
 
-
-
-
 #include <FreeRTOS.h>
 
 #include "pico/stdio.h"
 #include "hardware/i2c.h"
-#include "util/string_utils.h"
-
-
-#include "logging/logging.h"
-
-#include "controller-config.h"
 
 #include "device/pac1954.h"
+#include "logging/logging.h"
+#include "util/string_utils.h"
 
+#include "types.h"
 
 // From i2c.c
 extern volatile bool i2c_setup_completed;

@@ -13,6 +13,7 @@
 
 #include "controller-config.h"
 #include "i2c_programmer.h"
+#include "types.h"
 
 
 // These come in from TI's programmer tool

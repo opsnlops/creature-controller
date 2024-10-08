@@ -38,6 +38,7 @@
 #include "logging/logging.h"
 
 #include "responsive_analog_read_filter.h"
+#include "types.h"
 
 analog_filter create_analog_filter(bool sleep_enable, float snap_multiplier) {
 

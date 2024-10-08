@@ -3,8 +3,7 @@
 #include <math.h>
 
 #include "colors.h"
-
-#include "controller-config.h"
+#include "types.h"
 
 /*
  * These are the same formulas I used on Second Life for many years. I'm not

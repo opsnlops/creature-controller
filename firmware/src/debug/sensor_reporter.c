@@ -14,6 +14,7 @@
 #include "io/responsive_analog_read_filter.h"
 
 #include "controller-config.h"
+#include "types.h"
 
 extern double board_temperature;
 extern analog_filter sensed_motor_position[CONTROLLER_MOTORS_PER_MODULE];

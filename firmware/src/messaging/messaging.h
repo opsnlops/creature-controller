@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "controller-config.h"
+#include "types.h"
 
 
 // Assume MAX_TOKENS is the maximum number of tokens you expect in a message

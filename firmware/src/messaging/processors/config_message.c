@@ -12,7 +12,7 @@
 #include "messaging/messaging.h"
 #include "util/string_utils.h"
 
-#include "controller-config.h"
+#include "types.h"
 
 
 extern volatile bool controller_safe_to_run;

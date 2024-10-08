@@ -13,6 +13,8 @@
 // TinyUSB
 #include "tusb.h"
 
+#include "types.h"
+
 #define BOARD_TUD_RHPORT     0
 
 // Increase stack size when debug log is enabled

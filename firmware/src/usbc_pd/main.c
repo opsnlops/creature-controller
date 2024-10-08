@@ -12,16 +12,12 @@
 #include "pico/binary_info.h"
 #include "pico/stdlib.h"
 
+#include "debug/blinker.h"
 #include "device/status_lights.h"
-
 #include "logging/logging.h"
 #include "logging/logging_api.h"
-
-
-#include "debug/blinker.h"
-
+#include "types.h"
 #include "version.h"
-
 #include "usbc_pd/sensortest.h"
 
 volatile size_t xFreeHeapSpace;

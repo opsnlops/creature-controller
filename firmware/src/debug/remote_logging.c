@@ -8,6 +8,8 @@
 #include "logging/logging.h"
 #include "debug/remote_logging.h"
 
+#include "types.h"
+
 
 TaskHandle_t debug_remote_logging_task_handle;
 

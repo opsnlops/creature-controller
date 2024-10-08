@@ -17,6 +17,7 @@
 
 #include "controller-config.h"
 #include "controller.h"
+#include "types.h"
 #include "version.h"
 
 

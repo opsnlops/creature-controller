@@ -7,6 +7,8 @@
 #include <FreeRTOS.h>
 #include <task.h>
 
+#include "types.h"
+
 
 // Keep track of the amount of free heap space
 extern volatile size_t xFreeHeapSpace;

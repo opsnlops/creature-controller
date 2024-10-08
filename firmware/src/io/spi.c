@@ -2,13 +2,12 @@
 #include "pico/stdio.h"
 
 #include "logging/logging.h"
-
-#include "controller-config.h"
-
 #include "io/spi.h"
 
+#include "controller-config.h"
+#include "types.h"
 
-
+// This is a flag to indicate that the SPI bus has been set up
 volatile bool spi_setup_completed = false;
 
 /**

@@ -4,12 +4,11 @@
 #include "pico/stdio.h"
 #include "hardware/i2c.h"
 
-
+#include "device/mcp9808.h"
 #include "logging/logging.h"
 
 #include "controller-config.h"
-
-#include "device/mcp9808.h"
+#include "types.h"
 
 /*
  * A lot of this code comes from Microchip's Arduino library for the MCP9808. I've ported it

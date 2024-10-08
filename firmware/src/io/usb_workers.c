@@ -3,7 +3,6 @@
 
 #include <FreeRTOS.h>
 #include <queue.h>
-#include <task.h>
 
 #include "controller-config.h"
 
@@ -12,9 +11,9 @@
 
 #include "logging/logging.h"
 #include "io/usb_serial.h"
-
 #include "usb/usb.h"
 
+#include "types.h"
 
 volatile u64 usb_serial_messages_received = 0L;
 volatile u64 usb_serial_messages_sent = 0L;

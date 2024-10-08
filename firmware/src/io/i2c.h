@@ -2,7 +2,7 @@
 
 #include "hardware/i2c.h"
 
-#include "controller-config.h"
+#include "types.h"
 
 void setup_i2c();
 

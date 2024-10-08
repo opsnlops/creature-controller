@@ -6,7 +6,7 @@
 #include <FreeRTOS.h>
 #include <task.h>
 
-#include "controller-config.h"
+#include "types.h"
 
 
 void usb_serial_init();

@@ -1,6 +1,4 @@
 
-
-
 #include <FreeRTOS.h>
 #include <queue.h>
 
@@ -10,7 +8,7 @@
 #include "messaging/messaging.h"
 
 #include "message_processor.h"
-
+#include "types.h"
 
 
 /**
@@ -102,6 +100,8 @@ bool send_to_controller(const char *message) {
 }
 
 
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "EndlessLoop"
 
 portTASK_FUNCTION(incoming_message_processor_task, pvParameters) {
 
@@ -118,9 +118,6 @@ portTASK_FUNCTION(incoming_message_processor_task, pvParameters) {
     }
     memset(rx_buffer, '\0', INCOMING_MESSAGE_MAX_LENGTH + 1);
 
-
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "EndlessLoop"
     for (EVER) {
 
         if (xQueueReceive(incoming_messages, rx_buffer, (TickType_t) portMAX_DELAY) == pdPASS) {
@@ -146,7 +143,8 @@ portTASK_FUNCTION(incoming_message_processor_task, pvParameters) {
 
 }
 
-
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "EndlessLoop"
 portTASK_FUNCTION(outgoing_message_processor_task, pvParameters) {
 
     debug("hello from outgoing message processor!");
@@ -204,3 +202,5 @@ portTASK_FUNCTION(outgoing_message_processor_task, pvParameters) {
     }
 
 }
+
+#pragma clang diagnostic pop

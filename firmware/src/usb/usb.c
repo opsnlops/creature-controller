@@ -1,16 +1,17 @@
 
 #include <stddef.h>
 
-#include "controller-config.h"
-
-#include <hardware/gpio.h>
-
 #include <FreeRTOS.h>
 #include <timers.h>
+
+#include <hardware/gpio.h>
 
 #include "controller/controller.h"
 #include "logging/logging.h"
 #include "usb/usb.h"
+
+#include "controller-config.h"
+#include "types.h"
 
 u32 reports_sent = 0;
 bool usb_bus_active = false;

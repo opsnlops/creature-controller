@@ -9,8 +9,7 @@
 
 #include "logging/logging.h"
 
-
-#include "controller-config.h"
+#include "types.h"
 
 
 /**

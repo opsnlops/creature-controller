@@ -3,11 +3,12 @@
 #include "pico/stdlib.h"
 #include "pico/stdio.h"
 
+#include "device/power_relay.h"
 #include "logging/logging.h"
 
-#include "controller-config.h"
 
-#include "device/power_relay.h"
+#include "controller-config.h"
+#include "types.h"
 
 void init_power_relay() {
 

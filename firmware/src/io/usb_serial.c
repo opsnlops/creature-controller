@@ -8,9 +8,10 @@
 #include "controller-config.h"
 
 #include "logging/logging.h"
-#include "io/message_processor.h"
 #include "io/usb_serial.h"
 #include "usb/usb.h"
+
+#include "types.h"
 
 
 // Stats

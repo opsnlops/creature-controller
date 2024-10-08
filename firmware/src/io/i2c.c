@@ -5,11 +5,10 @@
 #include "device/mcp9808.h"
 #include "device/pac1954.h"
 #include "logging/logging.h"
-
-#include "controller-config.h"
-
 #include "io/i2c.h"
 
+#include "controller-config.h"
+#include "types.h"
 
 volatile bool i2c_setup_completed = false;
 

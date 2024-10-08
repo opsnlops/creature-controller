@@ -1,13 +1,14 @@
 
 #pragma once
 
-#include "controller-config.h"
-
 #include <stdbool.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdint.h>
 
+
+#include "controller-config.h"
+#include "types.h"
 
 #define LOG_LEVEL_VERBOSE 5
 #define LOG_LEVEL_DEBUG 4

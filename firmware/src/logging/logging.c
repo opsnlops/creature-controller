@@ -11,8 +11,8 @@
 #include "logging.h"
 #include "logging_api.h"
 
-
 #include "controller-config.h"
+#include "types.h"
 
 
 TaskHandle_t log_queue_reader_task_handle;

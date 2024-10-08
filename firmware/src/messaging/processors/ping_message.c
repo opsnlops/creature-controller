@@ -6,6 +6,7 @@
 #include "messaging/messaging.h"
 
 #include "controller-config.h"
+#include "types.h"
 
 bool handlePingMessage(const GenericMessage *msg) {
 
