@@ -32,9 +32,15 @@
 
 volatile TaskHandle_t debug_blinker_task_handle;
 
-extern volatile u64 position_messages_processed;
-extern volatile u64 uart_characters_received;
-extern volatile u64 usb_serial_characters_received;
+volatile u64 position_messages_processed = 0UL;
+volatile u64 uart_characters_received = 0UL;
+volatile u64 usb_serial_characters_received = 0UL;
+volatile u64 uart_messages_sent = 0UL;
+volatile u64 uart_messages_received = 0UL;
+volatile u64 usb_serial_messages_sent = 0UL;
+volatile u64 usb_serial_messages_received = 0UL;
+volatile u64 number_of_pwm_wraps = 0UL;
+
 
 u8 logic_board_state_machine;
 u8 module_a_state_machine;

@@ -9,7 +9,7 @@
 
 #include "types.h"
 
-volatile u64 position_messages_processed = 0UL;
+extern volatile u64 position_messages_processed;
 extern volatile bool controller_safe_to_run;
 extern volatile bool has_first_frame_been_received;
 

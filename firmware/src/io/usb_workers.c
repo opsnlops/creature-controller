@@ -15,8 +15,8 @@
 
 #include "types.h"
 
-volatile u64 usb_serial_messages_received = 0L;
-volatile u64 usb_serial_messages_sent = 0L;
+extern volatile u64 usb_serial_messages_received;
+extern volatile u64 usb_serial_messages_sent;
 
 // Our queues
 extern QueueHandle_t usb_serial_incoming_commands;

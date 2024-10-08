@@ -22,7 +22,7 @@
 
 
 // Stats
-volatile u64 number_of_pwm_wraps = 0UL;
+extern volatile u64 number_of_pwm_wraps;
 
 /*
  * The following map is used to map motor IDs to GPIO pins!

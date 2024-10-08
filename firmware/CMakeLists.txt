@@ -75,7 +75,6 @@ set(COMMON_INCLUDES
 )
 
 set(COMMON_SOURCES
-
         src/types.h
         src/debug/blinker.h
         src/debug/blinker.c
@@ -100,32 +99,10 @@ set(COMMON_SOURCES
         src/freertos_hooks.c
         src/io/i2c.h
         src/io/i2c.c
-        src/io/message_processor.h
-        src/io/message_processor.c
-        src/io/responsive_analog_read_filter.h
-        src/io/responsive_analog_read_filter.c
-        src/io/spi.h
-        src/io/spi.c
-        src/io/uart_serial.h
-        src/io/uart_serial.c
-        src/io/usb_serial.h
-        src/io/usb_serial.c
-        src/io/usb_workers.c
         src/logging/logging.h
         src/logging/logging.c
-        src/messaging/messaging.h
-        src/messaging/messaging.c
-        src/messaging/processors/config_message.h
-        src/messaging/processors/config_message.c
-        src/messaging/processors/ping_message.h
-        src/messaging/processors/ping_message.c
-        src/messaging/processors/position_message.h
-        src/messaging/processors/position_message.c
         src/sensor/sensor.h
         src/sensor/sensor.c
-        src/usb/usb.h
-        src/usb/usb.c
-        src/usb/usb_descriptors.c
         src/util/ranges.h
         src/util/ranges.c
         src/util/string_utils.h
@@ -145,10 +122,31 @@ set(CONTROLLER_ADDITIONAL_SOURCES
 
         # The star of the show
         src/controller/main.c
-
         src/controller/controller.h
         src/controller/controller.c
         src/controller/logger_hook.c
+        src/io/message_processor.h
+        src/io/message_processor.c
+        src/io/responsive_analog_read_filter.h
+        src/io/responsive_analog_read_filter.c
+        src/io/spi.h
+        src/io/spi.c
+        src/io/uart_serial.h
+        src/io/uart_serial.c
+        src/io/usb_serial.h
+        src/io/usb_serial.c
+        src/io/usb_workers.c
+        src/messaging/messaging.h
+        src/messaging/messaging.c
+        src/messaging/processors/config_message.h
+        src/messaging/processors/config_message.c
+        src/messaging/processors/ping_message.h
+        src/messaging/processors/ping_message.c
+        src/messaging/processors/position_message.h
+        src/messaging/processors/position_message.c
+        src/usb/usb.h
+        src/usb/usb.c
+        src/usb/usb_descriptors.c
 )
 
 set(CONTROLLER_ADDITIONAL_LIBS
@@ -164,7 +162,6 @@ set(USBC_PD_ADDITIONAL_SOURCES
         # We need the controller for the status lights only
         src/controller/controller.h
         src/controller/controller.c
-
         src/usbc_pd/sensortest.h
         src/usbc_pd/sensortest.c
 )

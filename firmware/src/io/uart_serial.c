@@ -17,9 +17,9 @@
 
 
 // Stats
-volatile u64 uart_characters_received = 0L;
-volatile u64 uart_messages_received = 0L;
-volatile u64 uart_messages_sent = 0L;
+extern volatile u64 uart_characters_received;
+extern volatile u64 uart_messages_received;
+extern volatile u64 uart_messages_sent;
 
 TaskHandle_t incoming_uart_serial_reader_task_handle;
 TaskHandle_t outgoing_uart_serial_writer_task_handle;

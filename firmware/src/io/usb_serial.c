@@ -14,8 +14,8 @@
 #include "types.h"
 
 
-// Stats
-volatile u64 usb_serial_characters_received = 0L;
+// Stats (from the status_lights module)
+extern volatile u64 usb_serial_characters_received;
 
 TaskHandle_t incoming_usb_serial_reader_task_handle;
 TaskHandle_t outgoing_usb_serial_writer_task_handle;
