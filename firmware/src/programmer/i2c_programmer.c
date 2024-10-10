@@ -24,7 +24,7 @@ extern const char tps25750x_fullFlash_i2c_array[];
 TaskHandle_t programming_task_handle;
 
 // Define the EEPROM page size (check the EEPROM's datasheet)
-#define EEPROM_PAGE_SIZE 8
+#define EEPROM_PAGE_SIZE 128
 
 void start_programmer_task() {
 
@@ -46,7 +46,7 @@ void programmer_setup_i2c() {
     gpio_set_function(PROGRAMMER_SDA_PIN, GPIO_FUNC_I2C);
     gpio_set_function(PROGRAMMER_SCL_PIN, GPIO_FUNC_I2C);
 
-    i2c_init(PROGRAMMER_I2C_BUS, 100 * 1000);   // Nice and slow at 100kHz
+    i2c_init(PROGRAMMER_I2C_BUS, 400 * 1000);   // Nice and slow at 400kHz
 
     gpio_pull_up(PROGRAMMER_SDA_PIN);
     gpio_pull_up(PROGRAMMER_SCL_PIN);

@@ -178,7 +178,7 @@ set(PROGRAMMER_ADDITIONAL_SOURCES
         src/programmer/main.c
         src/programmer/i2c_programmer.h
         src/programmer/i2c_programmer.c
-        src/programmer/tps25750_15v.c
+        src/programmer/tps25750_20v_3a.c
 )
 
 set(PROGRAMMER_ADDITIONAL_LIBS
