@@ -40,7 +40,7 @@
 #include "responsive_analog_read_filter.h"
 #include "types.h"
 
-analog_filter create_analog_filter(bool sleep_enable, float snap_multiplier) {
+analog_filter create_analog_filter(bool sleep_enable, float snap_multiplier, float activity_threshold, bool edge_snap_enable) {
 
     analog_filter f = {};
 
@@ -48,8 +48,8 @@ analog_filter create_analog_filter(bool sleep_enable, float snap_multiplier) {
     f.sleep_enable = sleep_enable;
     f.snap_multiplier = snap_multiplier;
     f.analog_resolution = 4096;
-    f.activity_threshold = (float)25.0;
-    f.edge_snap_enable = true;
+    f.activity_threshold = activity_threshold;
+    f.edge_snap_enable = edge_snap_enable;
     f.error_ema = (float)0.0;
     f.sleeping = false;
 

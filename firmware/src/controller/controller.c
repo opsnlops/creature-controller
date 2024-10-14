@@ -120,7 +120,10 @@ void controller_init() {
 
     // Create the analog filters for the sensed motor positions
     for (size_t i = 0; i < CONTROLLER_MOTORS_PER_MODULE; i++) {
-        sensed_motor_position[i] = create_analog_filter(true, (float)ANALOG_READ_FILTER_SNAP_VALUE);
+        sensed_motor_position[i] = create_analog_filter(true,
+                                                        (float)ANALOG_READ_FILTER_SNAP_VALUE,
+                                                        (float)ANALOG_READ_FILTER_ACTIVITY_THRESHOLD,
+                                                        ANALOG_READ_FILTER_EDGE_SNAP_ENABLE == 1 ? true : false);
     }
     debug("created the analog filters for the sensed motor positions");
 

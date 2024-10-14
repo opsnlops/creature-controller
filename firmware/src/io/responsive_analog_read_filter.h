@@ -64,7 +64,7 @@ typedef struct {
 } analog_filter;
 
 
-analog_filter create_analog_filter(bool sleep_enable, float snap_multiplier);
+analog_filter create_analog_filter(bool sleep_enable, float snap_multiplier, float activity_threshold, bool edge_snap_enable);
 uint16_t analog_filter_get_raw_value(analog_filter* filter);
 uint16_t analog_filter_get_value(analog_filter* filter);
 bool analog_filter_has_changed(analog_filter* filter);

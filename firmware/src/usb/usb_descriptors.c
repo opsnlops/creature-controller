@@ -34,6 +34,7 @@
 
 #include "logging/logging.h"
 #include "types.h"
+#include "version.h"
 
 
 #define USB_VID                     0x0666
@@ -60,7 +61,7 @@ tusb_desc_device_t const desc_device =
 
                 .idVendor           = USB_VID,
                 .idProduct          = USB_PID,
-                .bcdDevice          = 0x0201,               // This is the version number
+                .bcdDevice          = CREATURE_FIRMWARE_BCD_DEVICE,               // This is the version number
 
                 .iManufacturer      = USB_MANUFACTURER_INDEX,
                 .iProduct           = USB_PRODUCT_INDEX,

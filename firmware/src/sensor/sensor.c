@@ -208,7 +208,7 @@ void spi_sensor_read_timer_callback(TimerHandle_t xTimer) {
 
     spi_timer_count += 1;
 
-    if(spi_timer_count % 700 == 0) {
+    if(spi_timer_count % 10 == 0) {
         debug("sensed motor positions: %u %u %u %u %u %u %u %u",
               analog_filter_get_value(&sensed_motor_position[0]),
               analog_filter_get_value(&sensed_motor_position[1]),

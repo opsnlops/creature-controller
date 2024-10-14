@@ -22,6 +22,12 @@
 #define CREATURE_FIRMWARE_VERSION_MINOR @creature-firmware_VERSION_MINOR@
 #define CREATURE_FIRMWARE_VERSION_PATCH @creature-firmware_VERSION_PATCH@
 
+// Convert the version to the BCD version that we use on USB
+#define CREATURE_FIRMWARE_BCD_DEVICE ( ((CREATURE_FIRMWARE_VERSION_MAJOR / 10) << 12) | \
+                                       ((CREATURE_FIRMWARE_VERSION_MAJOR % 10) << 8)  | \
+                                       ((CREATURE_FIRMWARE_VERSION_MINOR / 10) << 4)  | \
+                                       (CREATURE_FIRMWARE_VERSION_MINOR % 10) )
+
 #define CREATURE_FIRMWARE_VERSION_STRING \
     TOSTRING(CREATURE_FIRMWARE_VERSION_MAJOR) "." \
     TOSTRING(CREATURE_FIRMWARE_VERSION_MINOR) "." \
