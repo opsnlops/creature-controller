@@ -60,7 +60,7 @@ bool handleConfigMessage(const GenericMessage *msg) {
             xTimerStart(controller_init_request_timer, 0);
             return false;
         }
-        debug("output_position: %s", output_position);
+        verbose("output_position: %s", output_position);
 
         char *min_us_str = strtok_r(NULL, " ", &temp_token);
         if (min_us_str == NULL) {
@@ -74,7 +74,7 @@ bool handleConfigMessage(const GenericMessage *msg) {
             xTimerStart(controller_init_request_timer, 0);
             return false;
         }
-        debug("min_us: %u", min_us);
+        verbose("min_us: %u", min_us);
 
 
         char *max_us_str = strtok_r(NULL, " ", &temp_token);
@@ -89,7 +89,7 @@ bool handleConfigMessage(const GenericMessage *msg) {
             xTimerStart(controller_init_request_timer, 0);
             return false;
         }
-        debug("max_us: %u", max_us);
+        verbose("max_us: %u", max_us);
 
 
         // Ask the controller to configure the servo

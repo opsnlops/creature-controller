@@ -106,18 +106,14 @@
 #define configSUPPORT_PICO_SYNC_INTEROP         1
 #define configSUPPORT_PICO_TIME_INTEROP         1
 
-/* RP2350 Stuff */
+/* RP2350 specific */
 #define configENABLE_FPU                        1
 #define configENABLE_MPU                        0
-#define configTOTAL_MPU_REGIONS                                   8
-#define configENABLE_MVE                  0
-
+#define configTOTAL_MPU_REGIONS                 8
+#define configENABLE_MVE                        0
 #define configENABLE_TRUSTZONE                  0
-#define configRUN_FREERTOS_SECURE_ONLY    0
-#define secureconfigMAX_SECURE_CONTEXTS        5
-
-
-
+#define configRUN_FREERTOS_SECURE_ONLY          1
+#define secureconfigMAX_SECURE_CONTEXTS         5
 
 #define configPRIO_BITS 3 /* 8 priority levels */
 

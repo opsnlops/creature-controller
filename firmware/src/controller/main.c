@@ -111,6 +111,10 @@ int main() {
 
     // Fire up the sensor reporter
     start_sensor_reporter();
+#else
+    // Mark the build as not having sensor enabled
+    warning("   *** NOTE: Sensors are disabled in this build! ***");
+    bi_decl(bi_program_feature(" ->> *** NOTE: Sensors have been disabled in this build *** <<-"))
 #endif
 
     // Queue up the startup task for right after the scheduler starts

@@ -123,12 +123,12 @@ u16 mcp9808_get_resolution(i2c_inst_t *i2c, u8 address) {
 
 void mcp9808_set_resolution(i2c_inst_t *i2c, u8 address, mcp9808_res_t resolution) {
 
-        configASSERT(i2c_setup_completed);
+    configASSERT(i2c_setup_completed);
 
-        u16 config = mcp9808_read_register(i2c, address, MCP9808_POINTER_CONFIG);
-        config = config & 0xFF9F; // Clear resolution bits
-        config = config | (resolution << 5);
+    u16 config = mcp9808_read_register(i2c, address, MCP9808_POINTER_CONFIG);
+    config = config & 0xFF9F; // Clear resolution bits
+    config = config | (resolution << 5);
     mcp9808_write_register(i2c, address, MCP9808_POINTER_CONFIG, config);
 
-        debug("Set mcp9808 resolution to %d", resolution);
+    debug("Set mcp9808 resolution to %d", resolution);
 }

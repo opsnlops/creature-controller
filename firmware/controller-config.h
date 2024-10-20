@@ -152,7 +152,17 @@
 #define CONTROLLER_RESET_SIGNAL_PERIOD_MS       250
 
 
-#define USE_SENSORS                             1    // Set to 1 to enable sensors
+//
+// Should we use the sensors?
+//
+//  If the sensors are enabled, but not connected, there's going to be an assertion
+//  that gets thrown. This is entirely on purpose; if a board is suppose to have
+//  sensors, but doesn't, we want to know about it.
+//
+//  If sensors are disabled, a warning will be generated at startup, and the binary
+//  will be marked as not having sensors enabled. (so it can be read in picotool)
+//
+#define USE_SENSORS 1
 
 
 /*
@@ -170,6 +180,8 @@
 #define SENSORS_SPI_RX_PIN                      20
 #define SENSORS_SPI_CS_PIN                      21
 
+// The smaller the number, the more often we log
+#define SENSORS_SPI_LOG_CYCLES                  2048
 
 #define SENSOR_I2C_TIMER_TIME_MS                200
 #define SENSOR_SPI_TIMER_TIME_MS                50

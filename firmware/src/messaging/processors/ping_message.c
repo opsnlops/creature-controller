@@ -10,7 +10,7 @@
 
 bool handlePingMessage(const GenericMessage *msg) {
 
-    debug("handling ping message");
+    verbose("handling ping message");
 
     // Look at the time
     debug("received ping with time: %s", msg->tokens[0]);
@@ -23,7 +23,7 @@ bool handlePingMessage(const GenericMessage *msg) {
              "PONG\t%lu", to_ms_since_boot(get_absolute_time()));
 
     send_to_controller(message);
-    debug("sent back a pong");
+    verbose("sent back a pong");
 
     return true;
 
