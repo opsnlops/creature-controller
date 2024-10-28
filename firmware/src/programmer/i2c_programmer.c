@@ -15,79 +15,49 @@
 #include "i2c_programmer.h"
 #include "types.h"
 
-
-// These come in from TI's programmer tool
-extern int gSizeFullFlashArray;
-extern const char tps25750x_fullFlash_i2c_array[];
-
 // Our task handle
 TaskHandle_t programming_task_handle;
 
 // Define the EEPROM page size (check the EEPROM's datasheet)
-#define EEPROM_PAGE_SIZE 128
+#define EEPROM_PAGE_SIZE 64
 
-void start_programmer_task() {
+extern u8* incoming_data_buffer;
+extern u32 incomingBufferIndex;
 
-
-    xTaskCreate(i2c_programmer_task,
-                "i2c_programmer_task",
-                1024,
-                NULL,
-                1,
-                &programming_task_handle);
-}
+// What state are we in?
+extern enum ProgrammerState programmer_state;
+extern u32 program_size;
 
 
 void programmer_setup_i2c() {
-
 
     debug("Configuring I2C");
 
     gpio_set_function(PROGRAMMER_SDA_PIN, GPIO_FUNC_I2C);
     gpio_set_function(PROGRAMMER_SCL_PIN, GPIO_FUNC_I2C);
 
-    i2c_init(PROGRAMMER_I2C_BUS, 400 * 1000);   // Nice and slow at 400kHz
+    i2c_init(PROGRAMMER_I2C_BUS, 100 * 1000);   // Nice and slow at 100kHz
 
     gpio_pull_up(PROGRAMMER_SDA_PIN);
     gpio_pull_up(PROGRAMMER_SCL_PIN);
 
-    debug("I2C configured at %uHz", SENSORS_I2C_FREQ);
+    debug("I2C configured at %uHz", 100000);
 
 }
 
-/**
- * This runs as a task so the logger is available!
- */
-portTASK_FUNCTION(i2c_programmer_task, pvParameters) {
-
+void write_incoming_buffer_to_eeprom() {
 
     info("Programming I2C EEPROM");
-    debug("There are %u bytes to program", gSizeFullFlashArray);
+    debug("There are %u bytes to program", program_size);
 
     // Write the full flash array to the EEPROM
-    i2c_eeprom_write(PROGRAMMER_I2C_BUS, PROGRAMMER_I2C_ADDR, 0, tps25750x_fullFlash_i2c_array, gSizeFullFlashArray);
+    i2c_eeprom_write(PROGRAMMER_I2C_BUS, PROGRAMMER_I2C_ADDR, 0, incoming_data_buffer, program_size);
     info("I2C EEPROM programmed");
 
-
-    // Verify the data written to EEPROM
-    debug("Verifying EEPROM data");
-    bool result = verify_eeprom_data(PROGRAMMER_I2C_BUS, PROGRAMMER_I2C_ADDR, tps25750x_fullFlash_i2c_array, gSizeFullFlashArray);
-
-    if (result) {
-        info("All data matches!");
-    } else {
-        error(" ****** WARNING: Data verification failed! ******");
-    }
-
-    // Remove ourselves from the scheduler
-    info("I2C EEPROM programming task ending now! Byyye!");
-    vTaskDelete(NULL);
 }
 
 
-
-
-void i2c_eeprom_write(i2c_inst_t *i2c, uint8_t eeprom_addr, uint16_t mem_addr, const char *data, size_t len) {
+void i2c_eeprom_write(i2c_inst_t *i2c, uint8_t eeprom_addr, uint16_t mem_addr, const u8 *data, size_t len) {
 
     debug("Writing %u bytes to EEPROM at address 0x%02X", len, eeprom_addr);
 
@@ -122,13 +92,13 @@ void i2c_eeprom_write(i2c_inst_t *i2c, uint8_t eeprom_addr, uint16_t mem_addr, c
         }
 
 
-        // Wait for the EEPROM to complete the write cycle (typically ~5ms)
-        vTaskDelay(pdMS_TO_TICKS(5));
+        // Wait for the EEPROM to complete the write cycle (typically ~5ms, but let's go slow)
+        vTaskDelay(pdMS_TO_TICKS(15));
     }
 }
 
 
-void print_eeprom_contents(const uint8_t *data, size_t len) {
+void print_eeprom_contents(const u8 *data, size_t len) {
 
     // Make sure we're not trying to print nothing
     if(data == NULL || len == 0) {
@@ -169,6 +139,8 @@ void i2c_eeprom_read(i2c_inst_t *i2c, uint8_t eeprom_addr, uint16_t mem_addr, ui
     while (len > 0) {
         size_t read_len = len > EEPROM_PAGE_SIZE ? EEPROM_PAGE_SIZE : len;
 
+        verbose("reading %u bytes starting at address 0x%02X", read_len, mem_addr);
+
         // Write the memory address we want to start reading from
         uint8_t addr_buffer[2] = {(uint8_t)((mem_addr >> 8) & 0xFF), (uint8_t)(mem_addr & 0xFF)};
         i2c_write_blocking(i2c, eeprom_addr, addr_buffer, 2, true);  // true means keep the bus active
@@ -183,13 +155,24 @@ void i2c_eeprom_read(i2c_inst_t *i2c, uint8_t eeprom_addr, uint16_t mem_addr, ui
     }
 }
 
-bool verify_eeprom_data(i2c_inst_t *i2c, uint8_t eeprom_addr, const char *expected_data, size_t len) {
+bool verify_eeprom_data(i2c_inst_t *i2c, uint8_t eeprom_addr, const u8 *expected_data, size_t len, char* result, size_t result_len) {
+
+    debug("Verifying EEPROM data, length: %u", len);
 
     // Use the old goto trick to make cleanup easier since we're allocating memory
-    bool returnVal;
+    bool returnVal = false;
 
     // Allocate a buffer to read the data back
+    debug("Allocating memory for read buffer");
+    vTaskDelay(pdMS_TO_TICKS(10));
     u8* read_data = (u8*)pvPortMalloc(len);    // An assert will be thrown if this fails
+
+
+    if(read_data == NULL) {
+        error("Failed to allocate memory for read buffer");
+        snprintf(result, result_len, "ERR Failed to allocate memory for read buffer");
+        goto end;
+    }
 
     // Read back the entire EEPROM data
     debug("Reading %u bytes from EEPROM at address 0x%02X", len, eeprom_addr);
@@ -209,8 +192,9 @@ bool verify_eeprom_data(i2c_inst_t *i2c, uint8_t eeprom_addr, const char *expect
         verbose("Comparing byte %u", i);
 
         if (read_data[i] != (uint8_t)expected_data[i]) {
-            warning("Mismatch at byte %zu: expected 0x%02X, got 0x%02X", i, (uint8_t)expected_data[i], read_data[i]);
 
+            snprintf(result, result_len, "ERR Mismatch at byte %zu: expected 0x%02X, got 0x%02X", i, (uint8_t)expected_data[i], read_data[i]);
+            warning("Mismatch at byte %zu: expected 0x%02X, got 0x%02X", i, (uint8_t)expected_data[i], read_data[i]);
             returnVal = false;
             goto end;
         }
@@ -218,6 +202,7 @@ bool verify_eeprom_data(i2c_inst_t *i2c, uint8_t eeprom_addr, const char *expect
 
     // Woohoo! Everything matches
     info("EEPROM data verified successfully!");
+    snprintf(result, result_len, "OK Data verified successfully!");
     returnVal = true;
     goto end;
 

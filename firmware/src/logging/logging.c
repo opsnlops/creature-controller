@@ -35,7 +35,7 @@ void __unused verbose(const char *message, ...) {
 #if LOGGING_LEVEL > 4
 
     // If the logging queue if full, stop now
-    if (!_is_safe_to_log())
+    if (!is_safe_to_log())
         return;
 
     // Copy the arguments to a new va_list

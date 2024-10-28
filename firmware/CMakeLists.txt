@@ -34,7 +34,7 @@ endif()
 message("Building for platform ${PICO_PLATFORM}")
 
 project(creature-firmware
-        VERSION "3.0.1"
+        VERSION "3.0.2"
         DESCRIPTION "Pi Pico Firmwares for April's Creatures"
         HOMEPAGE_URL https://github.com/opsnlops/creature-controller
         LANGUAGES C CXX ASM)
@@ -178,10 +178,18 @@ set(PROGRAMMER_ADDITIONAL_SOURCES
         src/programmer/main.c
         src/programmer/i2c_programmer.h
         src/programmer/i2c_programmer.c
-        src/programmer/tps25750_20v_3a.c
+        src/programmer/shell.h
+        src/programmer/shell.c
+        src/programmer/usb.h
+        src/programmer/usb.c
+        src/programmer/usb_descriptors.c
+        src/programmer/watchdog.h
+        src/programmer/watchdog.c
 )
 
 set(PROGRAMMER_ADDITIONAL_LIBS
+        tinyusb_device
+        tinyusb_board
 )
 
 set(PROGRAMMER_ADDITIONAL_INCLUDES
