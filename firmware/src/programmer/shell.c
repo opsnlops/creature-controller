@@ -26,6 +26,8 @@
 
 TaskHandle_t shell_task_handle = NULL;
 
+extern volatile size_t xFreeHeapSpace;
+
 extern u8* incoming_data_buffer;
 extern u32 incomingBufferIndex;
 
@@ -85,8 +87,14 @@ void handle_shell_command(u8 *buffer) {
             send_response(help_text);
 
             char help_buffer[OUTGOING_RESPONSE_BUFFER_SIZE];
+
+
             memset(help_buffer, '\0', OUTGOING_RESPONSE_BUFFER_SIZE);
-            snprintf(help_buffer, OUTGOING_RESPONSE_BUFFER_SIZE, "\nThis is version %s.\n", CREATURE_FIRMWARE_VERSION_STRING);
+            snprintf(help_buffer, OUTGOING_RESPONSE_BUFFER_SIZE, "\nFree heap: %u bytes\n", xFreeHeapSpace);
+            send_response(help_buffer);
+
+            memset(help_buffer, '\0', OUTGOING_RESPONSE_BUFFER_SIZE);
+            snprintf(help_buffer, OUTGOING_RESPONSE_BUFFER_SIZE, "This is version %s.\n", CREATURE_FIRMWARE_VERSION_STRING);
             send_response(help_buffer);
 
             reset_request_buffer();

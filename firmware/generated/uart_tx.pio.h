@@ -14,7 +14,7 @@
 
 #define uart_tx_wrap_target 0
 #define uart_tx_wrap 3
-#define uart_tx_pio_version 0
+#define uart_tx_pio_version 1
 
 static const uint16_t uart_tx_program_instructions[] = {
             //     .wrap_target
@@ -30,7 +30,7 @@ static const struct pio_program uart_tx_program = {
     .instructions = uart_tx_program_instructions,
     .length = 4,
     .origin = -1,
-    .pio_version = 0,
+    .pio_version = 1,
 #if PICO_PIO_VERSION > 0
     .used_gpio_ranges = 0x0
 #endif
