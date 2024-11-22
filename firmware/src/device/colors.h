@@ -1,7 +1,7 @@
 
 #pragma once
 
-#include "controller-config.h"
+#include "controller/config.h"
 
 // Let's define RGB and HSV as structs to make this easier
 typedef struct {

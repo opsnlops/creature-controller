@@ -8,7 +8,7 @@
 #include "hardware/gpio.h"
 #include "hardware/uart.h"
 
-#include "controller-config.h"
+#include "controller/config.h"
 
 #include "logging/logging.h"
 #include "io/uart_serial.h"

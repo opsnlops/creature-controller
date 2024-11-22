@@ -3,7 +3,7 @@
 
 #include "hardware/spi.h"
 
-#include "controller-config.h"
+#include "controller/config.h"
 
 
 

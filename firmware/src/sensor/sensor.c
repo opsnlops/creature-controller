@@ -16,7 +16,7 @@
 #include "io/responsive_analog_read_filter.h"
 #include "logging/logging.h"
 
-#include "controller-config.h"
+#include "controller/config.h"
 #include "sensor.h"
 #include "types.h"
 

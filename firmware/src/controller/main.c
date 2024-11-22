@@ -3,7 +3,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-#include "controller-config.h"
+#include "config.h"
 
 #include <FreeRTOS.h>
 #include <task.h>

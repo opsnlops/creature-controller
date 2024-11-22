@@ -13,7 +13,7 @@
 #include <timers.h>
 
 
-#include "controller-config.h"
+#include "config.h"
 
 // The max number of motors per module (0, 1, 2, 3)
 #define CONTROLLER_MOTORS_PER_MODULE 8

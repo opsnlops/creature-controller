@@ -5,7 +5,7 @@
 #include <queue.h>
 #include <task.h>
 
-#include "controller-config.h"
+#include "controller/config.h"
 
 #include "logging/logging.h"
 #include "io/usb_serial.h"

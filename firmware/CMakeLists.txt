@@ -122,6 +122,7 @@ set(CONTROLLER_ADDITIONAL_SOURCES
 
         # The star of the show
         src/controller/main.c
+        src/controller/config.h
         src/controller/controller.h
         src/controller/controller.c
         src/controller/logger_hook.c

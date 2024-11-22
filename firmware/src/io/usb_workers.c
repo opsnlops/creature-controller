@@ -4,7 +4,7 @@
 #include <FreeRTOS.h>
 #include <queue.h>
 
-#include "controller-config.h"
+#include "controller/config.h"
 
 #include "pico/stdlib.h"
 #include "pico/stdio.h"

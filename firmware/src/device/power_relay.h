@@ -4,7 +4,7 @@
 #include "pico/stdlib.h"
 #include "pico/stdio.h"
 
-#include "controller-config.h"
+#include "controller/config.h"
 
 /**
  * This is a simple abstraction of the power relay on the controller power board!

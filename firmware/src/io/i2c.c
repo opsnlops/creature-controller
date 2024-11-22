@@ -7,7 +7,7 @@
 #include "logging/logging.h"
 #include "io/i2c.h"
 
-#include "controller-config.h"
+#include "controller/config.h"
 #include "types.h"
 
 volatile bool i2c_setup_completed = false;

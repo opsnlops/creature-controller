@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include "controller-config.h"
+#include "controller/config.h"
 #include "types.h"
 
 

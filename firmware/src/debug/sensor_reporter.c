@@ -13,7 +13,7 @@
 #include "io/message_processor.h"
 #include "io/responsive_analog_read_filter.h"
 
-#include "controller-config.h"
+#include "controller/config.h"
 #include "types.h"
 
 extern double board_temperature;

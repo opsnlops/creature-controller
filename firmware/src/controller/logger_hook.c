@@ -5,7 +5,7 @@
 
 #include "io/message_processor.h"
 
-#include "controller-config.h"
+#include "config.h"
 #include "types.h"
 
 

@@ -7,7 +7,7 @@
 #include "logging/logging.h"
 
 
-#include "controller-config.h"
+#include "controller/config.h"
 #include "types.h"
 
 void init_power_relay() {

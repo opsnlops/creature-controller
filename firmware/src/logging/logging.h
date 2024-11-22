@@ -9,7 +9,7 @@
 #include <FreeRTOS.h>
 #include <task.h>
 
-#include "controller-config.h"
+#include "controller/config.h"
 #include "types.h"
 
 #define LOG_LEVEL_VERBOSE 5

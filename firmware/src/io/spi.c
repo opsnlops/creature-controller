@@ -4,7 +4,7 @@
 #include "logging/logging.h"
 #include "io/spi.h"
 
-#include "controller-config.h"
+#include "controller/config.h"
 #include "types.h"
 
 // This is a flag to indicate that the SPI bus has been set up

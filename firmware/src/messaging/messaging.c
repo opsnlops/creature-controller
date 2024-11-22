@@ -8,7 +8,7 @@
 #include "messaging/messaging.h"
 #include "util/string_utils.h"
 
-#include "controller-config.h"
+#include "controller/config.h"
 #include "types.h"
 
 // Various handlers

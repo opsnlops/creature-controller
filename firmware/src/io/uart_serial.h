@@ -10,7 +10,7 @@
 #include "logging/logging.h"
 
 
-#include "controller-config.h"
+#include "controller/config.h"
 
 void uart_serial_init();
 void uart_serial_start();

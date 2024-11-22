@@ -11,7 +11,7 @@
 #include "usb/usb.h"
 
 #include "config.h"
-#include "controller-config.h"
+#include "controller/config.h"
 #include "shell.h"
 #include "types.h"
 #include "usb.h"

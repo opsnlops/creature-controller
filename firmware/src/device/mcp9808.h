@@ -7,7 +7,7 @@
 #include "logging/logging.h"
 
 
-#include "controller-config.h"
+#include "controller/config.h"
 
 
 // Reference: https://github.com/microchip-pic-avr-solutions/mcp9808_arduino_driver/blob/main/src/mcp9808.cpp

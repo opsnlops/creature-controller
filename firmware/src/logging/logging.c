@@ -11,7 +11,7 @@
 #include "logging.h"
 #include "logging_api.h"
 
-#include "controller-config.h"
+#include "controller/config.h"
 #include "types.h"
 
 

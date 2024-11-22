@@ -10,7 +10,7 @@
 #include "logging/logging.h"
 
 
-#include "controller-config.h"
+#include "controller/config.h"
 
 // PAC1954 Register addresses
 #define PAC1954_REFRESH_CMD 0x00

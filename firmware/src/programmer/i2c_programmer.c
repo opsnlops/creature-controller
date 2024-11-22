@@ -11,7 +11,7 @@
 
 #include "logging/logging.h"
 
-#include "controller-config.h"
+#include "controller/config.h"
 #include "i2c_programmer.h"
 #include "types.h"
 

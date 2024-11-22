@@ -1,7 +1,7 @@
 
 #pragma once
 
-#include "controller-config.h"
+#include "controller/config.h"
 
 #include "pico/double.h"
 

@@ -10,7 +10,7 @@
 #include "hardware/spi.h"
 #include "pico/stdlib.h"
 
-#include "controller-config.h"
+#include "controller/config.h"
 #include "types.h"
 
 #include "device/pac1954.h"
