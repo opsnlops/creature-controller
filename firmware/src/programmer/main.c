@@ -21,7 +21,7 @@
 #include "types.h"
 #include "usb.h"
 #include "version.h"
-#include "watchdog.h"
+#include "watchdog/watchdog.h"
 
 volatile size_t xFreeHeapSpace;
 

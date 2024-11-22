@@ -22,7 +22,7 @@
 #include "types.h"
 #include "usb.h"
 #include "version.h"
-#include "watchdog.h"
+#include "watchdog/watchdog.h"
 
 TaskHandle_t shell_task_handle = NULL;
 

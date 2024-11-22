@@ -5,7 +5,7 @@
 #include <FreeRTOS.h>
 #include <timers.h>
 
-#include "config.h"
+#include "programmer/config.h"
 #include "logging/logging.h"
 #include "watchdog.h"
 

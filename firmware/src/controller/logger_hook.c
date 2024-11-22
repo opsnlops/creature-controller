@@ -1,4 +1,6 @@
 
+#include <stdio.h>
+
 #include "logging/logging_api.h"
 
 #include "io/message_processor.h"

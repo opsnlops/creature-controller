@@ -28,6 +28,7 @@
 #include "logging/logging.h"
 #include "sensor/sensor.h"
 #include "usb/usb.h"
+#include "watchdog/watchdog.h"
 
 #include "types.h"
 #include "version.h"
@@ -70,6 +71,13 @@ int main() {
 
     logger_init();
     debug("Logging running!");
+
+    // Log loudly if we were reset by the watchdog
+    if (watchdog_caused_reboot()) {
+        warning("*** Last reset was caused by the watchdog timer! ***");
+    } else {
+        debug("clean boot, not triggered by watchdog");
+    }
 
     // Set up the board
     board_init();
@@ -125,6 +133,9 @@ int main() {
                 NULL,
                 1,
                 &startup_task_handle);
+
+    // Start the watchdog timer so we reboot if we hang
+    start_watchdog_timer();
 
     // And fire up the tasks!
     vTaskStartScheduler();

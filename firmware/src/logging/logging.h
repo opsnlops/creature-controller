@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#include <FreeRTOS.h>
+#include <task.h>
 
 #include "controller-config.h"
 #include "types.h"
