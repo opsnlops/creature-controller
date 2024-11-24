@@ -83,11 +83,12 @@ void handle_shell_command(u8 *buffer) {
 
         case 'H':
             info("help command");
-            const char *help_text = "\nB - Burn\nV - Verify\nR - Reboot\nL##### - Load # bytes\nH - Help";
-            send_response(help_text);
+            const char *help_text0 = "\nI - Info in machine-readable format\nB - Burn\nV - Verify";
+            const char *help_text1 = "R - Reboot\nL##### - Load # bytes\n<ESC> - Reset Request Buffer\nH - Help";
+            send_response(help_text0);
+            send_response(help_text1);
 
             char help_buffer[OUTGOING_RESPONSE_BUFFER_SIZE];
-
 
             memset(help_buffer, '\0', OUTGOING_RESPONSE_BUFFER_SIZE);
             snprintf(help_buffer, OUTGOING_RESPONSE_BUFFER_SIZE, "\nFree heap: %u bytes\n", xFreeHeapSpace);
@@ -99,12 +100,29 @@ void handle_shell_command(u8 *buffer) {
 
             reset_request_buffer();
             break;
+
+        case 'I':
+            info("info command");
+
+            char info_buffer[OUTGOING_RESPONSE_BUFFER_SIZE];
+
+            memset(info_buffer, '\0', OUTGOING_RESPONSE_BUFFER_SIZE);
+            snprintf(info_buffer, OUTGOING_RESPONSE_BUFFER_SIZE, "{\"version\": \"%s\", \"free_heap\": %u, \"uptime\": %lu}",
+                     CREATURE_FIRMWARE_VERSION_STRING,
+                     xFreeHeapSpace,
+                     to_ms_since_boot(get_absolute_time()));
+            send_response(info_buffer);
+
+            reset_request_buffer();
+            break;
+
         case 'R':
             info("rebooting...");
             send_response("BYE!");
             vTaskDelay(pdMS_TO_TICKS(30)); // Give the response time to send
             reboot();
             break;
+
         case 'L':
             info("loading data...");
 
@@ -159,6 +177,60 @@ void handle_shell_command(u8 *buffer) {
             reset_request_buffer();
             break;
 
+//        case 'D':
+//            info("loading data...");
+//
+//            // Move the buffer pointer to the start of the data
+//            char *ending_pointer;
+//            u8 *data = buffer + 1;
+//            long size = strtol((char*)data, &ending_pointer, 10);
+//
+//            // Check for any errors during conversion
+//            if ((errno == ERANGE && (size == LONG_MAX || size == LONG_MIN)) || size > UINT32_MAX) {
+//                info("Conversion error occurred: out of range");
+//                send_response("ERR Size is out of range");
+//                reset_request_buffer();
+//                break;
+//            }
+//
+//            if (*ending_pointer != '\0') {
+//                warning("Conversion error: non-numeric characters found: %s\n", ending_pointer);
+//                send_response("ERR Size is non-numeric");
+//                reset_request_buffer();
+//                break;
+//            }
+//
+//            program_size = (u32)size;
+//            debug("program size: %u", program_size);
+//
+//            if(program_size == 0) {
+//                warning("Conversion error: size is zero");
+//                send_response("ERR Size is zero");
+//                reset_request_buffer();
+//                break;
+//            }
+//
+//            if(program_size > INCOMING_BUFFER_SIZE) {
+//                warning("Conversion error: size is too large");
+//
+//                char response[OUTGOING_RESPONSE_BUFFER_SIZE];
+//                memset(response, '\0', OUTGOING_RESPONSE_BUFFER_SIZE);
+//                snprintf(response, OUTGOING_RESPONSE_BUFFER_SIZE, "ERR Size too large: %lu (max is %lu)",
+//                         program_size,
+//                         (u32)INCOMING_BUFFER_SIZE);
+//
+//                send_response(response);
+//                reset_request_buffer();
+//                break;
+//            }
+//
+//            // Reset the buffer and switch to the FILLING_BUFFER state
+//            reset_incoming_buffer();
+//            programmer_state = FILLING_BUFFER;
+//            send_response("GO_AHEAD");
+//            reset_request_buffer();
+//            break;
+
         default:
             warning("unknown command: %s", buffer);
 
@@ -174,6 +246,10 @@ void handle_shell_command(u8 *buffer) {
 
 
 void terminate_shell() {
+
+    // Clean up the buffers
+    reset_request_buffer();
+    reset_incoming_buffer();
 
     if (shell_task_handle != NULL) {
         vTaskDelete(shell_task_handle);
@@ -311,8 +387,15 @@ void tud_cdc_rx_cb(__attribute__((unused)) uint8_t itf) {
                     break;
 
                 case IDLE:
+
+                    if (ch == 0x1B) {
+                        debug("resetting request buffer");
+                        reset_request_buffer();
+                        break;
+                    }
+
                     // Check for newline character
-                    if (ch == 0x0A) {
+                    else if (ch == 0x0A) {
 
                         verbose("it's the blessed character");
 
