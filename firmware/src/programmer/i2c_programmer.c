@@ -208,6 +208,7 @@ bool verify_eeprom_data(i2c_inst_t *i2c, uint8_t eeprom_addr, const u8 *expected
 
 
     end:
+
     // Release the buffer
     if(read_data != NULL) {
         vPortFree(read_data);

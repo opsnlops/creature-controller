@@ -267,6 +267,10 @@ void launch_shell() {
         return;
     }
 
+    // Clean up the buffers
+    reset_request_buffer();
+    reset_incoming_buffer();
+
     xTaskCreate(shell_task,
                 "shell_task",
                 configMINIMAL_STACK_SIZE + 256,
@@ -355,6 +359,8 @@ void tud_cdc_rx_cb(__attribute__((unused)) uint8_t itf) {
         for (u32 i = 0; i < readCount; ++i) {
             char ch = tempBuffer[i];
 
+            debug("character: %c", ch);
+
 #if LOGGING_LEVEL > 4
             // If it's not alphanumeric print the character in hex
             if (isalnum((unsigned char)ch)) {
@@ -391,6 +397,7 @@ void tud_cdc_rx_cb(__attribute__((unused)) uint8_t itf) {
                     if (ch == 0x1B) {
                         debug("resetting request buffer");
                         reset_request_buffer();
+                        reset_incoming_buffer(); // maybe?
                         break;
                     }
 

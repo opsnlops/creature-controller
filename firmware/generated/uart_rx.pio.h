@@ -18,10 +18,10 @@
 
 static const uint16_t uart_rx_mini_program_instructions[] = {
             //     .wrap_target
-    0x2020, //  0: wait   0 pin, 0                   
+    0x2020, //  0: wait   0 pin, 0
     0xea27, //  1: set    x, 7                   [10]
-    0x4001, //  2: in     pins, 1                    
-    0x0642, //  3: jmp    x--, 2                 [6] 
+    0x4001, //  2: in     pins, 1
+    0x0642, //  3: jmp    x--, 2                 [6]
             //     .wrap
 };
 
@@ -30,7 +30,7 @@ static const struct pio_program uart_rx_mini_program = {
     .instructions = uart_rx_mini_program_instructions,
     .length = 4,
     .origin = -1,
-    .pio_version = 1,
+    .pio_version = uart_rx_mini_pio_version,
 #if PICO_PIO_VERSION > 0
     .used_gpio_ranges = 0x0
 #endif
@@ -72,15 +72,15 @@ static inline void uart_rx_mini_program_init(PIO pio, uint sm, uint offset, uint
 
 static const uint16_t uart_rx_program_instructions[] = {
             //     .wrap_target
-    0x2020, //  0: wait   0 pin, 0                   
+    0x2020, //  0: wait   0 pin, 0
     0xea27, //  1: set    x, 7                   [10]
-    0x4001, //  2: in     pins, 1                    
-    0x0642, //  3: jmp    x--, 2                 [6] 
-    0x00c8, //  4: jmp    pin, 8                     
-    0xc014, //  5: irq    nowait 4 rel               
-    0x20a0, //  6: wait   1 pin, 0                   
-    0x0000, //  7: jmp    0                          
-    0x8020, //  8: push   block                      
+    0x4001, //  2: in     pins, 1
+    0x0642, //  3: jmp    x--, 2                 [6]
+    0x00c8, //  4: jmp    pin, 8
+    0xc014, //  5: irq    nowait 4 rel
+    0x20a0, //  6: wait   1 pin, 0
+    0x0000, //  7: jmp    0
+    0x8020, //  8: push   block
             //     .wrap
 };
 
@@ -89,7 +89,7 @@ static const struct pio_program uart_rx_program = {
     .instructions = uart_rx_program_instructions,
     .length = 9,
     .origin = -1,
-    .pio_version = 1,
+    .pio_version = uart_rx_pio_version,
 #if PICO_PIO_VERSION > 0
     .used_gpio_ranges = 0x0
 #endif

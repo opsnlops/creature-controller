@@ -18,10 +18,10 @@
 
 static const uint16_t uart_tx_program_instructions[] = {
             //     .wrap_target
-    0x9fa0, //  0: pull   block           side 1 [7] 
-    0xf727, //  1: set    x, 7            side 0 [7] 
-    0x6001, //  2: out    pins, 1                    
-    0x0642, //  3: jmp    x--, 2                 [6] 
+    0x9fa0, //  0: pull   block           side 1 [7]
+    0xf727, //  1: set    x, 7            side 0 [7]
+    0x6001, //  2: out    pins, 1
+    0x0642, //  3: jmp    x--, 2                 [6]
             //     .wrap
 };
 
@@ -30,7 +30,7 @@ static const struct pio_program uart_tx_program = {
     .instructions = uart_tx_program_instructions,
     .length = 4,
     .origin = -1,
-    .pio_version = 1,
+    .pio_version = uart_tx_pio_version,
 #if PICO_PIO_VERSION > 0
     .used_gpio_ranges = 0x0
 #endif
