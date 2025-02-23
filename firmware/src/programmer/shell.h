@@ -24,3 +24,4 @@ void reset_incoming_buffer();
 void reset_request_buffer();
 void send_response(const char *response);
 
+void print_incoming_data_buffer();

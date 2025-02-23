@@ -14,7 +14,7 @@
 
 #define uart_rx_mini_wrap_target 0
 #define uart_rx_mini_wrap 3
-#define uart_rx_mini_pio_version 0
+#define uart_rx_mini_pio_version 1
 
 static const uint16_t uart_rx_mini_program_instructions[] = {
             //     .wrap_target
@@ -68,7 +68,7 @@ static inline void uart_rx_mini_program_init(PIO pio, uint sm, uint offset, uint
 
 #define uart_rx_wrap_target 0
 #define uart_rx_wrap 8
-#define uart_rx_pio_version 0
+#define uart_rx_pio_version 1
 
 static const uint16_t uart_rx_program_instructions[] = {
             //     .wrap_target

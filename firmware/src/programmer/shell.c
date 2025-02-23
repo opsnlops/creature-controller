@@ -83,7 +83,7 @@ void handle_shell_command(u8 *buffer) {
 
         case 'H':
             info("help command");
-            const char *help_text0 = "\nI - Info in machine-readable format\nB - Burn\nV - Verify";
+            const char *help_text0 = "\nI - Info in machine-readable format\nB - Burn\nV - Verify\nP - Print incoming data buffer";
             const char *help_text1 = "R - Reboot\nL##### - Load # bytes\n<ESC> - Reset Request Buffer\nH - Help";
             send_response(help_text0);
             send_response(help_text1);
@@ -113,6 +113,12 @@ void handle_shell_command(u8 *buffer) {
                      to_ms_since_boot(get_absolute_time()));
             send_response(info_buffer);
 
+            reset_request_buffer();
+            break;
+
+        case 'P':
+            info("printing incoming data buffer");
+            print_incoming_data_buffer();
             reset_request_buffer();
             break;
 
@@ -344,105 +350,131 @@ portTASK_FUNCTION(shell_task, pvParameters) {
 
 // Automatically called by TinyUSB when data is received
 void tud_cdc_rx_cb(__attribute__((unused)) uint8_t itf) {
-
     // Turn on the receiving LED
     gpio_put(INCOMING_LED_PIN, true);
 
-    // Check how many bytes are available
+    // Get the number of available bytes
     u32 count = tud_cdc_available();
+    if (count == 0) return;  // Nothing to chew on yet!
 
-    if (count > 0) {
+    // Temporary buffer to hold incoming data
+    u8 tempBuffer[count];
+    u32 readCount = tud_cdc_read(tempBuffer, count);
 
-        u8 tempBuffer[count];  // Temporary buffer to hold incoming data
-        u32 readCount = tud_cdc_read(tempBuffer, count);
-
-        for (u32 i = 0; i < readCount; ++i) {
-            char ch = tempBuffer[i];
-
-            debug("character: %c", ch);
+    for (u32 i = 0; i < readCount; i++) {
+        char ch = tempBuffer[i];
+        debug("Received character: %c", ch);
 
 #if LOGGING_LEVEL > 4
-            // If it's not alphanumeric print the character in hex
-            if (isalnum((unsigned char)ch)) {
-                verbose("character: %c", ch);
-            } else {
-                char hexStr[5]; // Enough space for "0xHH\0"
-                snprintf(hexStr, sizeof(hexStr), "0x%02X", (unsigned char)ch);
-                verbose("character: %s", hexStr);
-            }
+        // Log alphanumerics normally, others in hex
+        if (isalnum((unsigned char)ch)) {
+            verbose("Received character: %c", ch);
+        } else {
+            char hexStr[5]; // Enough for "0xHH" and a null terminator
+            snprintf(hexStr, sizeof(hexStr), "0x%02X", (unsigned char)ch);
+            verbose("Received character: %s", hexStr);
+        }
 #endif
 
+        // Process data based on the current state of our programmer
+        switch (programmer_state) {
+            case FILLING_BUFFER:
+                // Reserve one byte for null termination
+                if (incomingBufferIndex < INCOMING_BUFFER_SIZE - 1) {
+                    incoming_data_buffer[incomingBufferIndex++] = ch;
+                    debug("Incoming buffer index: %u", incomingBufferIndex);
 
-            // If we're in programming mode, add this to the incoming data buffer
-            switch(programmer_state) {
-                case FILLING_BUFFER:
-                    if (incomingBufferIndex < INCOMING_BUFFER_SIZE) {
-                        incoming_data_buffer[incomingBufferIndex++] = ch;  // Store character and increment index
-                        debug("buffer index: %u", incomingBufferIndex);
-
-                        if (incomingBufferIndex == program_size) {
-                            programmer_state = IDLE;
-                            info("all data received; switching to IDLE state");
-                            send_response("OK");
-                        }
-                    } else {
-                        // Buffer overflow handling
-                        warning("buffer overflow in incoming data buffer");
-                        programmer_state = ERROR;
+                    // Check if we've received the expected number of bytes
+                    if (incomingBufferIndex == program_size) {
+                        // Null-terminate right after the last valid byte
+                        incoming_data_buffer[incomingBufferIndex] = '\0';
+                        programmer_state = IDLE;
+                        info("All data received; switching to IDLE state");
+                        send_response("OK");
                     }
+                } else {
+                    warning("Buffer overflow in incoming data buffer");
+                    programmer_state = ERROR;
+                }
+                break;
+
+            case IDLE:
+                if (ch == 0x1B) {  // Escape: reset buffers (a clean slate, like fresh lettuce!)
+                    debug("Received ESC - resetting buffers");
+                    reset_request_buffer();
+                    reset_incoming_buffer();
                     break;
-
-                case IDLE:
-
-                    if (ch == 0x1B) {
-                        debug("resetting request buffer");
-                        reset_request_buffer();
-                        reset_incoming_buffer(); // maybe?
+                }
+                else if (ch == 0x0A) {  // Newline: end of command
+                    if (requestBufferIndex == 0) {
+                        warning("Skipping blank input line from sender");
                         break;
                     }
-
-                    // Check for newline character
-                    else if (ch == 0x0A) {
-
-                        verbose("it's the blessed character");
-
-                        /*
-                         * If we're in idle mode, add incoming commands to the request buffer, not the
-                         * data buffer.
-                         */
-
-                        // If there was a blank line warn the sender
-                        if (requestBufferIndex == 0) {
-                            warning("skipping blank input line from sender");
-                            break;
-                        }
-
-                        request_buffer[requestBufferIndex] = '\0';  // Null-terminate the string
-
-                        handle_shell_command(request_buffer);
-
-                    } else if (requestBufferIndex < INCOMING_REQUEST_BUFFER_SIZE - 1) {
-                        request_buffer[requestBufferIndex++] = ch;  // Store character and increment index
-                        debug("request buffer index: %u", requestBufferIndex);
-
+                    // Null-terminate the request and process it
+                    request_buffer[requestBufferIndex] = '\0';
+                    handle_shell_command(request_buffer);
+                    // Reset the request buffer after processing the command
+                    reset_request_buffer();
+                }
+                else {
+                    // Append to the request buffer if there's room
+                    if (requestBufferIndex < INCOMING_REQUEST_BUFFER_SIZE - 1) {
+                        request_buffer[requestBufferIndex++] = ch;
+                        debug("Request buffer index: %u", requestBufferIndex);
                     } else {
-                        // Buffer overflow handling
-                        request_buffer[INCOMING_REQUEST_BUFFER_SIZE - 1] = '\0';  // Ensure null-termination
-
-                        requestBufferIndex = 0;  // Reset buffer index
-
-                        warning("request buffer overflow on incoming request");
+                        warning("Request buffer overflow on incoming request");
+                        // Reset the request buffer to start fresh on next command
+                        reset_request_buffer();
                     }
-                    break;
+                }
+                break;
 
-                default:
-                    warning("received data in an unexpected state: %d", programmer_state);
-                    break;
-            }
+            default:
+                warning("Received data in an unexpected state: %d", programmer_state);
+                break;
         }
     }
 
-    // Additional safety check for null-termination
-    incoming_data_buffer[INCOMING_BUFFER_SIZE - 1] = '\0';
+    // Final safety check: null-terminate the incoming data buffer at the current index
+    if (incomingBufferIndex < INCOMING_BUFFER_SIZE) {
+        incoming_data_buffer[incomingBufferIndex] = '\0';
+    }
 }
 
+
+
+void print_incoming_data_buffer() {
+
+    // Make sure we're not trying to print nothing
+    if(incoming_data_buffer == NULL || incomingBufferIndex == 0) {
+        warning("No data to print");
+        return;
+    }
+
+    // Buffer to hold a line of output
+    char line_buffer[140];
+
+    send_response("--- Start of Incoming Data Buffer ---");
+
+    for (size_t i = 0; i < incomingBufferIndex; i++) {
+        if (i % 32 == 0) {
+            // Start a new line with the memory address, clear the buffer first
+            memset(line_buffer, 0, sizeof(line_buffer));
+            snprintf(line_buffer, sizeof(line_buffer), "  0x%04zx: ", i);
+        }
+
+        // Append the next byte to the current line, checking buffer space
+        snprintf(line_buffer + strlen(line_buffer), sizeof(line_buffer) - strlen(line_buffer), "%02X ", incoming_data_buffer[i]);
+
+
+        // If 32 bytes have been added, or it's the end of the data, print the line
+        if (i % 32 == 31 || i == incomingBufferIndex - 1) {
+            send_response(line_buffer);
+
+            // Give the debugger's UART a chance to catch up
+            vTaskDelay(pdMS_TO_TICKS(15));
+        }
+    }
+
+    send_response("--- End of Incoming Data Buffer ---");
+}
