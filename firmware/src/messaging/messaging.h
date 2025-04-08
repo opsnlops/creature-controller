@@ -7,6 +7,8 @@
 #include "types.h"
 
 
+#define TOKEN_SEPERATOR "\t"
+
 // Assume MAX_TOKENS is the maximum number of tokens you expect in a message
 #define MAX_TOKENS 30
 

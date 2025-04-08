@@ -405,7 +405,7 @@ void tud_cdc_rx_cb(__attribute__((unused)) uint8_t itf) {
                     reset_incoming_buffer();
                     break;
                 }
-                else if (ch == 0x0A) {  // Newline: end of command
+                else if (ch == 0x0A || ch == 0x0D) {  // Newline: end of command
                     if (requestBufferIndex == 0) {
                         warning("Skipping blank input line from sender");
                         break;

@@ -53,7 +53,7 @@ bool parseMessage(const char *rawMessage, GenericMessage *outMessage) {
     buffer[USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH - 1] = '\0';
 
     // Tokenize the message
-    char *token = strtok(buffer, "\t");
+    char *token = strtok(buffer, TOKEN_SEPERATOR);
     int tokenIndex = 0;
 
     while (token != NULL && tokenIndex < MAX_TOKENS - 1) {
@@ -67,7 +67,7 @@ bool parseMessage(const char *rawMessage, GenericMessage *outMessage) {
             outMessage->tokens[tokenIndex - 1][MAX_TOKEN_LENGTH - 1] = '\0';
         }
 
-        token = strtok(NULL, "\t");
+        token = strtok(NULL, TOKEN_SEPERATOR);
         tokenIndex++;
     }
 
@@ -91,7 +91,7 @@ bool parseMessage(const char *rawMessage, GenericMessage *outMessage) {
 
 
     // Find the position of the last tab character, which precedes the checksum token
-    const char *lastTabPos = strrchr(rawMessage, '\t');
+    const char *lastTabPos = strrchr(rawMessage, TOKEN_SEPERATOR[0]);
     if (lastTabPos != NULL) {
         // Calculate the length of the message part that should be included in the checksum calculation
         size_t checksumLength = lastTabPos - rawMessage;

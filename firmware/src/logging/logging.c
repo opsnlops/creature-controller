@@ -1,4 +1,3 @@
-
 #include <stddef.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -19,6 +18,9 @@ TaskHandle_t log_queue_reader_task_handle;
 QueueHandle_t creature_log_message_queue_handle;
 bool volatile logging_queue_exists = false;
 
+// What level of logging we want (this is overridden from the EEPROM if it exists)
+u8 configured_logging_level = DEFAULT_LOGGING_LEVEL;
+
 
 void logger_init() {
     creature_log_message_queue_handle = xQueueCreate(LOGGING_QUEUE_LENGTH, sizeof(struct LogMessage));
@@ -31,116 +33,62 @@ bool inline is_safe_to_log() {
     return (logging_queue_exists && !xQueueIsQueueFullFromISR(creature_log_message_queue_handle));
 }
 
-void __unused verbose(const char *message, ...) {
-#if LOGGING_LEVEL > 4
-
-    // If the logging queue if full, stop now
-    if (!is_safe_to_log())
+/**
+ * @brief Internal logging function that handles the common logic for all log levels
+ *
+ * @param level The logging level
+ * @param message The format string
+ * @param args Variable arguments for the format string
+ */
+static void log_internal(uint8_t level, const char *message, va_list args) {
+    // If not at the right logging level or queue is full, stop now
+    if (configured_logging_level < level || !is_safe_to_log())
         return;
 
-    // Copy the arguments to a new va_list
+    struct LogMessage lm = createMessageObject(level, message, args);
+    xQueueSendToBackFromISR(creature_log_message_queue_handle, &lm, NULL);
+}
+
+void __unused verbose(const char *message, ...) {
     va_list args;
     va_start(args, message);
-
-    struct LogMessage lm = createMessageObject(LOG_LEVEL_VERBOSE, message, args);
+    log_internal(LOG_LEVEL_VERBOSE, message, args);
     va_end(args);
-
-    xQueueSendToBackFromISR(creature_log_message_queue_handle, &lm, NULL);
-
-#endif
 }
 
 void debug(const char *message, ...) {
-#if LOGGING_LEVEL > 3
-
-    // If the logging queue if full, stop now
-    if (!is_safe_to_log())
-        return;
-
-    // Copy the arguments to a new va_list
     va_list args;
     va_start(args, message);
-
-    struct LogMessage lm = createMessageObject(LOG_LEVEL_DEBUG, message, args);
+    log_internal(LOG_LEVEL_DEBUG, message, args);
     va_end(args);
-
-    xQueueSendToBackFromISR(creature_log_message_queue_handle, &lm, NULL);
-
-#endif
 }
 
 void info(const char *message, ...) {
-#if LOGGING_LEVEL > 2
-
-    // If the logging queue if full, stop now
-    if (!is_safe_to_log())
-        return;
-
-    // Copy the arguments to a new va_list
     va_list args;
     va_start(args, message);
-
-    struct LogMessage lm = createMessageObject(LOG_LEVEL_INFO, message, args);
+    log_internal(LOG_LEVEL_INFO, message, args);
     va_end(args);
-
-    xQueueSendToBackFromISR(creature_log_message_queue_handle, &lm, NULL);
-
-#endif
 }
 
 void warning(const char *message, ...) {
-#if LOGGING_LEVEL > 1
-
-    // If the logging queue if full, stop now
-    if (!is_safe_to_log())
-        return;
-
-    // Copy the arguments to a new va_list
     va_list args;
     va_start(args, message);
-
-    struct LogMessage lm = createMessageObject(LOG_LEVEL_WARNING, message, args);
+    log_internal(LOG_LEVEL_WARNING, message, args);
     va_end(args);
-
-    xQueueSendToBackFromISR(creature_log_message_queue_handle, &lm, NULL);
-
-#endif
 }
 
 void error(const char *message, ...) {
-#if LOGGING_LEVEL > 0
-
-    // If the logging queue if full, stop now
-    if (!is_safe_to_log())
-        return;
-
-    // Copy the arguments to a new va_list
     va_list args;
     va_start(args, message);
-
-    struct LogMessage lm = createMessageObject(LOG_LEVEL_ERROR, message, args);
+    log_internal(LOG_LEVEL_ERROR, message, args);
     va_end(args);
-
-    xQueueSendToBackFromISR(creature_log_message_queue_handle, &lm, NULL);
-
-#endif
 }
 
 void __unused fatal(const char *message, ...) {
-
-    // If the logging queue if full, stop now
-    if (!is_safe_to_log())
-        return;
-
-    // Copy the arguments to a new va_list
     va_list args;
     va_start(args, message);
-
-    struct LogMessage lm = createMessageObject(LOG_LEVEL_FATAL, message, args);
+    log_internal(LOG_LEVEL_FATAL, message, args);
     va_end(args);
-
-    xQueueSendToBackFromISR(creature_log_message_queue_handle, &lm, NULL);
-
 }
 
 struct LogMessage createMessageObject(uint8_t level, const char *message, va_list args) {
@@ -219,7 +167,6 @@ portTASK_FUNCTION(log_queue_reader_task, pvParameters) {
 
             // Wipe the buffer for next time
             memset(&levelBuffer, '\0', 4);
-
         }
     }
 }

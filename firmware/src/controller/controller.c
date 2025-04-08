@@ -234,7 +234,7 @@ bool requestServoPosition(const char *motor_id, u16 requestedMicroseconds) {
     // What percentage of the frame is going to be set to on?
     double frame_active = (float) requestedMicroseconds / (float) frame_length_microseconds;
 
-    // ..and what counter value is that?
+    // ...and what counter value is that?
     u32 desired_ticks = (u32) ((float) pwm_resolution * frame_active);
 
     verbose("Requested position for %s: %u ticks -> %u microseconds", motor_id, desired_ticks, requestedMicroseconds);
@@ -293,7 +293,6 @@ void send_init_request(TimerHandle_t xTimer) {
 
     send_to_controller(message);
     debug("sent init request");
-
 }
 
 
