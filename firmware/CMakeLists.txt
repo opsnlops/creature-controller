@@ -3,7 +3,10 @@ cmake_minimum_required(VERSION 3.25)
 set(FREERTOS_HEAP "4" CACHE STRING "" FORCE)
 set(FREERTOS_PORT "TEMPLATE" CACHE STRING "" FORCE)
 
-set(PICO_PLATFORM rp2350)
+# New in SDK 2.1.1, use the fastest supported clock
+set(PICO_USE_FASTEST_SUPPORTED_CLOCK 1)
+
+#set(PICO_PLATFORM rp2350)
 if (NOT PICO_PLATFORM AND NOT DEFINED ENV{PICO_PLATFORM})
     message("PICO_PLATFORM not defined, defaulting to rp2040")
     set(PICO_PLATFORM rp2040)
@@ -14,8 +17,8 @@ endif()
 include($ENV{PICO_SDK_PATH}/external/pico_sdk_import.cmake)
 
 # Make sure we have the right version of the SDK
-if (PICO_SDK_VERSION_STRING VERSION_LESS "2.1.0")
-    message(FATAL_ERROR "Raspberry Pi Pico SDK version 2.1.0 (or later) required. Your version is ${PICO_SDK_VERSION_STRING}")
+if (PICO_SDK_VERSION_STRING VERSION_LESS "2.1.1")
+    message(FATAL_ERROR "Raspberry Pi Pico SDK version 2.1.1 (or later) required. Your version is ${PICO_SDK_VERSION_STRING}")
 endif()
 
 
@@ -34,7 +37,7 @@ endif()
 message("Building for platform ${PICO_PLATFORM}")
 
 project(creature-firmware
-        VERSION "3.0.7"
+        VERSION "3.1.0"
         DESCRIPTION "Pi Pico Firmwares for April's Creatures"
         HOMEPAGE_URL https://github.com/opsnlops/creature-controller
         LANGUAGES C CXX ASM)
