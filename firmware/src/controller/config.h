@@ -11,6 +11,9 @@
 
 #define INIT_REQUEST_TIME_MS                1000
 
+// Are we debugging the ADC?
+#define DEBUG_ADC                           0
+
 
 // We always want to be at 50Hz
 #define SERVO_FREQUENCY                      50

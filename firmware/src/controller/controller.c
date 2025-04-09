@@ -1,10 +1,8 @@
-
-
 #include <limits.h>
 
 #include <FreeRTOS.h>
 #include <timers.h>
-
+#include <semphr.h>
 
 // Our modules
 #include "hardware/gpio.h"
@@ -23,6 +21,9 @@
 
 // Stats
 extern volatile u64 number_of_pwm_wraps;
+
+// Mutex for thread-safe access to motor_map
+SemaphoreHandle_t motor_map_mutex;
 
 /*
  * The following map is used to map motor IDs to GPIO pins!
@@ -118,6 +119,13 @@ volatile bool has_first_frame_been_received = false;
 void controller_init() {
     info("init-ing the controller");
 
+    // Create mutex for thread-safe access to motor_map
+    motor_map_mutex = xSemaphoreCreateMutex();
+    if (motor_map_mutex == NULL) {
+        fatal("Failed to create motor_map_mutex");
+        return;
+    }
+
     // Create the analog filters for the sensed motor positions
     for (size_t i = 0; i < CONTROLLER_MOTORS_PER_MODULE; i++) {
         sensed_motor_position[i] = create_analog_filter(true,
@@ -138,7 +146,10 @@ void controller_init() {
     );
 
     // If this fails, something is super broke. Bail out now.
-    configASSERT (controller_init_request_timer != NULL);
+    if (controller_init_request_timer == NULL) {
+        fatal("Failed to create controller_init_request_timer");
+        return;
+    }
 
 
     // Set up the GPIO pin for monitoring for a reset signal
@@ -155,8 +166,10 @@ void controller_init() {
     );
 
     // Same deal, this shouldn't happen.
-    configASSERT (controller_reset_request_check_timer != NULL);
-
+    if (controller_reset_request_check_timer == NULL) {
+        fatal("Failed to create controller_reset_request_check_timer");
+        return;
+    }
 }
 
 void controller_start() {
@@ -166,7 +179,7 @@ void controller_start() {
     u32 wrap;
     for (size_t i = 0; i < sizeof(motor_map) / sizeof(motor_map[0]); ++i) {
         gpio_set_function(motor_map[i].gpio_pin, GPIO_FUNC_PWM);
-        wrap = pwm_set_freq_duty(motor_map[i].slice, motor_map[i].channel, 50, 0);
+        wrap = pwm_set_freq_duty(motor_map[i].slice, motor_map[i].channel, SERVO_FREQUENCY, 0);
         pwm_set_enabled(motor_map[i].slice, true);
     }
 
@@ -174,7 +187,7 @@ void controller_start() {
      * If this is the first one, set the frame length and resolution
      */
     if (frame_length_microseconds == 0UL) {
-        frame_length_microseconds = 1000000UL / 50UL;  // TODO: This is assuming 50Hz
+        frame_length_microseconds = 1000000UL / SERVO_FREQUENCY;
         pwm_resolution = wrap;
     }
 
@@ -185,7 +198,6 @@ void controller_start() {
 
     // Start the timer that checks for a request to reset from the controller
     xTimerStart(controller_reset_request_check_timer, 0);
-
 }
 
 u8 getMotorMapIndex(const char *motor_id) {
@@ -194,7 +206,7 @@ u8 getMotorMapIndex(const char *motor_id) {
         return INVALID_MOTOR_ID;
     }
 
-    u8 motor_number = motor_id[0] - '0';   // Convert '0', '1', ..., '3' to 0, 1, ..., 3
+    u8 motor_number = motor_id[0] - '0';   // Convert '0', '1', ..., '7' to 0, 1, ..., 7
 
     // Make sure the controller requested a valid motor
     if (motor_number < 0 ||
@@ -203,8 +215,7 @@ u8 getMotorMapIndex(const char *motor_id) {
         return INVALID_MOTOR_ID;
     }
 
-    u8 index = motor_number;
-    return index;
+    return motor_number;
 }
 
 
@@ -221,26 +232,39 @@ bool requestServoPosition(const char *motor_id, u16 requestedMicroseconds) {
         return false;
     }
 
-    // Make sure the motor is allowed to move to this position
-    if(requestedMicroseconds < motor_map[motor_id_index].min_microseconds || requestedMicroseconds > motor_map[motor_id_index].max_microseconds) {
-        fatal("Invalid position requested for %s: %u (valid is: %u - %u)",
-              motor_id, requestedMicroseconds, motor_map[motor_id_index].min_microseconds, motor_map[motor_id_index].max_microseconds);
-        return false;
+    bool result = false;
+
+    // Take the mutex to ensure thread-safe access
+    if (xSemaphoreTake(motor_map_mutex, portMAX_DELAY) == pdTRUE) {
+        // Make sure the motor is allowed to move to this position
+        if(requestedMicroseconds < motor_map[motor_id_index].min_microseconds ||
+           requestedMicroseconds > motor_map[motor_id_index].max_microseconds) {
+            error("Invalid position requested for %s: %u (valid is: %u - %u)",
+                  motor_id, requestedMicroseconds, motor_map[motor_id_index].min_microseconds,
+                  motor_map[motor_id_index].max_microseconds);
+            xSemaphoreGive(motor_map_mutex);
+            return false;
+        }
+
+        // Update the number of microseconds we're set to for the status lights to use
+        motor_map[motor_id_index].current_microseconds = requestedMicroseconds;
+
+        // What percentage of the frame is going to be set to on?
+        double frame_active = (float) requestedMicroseconds / (float) frame_length_microseconds;
+
+        // ...and what counter value is that?
+        u32 desired_ticks = (u32) ((float) pwm_resolution * frame_active);
+
+        verbose("Requested position for %s: %u ticks -> %u microseconds", motor_id, desired_ticks, requestedMicroseconds);
+        motor_map[motor_id_index].requested_position = desired_ticks;
+
+        result = true;
+        xSemaphoreGive(motor_map_mutex);
+    } else {
+        warning("Failed to take motor_map_mutex in requestServoPosition");
     }
 
-    // Update the number of microseconds we're set to for the status lights to use
-    motor_map[motor_id_index].current_microseconds = requestedMicroseconds;
-
-    // What percentage of the frame is going to be set to on?
-    double frame_active = (float) requestedMicroseconds / (float) frame_length_microseconds;
-
-    // ...and what counter value is that?
-    u32 desired_ticks = (u32) ((float) pwm_resolution * frame_active);
-
-    verbose("Requested position for %s: %u ticks -> %u microseconds", motor_id, desired_ticks, requestedMicroseconds);
-    motor_map[motor_id_index].requested_position = desired_ticks;
-
-    return true;
+    return result;
 }
 
 bool configureServoMinMax(const char* motor_id, u16 minMicroseconds, u16 maxMicroseconds) {
@@ -256,21 +280,35 @@ bool configureServoMinMax(const char* motor_id, u16 minMicroseconds, u16 maxMicr
         return false;
     }
 
-    motor_map[motor_id_index].min_microseconds = minMicroseconds;
-    motor_map[motor_id_index].max_microseconds = maxMicroseconds;
-    info("updated the motor map to allow motor %s to move between %u and %u microseconds",
-         motor_id, minMicroseconds, maxMicroseconds);
+    bool result = false;
 
-    return true;
+    // Take the mutex to ensure thread-safe access
+    if (xSemaphoreTake(motor_map_mutex, portMAX_DELAY) == pdTRUE) {
+        motor_map[motor_id_index].min_microseconds = minMicroseconds;
+        motor_map[motor_id_index].max_microseconds = maxMicroseconds;
+        info("updated the motor map to allow motor %s to move between %u and %u microseconds",
+             motor_id, minMicroseconds, maxMicroseconds);
+
+        result = true;
+        xSemaphoreGive(motor_map_mutex);
+    } else {
+        warning("Failed to take motor_map_mutex in configureServoMinMax");
+    }
+
+    return result;
 }
 
 
 void __isr on_pwm_wrap_handler() {
-
     // This is an ISR. Treat with caution! ☠️
 
+    // Using local variable to safely access volatile flag
+    // In an ISR we want to be quick, so we'll just use a local copy
+    // rather than a full critical section, since this is just reading a bool
+    bool is_safe = controller_safe_to_run;
+
     // Don't actually wiggle the motors if we haven't been told it's safe
-    if(controller_safe_to_run) {
+    if (is_safe) {
         for (size_t i = 0; i < sizeof(motor_map) / sizeof(motor_map[0]); ++i) {
             pwm_set_chan_level(motor_map[i].slice,
                                motor_map[i].channel,
@@ -284,7 +322,6 @@ void __isr on_pwm_wrap_handler() {
 }
 
 void send_init_request(TimerHandle_t xTimer) {
-
     char message[USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH];
     memset(&message, '\0', USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH);
 
@@ -296,11 +333,11 @@ void send_init_request(TimerHandle_t xTimer) {
 }
 
 
-u32 pwm_set_freq_duty(uint slice_num, uint chan, u32 frequency, int d) {
+u32 pwm_set_freq_duty(u32 slice_num, u32 chan, u32 frequency, int d) {
     u32 clock = 125000000;
     u32 divider16 = clock / frequency / 4096 + (clock % (frequency * 4096) != 0);
     if (divider16 / 16 == 0) divider16 = 16;
-    u32 wrap = clock * 16 / divider16 / frequency - 1;
+    u32 wrap = (clock << 4) / divider16 / frequency - 1; // Using bit shift for efficiency
     pwm_set_clkdiv_int_frac(slice_num, divider16 / 16, divider16 & 0xF);
     pwm_set_wrap(slice_num, wrap);
     pwm_set_chan_level(slice_num, chan, wrap * d / 100);
@@ -311,7 +348,6 @@ u32 pwm_set_freq_duty(uint slice_num, uint chan, u32 frequency, int d) {
  * Called from a timer in usb.c when the CDC is connected
  */
 void controller_connected() {
-
     // We just got connected for the first time, halt anything
     // that might already be running
     controller_safe_to_run = false;
@@ -328,7 +364,6 @@ void controller_connected() {
  * Called from a timer in usb.c when the CDC is disconnected
  */
 void controller_disconnected() {
-
     info("controller disconnected, stopping");
     controller_safe_to_run = false;
 
@@ -340,11 +375,9 @@ void controller_disconnected() {
 
     // No point in doing this if we're not connected
     xTimerStop(controller_init_request_timer, 0);
-
 }
 
 void firmware_configuration_received() {
-
     info("We've received a valid configuration from the controller!");
 
     // Tell everyone to go go go
