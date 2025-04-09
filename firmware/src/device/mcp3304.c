@@ -1,11 +1,6 @@
 
-#include <stdio.h>
-
 #include "hardware/gpio.h"
 #include "hardware/spi.h"
-#include "pico/stdlib.h"
-
-#include "logging/logging.h"
 
 #include "mcp3304.h"
 #include "types.h"
@@ -36,7 +31,7 @@ u16 adc_read(u8 adc_channel, u8 adc_num_cs_pin) {
     u16 adcResult = ((rxBuffer[1] & 0x0F) << 8) | rxBuffer[2];
 
     // Debug print
-    /*
+#if DEBUG_ADC == 1
     if (adc_channel == 0)
         debug("ADC Channel: %d, Raw SPI Data: %s %s %s, ADC Result: %u",
                adc_channel,
@@ -44,7 +39,7 @@ u16 adc_read(u8 adc_channel, u8 adc_num_cs_pin) {
                to_binary_string(rxBuffer[1]),
                to_binary_string(rxBuffer[2]),
                adcResult);
-    */
+#endif
 
     return adcResult;
 }

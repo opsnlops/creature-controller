@@ -163,7 +163,12 @@ static bool initialize_core_systems(void) {
 static void log_system_info(void) {
     info("----------------------------------------");
     info("April's Creature Workshop Controller v%s", CREATURE_FIRMWARE_VERSION_STRING);
-    info("Protocol Version: %s", CREATURE_PROTOCOL_VERSION_STRING);
+    info("FreeRTOS Version: %s", tskKERNEL_VERSION_NUMBER);
+    info(CREATURE_PROTOCOL_VERSION_STRING);
+
+#if USE_SENSORS == 0
+    warning("*** Sensors are disabled in this build! ***");
+#endif
 
     // Log watchdog reset status
     if (watchdog_caused_reboot()) {

@@ -167,7 +167,7 @@
 //  If sensors are disabled, a warning will be generated at startup, and the binary
 //  will be marked as not having sensors enabled. (so it can be read in picotool)
 //
-#define USE_SENSORS 1
+#define USE_SENSORS                            1
 
 
 /*
