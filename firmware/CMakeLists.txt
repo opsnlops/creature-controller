@@ -37,7 +37,7 @@ endif()
 message("Building for platform ${PICO_PLATFORM}")
 
 project(creature-firmware
-        VERSION "3.1.0"
+        VERSION "3.1.1"
         DESCRIPTION "Pi Pico Firmwares for April's Creatures"
         HOMEPAGE_URL https://github.com/opsnlops/creature-controller
         LANGUAGES C CXX ASM)
@@ -47,6 +47,14 @@ set(CMAKE_C_STANDARD 11)
 
 # Initialize the SDK
 pico_sdk_init()
+
+# Add FreeRTOS debugging support for CLion
+add_compile_definitions(
+        FREERTOS_ENABLE_TRACE=1
+        configUSE_TRACE_FACILITY=1
+        configRECORD_STACK_HIGH_ADDRESS=1
+        configGENERATE_RUN_TIME_STATS=1
+)
 
 # Ensure we're using the hardware floating point
 set(PICO_DEFAULT_FLOAT_IMPL pico_float_pico)

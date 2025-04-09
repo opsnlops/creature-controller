@@ -79,8 +79,6 @@
 #define configUSE_DAEMON_TASK_STARTUP_HOOK      0
 
 /* Run time and task stats gathering related definitions. */
-#define configGENERATE_RUN_TIME_STATS           0
-#define configUSE_TRACE_FACILITY                1
 #define configUSE_STATS_FORMATTING_FUNCTIONS    1
 
 /* Software timer related definitions. */
@@ -175,9 +173,15 @@ to exclude the API function. */
 #define portSUPPORT_SMP                         1
 
 
-#define configMAX_TASK_NAME_LEN                 64
-#define configRECORD_STACK_HIGH_ADDRESS         1
+/* CLion Debugger Integration - add these lines just before the end of FreeRTOSConfig.h */
+#define FREERTOS_ENABLE_TRACE                  1
+#define configUSE_TRACE_FACILITY               1
+#define configRECORD_STACK_HIGH_ADDRESS        1
+#define configGENERATE_RUN_TIME_STATS          1
 
+#define configMAX_TASK_NAME_LEN                64
+#define portCONFIGURE_TIMER_FOR_RUN_TIME_STATS()
+#define portGET_RUN_TIME_COUNTER_VALUE()       xTaskGetTickCount()
 
 
 #endif /* FREERTOS_CONFIG_H */
