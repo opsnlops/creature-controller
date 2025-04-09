@@ -49,7 +49,8 @@
 #define STATUS_LIGHTS_MOD_A_PIN             14
 #define STATUS_LIGHTS_MOD_A_IS_RGBW         false
 
-#define STATUS_LIGHTS_MOD_B_PIN             17
+// TODO: This feature is no longer used. Remove it. (Status lights B and C)
+#define STATUS_LIGHTS_MOD_B_PIN             16
 //#define STATUS_LIGHTS_MOD_B_PIN             6
 #define STATUS_LIGHTS_MOD_B_IS_RGBW         false
 
