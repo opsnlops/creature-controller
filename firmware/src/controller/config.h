@@ -19,7 +19,6 @@
 #define SERVO_FREQUENCY                      50
 
 // Configure the watchdog timer
-#define WATCHDOG_TIMER_PERIOD_MS        1000
 #define WATCHDOG_TIMEOUT_MS             5000
 
 // Light to flash when commands are being received
@@ -40,26 +39,16 @@
 #define STATUS_LIGHTS_PIO                   pio1
 
 #define STATUS_LIGHTS_LOGIC_BOARD_PIN       17
-//#define STATUS_LIGHTS_LOGIC_BOARD_PIN       22
 #define STATUS_LIGHTS_LOGIC_BOARD_IS_RGBW   false
 
 // Max brightness of the lights on the servo modules. Max is 255.
-#define STATUS_LIGHTS_SERVO_BRIGHTNESS      64
+#define STATUS_LIGHTS_SERVOS_BRIGHTNESS     64
 
-#define STATUS_LIGHTS_MOD_A_PIN             14
-#define STATUS_LIGHTS_MOD_A_IS_RGBW         false
-
-// TODO: This feature is no longer used. Remove it. (Status lights B and C)
-#define STATUS_LIGHTS_MOD_B_PIN             16
-//#define STATUS_LIGHTS_MOD_B_PIN             6
-#define STATUS_LIGHTS_MOD_B_IS_RGBW         false
-
-#define STATUS_LIGHTS_MOD_C_PIN             16
-//#define STATUS_LIGHTS_MOD_C_PIN             7
-#define STATUS_LIGHTS_MOD_C_IS_RGBW         false
+#define STATUS_LIGHTS_SERVOS_PIN            14
+#define STATUS_LIGHTS_SERVOS_IS_RGBW        false
 
 // How many frames do we have to go before we decide there's no IO
-#define STATUS_LIGHTS_IO_RESPONSIVENESS     10
+#define STATUS_LIGHTS_IO_RESPONSIVENESS     25
 
 // How many frames should we wait to turn off a motor's light?
 #define STATUS_LIGHTS_MOTOR_OFF_FRAMES      100
@@ -162,7 +151,7 @@
 // Should we use the sensors?
 //
 //  If the sensors are enabled, but not connected, there's going to be an assertion
-//  that gets thrown. This is entirely on purpose; if a board is suppose to have
+//  that gets thrown. This is entirely on purpose; if a board is supposed to have
 //  sensors, but doesn't, we want to know about it.
 //
 //  If sensors are disabled, a warning will be generated at startup, and the binary

@@ -23,7 +23,7 @@
  *  3 = UART
  *
  *
- * Servo Order (per module):
+ * Servo Order:
  *  0 = Servo 0
  *  1..n = Each servo after that
  */
@@ -42,10 +42,7 @@ volatile u64 number_of_pwm_wraps = 0UL;
 
 
 u8 logic_board_state_machine;
-u8 module_a_state_machine;
-u8 module_b_state_machine;
-u8 module_c_state_machine;
-
+u8 servo_lights_state_machine;
 
 TaskHandle_t status_lights_task_handle;
 extern enum FirmwareState controller_firmware_state;
@@ -66,17 +63,9 @@ void status_lights_init() {
     debug("logic board status lights state machine: %u", logic_board_state_machine);
     ws2812_program_init(STATUS_LIGHTS_PIO, logic_board_state_machine, offset, STATUS_LIGHTS_LOGIC_BOARD_PIN, 800000, STATUS_LIGHTS_LOGIC_BOARD_IS_RGBW);
 
-    module_a_state_machine = pio_claim_unused_sm(STATUS_LIGHTS_PIO, true);
-    debug("module A state machine: %u", module_a_state_machine);
-    ws2812_program_init(STATUS_LIGHTS_PIO, module_a_state_machine, offset, STATUS_LIGHTS_MOD_A_PIN, 800000, STATUS_LIGHTS_MOD_A_IS_RGBW);
-
-    module_b_state_machine = pio_claim_unused_sm(STATUS_LIGHTS_PIO, true);
-    debug("module B state machine: %u", module_b_state_machine);
-    ws2812_program_init(STATUS_LIGHTS_PIO, module_b_state_machine, offset, STATUS_LIGHTS_MOD_B_PIN, 800000, STATUS_LIGHTS_MOD_B_IS_RGBW);
-
-    module_c_state_machine = pio_claim_unused_sm(STATUS_LIGHTS_PIO, true);
-    debug("module C state machine: %u", module_c_state_machine);
-    ws2812_program_init(STATUS_LIGHTS_PIO, module_c_state_machine, offset, STATUS_LIGHTS_MOD_C_PIN, 800000, STATUS_LIGHTS_MOD_C_IS_RGBW);
+    servo_lights_state_machine = pio_claim_unused_sm(STATUS_LIGHTS_PIO, true);
+    debug("servo status lights state machine: %u", servo_lights_state_machine);
+    ws2812_program_init(STATUS_LIGHTS_PIO, servo_lights_state_machine, offset, STATUS_LIGHTS_SERVOS_PIN, 800000, STATUS_LIGHTS_SERVOS_IS_RGBW);
 
 }
 
@@ -278,8 +267,8 @@ portTASK_FUNCTION(status_lights_task, pvParameters) {
                                              0,
                                              STATUS_LIGHTS_MOTOR_OFF_FRAMES,
                                              0,
-                                             STATUS_LIGHTS_SERVO_BRIGHTNESS);
-                brightness = STATUS_LIGHTS_SERVO_BRIGHTNESS - brightness;
+                                             STATUS_LIGHTS_SERVOS_BRIGHTNESS);
+                brightness = STATUS_LIGHTS_SERVOS_BRIGHTNESS - brightness;
 
                 // Convert directly to RGB using the optimized function
                 motorLightColor[currentServo] = hsv_to_urgb((hsv_t){
@@ -299,15 +288,13 @@ portTASK_FUNCTION(status_lights_task, pvParameters) {
         put_pixel(runningLightColor, logic_board_state_machine);
         put_pixel(usbLightColor, logic_board_state_machine);
         put_pixel(uartLightColor, logic_board_state_machine);
-
+;
         // Dump out the lights to the various modules
         for(u8 i = 0; i < MOTOR_MAP_SIZE; i++) {
             if(i < CONTROLLER_MOTORS_PER_MODULE) {
-                put_pixel(motorLightColor[i], module_a_state_machine);
-            } else if(i < CONTROLLER_MOTORS_PER_MODULE * 2) {
-                put_pixel(motorLightColor[i], module_b_state_machine);
+                put_pixel(motorLightColor[i], servo_lights_state_machine);
             } else {
-                put_pixel(motorLightColor[i], module_c_state_machine);
+                warning("attempting to write to servo light %d, but only %d are available", i, CONTROLLER_MOTORS_PER_MODULE);
             }
         }
 
