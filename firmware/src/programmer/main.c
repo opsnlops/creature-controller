@@ -98,7 +98,7 @@ int main() {
                 &startup_task_handle);
 
     // Start the watchdog timer so we reboot if we hang
-    start_watchdog_timer();
+    //start_watchdog_timer();
 
     vTaskStartScheduler();
 }
