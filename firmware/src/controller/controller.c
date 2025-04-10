@@ -320,7 +320,11 @@ void __isr on_pwm_wrap_handler() {
     // Clear the IRQ regardless of if it's safe to wiggle things
     pwm_clear_irq(motor_map[0].slice);
     number_of_pwm_wraps = number_of_pwm_wraps + 1;
-    watchdog_update();
+
+    // Kick the watchdog every 100 wraps
+    if(number_of_pwm_wraps % 100 == 0) {
+        watchdog_update();
+    }
 }
 
 void send_init_request(TimerHandle_t xTimer) {
