@@ -23,6 +23,9 @@
 // Stats
 extern volatile u64 number_of_pwm_wraps;
 
+// Counter of how many times we've the PWM counter roll over since the last watchdog update
+volatile u32 watchdog_wrap_count = 0UL;
+
 // Mutex for thread-safe access to motor_map
 SemaphoreHandle_t motor_map_mutex;
 
@@ -321,10 +324,13 @@ void __isr on_pwm_wrap_handler() {
     pwm_clear_irq(motor_map[0].slice);
     number_of_pwm_wraps = number_of_pwm_wraps + 1;
 
-    // Kick the watchdog every 100 wraps
-    if(number_of_pwm_wraps % 100 == 0) {
+    // Update the watchdog every PWM_WRAPS_PER_WATCHDOG_UPDATE wraps
+    watchdog_wrap_count++;
+    if (watchdog_wrap_count >= PWM_WRAPS_PER_WATCHDOG_UPDATE) {
+        watchdog_wrap_count = 0;
         watchdog_update();
     }
+
 }
 
 void send_init_request(TimerHandle_t xTimer) {

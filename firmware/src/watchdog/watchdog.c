@@ -1,4 +1,3 @@
-#include <sys/cdefs.h>
 #include <hardware/watchdog.h>
 
 #include <FreeRTOS.h>
@@ -31,7 +30,7 @@ bool init_watchdog(void) {
 _Noreturn void reboot(void) {
     info("Initiating system reboot via watchdog");
 
-    // Disable interrupts using FreeRTOS API
+    // Disable interrupts using FreeRTOS API, which should stop the ISR that updates the counter
     taskDISABLE_INTERRUPTS();
 
     // Configure watchdog for immediate reset (1ms timeout)
