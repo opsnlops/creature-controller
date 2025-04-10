@@ -8,59 +8,18 @@
 #include "logging/logging.h"
 #include "watchdog.h"
 
-// Handle for the watchdog timer
-static TimerHandle_t watchdog_timer = NULL;
 
 /**
- * @brief Start the watchdog timer
+ * @brief Initialize the watchdog timer
  *
  * @return true if watchdog started successfully, false otherwise
  */
-bool start_watchdog_timer(void) {
+bool init_watchdog(void) {
     // Start the watchdog timer with the configured timeout
     watchdog_enable(WATCHDOG_TIMEOUT_MS, 1);
     watchdog_update();
 
-    // Create a timer to update the watchdog periodically
-    watchdog_timer = xTimerCreate(
-            "watchdog_timer",
-            pdMS_TO_TICKS(WATCHDOG_TIMER_PERIOD_MS),
-            pdTRUE,                        // Auto-reload
-            NULL,                          // Timer ID
-            watchdog_timer_callback        // Callback function
-    );
-
-    // Check if timer creation was successful
-    if (watchdog_timer == NULL) {
-        error("Failed to create watchdog timer");
-        return false;
-    }
-
-    // Start the timer with a timeout to ensure it starts
-    if (xTimerStart(watchdog_timer, pdMS_TO_TICKS(100)) != pdPASS) {
-        error("Failed to start watchdog timer");
-        return false;
-    }
-
-    info("Watchdog timer started (timeout: %u ms, period: %u ms)",
-         WATCHDOG_TIMEOUT_MS, WATCHDOG_TIMER_PERIOD_MS);
     return true;
-}
-
-/**
- * @brief Watchdog timer callback function
- *
- * Called periodically to feed the watchdog and prevent system reset.
- *
- * @param xTimer The timer handle (unused)
- */
-void watchdog_timer_callback(TimerHandle_t xTimer) {
-    (void) xTimer; // Prevent unused parameter warning
-
-    // Reset the watchdog to prevent system reset
-    watchdog_update();
-
-    // Could add additional system checks here in the future
 }
 
 /**

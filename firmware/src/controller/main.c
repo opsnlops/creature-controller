@@ -88,11 +88,11 @@ int main() {
         return -1;
     }
 
-    // Start the watchdog timer
-    if (!start_watchdog_timer()) {
-        warning("Failed to start watchdog timer - continuing without watchdog protection");
+    // Initialize the watchdog timer
+    if (!init_watchdog()) {
+        warning("Failed to initialize watchdog timer - continuing without watchdog protection");
     } else {
-        debug("Watchdog timer started successfully");
+        debug("Watchdog init'ed successfully");
     }
 
     info("All systems initialized, starting scheduler");
@@ -118,9 +118,7 @@ static void initialize_binary_info(void) {
     bi_decl(bi_program_url("https://creature.engineering/hardware/creature-controller/"))
     bi_decl(bi_1pin_with_name(POWER_PIN, "Power Relay"))
     bi_decl(bi_1pin_with_name(STATUS_LIGHTS_LOGIC_BOARD_PIN, "Status Lights for Logic Board"))
-    bi_decl(bi_1pin_with_name(STATUS_LIGHTS_MOD_A_PIN, "Status Lights Module A"))
-    bi_decl(bi_1pin_with_name(STATUS_LIGHTS_MOD_B_PIN, "Status Lights Module B"))
-    bi_decl(bi_1pin_with_name(STATUS_LIGHTS_MOD_C_PIN, "Status Lights Module C"))
+    bi_decl(bi_1pin_with_name(STATUS_LIGHTS_SERVOS_PIN, "Status Lights for the Servos"))
     bi_decl(bi_2pins_with_func(UART_TX_PIN, UART_RX_PIN, GPIO_FUNC_UART))
     bi_decl(bi_2pins_with_func(SENSORS_I2C_SDA_PIN, SENSORS_I2C_SCL_PIN, GPIO_FUNC_I2C))
     bi_decl(bi_4pins_with_func(SENSORS_SPI_SCK_PIN, SENSORS_SPI_TX_PIN, SENSORS_SPI_RX_PIN, SENSORS_SPI_CS_PIN, GPIO_FUNC_SPI))

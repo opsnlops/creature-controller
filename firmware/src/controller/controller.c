@@ -7,6 +7,7 @@
 // Our modules
 #include "hardware/gpio.h"
 #include "hardware/pwm.h"
+#include "hardware/watchdog.h"
 
 #include "device/power_relay.h"
 #include "io/message_processor.h"
@@ -319,6 +320,7 @@ void __isr on_pwm_wrap_handler() {
     // Clear the IRQ regardless of if it's safe to wiggle things
     pwm_clear_irq(motor_map[0].slice);
     number_of_pwm_wraps = number_of_pwm_wraps + 1;
+    watchdog_update();
 }
 
 void send_init_request(TimerHandle_t xTimer) {

@@ -8,25 +8,16 @@
 #include <timers.h>
 
 /**
- * @brief Start the watchdog timer with configured timeout
+ * @brief Enable the watchdog timer
  *
- * Initializes the hardware watchdog and creates a FreeRTOS timer to
- * periodically reset it. If the timer fails to reset the watchdog
- * within WATCHDOG_TIMEOUT_MS, the system will reboot.
+ * Initializes the watchdog timer with the timeout defined in config.h. The watchdog
+ * it updated in the ISR that runs every time the PWM wraps. If the PWM timer stops
+ * working, we're dead in the water, so it's time to reboot.
  *
- * @return true if watchdog was successfully started, false otherwise
+ * @return true if watchdog was successfully init'ed, false otherwise
  */
-bool start_watchdog_timer(void);
+bool init_watchdog(void);
 
-/**
- * @brief FreeRTOS timer callback to reset the watchdog
- *
- * This function is called periodically by the FreeRTOS timer to
- * feed the watchdog and prevent a system reset.
- *
- * @param xTimer Handle to the timer that triggered this callback
- */
-void watchdog_timer_callback(TimerHandle_t xTimer);
 
 /**
  * @brief Intentionally force a system reboot using the watchdog
