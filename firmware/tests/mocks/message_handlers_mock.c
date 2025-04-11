@@ -3,30 +3,51 @@
  * @brief Mock implementations of message handler functions
  */
 
-#include <stdbool.h>
 #include "messaging/messaging.h"
+#include <stdbool.h>
+#include <stdio.h>
 
 // Mock implementations of the message handler functions
-bool handlePingMessage(const void *msg) {
-    // Cast to the right type inside the implementation
-    // const GenericMessage *real_msg = (const GenericMessage *)msg;
+bool handlePingMessage(const GenericMessage *msg) {
+    if (msg == NULL) {
+        printf("WARNING: handlePingMessage called with NULL message\n");
+        return false;
+    }
 
-    // Simple mock that just returns success
+    // Simple validation to avoid crashes
+    if (msg->messageType[0] == '\0') {
+        printf("INFO: handlePingMessage called with empty message type\n");
+    }
+
     return true;
 }
 
-bool handlePositionMessage(const void *msg) {
-    // Cast to the right type inside the implementation
-    // const GenericMessage *real_msg = (const GenericMessage *)msg;
+bool handlePositionMessage(const GenericMessage *msg) {
+    if (msg == NULL) {
+        printf("WARNING: handlePositionMessage called with NULL message\n");
+        return false;
+    }
 
-    // Simple mock that just returns success
+    // Simple validation to avoid crashes
+    if (msg->messageType[0] == '\0') {
+        printf("INFO: handlePositionMessage called with empty message type\n");
+    }
+
     return true;
 }
 
-bool handleConfigMessage(const void *msg) {
-    // Cast to the right type inside the implementation
-    // const GenericMessage *real_msg = (const GenericMessage *)msg;
+bool handleConfigMessage(const GenericMessage *msg) {
+    if (msg == NULL) {
+        printf("WARNING: handleConfigMessage called with NULL message\n");
+        return false;
+    }
 
-    // Simple mock that just returns success
+    // Simple validation to avoid crashes
+    if (msg->messageType[0] == '\0') {
+        printf("INFO: handleConfigMessage called with empty message type\n");
+    }
+
     return true;
 }
+
+// REMOVED duplicate calculateChecksum function

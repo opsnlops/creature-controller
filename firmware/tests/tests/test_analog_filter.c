@@ -3,9 +3,6 @@
  * @brief Tests for responsive_analog_read_filter.c functions
  */
 
-#include <string.h>
-#include <stdio.h>
-
 #include "unity.h"
 #include "freertos_mocks.h"
 #include "hardware_mocks.h"
@@ -45,6 +42,9 @@ void test_analog_filter_update_stable_input(void) {
     // Create filter with sleep disabled for predictable behavior
     analog_filter filter = create_analog_filter(false, 0.5f, 20.0f, false);
 
+    // Initialize to ensure smooth_value is not garbage
+    filter.smooth_value = 0.0f;
+
     // Single update with stable value
     analog_filter_update(&filter, 2000);
 
@@ -57,6 +57,9 @@ void test_analog_filter_update_stable_input(void) {
 void test_analog_filter_update_changing_input(void) {
     // Create filter with predictable parameters
     analog_filter filter = create_analog_filter(false, 0.5f, 20.0f, false);
+
+    // Initialize to ensure smooth_value is not garbage
+    filter.smooth_value = 0.0f;
 
     // Initial update
     analog_filter_update(&filter, 2000);
@@ -76,6 +79,10 @@ void test_analog_filter_update_changing_input(void) {
 void test_analog_filter_sleep_threshold(void) {
     // Create filter with sleep enabled and large activity threshold
     analog_filter filter = create_analog_filter(true, 0.1f, 100.0f, false);
+
+    // Initialize to ensure smooth_value and error_ema are not garbage
+    filter.smooth_value = 0.0f;
+    filter.error_ema = 0.0f;
 
     // Initial update to establish baseline
     analog_filter_update(&filter, 2000);
@@ -142,6 +149,10 @@ void test_snap_curve_function(void) {
 void test_analog_filter_accessor_methods(void) {
     // Create filter and update it
     analog_filter filter = create_analog_filter(false, 0.5f, 20.0f, false);
+
+    // Initialize to ensure smooth_value is not garbage
+    filter.smooth_value = 0.0f;
+
     analog_filter_update(&filter, 2000);
 
     // Test getter methods
