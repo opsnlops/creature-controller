@@ -3,6 +3,9 @@
  * @brief Tests for responsive_analog_read_filter.c functions
  */
 
+#include <string.h>
+#include <stdio.h>
+
 #include "unity.h"
 #include "freertos_mocks.h"
 #include "hardware_mocks.h"

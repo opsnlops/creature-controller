@@ -125,6 +125,12 @@ void fatal_mock(const char *message, ...) {
     va_end(args);
 }
 
+// Implementation of is_safe_to_log function
+bool is_safe_to_log(void) {
+    // In test environment, we'll always consider it safe to log
+    return true;
+}
+
 // Functions to help test verification
 const char* get_log_message(u16 index) {
     if (index < log_count) {
@@ -145,4 +151,3 @@ bool log_contains(const char* substring) {
     }
     return false;
 }
-

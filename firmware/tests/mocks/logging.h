@@ -8,7 +8,8 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdio.h>
-#include "types.h"
+#include <stdarg.h>
+#include "stubs.h"
 
 // Logging level definitions
 #define LOG_LEVEL_VERBOSE 5
@@ -26,5 +27,5 @@ void warning(const char *message, ...);
 void error(const char *message, ...);
 void fatal(const char *message, ...);
 
-// Stub functions for test mocks
+// Function to check if it's safe to log
 bool is_safe_to_log(void);

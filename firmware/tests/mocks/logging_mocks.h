@@ -6,7 +6,8 @@
 #pragma once
 
 #include <stdbool.h>
-#include "types.h"
+#include <stdint.h>
+#include "stubs.h"
 
 // Define logging levels
 #define LOG_LEVEL_VERBOSE 5
@@ -27,6 +28,9 @@ void info_mock(const char *message, ...);
 void warning_mock(const char *message, ...);
 void error_mock(const char *message, ...);
 void fatal_mock(const char *message, ...);
+
+// Implement is_safe_to_log for mocks
+bool is_safe_to_log(void);
 
 // Utility functions for test verification
 void reset_log_mocks(void);

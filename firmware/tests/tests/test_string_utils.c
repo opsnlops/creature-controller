@@ -3,6 +3,9 @@
  * @brief Tests for string_utils.c functions
  */
 
+#include <string.h>
+#include <stdio.h>
+
 #include "unity.h"
 #include "freertos_mocks.h"
 #include "hardware_mocks.h"

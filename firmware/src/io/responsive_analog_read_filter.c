@@ -32,8 +32,10 @@
 
  */
 
+#include <math.h>
 #include <stdlib.h>
 #include <unistd.h>
+
 
 #include "logging/logging.h"
 
@@ -144,7 +146,7 @@ uint16_t analog_filter_get_responsive_value(analog_filter* filter, uint16_t new_
     }
 
     // get difference between new input value and current smooth value
-    uint16_t diff = abs(new_value - filter->smooth_value);
+    uint16_t diff = fabsf(new_value - filter->smooth_value);
 
     // measure the difference between the new value and current value
     // and use another exponential moving average to work out what
@@ -155,7 +157,7 @@ uint16_t analog_filter_get_responsive_value(analog_filter* filter, uint16_t new_
     if(filter->sleep_enable) {
 
         // recalculate sleeping status
-        filter->sleeping = abs(filter->error_ema) < filter->activity_threshold;
+        filter->sleeping = fabsf(filter->error_ema) < filter->activity_threshold;
 
     }
 
