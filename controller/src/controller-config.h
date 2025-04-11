@@ -1,4 +1,3 @@
-
 #pragma once
 
 #include <cstdint>
@@ -17,6 +16,14 @@ using u64 = std::uint64_t;
 #define EVER ;;
 
 #define BAUD_RATE                           B115200
+
+/*
+ * Serial Port Monitor Configuration
+ */
+#define SERIAL_PORT_CHECK_INTERVAL_MS     5000      // Check every 5 seconds
+#define SERIAL_PORT_MAX_RECONNECT_ATTEMPTS 10       // Maximum number of reconnect attempts
+#define SERIAL_PORT_RECONNECT_DELAY_MS    2000      // Wait 2 seconds between reconnect attempts
+
 
 // The most servos we can control
 #define MAX_NUMBER_OF_SERVOS                8

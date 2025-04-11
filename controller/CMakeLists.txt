@@ -221,6 +221,8 @@ add_library(creature_lib
         src/server/MotorSensorReportMessage.h
         src/server/WebsocketWriter.h
         src/server/WebsocketWriter.cpp
+        src/io/SerialPortMonitor.cpp
+        src/io/SerialPortMonitor.h
 )
 
 target_include_directories(creature_lib PUBLIC
