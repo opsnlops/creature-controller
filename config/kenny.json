@@ -70,7 +70,7 @@
       "max_pulse_us": 1750,
       "smoothing_value": 0.9,
       "inverted": false,
-      "default_position": "min"
+      "default_position": "max"
     }
   ],
   "inputs": [
