@@ -42,7 +42,7 @@
       "name": "Neck Rotate",
       "output_module": "A",
       "output_header": 3,
-      "min_pulse_us": 1450,
+      "min_pulse_us": 1200,
       "max_pulse_us": 1970,
       "smoothing_value": 0.95,
       "inverted": false,
@@ -54,10 +54,10 @@
       "name": "Beak",
       "output_module": "A",
       "output_header": 2,
-      "min_pulse_us": 750,
-      "max_pulse_us": 2250,
+      "min_pulse_us": 1200,
+      "max_pulse_us": 1800,
       "smoothing_value": 0.4,
-      "inverted": true,
+      "inverted": false,
       "default_position": "min"
     },
     {
@@ -66,10 +66,10 @@
       "name": "Body Lean",
       "output_module": "A",
       "output_header": 4,
-      "min_pulse_us": 1600,
-      "max_pulse_us": 2350,
-      "smoothing_value": 0.4,
-      "inverted": true,
+      "min_pulse_us": 900,
+      "max_pulse_us": 1750,
+      "smoothing_value": 0.9,
+      "inverted": false,
       "default_position": "min"
     }
   ],
