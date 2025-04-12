@@ -1,9 +1,9 @@
 {
-  "name": "Mini",
-  "id": "6b5113be-3104-11ef-a789-cbcf3b361d2f",
+  "name": "Kenny",
+  "id": "2e431d6e-175e-11f0-b4f3-cb1f6d25c080",
   "version": "0.1.0",
-  "description": "Simple Creature Config for testing creatures",
-  "channel_offset": 10,
+  "description": "You killed Kenny! You bastard!",
+  "channel_offset": 20,
   "audio_channel": 3,
   "universe": 2,
   "position_min": 0,
