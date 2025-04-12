@@ -54,6 +54,7 @@ is for safety. Anything beyond this at the creature will halt, assuming a
 coding error. (Servos are strong and snapping PLA is easy!)
 
 
+# Uploading a Creature's Config
 
-## Pi Pico ➡️ Controller
-
+   curl -v -d @kenny.json https://server.prod.chirpchirp.dev/api/v1/creature
+  
