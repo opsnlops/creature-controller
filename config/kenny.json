@@ -18,8 +18,8 @@
       "name": "Neck Left",
       "output_module": "A",
       "output_header": 0,
-      "min_pulse_us": 1250,
-      "max_pulse_us": 2250,
+      "min_pulse_us": 1600,
+      "max_pulse_us": 2500,
       "smoothing_value": 0.90,
       "inverted": false,
       "default_position": "center"
@@ -30,8 +30,8 @@
       "name": "Neck Right",
       "output_module": "A",
       "output_header": 1,
-      "min_pulse_us": 800,
-      "max_pulse_us": 1800,
+      "min_pulse_us": 600,
+      "max_pulse_us": 1650,
       "smoothing_value": 0.90,
       "inverted": true,
       "default_position": "center"
