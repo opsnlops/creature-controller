@@ -10,7 +10,6 @@
 #include "io/SerialHandler.h"
 #include "io/SerialReader.h"
 #include "io/SerialWriter.h"
-#include "io/SerialPortMonitor.h"
 #include "io/SerialException.h"
 #include "util/Result.h"
 
@@ -31,7 +30,8 @@ namespace creatures {
                                  UARTDevice::module_name moduleName,
                                  const std::shared_ptr<MessageQueue<Message>> &outgoingQueue,
                                  const std::shared_ptr<MessageQueue<Message>> &incomingQueue) :
-            deviceNode(deviceNode), moduleName(moduleName), logger(logger) {
+            deviceNode(deviceNode), moduleName(moduleName), logger(logger),
+            resources_valid(true), port_connected(false) {
 
         this->logger->info("creating a new SerialHandler for device {} on node {} ",
                            UARTDevice::moduleNameToString(moduleName), deviceNode);
@@ -47,21 +47,26 @@ namespace creatures {
             throw SerialException("incomingQueue is null");
         }
 
-        isDeviceNodeAccessible(logger, deviceNode);
+        try {
+            // Just check if the device node is accessible - don't open it yet
+            isDeviceNodeAccessible(logger, deviceNode);
+        } catch (const SerialException& e) {
+            // Log the error but don't propagate the exception - we'll handle reconnection later
+            this->logger->warn("Device node not initially accessible: {}", e.what());
+        }
 
         this->outgoingQueue = outgoingQueue;
         this->incomingQueue = incomingQueue;
         this->fileDescriptor = -1;
-        this->reconnecting = false;
 
         this->logger->debug("new SerialHandler created");
     }
 
     // Clean up the serial port
     SerialHandler::~SerialHandler() {
-        // Simply close the port without trying to signal monitors
-        // The robust error handling in the monitor threads will take care of this
-        closeSerialPort();
+        // Make sure we're fully shut down before destruction
+        shutdown();
+        this->logger->debug("SerialHandler destroyed");
     }
 
     UARTDevice::module_name SerialHandler::getModuleName() {
@@ -72,22 +77,49 @@ namespace creatures {
     std::shared_ptr<MessageQueue<Message>> SerialHandler::getOutgoingQueue() {
         return this->outgoingQueue;
     }
+
     std::shared_ptr<MessageQueue<Message>> SerialHandler::getIncomingQueue() {
         return this->incomingQueue;
     }
 
+    bool SerialHandler::areResourcesValid() const {
+        return resources_valid.load();
+    }
+
+    bool SerialHandler::isPortConnected() const {
+        return port_connected.load() && fileDescriptor >= 0;
+    }
+
     Result<bool> SerialHandler::setupSerialPort() {
-        // Clear the reconnecting flag if set
-        reconnecting = false;
+        // Don't set up if resources are already invalidated
+        if (!resources_valid.load()) {
+            return Result<bool>{ControllerError(ControllerError::IOError, "Resources already invalidated")};
+        }
+
+        // If the file descriptor is already open, close it first
+        if (this->fileDescriptor >= 0) {
+            closeSerialPort();
+        }
 
         this->logger->info("attempting to open {}", this->deviceNode);
+
+        // Check if the device exists before trying to open it
+        try {
+            isDeviceNodeAccessible(logger, deviceNode);
+        } catch (const SerialException& e) {
+            this->logger->error("Cannot access device node: {}", e.what());
+            port_connected.store(false);
+            return Result<bool>{ControllerError(ControllerError::IOError, e.what())};
+        }
+
         this->fileDescriptor = open(this->deviceNode.c_str(), O_RDWR | O_NONBLOCK | O_NOCTTY);
-        this->logger->debug("serial port is open, fileDescriptor = {}", this->fileDescriptor);
+        this->logger->debug("serial port open attempt, fileDescriptor = {}", this->fileDescriptor);
 
         if (this->fileDescriptor == -1) {
             // Handle error - unable to open serial port
             std::string errorMessage = fmt::format("Error opening {}: {}", this->deviceNode.c_str(), strerror(errno));
             this->logger->critical(errorMessage);
+            port_connected.store(false);
             return Result<bool>{ControllerError(ControllerError::IOError, errorMessage)};
         } else {
             struct termios tty{};
@@ -95,6 +127,9 @@ namespace creatures {
                 // Handle error in tcgetattr
                 std::string errorMessage = fmt::format("Error from tcgetattr while opening the port: {}", strerror(errno));
                 this->logger->critical(errorMessage);
+                close(this->fileDescriptor);
+                this->fileDescriptor = -1;
+                port_connected.store(false);
                 return Result<bool>{ControllerError(ControllerError::IOError, errorMessage)};
             }
 
@@ -130,10 +165,14 @@ namespace creatures {
             if (tcsetattr(this->fileDescriptor, TCSANOW, &tty) != 0) {
                 std::string errorMessage = fmt::format("Error from tcsetattr while configuring the port: {}", strerror(errno));
                 this->logger->critical(errorMessage);
+                close(this->fileDescriptor);
+                this->fileDescriptor = -1;
+                port_connected.store(false);
                 return Result<bool>{ControllerError(ControllerError::IOError, errorMessage)};
             }
 
             this->logger->debug("serial port {} is open", this->deviceNode);
+            port_connected.store(true);
         }
 
         return Result<bool>{true};
@@ -144,11 +183,17 @@ namespace creatures {
             this->logger->info("closing {}", this->deviceNode);
             close(this->fileDescriptor);
             this->fileDescriptor = -1;
+            port_connected.store(false);
         }
         return Result<bool>{true};
     }
 
     Result<bool> SerialHandler::start() {
+        // Don't start if we're already shutting down
+        if (!resources_valid.load()) {
+            return Result<bool>{ControllerError(ControllerError::IOError, "Cannot start, resources already invalidated")};
+        }
+
         this->logger->info("starting SerialHandler for device {}", deviceNode);
 
         auto setupResult = setupSerialPort();
@@ -159,129 +204,115 @@ namespace creatures {
         }
         this->logger->debug("setupSerialPort done");
 
-        std::shared_ptr<creatures::StoppableThread> reader = std::make_shared<creatures::io::SerialReader>(this->logger,
-                                                                                                           this->deviceNode,
-                                                                                                           this->moduleName,
-                                                                                                           this->fileDescriptor,
-                                                                                                           this->incomingQueue);
+        // Clear any previous threads
+        threads.clear();
+
+        // Create reader and writer threads with port_connected reference
+        std::shared_ptr<creatures::StoppableThread> reader = std::make_shared<creatures::io::SerialReader>(
+                this->logger,
+                this->deviceNode,
+                this->moduleName,
+                this->fileDescriptor,
+                this->incomingQueue,
+                this->resources_valid,
+                this->port_connected
+        );
+
+        std::shared_ptr<creatures::StoppableThread> writer = std::make_shared<creatures::io::SerialWriter>(
+                this->logger,
+                this->deviceNode,
+                this->moduleName,
+                this->fileDescriptor,
+                this->outgoingQueue,
+                this->resources_valid,
+                this->port_connected
+        );
+
+        // Start both threads
         reader->start();
-
-        std::shared_ptr<creatures::StoppableThread> writer = std::make_shared<creatures::io::SerialWriter>(this->logger,
-                                                                                                           this->deviceNode,
-                                                                                                           this->moduleName,
-                                                                                                           this->fileDescriptor,
-                                                                                                           this->outgoingQueue);
         writer->start();
-
-        // Create and start the port monitor thread
-        std::shared_ptr<creatures::StoppableThread> monitor = std::make_shared<creatures::io::SerialPortMonitor>(this->logger,
-                                                                                                                 this->deviceNode,
-                                                                                                                 this->moduleName,
-                                                                                                                 *this);
-        monitor->start();
 
         // Store the workers
         this->threads.push_back(reader);
         this->threads.push_back(writer);
-        this->threads.push_back(monitor);
 
         this->logger->debug("done starting SerialHandler for device {}", deviceNode);
 
         return Result<bool>{true};
     }
 
+    Result<bool> SerialHandler::reconnect() {
+        this->logger->info("attempting to reconnect to {}", deviceNode);
+
+        // First shutdown existing connections
+        auto shutdownResult = shutdown();
+        if (!shutdownResult.isSuccess()) {
+            auto errorMessage = fmt::format("Failed to shut down before reconnect: {}",
+                                            shutdownResult.getError()->getMessage());
+            this->logger->warn(errorMessage);
+            // Continue anyway - we'll try to reconnect
+        }
+
+        // Reset our internal state
+        resources_valid.store(true);
+        port_connected.store(false);
+
+        // Clear any pending messages in the queues
+        if (this->outgoingQueue) {
+            this->outgoingQueue->clear();
+        }
+        if (this->incomingQueue) {
+            this->incomingQueue->clear();
+        }
+
+        // Small delay to ensure the port is fully released
+        std::this_thread::sleep_for(std::chrono::milliseconds(250));
+
+        // Try to reopen and restart
+        return start();
+    }
+
     Result<bool> SerialHandler::shutdown() {
         this->logger->info("shutting down SerialHandler for device {}", deviceNode);
 
+        // First, mark resources as invalid to signal threads to stop using them
+        resources_valid.store(false);
+        port_connected.store(false);
+
         // Stop all threads
         for (auto& thread : threads) {
-            thread->shutdown();
+            if (thread) {
+                this->logger->debug("stopping thread {}", thread->getName());
+                thread->shutdown();
+            }
         }
 
-        // Clear the threads vector
+        // Wait for threads to actually stop (with a timeout)
+        for (auto& thread : threads) {
+            if (thread) {
+                // Give each thread up to 500ms to stop
+                for (int i = 0; i < 50; i++) {
+                    if (!thread->isThreadJoinable()) {
+                        break;
+                    }
+                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                }
+
+                if (thread->isThreadJoinable()) {
+                    this->logger->warn("Thread {} did not stop in time", thread->getName());
+                }
+            }
+        }
+
+        // Clear threads vector
         threads.clear();
 
+        // Close the port after threads are stopped
         closeSerialPort();
+
         return Result<bool>{true};
     }
 
-    bool SerialHandler::isPortConnected() {
-        // First check if this handler is still valid
-        if (this == nullptr) {
-            // This should never happen, but let's be defensive
-            // If we're somehow called on a null pointer, we're definitely not connected
-            return false;
-        }
-
-        // Check if we have a valid file descriptor
-        if (this->fileDescriptor == -1) {
-            return false;
-        }
-
-        // Try to get the status of the device
-        struct termios tty;
-        if (tcgetattr(this->fileDescriptor, &tty) != 0) {
-            // If tcgetattr fails, the port is likely disconnected
-            if (this->logger) { // Check logger is valid before using
-                this->logger->warn("Port status check failed: {}", strerror(errno));
-            }
-            return false;
-        }
-
-        return true;
-    }
-
-    Result<bool> SerialHandler::reconnect() {
-        // If we're already reconnecting, don't do it again
-        if (reconnecting) {
-            return Result<bool>{true};
-        }
-
-        reconnecting = true;
-        this->logger->info("Attempting to reconnect to {}", this->deviceNode);
-
-        // Close the port first
-        closeSerialPort();
-
-        // Signal all threads to stop (without joining)
-        for (auto& thread : threads) {
-            if (thread) {
-                // Request the thread to stop
-                thread->requestStop();
-            }
-        }
-
-        // Give threads time to notice the stop request
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
-
-        // Safely try to join threads that can be joined (not current thread)
-        for (auto& thread : threads) {
-            if (thread) {
-                thread->tryJoin();
-            }
-        }
-
-        // Clear the threads vector - at this point any threads that couldn't be joined
-        // have been signaled to stop and will clean up on their own
-        threads.clear();
-
-        // Wait a bit before trying to reconnect
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
-
-        // Try to reopen the port
-        auto result = start();
-        if (!result.isSuccess()) {
-            this->logger->error("Failed to reconnect to {}: {}",
-                                this->deviceNode,
-                                result.getError()->getMessage());
-            reconnecting = false;
-            return result;
-        }
-
-        this->logger->info("Successfully reconnected to {}", this->deviceNode);
-        reconnecting = false;
-        return Result<bool>{true};
-    }
 
     /**
      * Makes sure that a device node exists, and is a character device

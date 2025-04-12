@@ -1,7 +1,8 @@
-
 #pragma once
 
+#include <atomic>
 #include <memory>
+#include <optional>
 #include <thread>
 #include <string>
 #include <unordered_map>
@@ -40,10 +41,11 @@ namespace creatures {
 
         void registerHandler(std::string messageType, std::shared_ptr<IMessageHandler> handler);
         void start() override;
+        void shutdown() override; // Added override keyword here
 
         void run() override;
 
-        Message waitForMessage();
+        std::optional<Message> waitForMessage();
         Result<bool> processMessage(const Message& message);
 
     private:
@@ -58,6 +60,9 @@ namespace creatures {
         std::unordered_map<std::string, std::shared_ptr<IMessageHandler>> handlers;
 
         std::thread workerThread;
+
+        // Flag to indicate if processor is shutting down
+        std::atomic<bool> is_shutting_down;
 
         std::shared_ptr<Logger> logger;
         UARTDevice::module_name moduleId;
@@ -76,4 +81,3 @@ namespace creatures {
     };
 
 } // creatures
-

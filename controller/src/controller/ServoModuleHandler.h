@@ -1,5 +1,6 @@
-
 #pragma once
+
+#include <atomic>
 
 #include "config/UARTDevice.h"
 #include "controller/Controller.h"
@@ -75,7 +76,6 @@ namespace creatures {
         Result<bool> sendMessageToController(std::string messagePayload);
 
 
-
         /**
          * @brief Informs the controller that the firmware is ready for initialization
          *
@@ -92,7 +92,6 @@ namespace creatures {
         void firmwareReadyToOperate();
 
 
-
         /**
          * Get the module name of the module we're controlling
          *
@@ -100,20 +99,32 @@ namespace creatures {
          */
         creatures::config::UARTDevice::module_name getModuleName() const;
 
+        /**
+         * Check if the module is ready to operate
+         *
+         * @return true if the module is ready
+         */
+        bool isReady() const;
+
+        /**
+         * Check if the module is configured
+         *
+         * @return true if the module is configured
+         */
+        bool isConfigured() const;
+
     protected:
         void run() override; // This is the method that will be called when the thread starts
 
     private:
+        // Flag to indicate if this module is shutting down
+        std::atomic<bool> is_shutting_down{false};
 
         // The version of firmware our module is running
         u32 firmwareVersion;
 
-        bool ready = false;
-        bool configured = false;
-
-
-
-
+        std::atomic<bool> ready{false};
+        std::atomic<bool> configured{false};
 
         /**
          * Our logger
@@ -123,7 +134,7 @@ namespace creatures {
         /**
          * Our controller
          */
-         std::shared_ptr<Controller> controller;
+        std::shared_ptr<Controller> controller;
 
 
         /**

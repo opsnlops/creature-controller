@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <string>
 #include <thread>
 #include <vector>
@@ -9,16 +10,10 @@
 #include "config/UARTDevice.h"
 #include "logging/Logger.h"
 #include "io/Message.h"
+#include "io/SerialReader.h"
 #include "util/MessageQueue.h"
 #include "util/Result.h"
 #include "util/StoppableThread.h"
-
-// Forward declarations
-namespace creatures::io {
-    class SerialReader;
-    class SerialWriter;
-    class SerialPortMonitor;
-}
 
 namespace creatures {
 
@@ -49,6 +44,20 @@ namespace creatures {
         Result<bool> start();
         Result<bool> shutdown();
 
+        /**
+         * Check if the port is currently connected
+         *
+         * @return true if the port is connected and operational
+         */
+        bool isPortConnected() const;
+
+        /**
+         * Attempt to reconnect to the port if it's disconnected
+         *
+         * @return Result indicating success or failure
+         */
+        Result<bool> reconnect();
+
         std::shared_ptr<MessageQueue<Message>> getOutgoingQueue();
         std::shared_ptr<MessageQueue<Message>> getIncomingQueue();
 
@@ -60,18 +69,11 @@ namespace creatures {
         UARTDevice::module_name getModuleName();
 
         /**
-         * Check if the serial port is currently connected
+         * Check if the resources (port, file descriptor, etc.) are valid
          *
-         * @return true if the port is connected, false otherwise
+         * @return true if resources can be safely used
          */
-        bool isPortConnected();
-
-        /**
-         * Attempt to reconnect to the serial port
-         *
-         * @return Result indicating success or failure
-         */
-        Result<bool> reconnect();
+        bool areResourcesValid() const;
 
         /*
          * This is public so that the threads can be registered with the servo module handler
@@ -82,11 +84,16 @@ namespace creatures {
         std::string deviceNode;
         UARTDevice::module_name moduleName;
         int fileDescriptor = -1;
-        bool reconnecting = false;
 
         // A pointer to our shared MessageQueues
         std::shared_ptr<MessageQueue<Message>> outgoingQueue;
         std::shared_ptr<MessageQueue<Message>> incomingQueue;
+
+        // Flag to indicate if resources are valid for threads to use
+        std::atomic<bool> resources_valid;
+
+        // Flag to indicate if the port is connected
+        std::atomic<bool> port_connected{false};
 
         static bool isDeviceNodeAccessible(const std::shared_ptr<Logger>& logger, const std::string& deviceNode);
 

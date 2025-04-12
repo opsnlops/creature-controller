@@ -1,112 +1,108 @@
-#include <chrono>
+#include <iostream>
+#include <string>
 #include <thread>
+#include <chrono>
 
 #include "config/UARTDevice.h"
+#include "io/SerialHandler.h"
 #include "io/SerialPortMonitor.h"
-#include "io/SerialHandler.h" // Explicitly include SerialHandler
+#include "logging/Logger.h"
 #include "util/thread_name.h"
 
 namespace creatures::io {
 
-    using creatures::config::UARTDevice;
+    SerialPortMonitor::SerialPortMonitor(std::shared_ptr<Logger> logger,
+                                         std::shared_ptr<SerialHandler> serialHandler,
+                                         unsigned int checkIntervalMs)
+            : logger(logger),
+              serialHandler(serialHandler),
+              checkIntervalMs(checkIntervalMs),
+              isRunning(false) {
 
-    SerialPortMonitor::SerialPortMonitor(const std::shared_ptr<Logger>& logger,
-                                         std::string deviceNode,
-                                         UARTDevice::module_name moduleName,
-                                         creatures::SerialHandler& serialHandler) :
-            logger(logger),
-            deviceNode(deviceNode),
-            moduleName(moduleName),
-            serialHandler(serialHandler) {
+        logger->info("Creating SerialPortMonitor for device {}",
+                     config::UARTDevice::moduleNameToString(serialHandler->getModuleName()));
+    }
 
-        this->logger->info("creating a new SerialPortMonitor for module {} on {}",
-                           UARTDevice::moduleNameToString(moduleName), deviceNode);
+    SerialPortMonitor::~SerialPortMonitor() {
+        // Make sure we stop the monitoring thread cleanly
+        stop();
+        logger->debug("SerialPortMonitor destroyed");
     }
 
     void SerialPortMonitor::start() {
-        this->logger->info("starting the port monitor thread");
-        creatures::StoppableThread::start();
-    }
+        logger->info("Starting SerialPortMonitor");
 
-    void SerialPortMonitor::run() {
-        // Store a local copy of logger for safety
-        auto localLogger = this->logger;
-
-        localLogger->info("hello from the port monitor thread for {} 🔍", this->deviceNode);
-
-        this->threadName = fmt::format("SerialPortMonitor::run for {}", this->deviceNode);
-        setThreadName(threadName);
-
-        int reconnectAttempts = 0;
-
-        while(!stop_requested.load()) {
-            // Sleep first to give initial connection time to establish properly
-            std::this_thread::sleep_for(std::chrono::milliseconds(SERIAL_PORT_CHECK_INTERVAL_MS));
-
-            // Check if we should stop before doing any work
-            if (stop_requested.load()) {
-                break;
-            }
-
-            // Check if we should stop
-            if (stop_requested.load()) {
-                break;
-            }
-
-            // Check port connection status with safety
-            bool isConnected = false;
-            try {
-                isConnected = serialHandler.isPortConnected();
-            } catch (const std::exception& e) {
-                localLogger->error("Exception checking port connection: {}", e.what());
-                // Something went wrong with the handler, exit the thread
-                break;
-            } catch (...) {
-                localLogger->error("Unknown exception checking port connection");
-                // Something went wrong with the handler, exit the thread
-                break;
-            }
-
-            if (!isConnected) {
-                localLogger->warn("Serial port {} appears to be disconnected", this->deviceNode);
-
-                // Only try reconnecting a limited number of times
-                if (reconnectAttempts < SERIAL_PORT_MAX_RECONNECT_ATTEMPTS) {
-                    reconnectAttempts++;
-                    localLogger->info("Reconnect attempt {} of {}", reconnectAttempts, SERIAL_PORT_MAX_RECONNECT_ATTEMPTS);
-
-                    // Try to reconnect with safety checks
-                    try {
-                        auto result = serialHandler.reconnect();
-                        if (result.isSuccess()) {
-                            localLogger->info("Successfully reconnected to {}", this->deviceNode);
-                            reconnectAttempts = 0; // Reset counter on successful reconnect
-                        } else {
-                            // Wait before attempting to reconnect again
-                            std::this_thread::sleep_for(std::chrono::milliseconds(SERIAL_PORT_RECONNECT_DELAY_MS));
-                        }
-                    } catch (const std::exception& e) {
-                        localLogger->error("Exception during reconnect: {}", e.what());
-                        break; // Exit if the handler is broken
-                    } catch (...) {
-                        localLogger->error("Unknown exception during reconnect");
-                        break; // Exit for unknown exceptions too
-                    }
-                } else {
-                    localLogger->error("Maximum reconnect attempts ({}) reached for {}",
-                                       SERIAL_PORT_MAX_RECONNECT_ATTEMPTS, this->deviceNode);
-                    // After max reconnect attempts, slow down checking to avoid log spam
-                    std::this_thread::sleep_for(std::chrono::milliseconds(SERIAL_PORT_CHECK_INTERVAL_MS * 3));
-                }
-            } else {
-                // Reset reconnect attempts counter if port is connected
-                if (reconnectAttempts > 0) {
-                    localLogger->info("Port {} is now stable", this->deviceNode);
-                    reconnectAttempts = 0;
-                }
-            }
+        // Don't start if we're already running
+        if (isRunning.load()) {
+            logger->warn("SerialPortMonitor already running, not starting again");
+            return;
         }
 
-        localLogger->info("port monitor thread stopping");
+        // Set the running flag
+        isRunning.store(true);
+
+        // Start the monitoring thread
+        monitorThread = std::thread(&SerialPortMonitor::monitorLoop, this);
     }
-}
+
+    void SerialPortMonitor::stop() {
+        logger->info("Stopping SerialPortMonitor");
+
+        // Signal the thread to stop
+        isRunning.store(false);
+
+        // Wait for the thread to finish if it's running
+        if (monitorThread.joinable()) {
+            monitorThread.join();
+        }
+
+        logger->debug("SerialPortMonitor stopped");
+    }
+
+    void SerialPortMonitor::monitorLoop() {
+        // Set a thread name for debugging
+        setThreadName("SerialPortMonitor");
+
+        logger->info("SerialPortMonitor thread started");
+
+        // Track the connection state
+        bool isConnected = false;
+
+        // Main monitoring loop
+        while (isRunning.load()) {
+            try {
+                // Check the current connection state
+                if (serialHandler) {
+                    isConnected = serialHandler->isPortConnected();
+
+                    // If we lost the connection, try to reconnect
+                    if (!isConnected) {
+                        logger->warn("Serial port disconnected, attempting to reconnect");
+
+                        // Try to reconnect
+                        if (serialHandler) {
+                            auto result = serialHandler->reconnect();
+                            if (result.isSuccess()) {
+                                logger->info("Successfully reconnected to serial port");
+                            } else {
+                                logger->error("Failed to reconnect to serial port: {}",
+                                              result.getError()->getMessage());
+                            }
+                        }
+                    }
+                } else {
+                    logger->error("SerialHandler is null in SerialPortMonitor");
+                }
+            } catch (const std::exception& e) {
+                // Catch any exceptions to prevent thread termination
+                logger->error("Exception in SerialPortMonitor: {}", e.what());
+            }
+
+            // Sleep for the check interval
+            std::this_thread::sleep_for(std::chrono::milliseconds(checkIntervalMs));
+        }
+
+        logger->info("SerialPortMonitor thread exiting");
+    }
+
+} // namespace creatures::io

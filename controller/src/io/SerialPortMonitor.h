@@ -1,50 +1,63 @@
 #pragma once
 
-#include <string>
+#include <atomic>
+#include <memory>
 #include <thread>
 
-#include "controller-config.h"
 #include "logging/Logger.h"
-#include "config/UARTDevice.h"
-#include "util/StoppableThread.h"
-
-// Forward declaration with proper namespace
-namespace creatures {
-    class SerialHandler;
-}
+#include "io/SerialHandler.h"
 
 namespace creatures::io {
 
-    using creatures::config::UARTDevice;
-
     /**
-     * A thread that monitors the serial port connection and
-     * triggers reconnection when necessary
+     * @brief Monitor for serial port connections
+     *
+     * This class monitors the connection status of a serial port and attempts to
+     * reconnect if the connection is lost.
      */
-    class SerialPortMonitor : public StoppableThread {
-
+    class SerialPortMonitor {
     public:
-        SerialPortMonitor(const std::shared_ptr<Logger>& logger,
-                          std::string deviceNode,
-                          UARTDevice::module_name moduleName,
-                          creatures::SerialHandler& serialHandler);
+        /**
+         * @brief Construct a new Serial Port Monitor
+         *
+         * @param logger Logger instance
+         * @param serialHandler The serial handler to monitor
+         * @param checkIntervalMs How often to check the connection status in milliseconds
+         */
+        SerialPortMonitor(std::shared_ptr<Logger> logger,
+                          std::shared_ptr<SerialHandler> serialHandler,
+                          unsigned int checkIntervalMs = 1000);
 
-        ~SerialPortMonitor() override {
-            this->logger->info("SerialPortMonitor destroyed");
-        }
+        /**
+         * @brief Destroy the Serial Port Monitor
+         */
+        ~SerialPortMonitor();
 
-        void start() override;
+        /**
+         * @brief Start the monitoring thread
+         */
+        void start();
 
-    protected:
-        void run() override;
+        /**
+         * @brief Stop the monitoring thread
+         */
+        void stop();
 
     private:
-        std::shared_ptr<Logger> logger;
-        std::string deviceNode;
-        UARTDevice::module_name moduleName;
-        creatures::SerialHandler& serialHandler; // Reference to the serial handler
+        /**
+         * @brief Main monitoring loop
+         *
+         * This runs in a separate thread and periodically checks the connection
+         * status of the serial port.
+         */
+        void monitorLoop();
 
-        // Monitor constants are defined in controller-config.h
+        std::shared_ptr<Logger> logger;
+        std::shared_ptr<SerialHandler> serialHandler;
+        unsigned int checkIntervalMs;
+
+        std::atomic<bool> isRunning;
+        std::thread monitorThread;
     };
 
-} // creatures::io
+} // namespace creatures::io

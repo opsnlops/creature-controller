@@ -1,4 +1,3 @@
-
 #include <string>
 #include <unordered_map>
 #include <sstream>
@@ -28,13 +27,27 @@ namespace creatures {
                                        UARTDevice::module_name moduleId,
                                        std::shared_ptr<ServoModuleHandler> servoModuleHandler,
                                        std::shared_ptr<MessageQueue<creatures::server::ServerMessage>> websocketOutgoingQueue) :
-                                       servoModuleHandler(servoModuleHandler),
-                                       logger(_logger),
-                                       moduleId(moduleId),
-                                       websocketOutgoingQueue(websocketOutgoingQueue) {
+            servoModuleHandler(servoModuleHandler),
+            logger(_logger),
+            moduleId(moduleId),
+            websocketOutgoingQueue(websocketOutgoingQueue),
+            is_shutting_down(false) {
 
         logger->info("Message Processor created!");
+
+        // Safety check - make sure we have a valid servoModuleHandler
+        if (!servoModuleHandler) {
+            logger->critical("ServoModuleHandler is null in MessageProcessor constructor");
+            throw MessageProcessingException("ServoModuleHandler is null");
+        }
+
         this->incomingQueue = this->servoModuleHandler->getIncomingQueue();
+
+        // Safety check - make sure we have a valid incomingQueue
+        if (!this->incomingQueue) {
+            logger->critical("IncomingQueue is null in MessageProcessor constructor");
+            throw MessageProcessingException("IncomingQueue is null");
+        }
 
         createHandlers();
 
@@ -58,7 +71,6 @@ namespace creatures {
         this->readyHandler = std::make_shared<ReadyHandler>(this->logger, this->servoModuleHandler);
         this->boardSensorHandler = std::make_shared<BoardSensorHandler>(this->logger, this->websocketOutgoingQueue);
         this->motorSensorHandler = std::make_shared<MotorSensorHandler>(this->logger, this->websocketOutgoingQueue);
-
     }
 
     void MessageProcessor::registerHandler(std::string messageType, std::shared_ptr<IMessageHandler> handler) {
@@ -68,21 +80,38 @@ namespace creatures {
 
 
     void MessageProcessor::start() {
-
         logger->info("Starting the message processor");
         creatures::StoppableThread::start();
     }
 
+    void MessageProcessor::shutdown() {
+        logger->info("Shutting down the message processor");
+        is_shutting_down.store(true);
+        creatures::StoppableThread::shutdown();
+    }
+
     /**
-     * Wait for a message to be delivered from the incoming queue
+     * Wait for a message to be delivered from the incoming queue with a timeout
      *
-     * @return the next message
+     * @return the next message, or empty message on timeout
      */
-    Message MessageProcessor::waitForMessage() {
+    std::optional<Message> MessageProcessor::waitForMessage() {
         logger->trace("waiting for a message");
-        auto incomingMessage = this->incomingQueue->pop();
-        logger->trace("got one!");
-        return incomingMessage;
+
+        // Make sure we have a valid queue
+        if (!this->incomingQueue) {
+            logger->error("IncomingQueue is null in waitForMessage");
+            throw MessageProcessingException("IncomingQueue is null");
+        }
+
+        try {
+            auto incomingMessage = this->incomingQueue->popWithTimeout(std::chrono::milliseconds(100));
+            logger->trace("got one!");
+            return incomingMessage;
+        } catch (const std::exception& e) {
+            // Timeout - this is normal, just return an empty optional
+            return std::nullopt;
+        }
     }
 
     /**
@@ -91,9 +120,13 @@ namespace creatures {
      * @param message the message to process
      */
     Result<bool> MessageProcessor::processMessage(const Message& message) {
+        // Don't process messages if we're shutting down
+        if (is_shutting_down.load()) {
+            return Result<bool>{ControllerError(ControllerError::UnprocessableMessage, "MessageProcessor is shutting down")};
+        }
 
 #if DEBUG_MESSAGE_PROCESSING
-        this->logger->debug("pulled message off queue: {}", incomingMessage);
+        this->logger->debug("processing message: {}", message.payload);
 #endif
 
         // Make sure there's actually handlers registered
@@ -101,6 +134,11 @@ namespace creatures {
             auto errorMessage = "There's no handlers registered and you're asking me to process a message!";
             logger->critical(errorMessage);
             return Result<bool>{ControllerError(ControllerError::UnprocessableMessage, errorMessage)};
+        }
+
+        // Make sure the message has content
+        if (message.payload.empty()) {
+            return Result<bool>{true}; // Empty message, nothing to do
         }
 
         // Tokenize message
@@ -111,11 +149,31 @@ namespace creatures {
             tokens.push_back(token);
         }
 
+        // Make sure we have at least one token
+        if (tokens.empty()) {
+            auto errorMessage = "Message has no tokens";
+            logger->warn(errorMessage);
+            return Result<bool>{ControllerError(ControllerError::UnprocessableMessage, errorMessage)};
+        }
+
         // Find and invoke the handler
         auto it = handlers.find(tokens[0]);
         if (it != handlers.end()) {
-            // Handler found, invoke it
-            it->second->handle(logger, tokens);
+            // Handler found, make sure it's valid
+            if (!it->second) {
+                auto errorMessage = fmt::format("Handler for {} is null", tokens[0]);
+                logger->error(errorMessage);
+                return Result<bool>{ControllerError(ControllerError::UnprocessableMessage, errorMessage)};
+            }
+
+            try {
+                // Invoke the handler
+                it->second->handle(logger, tokens);
+            } catch (const std::exception& e) {
+                auto errorMessage = fmt::format("Exception in message handler for {}: {}", tokens[0], e.what());
+                logger->error(errorMessage);
+                return Result<bool>{ControllerError(ControllerError::UnprocessableMessage, errorMessage)};
+            }
         } else {
             // We didn't find a handler!
 
@@ -128,29 +186,44 @@ namespace creatures {
         }
 
         return Result<bool>{true};
-
     }
 
     void MessageProcessor::run() {
-
         auto threadName = fmt::format("MessageProcessor::{}", UARTDevice::moduleNameToString(this->moduleId));
         setThreadName(threadName);
 
         logger->debug("hello from the message processor thread for {}! 👋🏻", UARTDevice::moduleNameToString(servoModuleHandler->getModuleName()));
 
         while(!this->stop_requested.load()) {
+            // Check if we're shutting down
+            if (is_shutting_down.load()) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                continue;
+            }
 
-            auto message = waitForMessage();
+            try {
+                auto messageOpt = waitForMessage();
 
-            // Try to process the message, leaving an error if needed
-            auto processResult = processMessage(message);
-            if(!processResult.isSuccess()) {
-                auto errorMessage = fmt::format("Error processing message: {}", processResult.getError()->getMessage());
-                logger->error(errorMessage);
+                // Skip processing if no message (timeout)
+                if (!messageOpt) {
+                    continue;
+                }
 
-                // Don't stop the thread, just log the error
+                // Try to process the message, leaving an error if needed
+                auto processResult = processMessage(messageOpt.value());
+                if(!processResult.isSuccess()) {
+                    auto errorMessage = fmt::format("Error processing message: {}", processResult.getError()->getMessage());
+                    logger->error(errorMessage);
+                    // Don't stop the thread, just log the error and continue
+                }
+            } catch (const std::exception& e) {
+                // Catch any exceptions to prevent thread termination
+                logger->error("Exception in message processor loop: {}", e.what());
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
         }
+
+        logger->info("MessageProcessor thread for {} stopping", UARTDevice::moduleNameToString(this->moduleId));
     }
 
 } // creatures

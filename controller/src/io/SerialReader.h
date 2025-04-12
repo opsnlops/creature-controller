@@ -1,6 +1,6 @@
-
 #pragma once
 
+#include <atomic>
 #include <string>
 #include <thread>
 
@@ -27,7 +27,9 @@ namespace creatures::io {
                      std::string deviceNode,
                      UARTDevice::module_name moduleName,
                      int fileDescriptor,
-                     const std::shared_ptr<MessageQueue<Message>>& incomingQueue);
+                     const std::shared_ptr<MessageQueue<Message>>& incomingQueue,
+        std::atomic<bool>& resources_valid,
+                std::atomic<bool>& port_connected);
 
         ~SerialReader() override {
             this->logger->info("SerialReader destroyed");
@@ -44,8 +46,8 @@ namespace creatures::io {
         std::string deviceNode;
         UARTDevice::module_name moduleName;
         int fileDescriptor;
+        std::atomic<bool>& resources_valid; // Reference to parent's resources_valid flag
+        std::atomic<bool>& port_connected;  // Reference to parent's port_connected flag
     };
 
 } // creatures::io
-
-
