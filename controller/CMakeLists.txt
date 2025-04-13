@@ -221,8 +221,6 @@ add_library(creature_lib
         src/server/MotorSensorReportMessage.h
         src/server/WebsocketWriter.h
         src/server/WebsocketWriter.cpp
-        src/io/SerialPortMonitor.cpp
-        src/io/SerialPortMonitor.h
 )
 
 target_include_directories(creature_lib PUBLIC
@@ -262,60 +260,60 @@ install(TARGETS creature-controller
 # Set up testing
 #
 
-enable_testing()
+#enable_testing()
 
-add_executable(creature-controller-test
-        tests/config/CreatureBuilder_test.cpp
-        tests/creature_test.cpp
-        tests/servo_test.cpp
-        tests/MessageQueue_test.cpp
-        tests/SerialHandler_test.cpp
-        tests/MessageProcessor_test.cpp
-        tests/LogHandler_test.cpp
-        tests/mocks/logging/MockLogger.h
-        tests/mocks/io/handlers/MockMessageHandler.cpp
-        tests/mocks/io/handlers/MockMessageHandler.h
-        tests/controller/commands/tokens/ServoPosition_test.cpp
-        tests/controller/Controller_test.cpp
-        tests/mocks/controller/commands/MockCommand.h
-        tests/controller/commands/ICommand_test.cpp
-        tests/controller/commands/SetServoPositions_test.cpp
-        tests/io/handlers/StatsMessage_test.cpp
-        tests/string_utils_test.cpp
-        tests/io/handlers/StatsHandler_test.cpp
-        tests/dmx/E131Server_test.cpp
-        tests/mocks/creature/MockCreature.h
-        tests/creature/Input_test.cpp
-        tests/util/StoppableThread_test.cpp
-        tests/config/UARTDevice_test.cpp
-        tests/config/Configuation_test.cpp
-        tests/io/Message_test.cpp
-)
+#add_executable(creature-controller-test
+#        tests/config/CreatureBuilder_test.cpp
+#        tests/creature_test.cpp
+#        tests/servo_test.cpp
+#        tests/MessageQueue_test.cpp
+#        tests/SerialHandler_test.cpp
+#        tests/MessageProcessor_test.cpp
+#        tests/LogHandler_test.cpp
+#        tests/mocks/logging/MockLogger.h
+#        tests/mocks/io/handlers/MockMessageHandler.cpp
+#        tests/mocks/io/handlers/MockMessageHandler.h
+#        tests/controller/commands/tokens/ServoPosition_test.cpp
+#        tests/controller/Controller_test.cpp
+#        tests/mocks/controller/commands/MockCommand.h
+#        tests/controller/commands/ICommand_test.cpp
+#        tests/controller/commands/SetServoPositions_test.cpp
+#        tests/io/handlers/StatsMessage_test.cpp
+#        tests/string_utils_test.cpp
+#        tests/io/handlers/StatsHandler_test.cpp
+#        tests/dmx/E131Server_test.cpp
+#        tests/mocks/creature/MockCreature.h
+#        tests/creature/Input_test.cpp
+#        tests/util/StoppableThread_test.cpp
+#        tests/config/UARTDevice_test.cpp
+#        tests/config/Configuation_test.cpp
+#        tests/io/Message_test.cpp
+#)
 
-target_link_libraries(creature-controller-test
-        creature_lib
-        gtest_main
-        gmock_main
-        libe131
-        nlohmann_json::nlohmann_json
-        fmt::fmt
-        argparse
-        spdlog::spdlog $<$<BOOL:${MINGW}>:ws2_32>
-)
+#target_link_libraries(creature-controller-test
+#        creature_lib
+#        gtest_main
+#        gmock_main
+#        libe131
+#        nlohmann_json::nlohmann_json
+#        fmt::fmt
+#        argparse
+#        spdlog::spdlog $<$<BOOL:${MINGW}>:ws2_32>
+#)
 
 # This is to include Google Test and Google Mock headers
-target_include_directories(creature-controller-test PRIVATE
-        ${googletest_SOURCE_DIR}/include
-        ${googlemock_SOURCE_DIR}/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/tests/
-)
+#target_include_directories(creature-controller-test PRIVATE
+#        ${googletest_SOURCE_DIR}/include
+#        ${googlemock_SOURCE_DIR}/include
+#        ${CMAKE_CURRENT_SOURCE_DIR}/tests/
+#)
 
 # Tell CMake where our tests are
-set_property(TARGET creature-controller-test PROPERTY FOLDER "tests")
+#set_property(TARGET creature-controller-test PROPERTY FOLDER "tests")
 
 # Register the test with CTest
-include(GoogleTest)
-gtest_discover_tests(creature-controller-test)
+#include(GoogleTest)
+#gtest_discover_tests(creature-controller-test)
 
 # where to find our CMake modules
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")

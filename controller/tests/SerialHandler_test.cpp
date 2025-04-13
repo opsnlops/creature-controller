@@ -7,6 +7,8 @@
 #include "util/MessageQueue.h"
 #include "mocks/logging/MockLogger.h"
 
+extern std::atomic<bool> shutdown_requested;
+
 namespace creatures {
 
     // There isn't a clean way to mock a serial device in a unit test

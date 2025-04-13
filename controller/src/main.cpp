@@ -228,6 +228,7 @@ int main(int argc, char **argv) {
     // Shut down the worker threads in LIFO order
     const unsigned long timeout_ms = 150;
     for (auto & workerThread : std::ranges::reverse_view(workerThreads)) {
+        logger->debug("shutting down {}", workerThread->getName());
         timedShutdown(workerThread, timeout_ms);
     }
 

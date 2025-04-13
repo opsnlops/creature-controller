@@ -6,6 +6,9 @@
 #include "io/SerialReader.h"
 #include "util/thread_name.h"
 
+// Hook into the shutdown_requested variable
+extern std::atomic<bool> shutdown_requested;
+
 namespace creatures :: io {
 
     using creatures::config::UARTDevice;
@@ -127,20 +130,19 @@ namespace creatures :: io {
                                 // Special handling for common disconnect errors
                                 if (errno == ENXIO || errno == ENODEV || errno == ENOENT || errno == ENOTTY ||
                                     errno == EBADF || errno == EINVAL || errno == EIO || errno == 6) { // Device not configured
-                                    this->logger->error("Device error detected, marking port as disconnected");
-                                    port_connected.store(false);
-                                    // Reset error count after taking action
-                                    errorCount = 0;
+                                    this->logger->error("Device error detected, halting.");
+                                    shutdown_requested.store(true);
+                                    return;
                                 }
                             }
                         }
 
                         // If we've had too many consecutive errors, mark the port as disconnected
                         if (errorCount >= MAX_CONSECUTIVE_ERRORS) {
-                            this->logger->error("Too many consecutive read errors, marking port as disconnected");
+                            this->logger->error("Too many consecutive read errors, halting.");
                             port_connected.store(false);
-                            // Reset error count after taking action
-                            errorCount = 0;
+                            shutdown_requested.store(true);
+                            return;
                         }
 
                         // Sleep briefly to avoid busy-waiting

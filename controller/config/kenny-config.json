@@ -4,7 +4,7 @@
     [
       {
         "enabled": true,
-        "deviceNode": "/dev/tty.usbmodem1201",
+        "deviceNode": "/dev/cu.usbmodemUnknown_S_N1",
         "module": "A"
       }
     ],

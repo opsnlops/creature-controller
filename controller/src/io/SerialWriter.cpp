@@ -5,6 +5,9 @@
 #include "io/SerialWriter.h"
 #include "util/thread_name.h"
 
+// If we need to halt, we need this
+extern std::atomic<bool> shutdown_requested;
+
 namespace creatures :: io {
 
     using creatures::io::Message;
@@ -103,20 +106,20 @@ namespace creatures :: io {
                                 // Special handling for common disconnect errors
                                 if (errno == ENXIO || errno == ENODEV || errno == ENOENT || errno == ENOTTY ||
                                     errno == EBADF || errno == EINVAL || errno == EIO || errno == 6) { // Device not configured
-                                    this->logger->error("Device error detected, marking port as disconnected");
+                                    this->logger->error("Device error detected, halting.");
                                     port_connected.store(false);
-                                    // Reset error count after taking action
-                                    errorCount = 0;
+                                    shutdown_requested.store(true);
+                                    return;
                                 }
                             }
                         }
 
                         // If we've had too many consecutive errors, mark the port as disconnected
                         if (errorCount >= MAX_CONSECUTIVE_ERRORS) {
-                            this->logger->error("Too many consecutive write errors, marking port as disconnected");
+                            this->logger->error("Too many consecutive write errors, halting");
                             port_connected.store(false);
-                            // Reset error count after taking action
-                            errorCount = 0;
+                            shutdown_requested.store(true);
+                            return;
                         }
 
                         std::this_thread::sleep_for(std::chrono::milliseconds(10));
