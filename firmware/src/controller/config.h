@@ -39,7 +39,7 @@
  * EEPROM Config
  */
 
-#define USE_EEPROM                          1
+#define USE_EEPROM                          0
 
 // Define the EEPROM page size (check the EEPROM's datasheet)
 #define EEPROM_PAGE_SIZE                    64
@@ -174,7 +174,7 @@
 //  If sensors are disabled, a warning will be generated at startup, and the binary
 //  will be marked as not having sensors enabled. (so it can be read in picotool)
 //
-#define USE_SENSORS                            0
+#define USE_SENSORS                            1
 
 
 /*

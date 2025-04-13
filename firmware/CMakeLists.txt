@@ -6,7 +6,7 @@ set(FREERTOS_PORT "TEMPLATE" CACHE STRING "" FORCE)
 # New in SDK 2.1.1, use the fastest supported clock
 set(PICO_USE_FASTEST_SUPPORTED_CLOCK 1)
 
-set(PICO_PLATFORM rp2350)
+#set(PICO_PLATFORM rp2350)
 if (NOT PICO_PLATFORM AND NOT DEFINED ENV{PICO_PLATFORM})
     message("PICO_PLATFORM not defined, defaulting to rp2040")
     set(PICO_PLATFORM rp2040)
