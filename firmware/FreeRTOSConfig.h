@@ -46,8 +46,13 @@
 #define configUSE_TICK_HOOK                     1
 #define configTICK_RATE_HZ                      ( ( TickType_t ) 1000 )
 #define configMAX_PRIORITIES                    32
-#define configMINIMAL_STACK_SIZE                ( configSTACK_DEPTH_TYPE ) 256
 #define configUSE_16_BIT_TICKS                  0
+
+#if defined(PICO_PLATFORM) && (PICO_PLATFORM_IS_RP2350)
+#define configMINIMAL_STACK_SIZE                ( configSTACK_DEPTH_TYPE ) 512
+#else
+#define configMINIMAL_STACK_SIZE                ( configSTACK_DEPTH_TYPE ) 256
+#endif
 
 #define configIDLE_SHOULD_YIELD                 1
 
@@ -70,8 +75,13 @@
 /* Memory allocation related definitions. */
 #define configSUPPORT_STATIC_ALLOCATION         0
 #define configSUPPORT_DYNAMIC_ALLOCATION        1
-#define configTOTAL_HEAP_SIZE                   (128*1024)
 #define configAPPLICATION_ALLOCATED_HEAP        0
+
+#if defined(PICO_PLATFORM) && (PICO_PLATFORM_IS_RP2350)
+#define configTOTAL_HEAP_SIZE                   (400*1024)  // 400KB for RP2350
+#else
+#define configTOTAL_HEAP_SIZE                   (128*1024)  // 128KB for RP2040
+#endif
 
 /* Hook function related definitions. */
 #define configCHECK_FOR_STACK_OVERFLOW          2

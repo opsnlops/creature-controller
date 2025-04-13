@@ -11,7 +11,7 @@ if (NOT PICO_PLATFORM AND NOT DEFINED ENV{PICO_PLATFORM})
     message("PICO_PLATFORM not defined, defaulting to rp2040")
     set(PICO_PLATFORM rp2040)
 endif()
-
+add_compile_definitions(PICO_PLATFORM=${PICO_PLATFORM})
 
 # Pull in the Pico SDK
 include($ENV{PICO_SDK_PATH}/external/pico_sdk_import.cmake)
@@ -24,11 +24,14 @@ endif()
 
 # Pull in FreeRTOS from RPI directly so we get the RP2350 support
 if(PICO_PLATFORM STREQUAL "rp2040")
+    add_compile_definitions(PICO_PLATFORM_IS_RP2350=0)
     include($ENV{PICO_SDK_PATH}/../FreeRTOS-Kernel/portable/ThirdParty/GCC/RP2040/FreeRTOS_Kernel_import.cmake)
 else()
     if (PICO_PLATFORM STREQUAL "rp2350-riscv")
+        add_compile_definitions(PICO_PLATFORM_IS_RP2350=1)
         include($ENV{PICO_SDK_PATH}/../FreeRTOS-Kernel/portable/ThirdParty/GCC/RP2350_RISC-V/FreeRTOS_Kernel_import.cmake)
     else()
+        add_compile_definitions(PICO_PLATFORM_IS_RP2350=1)
         include($ENV{PICO_SDK_PATH}/../FreeRTOS-Kernel/portable/ThirdParty/GCC/RP2350_ARM_NTZ/FreeRTOS_Kernel_import.cmake)
     endif()
 endif()
@@ -37,7 +40,7 @@ endif()
 message("Building for platform ${PICO_PLATFORM}")
 
 project(creature-firmware
-        VERSION "3.2.1"
+        VERSION "3.2.2"
         DESCRIPTION "Pi Pico Firmwares for April's Creatures"
         HOMEPAGE_URL https://github.com/opsnlops/creature-controller
         LANGUAGES C CXX ASM)
