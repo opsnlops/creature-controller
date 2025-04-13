@@ -6,7 +6,7 @@ set(FREERTOS_PORT "TEMPLATE" CACHE STRING "" FORCE)
 # New in SDK 2.1.1, use the fastest supported clock
 set(PICO_USE_FASTEST_SUPPORTED_CLOCK 1)
 
-#set(PICO_PLATFORM rp2350)
+set(PICO_PLATFORM rp2350)
 if (NOT PICO_PLATFORM AND NOT DEFINED ENV{PICO_PLATFORM})
     message("PICO_PLATFORM not defined, defaulting to rp2040")
     set(PICO_PLATFORM rp2040)
@@ -37,7 +37,7 @@ endif()
 message("Building for platform ${PICO_PLATFORM}")
 
 project(creature-firmware
-        VERSION "3.1.4"
+        VERSION "3.2.1"
         DESCRIPTION "Pi Pico Firmwares for April's Creatures"
         HOMEPAGE_URL https://github.com/opsnlops/creature-controller
         LANGUAGES C CXX ASM)
@@ -95,6 +95,8 @@ set(COMMON_SOURCES
         src/debug/stats_reporter.c
         src/device/colors.h
         src/device/colors.c
+        src/device/eeprom.h
+        src/device/eeprom.c
         src/device/mcp3304.h
         src/device/mcp3304.c
         src/device/mcp9808.h

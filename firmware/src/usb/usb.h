@@ -1,47 +1,76 @@
-
 #pragma once
 
-#include <sys/select.h>
-#include <sys/cdefs.h>
 #include <string.h>
+#include <sys/cdefs.h>
+#include <sys/select.h>
 
-
-// FreeRTOS
 #include <FreeRTOS.h>
 #include <timers.h>
 
-// TinyUSB
 #include "tusb.h"
 
 #include "types.h"
 
-#define BOARD_TUD_RHPORT     0
+/**
+ * @file usb.h
+ * @brief USB subsystem interface for creature controller
+ *
+ * This module provides functions to initialize, start, and interact with the USB
+ * subsystem. It handles USB device enumeration, CDC connection monitoring, and
+ * message transmission over CDC.
+ */
 
-// Increase stack size when debug log is enabled
-#define USBD_STACK_SIZE    (3*configMINIMAL_STACK_SIZE/2) * (CFG_TUSB_DEBUG ? 2 : 1)
-#define HID_STACK_SIZE      configMINIMAL_STACK_SIZE
-
-
-void usb_init();
-
-void usb_start();
+// USB configuration
+#define BOARD_TUD_ROOT_HUB_PORT      0    // Root hub port for device mode
 
 /**
- * Called every 1ms to trigger the USB device timer
- * @param xTimer
+ * @brief Initialize the USB subsystem
+ *
+ * Sets up the TinyUSB stack, initializes the device stack, and configures the
+ * LED indicator. This must be called after the RTOS scheduler is started since
+ * USB IRQ handlers use RTOS queue APIs.
+ */
+void usb_init(void);
+
+/**
+ * @brief Start USB service timers
+ *
+ * Creates and starts the FreeRTOS timers needed for USB operation:
+ * - A 1ms timer for USB device tasks processing
+ * - A 100ms timer for CDC connection monitoring
+ *
+ * This function should be called after usb_init().
+ */
+void usb_start(void);
+
+/**
+ * @brief Timer callback for USB device processing
+ *
+ * Called every 1ms to process TinyUSB tasks, ensuring the USB stack gets
+ * regular processing time without blocking other operations.
+ *
+ * @param xTimer Timer handle that triggered this callback
  */
 void usbDeviceTimerCallback(TimerHandle_t xTimer);
 
 /**
- * @brief Timer to check and see if the CDC is connected
+ * @brief Timer callback for CDC connection monitoring
  *
- * Called every 100ms via a timer. If there's a change in state it will
- * both update the internal LED on the Pico, and call the hooks in
- * controller.c to react as needed.
+ * Called every 100ms to check if the CDC connection state has changed.
+ * Updates the LED indicator and notifies the controller module of
+ * connection/disconnection events.
  *
- * @param xTimer
+ * @param xTimer Timer handle that triggered this callback
  */
 void is_cdc_connected_timer(TimerHandle_t xTimer);
 
-
-void cdc_send(char const *line);
+/**
+ * @brief Send a message over CDC interface
+ *
+ * Transmits a null-terminated string over the CDC interface if connected.
+ * If the device is not connected, the message is silently dropped and a
+ * verbose log entry is generated.
+ *
+ * @param line Null-terminated string to transmit
+ */
+void cdc_send(const char *line);

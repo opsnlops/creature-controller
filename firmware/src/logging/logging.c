@@ -112,6 +112,25 @@ void start_log_reader() {
                 &log_queue_reader_task_handle);
 }
 
+char* log_level_to_string(u8 level) {
+    switch (level) {
+        case LOG_LEVEL_VERBOSE:
+            return "Verbose";
+        case LOG_LEVEL_DEBUG:
+            return "Debug";
+        case LOG_LEVEL_INFO:
+            return "Info";
+        case LOG_LEVEL_WARNING:
+            return "Warning";
+        case LOG_LEVEL_ERROR:
+            return "Error";
+        case LOG_LEVEL_FATAL:
+            return "Fatal";
+        default:
+            return "Unknown";
+    }
+}
+
 /**
  * @brief Creates a task that polls the logging queue
  *
@@ -170,5 +189,4 @@ portTASK_FUNCTION(log_queue_reader_task, pvParameters) {
         }
     }
 }
-
 #pragma clang diagnostic pop

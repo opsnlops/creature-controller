@@ -149,3 +149,6 @@ void start_log_reader();
  * @param pvParameters Task parameters (unused)
  */
 portTASK_FUNCTION_PROTO(log_queue_reader_task, pvParameters);
+
+
+char* log_level_to_string(u8 level);

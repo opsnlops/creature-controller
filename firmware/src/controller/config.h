@@ -35,6 +35,21 @@
 // Devices
 #define POWER_PIN                           28
 
+/*
+ * EEPROM Config
+ */
+
+#define USE_EEPROM                          1
+
+// Define the EEPROM page size (check the EEPROM's datasheet)
+#define EEPROM_PAGE_SIZE                    64
+
+#define EEPROM_SDA_PIN                      2
+#define EEPROM_SCL_PIN                      3
+#define EEPROM_I2C_BUS                      i2c1
+#define EEPROM_I2C_ADDR                     0x50
+
+
 
 // The NeoPixel status lights
 #define STATUS_LIGHTS_TIME_MS               20
@@ -159,7 +174,7 @@
 //  If sensors are disabled, a warning will be generated at startup, and the binary
 //  will be marked as not having sensors enabled. (so it can be read in picotool)
 //
-#define USE_SENSORS                            1
+#define USE_SENSORS                            0
 
 
 /*

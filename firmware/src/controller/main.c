@@ -1,38 +1,41 @@
+/**
+ * @file main.c
+ * @brief Main entry point for the April's Creature Workshop Controller firmware
+ *
+ * This file provides the central initialization sequence and system startup
+ * for the creature controller firmware. It orchestrates the initialization
+ * of all subsystems in the correct order and starts the RTOS scheduler.
+ */
+
 #include <stddef.h>
 #include <stdlib.h>
-
-#include "config.h"
 
 #include <FreeRTOS.h>
 #include <task.h>
 
-// TinyUSB
 #include "bsp/board.h"
-#include "tusb.h"
-
 #include "pico/binary_info.h"
 #include "pico/stdlib.h"
 
+#include "config.h"
 #include "controller/controller.h"
+#include "debug/stats_reporter.h"
+#include "device/eeprom.h"
 #include "device/power_relay.h"
 #include "device/status_lights.h"
-#include "debug/sensor_reporter.h"
-#include "debug/stats_reporter.h"
-#include "io/i2c.h"
 #include "io/message_processor.h"
-#include "io/spi.h"
-#include "io/usb_serial.h"
 #include "io/uart_serial.h"
+#include "io/usb_serial.h"
 #include "logging/logging.h"
-#include "sensor/sensor.h"
+#include "types.h"
 #include "usb/usb.h"
+#include "usb/usb_descriptors.h"
+#include "version.h"
 #include "watchdog/watchdog.h"
 
-#include "types.h"
-#include "version.h"
-
-// Forward declarations of initialization functions
+// Forward declarations for initialization functions
 static void initialize_binary_info(void);
+static void initialize_eeprom(void);
 static bool initialize_core_systems(void);
 static bool initialize_communication_systems(void);
 static bool initialize_controller_systems(void);
@@ -49,7 +52,18 @@ volatile size_t xFreeHeapSpace;
 /**
  * @brief Main entry point for the program
  *
- * Initializes all subsystems in a structured way and starts the RTOS scheduler.
+ * Initializes all subsystems in a structured sequence and starts the RTOS scheduler.
+ * The initialization follows this sequence:
+ * 1. Binary info for debugging
+ * 2. Core systems (logging, stdlib)
+ * 3. EEPROM configuration (if enabled)
+ * 4. Communication systems
+ * 5. Controller systems
+ * 6. Status and monitoring
+ * 7. Watchdog timer
+ * 8. RTOS scheduler
+ *
+ * @return -1 on failure, though successful execution does not return
  */
 int main() {
     // Setup binary info first for debugging
@@ -63,6 +77,9 @@ int main() {
 
     // Log system information
     log_system_info();
+
+    // Read the EEPROM before setting up the USB subsystem
+    initialize_eeprom();
 
     // Initialize communication systems
     if (!initialize_communication_systems()) {
@@ -107,6 +124,10 @@ int main() {
 
 /**
  * @brief Create binary info declarations for debugging
+ *
+ * Sets up Pico binary info entries that can be read via picotool.
+ * This includes firmware version, GPIO pin assignments, and other
+ * critical hardware configuration details.
  */
 static void initialize_binary_info(void) {
     bi_decl(bi_program_name("controller-firmware"))
@@ -120,8 +141,6 @@ static void initialize_binary_info(void) {
     bi_decl(bi_1pin_with_name(STATUS_LIGHTS_LOGIC_BOARD_PIN, "Status Lights for Logic Board"))
     bi_decl(bi_1pin_with_name(STATUS_LIGHTS_SERVOS_PIN, "Status Lights for the Servos"))
     bi_decl(bi_2pins_with_func(UART_TX_PIN, UART_RX_PIN, GPIO_FUNC_UART))
-    bi_decl(bi_2pins_with_func(SENSORS_I2C_SDA_PIN, SENSORS_I2C_SCL_PIN, GPIO_FUNC_I2C))
-    bi_decl(bi_4pins_with_func(SENSORS_SPI_SCK_PIN, SENSORS_SPI_TX_PIN, SENSORS_SPI_RX_PIN, SENSORS_SPI_CS_PIN, GPIO_FUNC_SPI))
     bi_decl(bi_1pin_with_name(SERVO_0_GPIO_PIN, "Servo 0"))
     bi_decl(bi_1pin_with_name(SERVO_1_GPIO_PIN, "Servo 1"))
     bi_decl(bi_1pin_with_name(SERVO_2_GPIO_PIN, "Servo 2"))
@@ -135,7 +154,32 @@ static void initialize_binary_info(void) {
 }
 
 /**
+ * @brief Initialize the EEPROM and configure system from stored settings
+ *
+ * If EEPROM support is enabled, this function initializes the I2C interface
+ * for the EEPROM, reads the stored configuration, and updates system settings
+ * including USB descriptors. If disabled, it logs a warning.
+ */
+void initialize_eeprom(void) {
+#if USE_EEPROM
+    bi_decl(bi_2pins_with_func(EEPROM_SDA_PIN, EEPROM_SCL_PIN, GPIO_FUNC_I2C))
+    eeprom_setup_i2c();
+    read_eeprom_and_configure();
+    usb_descriptors_init();
+#else
+    // Mark the build as not having EEPROM enabled
+    warning("   *** NOTE: EEPROM is disabled in this build! ***");
+    bi_decl(bi_program_feature(" ->> *** NOTE: EEPROM has been disabled in this build *** <<-"))
+#endif
+}
+
+/**
  * @brief Initialize core system components
+ *
+ * Sets up the fundamental systems needed for basic operation:
+ * - Standard I/O for debugging
+ * - Logging system
+ * - Board hardware initialization
  *
  * @return true if successfully initialized, false otherwise
  */
@@ -157,6 +201,10 @@ static bool initialize_core_systems(void) {
 
 /**
  * @brief Log system version and boot information
+ *
+ * Outputs key system information to the log including firmware version,
+ * FreeRTOS version, and protocol version. Also logs warnings if certain
+ * subsystems are disabled in the build.
  */
 static void log_system_info(void) {
     info("----------------------------------------");
@@ -166,6 +214,10 @@ static void log_system_info(void) {
 
 #if USE_SENSORS == 0
     warning("*** Sensors are disabled in this build! ***");
+#endif
+
+#if USE_EEPROM == 0
+    warning("*** Configuration via the EEPROM is disabled in this build! ***");
 #endif
 
     // Log watchdog reset status
@@ -179,6 +231,11 @@ static void log_system_info(void) {
 
 /**
  * @brief Initialize communication subsystems
+ *
+ * Sets up all communication interfaces and starts their respective tasks:
+ * - Message processor
+ * - USB serial
+ * - UART serial
  *
  * @return true if successfully initialized, false otherwise
  */
@@ -207,6 +264,11 @@ static bool initialize_communication_systems(void) {
 /**
  * @brief Initialize controller and related hardware systems
  *
+ * Sets up the core control systems:
+ * - Power relay for motor control
+ * - Main controller (servo/motor control)
+ * - Status lights for visual feedback
+ *
  * @return true if successfully initialized, false otherwise
  */
 static bool initialize_controller_systems(void) {
@@ -231,6 +293,11 @@ static bool initialize_controller_systems(void) {
 /**
  * @brief Initialize status reporting and monitoring systems
  *
+ * Sets up systems for monitoring and reporting on device state:
+ * - Statistics reporter
+ * - I2C and SPI buses for sensors (if enabled)
+ * - Sensor monitoring and reporting
+ *
  * @return true if successfully initialized, false otherwise
  */
 static bool initialize_status_and_monitoring(void) {
@@ -239,6 +306,9 @@ static bool initialize_status_and_monitoring(void) {
     debug("Stats reporter started");
 
 #if USE_SENSORS
+    bi_decl(bi_2pins_with_func(SENSORS_I2C_SDA_PIN, SENSORS_I2C_SCL_PIN, GPIO_FUNC_I2C))
+    bi_decl(bi_4pins_with_func(SENSORS_SPI_SCK_PIN, SENSORS_SPI_TX_PIN, SENSORS_SPI_RX_PIN, SENSORS_SPI_CS_PIN, GPIO_FUNC_SPI))
+
     // Configure i2c for our needs
     if (!setup_i2c()) {
         error("Failed to initialize I2C");
@@ -273,6 +343,9 @@ static bool initialize_status_and_monitoring(void) {
 /**
  * @brief Schedule the startup task
  *
+ * Creates a task that will run after the RTOS scheduler starts to handle
+ * initialization steps that must occur after the scheduler is running.
+ *
  * @return true if successfully scheduled, false otherwise
  */
 static bool schedule_startup_task(void) {
@@ -299,8 +372,11 @@ static bool schedule_startup_task(void) {
 /**
  * @brief Task to handle initialization after scheduler has started
  *
- * This is required because USB initialization must occur after
- * the scheduler is running.
+ * This task initializes the USB subsystem, which must occur after the RTOS
+ * scheduler is running because the USB driver uses RTOS functionality.
+ * The task deletes itself once initialization is complete.
+ *
+ * @param pvParameters Task parameters (unused)
  */
 portTASK_FUNCTION(startup_task, pvParameters) {
     // Initialize USB after scheduler is started (required by TinyUSB)
