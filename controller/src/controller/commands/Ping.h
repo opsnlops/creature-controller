@@ -9,10 +9,10 @@
 
 namespace creatures::commands {
 
-    class Ping : public ICommand {
+    class Ping final : public ICommand {
 
     public:
-        Ping(std::shared_ptr<Logger> logger);
+        explicit Ping(std::shared_ptr<Logger> logger);
 
         std::string toMessage() override;
 

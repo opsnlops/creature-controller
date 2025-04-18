@@ -15,7 +15,7 @@ namespace creatures {
 
     public:
 
-        ServoConfig(std::shared_ptr<Logger> logger, std::shared_ptr<Servo> servo);
+        ServoConfig(const std::shared_ptr<Logger> &logger, const std::shared_ptr<Servo> &servo);
         ~ServoConfig() = default;
 
         u16 getOutputHeader() const;

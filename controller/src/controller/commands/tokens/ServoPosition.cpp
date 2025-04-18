@@ -10,7 +10,7 @@
 namespace creatures {
 
 
-    ServoPosition::ServoPosition(ServoSpecifier servoId, u32 requestedTicks) :
+    ServoPosition::ServoPosition(const ServoSpecifier servoId, const u32 requestedTicks) :
             servoId(servoId), requestedTicks(requestedTicks) {}
 
     ServoSpecifier ServoPosition::getServoId() const {

@@ -32,7 +32,7 @@ namespace creatures {
             u16 checksum = 0;
 
             // Calculate checksum
-            for (char c : toMessage()) {
+            for (const char c : toMessage()) {
                 checksum += c;
             }
 

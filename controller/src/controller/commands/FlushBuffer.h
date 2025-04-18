@@ -14,10 +14,10 @@ namespace creatures::commands {
      * a magic signal to the firmware to flush its buffer and get ready to start over.
      * That magic character is `\a`, a bell character. 🔔
      */
-    class FlushBuffer : public ICommand {
+    class FlushBuffer final : public ICommand {
 
     public:
-        FlushBuffer(std::shared_ptr<Logger> logger);
+        explicit FlushBuffer(const std::shared_ptr<Logger> &logger);
 
         std::string toMessage() override;
 

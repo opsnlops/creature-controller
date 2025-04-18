@@ -1,4 +1,13 @@
 
+/**
+ * @file main.cpp
+ * @brief Main entry point for the creature controller application
+ * 
+ * Initializes the application, processes command line arguments,
+ * builds the creature configuration, and runs the main controller.
+ */
+
+// Standard library includes
 #include <cstdlib>
 #include <csignal>
 #include <future>
@@ -7,8 +16,8 @@
 #include <utility>
 #include <vector>
 
+// Project includes
 #include "controller-config.h"
-
 #include "config/CommandLine.h"
 #include "config/CreatureBuilder.h"
 #include "controller/Controller.h"
@@ -27,12 +36,13 @@
 #include "util/StoppableThread.h"
 #include "Version.h"
 
-
 // Default to not shutting down
 std::atomic<bool> shutdown_requested(false);
 
-
-// Signal handler to stop the event loop
+/**
+ * @brief Signal handler to gracefully shutdown the application
+ * @param signal The received signal
+ */
 void signal_handler(int signal) {
     if (signal == SIGINT) {
         std::cerr << "Caught SIGINT, shutting down..." << std::endl;
@@ -40,6 +50,11 @@ void signal_handler(int signal) {
     }
 }
 
+/**
+ * @brief Shutdown a thread with timeout handling
+ * @param workerThread The thread to shutdown
+ * @param timeout_ms Maximum time to wait for shutdown in milliseconds
+ */
 void timedShutdown(std::shared_ptr<creatures::StoppableThread> &workerThread, unsigned long timeout_ms) {
     auto shutdownTask = std::async(std::launch::async, [&]{
         workerThread->shutdown();
@@ -51,14 +66,24 @@ void timedShutdown(std::shared_ptr<creatures::StoppableThread> &workerThread, un
     }
 }
 
+/**
+ * @brief Create a new logger with the specified name
+ * @param name The name to assign to the logger
+ * @return A shared pointer to the created logger
+ */
 std::shared_ptr<creatures::Logger> makeLogger(std::string name) {
     auto logger = std::make_shared<creatures::SpdlogLogger>();
     logger->init(std::move(name));
     return logger;
 }
 
+/**
+ * @brief Main entry point for the creature controller application
+ * @param argc Number of command line arguments
+ * @param argv Array of command line argument strings
+ * @return EXIT_SUCCESS on normal termination, EXIT_FAILURE otherwise
+ */
 int main(int argc, char **argv) {
-
     using creatures::io::Message;
     using creatures::server::ServerConnection;
 
@@ -80,13 +105,13 @@ int main(int argc, char **argv) {
     logger->debug("spdlog version {}.{}.{}", SPDLOG_VER_MAJOR, SPDLOG_VER_MINOR, SPDLOG_VER_PATCH);
     logger->debug("fmt version {}", FMT_VERSION);
 
-
     // Parse out the command line options
     auto commandLine = std::make_unique<creatures::CommandLine>(logger);
     auto configResult = commandLine->parseCommandLine(argc, argv);
 
     if(!configResult.isSuccess()) {
-        auto errorMessage = fmt::format("Unable to build configuration in memory: {}", configResult.getError().value().getMessage());
+        auto errorMessage = fmt::format("Unable to build configuration in memory: {}", 
+                                        configResult.getError().value().getMessage());
         std::cerr << errorMessage << std::endl;
         std::exit(EXIT_FAILURE);
     }
@@ -97,7 +122,8 @@ int main(int argc, char **argv) {
     auto builder = creatures::config::CreatureBuilder(logger, config->getCreatureConfigFile());
     auto creatureResult = builder.build();
     if(!creatureResult.isSuccess()) {
-        auto errorMessage = fmt::format("Unable to build the creature: {}", creatureResult.getError().value().getMessage());
+        auto errorMessage = fmt::format("Unable to build the creature: {}", 
+                                       creatureResult.getError().value().getMessage());
         std::cerr << errorMessage << std::endl;
         std::exit(EXIT_FAILURE);
     }
@@ -108,12 +134,12 @@ int main(int argc, char **argv) {
     // Make sure the creature believes it's ready to go
     auto preFlightCheckResult = creature->performPreFlightCheck();
     if(!preFlightCheckResult.isSuccess()) {
-        auto errorMessage = fmt::format("Pre-flight check failed: {}", preFlightCheckResult.getError().value().getMessage());
+        auto errorMessage = fmt::format("Pre-flight check failed: {}", 
+                                       preFlightCheckResult.getError().value().getMessage());
         std::cerr << errorMessage << std::endl;
         std::exit(EXIT_FAILURE);
     }
     logger->info("Pre-flight check passed: {}", preFlightCheckResult.getValue().value());
-
 
     // Hooray, we did it!
     logger->info("working with {}! ({})", creature->getName(), creature->getDescription());
@@ -123,32 +149,30 @@ int main(int argc, char **argv) {
     // Label the thread so it shows up in ps
     setThreadName("main for " + creature->getName());
 
-
     // Keep track of our threads
     std::vector<std::shared_ptr<creatures::StoppableThread>> workerThreads;
 
-
     // Start talking to the server, if we're told to
     auto websocketOutgoingQueue = std::make_shared<creatures::MessageQueue<creatures::server::ServerMessage>>();
-    auto serverConnection = std::make_shared<ServerConnection>(makeLogger("server"),
-                                                                              creature,
-                                                                              config->isUsingServer(),
-                                                                              config->getServerAddress(),
-                                                                              config->getServerPort(),
-                                                                              websocketOutgoingQueue);
+    auto serverConnection = std::make_shared<ServerConnection>(
+        makeLogger("server"),
+        creature,
+        config->isUsingServer(),
+        config->getServerAddress(),
+        config->getServerPort(),
+        websocketOutgoingQueue
+    );
+    
     // Start up if we should
     if(config->isUsingServer()) {
         serverConnection->start();
         workerThreads.push_back(serverConnection);
     }
 
-
     // Bring up the GPIO pins if enabled on the command line
     auto gpio = std::make_shared<creatures::device::GPIO>(makeLogger("gpio"), config->getUseGPIO());
     gpio->init();
     gpio->toggleFirmwareReset();
-
-
 
     // Create the top level message queues
     auto topLevelOutgoingQueue = std::make_shared<creatures::MessageQueue<Message>>();
@@ -162,36 +186,40 @@ int main(int argc, char **argv) {
     controller->start();
     workerThreads.push_back(controller);
 
-
-
     /**
      * Create and start the ServoModuleHandler for the UART devices that were found in the config file
      */
-    for( const auto& uart : config->getUARTDevices() ) {
-
+    for(const auto& uart : config->getUARTDevices()) {
         logger->debug("creating a ServoModuleHandler for module {} on {}",
                       UARTDevice::moduleNameToString(uart.getModule()),
                       uart.getDeviceNode());
 
         std::string loggerName = fmt::format("uart-{}", UARTDevice::moduleNameToString(uart.getModule()));
-        auto handler = std::make_shared<ServoModuleHandler>(makeLogger(loggerName),
-                                                            controller,
-                                                            uart.getModule(),
-                                                            uart.getDeviceNode(),
-                                                            messageRouter,
-                                                            websocketOutgoingQueue);
+        auto handler = std::make_shared<ServoModuleHandler>(
+            makeLogger(loggerName),
+            controller,
+            uart.getModule(),
+            uart.getDeviceNode(),
+            messageRouter,
+            websocketOutgoingQueue
+        );
 
         // Register the handler with the message router
-        messageRouter->registerServoModuleHandler(uart.getModule(), handler->getIncomingQueue(), handler->getOutgoingQueue());
+        messageRouter->registerServoModuleHandler(
+            uart.getModule(), 
+            handler->getIncomingQueue(), 
+            handler->getOutgoingQueue()
+        );
 
-        logger->debug("init'ing the ServoModuleHandler for module {}", UARTDevice::moduleNameToString(uart.getModule()));
+        logger->debug("init'ing the ServoModuleHandler for module {}", 
+                     UARTDevice::moduleNameToString(uart.getModule()));
         handler->init();
 
-        logger->debug("starting the ServoModuleHandler for module {}", UARTDevice::moduleNameToString(uart.getModule()));
+        logger->debug("starting the ServoModuleHandler for module {}", 
+                     UARTDevice::moduleNameToString(uart.getModule()));
         handler->start();
 
         workerThreads.push_back(handler);
-
     }
 
     // Now that the controller is running, we can start the creature
@@ -217,9 +245,9 @@ int main(int argc, char **argv) {
     pingTask->start();
     workerThreads.push_back(std::move(pingTask));
 
-
+    // Main loop - wait for shutdown signal
     while(!shutdown_requested.load()) {
-        std::this_thread::sleep_for(std::chrono::milliseconds (500));
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
 
     // Stop the creature first
@@ -239,6 +267,5 @@ int main(int argc, char **argv) {
 
     std::cout << "Bye! 🖖🏻" << std::endl;
     std::exit(EXIT_SUCCESS);
-
 }
 

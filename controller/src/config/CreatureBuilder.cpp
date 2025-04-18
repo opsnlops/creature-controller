@@ -1,14 +1,22 @@
 
+/**
+ * @file CreatureBuilder.cpp
+ * @brief Implementation of the CreatureBuilder class
+ */
+
+// Standard library includes
 #include <string>
 #include <fstream>
 #include <sstream>
+#include <memory>
 
+// Third-party includes
 #include <nlohmann/json.hpp>
-using json = nlohmann::json;
+#include <utility>
 
-#include "CreatureBuilder.h"
-#include "CreatureBuilderException.h"
-
+// Project includes
+#include "config/CreatureBuilder.h"
+#include "config/CreatureBuilderException.h"
 #include "config/UARTDevice.h"
 #include "controller/Input.h"
 #include "creature/Creature.h"
@@ -18,106 +26,136 @@ using json = nlohmann::json;
 #include "logging/Logger.h"
 #include "util/Result.h"
 
-namespace creatures :: config {
+// Use json as an alias for nlohmann::json for cleaner code
+using json = nlohmann::json;
 
+namespace creatures::config {
+
+    /**
+     * @brief Constructor for the CreatureBuilder class
+     * @param logger Shared pointer to a logger instance
+     * @param configFile Path to the creature configuration file
+     */
     CreatureBuilder::CreatureBuilder(std::shared_ptr<Logger> logger,
-                                     std::string configFile) :
-                                     BaseBuilder(logger, std::move(configFile)) {
-
+                                    std::string configFile) :
+                                    BaseBuilder(std::move(logger), std::move(configFile)) {
         // Define the required config file fields
         requiredTopLevelFields = {
-                "id", "type", "name", "version", "channel_offset", "universe", "motors",
-                "head_offset_max", "servo_frequency", "position_min", "position_max",
-                "description",
+            "id", "type", "name", "version", "channel_offset", "universe", "motors",
+            "head_offset_max", "servo_frequency", "position_min", "position_max",
+            "description",
         };
 
         requiredServoFields = {
-                "type", "id", "name", "output_module", "output_header", "min_pulse_us", "max_pulse_us",
-                "smoothing_value", "inverted", "default_position"
+            "type", "id", "name", "output_module", "output_header", "min_pulse_us", "max_pulse_us",
+            "smoothing_value", "inverted", "default_position"
         };
 
         requiredInputFields = {
-                "name", "slot", "width"
+            "name", "slot", "width"
         };
-
     }
 
-
+    /**
+     * @brief Build a creature from the configuration file
+     * @return Result containing either a creature pointer or an error
+     */
     Result<std::shared_ptr<creatures::creature::Creature>> CreatureBuilder::build() {
+        logger->info("Parsing creature configuration file");
 
-        logger->info("about to try to parse the creature config file");
-
-        // Make sure the file is accessible
+        // Verify file accessibility
         auto fileResult = isFileAccessible(logger, fileName);
-        if(!fileResult.isSuccess()) {
-            return Result<std::shared_ptr<creatures::creature::Creature>>{ControllerError(ControllerError::InternalError, "Unable to determine if the creature config file is accessible")};
+        if (!fileResult.isSuccess()) {
+            return Result<std::shared_ptr<creatures::creature::Creature>>{
+                ControllerError(ControllerError::InternalError, 
+                "Unable to determine if the creature config file is accessible")
+            };
         }
 
-        // Okay, we know the file exists. Is it readable?
-        if(!fileResult.getValue().value()) {
-            return Result<std::shared_ptr<creatures::creature::Creature>>{ControllerError(ControllerError::InvalidConfiguration, fmt::format("File {} is not accessible", fileName))};
+        // Check if file is readable
+        if (!fileResult.getValue().value()) {
+            return Result<std::shared_ptr<creatures::creature::Creature>>{
+                ControllerError(ControllerError::InvalidConfiguration, 
+                fmt::format("File {} is not accessible", fileName))
+            };
         }
 
-        // Okay we have a valid-ish config! Let's start building the Configuration object
+        // Load the configuration file
         auto configFileResult = loadFile(logger, fileName);
-        if(!configFileResult.isSuccess()) {
+        if (!configFileResult.isSuccess()) {
             auto errorMessage = fmt::format("Unable to open {} for reading", fileName);
             logger->warn(errorMessage);
-            return Result<std::shared_ptr<creatures::creature::Creature>>{ControllerError(ControllerError::InvalidData, errorMessage)};
+            return Result<std::shared_ptr<creatures::creature::Creature>>{
+                ControllerError(ControllerError::InvalidData, errorMessage)
+            };
         }
         auto configFile = std::move(configFileResult.getValue().value());
 
+        // Parse JSON content
         json j;
         try {
             j = json::parse(configFile);
-            logger->debug("file was parsed!");
+            logger->debug("Configuration file successfully parsed");
         } catch (json::parse_error& e) {
-            auto errorMessage = fmt::format("Unable to parse the creature config file: {}", e.what());
+            auto errorMessage = fmt::format("Unable to parse creature config file: {}", e.what());
             logger->error(errorMessage);
-            return Result<std::shared_ptr<creatures::creature::Creature>>{ControllerError(ControllerError::InvalidData, errorMessage)};
+            return Result<std::shared_ptr<creatures::creature::Creature>>{
+                ControllerError(ControllerError::InvalidData, errorMessage)
+            };
         }
 
+        // Verify JSON is an object
         if (!j.is_object()) {
-            auto errorMessage = "JSON is not an object while parsing the creature config file";
+            auto errorMessage = "JSON is not an object in creature config file";
             logger->error(errorMessage);
-            return Result<std::shared_ptr<creatures::creature::Creature>>{ControllerError(ControllerError::InvalidData, errorMessage)};
+            return Result<std::shared_ptr<creatures::creature::Creature>>{
+                ControllerError(ControllerError::InvalidData, errorMessage)
+            };
         }
 
-        // Make sure the top level fields we need are present
+        // Validate required top-level fields
         for (const auto& fieldName : requiredTopLevelFields) {
             auto fieldResult = checkJsonField(j, fieldName);
-            if(!fieldResult.isSuccess()) {
+            if (!fieldResult.isSuccess()) {
                 auto errorMessage = fieldResult.getError().value().getMessage();
                 logger->error(errorMessage);
-                return Result<std::shared_ptr<creatures::creature::Creature>>{ControllerError(ControllerError::InvalidData, errorMessage)};
+                return Result<std::shared_ptr<creatures::creature::Creature>>{
+                    ControllerError(ControllerError::InvalidData, errorMessage)
+                };
             }
         }
 
-        // Validate the creature type
-        creatures::creature::Creature::creature_type type = creatures::creature::Creature::stringToCreatureType(j["type"]);
-        std::string string_type = j["type"]; // Render the type to a string so fmt can print it
-        if(type == creatures::creature::Creature::invalid_creature) {
-            auto errorMessage = fmt::format("invalid creature type: {}", string_type);
-            logger->critical("invalid creature type: {}", string_type);
-            return Result<std::shared_ptr<creatures::creature::Creature>>{ControllerError(ControllerError::InvalidConfiguration, errorMessage)};
+        // Validate and get creature type
+        creatures::creature::Creature::creature_type type = 
+            creatures::creature::Creature::stringToCreatureType(j["type"]);
+        std::string string_type = j["type"];
+        
+        if (type == creatures::creature::Creature::invalid_creature) {
+            auto errorMessage = fmt::format("Invalid creature type: {}", string_type);
+            logger->critical(errorMessage);
+            return Result<std::shared_ptr<creatures::creature::Creature>>{
+                ControllerError(ControllerError::InvalidConfiguration, errorMessage)
+            };
         }
 
+        // Create creature instance based on type
         std::shared_ptr<creatures::creature::Creature> creature;
-
-        switch(type) {
+        switch (type) {
             case creatures::creature::Creature::parrot:
                 creature = std::make_shared<Parrot>(logger);
                 break;
             default:
-                logger->error("unimplemented creature type: {}", string_type);
-                std::exit(1);
+                auto errorMessage = fmt::format("Unimplemented creature type: {}", string_type);
+                logger->error(errorMessage);
+                return Result<std::shared_ptr<creatures::creature::Creature>>{
+                    ControllerError(ControllerError::InvalidConfiguration, errorMessage)
+                };
         }
 
-        // The servo frequency is shared. There can only be one per creature, so it's
-        // set in the creature tree, but it needs to be passed into the servos. It
-        // needs to know this to do math on position updates.
+        // The servo frequency is shared across all servos for the creature
         u16 servo_frequency = j["servo_frequency"];
 
+        // Configure creature properties
         creature->setName(j["name"]);
         creature->setId(j["id"]);
         creature->setVersion(j["version"]);
@@ -130,98 +168,116 @@ namespace creatures :: config {
         creature->setServoUpdateFrequencyHz(servo_frequency);
         creature->setType(type);
 
-        // Log that we've gotten this far
-        logger->info("creature name is {} (version {}), at channel offset {}",
-             creature->getName(), creature->getVersion(), creature->getChannelOffset());
+        logger->info("Configuring creature: {} (version {}), at channel offset {}",
+                    creature->getName(), creature->getVersion(), creature->getChannelOffset());
 
-        for(auto& motor : j["motors"]) {
-
+        // Process motors configuration
+        for (auto& motor : j["motors"]) {
             std::string id_string = motor["id"];
             std::string type_string = motor["type"];
 
-            // Validate the fields in this object
+            // Validate motor fields
             for (const auto& fieldName : requiredServoFields) {
-                checkJsonField(motor, fieldName);
+                auto fieldResult = checkJsonField(motor, fieldName);
+                if (!fieldResult.isSuccess()) {
+                    auto errorMessage = fieldResult.getError().value().getMessage();
+                    logger->error(errorMessage);
+                    return Result<std::shared_ptr<creatures::creature::Creature>>{
+                        ControllerError(ControllerError::InvalidData, errorMessage)
+                    };
+                }
             }
-            logger->debug("looking at motor {}", id_string);
+            
+            logger->debug("Processing motor: {}", id_string);
 
-            // Make sure we have a valid type for this motor
-            creatures::creature::Creature::motor_type motorType = creatures::creature::Creature::stringToMotorType(motor["type"]);
-            switch(motorType) {
-
-                // Do this in its own context since there's a var being created
+            // Validate motor type
+            creatures::creature::Creature::motor_type motorType = 
+                creatures::creature::Creature::stringToMotorType(motor["type"]);
+                
+            switch (motorType) {
                 case creatures::creature::Creature::servo: {
-
                     auto servoResult = createServo(motor, servo_frequency);
-                    if(!servoResult.isSuccess()) {
+                    if (!servoResult.isSuccess()) {
                         auto errorMessage = servoResult.getError().value().getMessage();
                         logger->error(errorMessage);
-                        return Result<std::shared_ptr<creatures::creature::Creature>>{ControllerError(ControllerError::InvalidConfiguration, errorMessage)};
+                        return Result<std::shared_ptr<creatures::creature::Creature>>{
+                            ControllerError(ControllerError::InvalidConfiguration, errorMessage)
+                        };
                     }
 
                     auto servo = servoResult.getValue().value();
-                    logger->debug("adding servo id: {}, name: {}", servo->getId(), servo->getName());
+                    logger->debug("Adding servo - ID: {}, Name: {}", servo->getId(), servo->getName());
                     creature->addServo(servo->getId(), servo);
                     break;
                 }
                 default:
-                    auto errorMessage = fmt::format("invalid motor type: {}", type_string);
+                    auto errorMessage = fmt::format("Invalid motor type: {}", type_string);
                     logger->error(errorMessage);
-                    return Result<std::shared_ptr<creatures::creature::Creature>>{ControllerError(ControllerError::InvalidConfiguration, errorMessage)};
+                    return Result<std::shared_ptr<creatures::creature::Creature>>{
+                        ControllerError(ControllerError::InvalidConfiguration, errorMessage)
+                    };
             }
-
         }
-        logger->debug("done processing motors");
+        
+        logger->debug("Finished processing motors");
 
-        // Handle the inputs
-        for(auto& input : j["inputs"]) {
-
-            // Validate the fields in this object
-            for (const auto& fieldName : requiredInputFields) {
-                auto fieldCheckResult = checkJsonField(input, fieldName);
-                if(!fieldCheckResult.isSuccess()) {
-                    auto errorMessage = fieldCheckResult.getError().value().getMessage();
-                    logger->error(errorMessage);
-                    return Result<std::shared_ptr<creatures::creature::Creature>>{ControllerError(ControllerError::InvalidData, errorMessage)};
+        // Process inputs configuration
+        if (j.contains("inputs")) {
+            for (auto& input : j["inputs"]) {
+                // Validate input fields
+                for (const auto& fieldName : requiredInputFields) {
+                    auto fieldCheckResult = checkJsonField(input, fieldName);
+                    if (!fieldCheckResult.isSuccess()) {
+                        auto errorMessage = fieldCheckResult.getError().value().getMessage();
+                        logger->error(errorMessage);
+                        return Result<std::shared_ptr<creatures::creature::Creature>>{
+                            ControllerError(ControllerError::InvalidData, errorMessage)
+                        };
+                    }
                 }
+
+                std::string inputName = input["name"];
+                u16 inputSlot = input["slot"];
+                u8 inputWidth = input["width"];
+
+                // Validate DMX slot range (1-512)
+                if (inputSlot > 512) {
+                    auto errorMessage = fmt::format("Input slot {} is out of range (max 512)", inputSlot);
+                    logger->error(errorMessage);
+                    return Result<std::shared_ptr<creatures::creature::Creature>>{
+                        ControllerError(ControllerError::InvalidConfiguration, errorMessage)
+                    };
+                }
+
+                creature->addInput(creatures::Input(inputName, inputSlot, inputWidth, 0UL));
+                logger->debug("Added input: {} at slot {}", inputName, inputSlot);
             }
-
-            std::string inputName = input["name"];
-            u16 inputSlot = input["slot"];
-            u8 inputWidth = input["width"];
-
-            // Make sure the slot is in the correct range for DMX
-            if(inputSlot > 512) {
-                auto errorMessage = fmt::format("input slot {} is out of range", inputSlot);
-                logger->error(errorMessage);
-                return Result<std::shared_ptr<creatures::creature::Creature>>{ControllerError(ControllerError::InvalidConfiguration, errorMessage)};
-            }
-
-            creature->addInput(creatures::Input(inputName, inputSlot, inputWidth, 0UL));
-            logger->debug("added input {} at slot {}", inputName, inputSlot);
-
         }
 
+        logger->info("Creature configuration complete");
         return Result<std::shared_ptr<creatures::creature::Creature>>{creature};
     }
 
-
     /**
-     * Builds a Servo object from a JSON object. Assumes that the
-     * JSON object has already been validated.
-     *
-     * @param j
-     * @return a `std::shared_ptr<Servo>` to the new servo
+     * @brief Creates a servo from its JSON configuration
+     * @param j JSON object containing servo configuration
+     * @param servo_frequency The frequency at which to drive the servo
+     * @return Result containing either a servo pointer or an error
      */
     Result<std::shared_ptr<Servo>> CreatureBuilder::createServo(const json& j, u16 servo_frequency) {
-
-        creatures::creature::Creature::motor_type type = creatures::creature::Creature::stringToMotorType(j["type"]);
-        if(type == creatures::creature::Creature::invalid_motor) {
-            auto errorMessage = fmt::format("invalid motor type: {}", j["type"]);
+        // Validate motor type
+        creatures::creature::Creature::motor_type type = 
+            creatures::creature::Creature::stringToMotorType(j["type"]);
+            
+        if (type == creatures::creature::Creature::invalid_motor) {
+            auto errorMessage = fmt::format("Invalid motor type: {}", j["type"].get<std::string>());
             logger->error(errorMessage);
-            return Result<std::shared_ptr<Servo>>{ControllerError(ControllerError::InvalidConfiguration, errorMessage)};
+            return Result<std::shared_ptr<Servo>>{
+                ControllerError(ControllerError::InvalidConfiguration, errorMessage)
+            };
         }
 
+        // Extract servo configuration values
         std::string id = j["id"];
         std::string name = j["name"];
         std::string output_module_as_string = j["output_module"];
@@ -232,21 +288,25 @@ namespace creatures :: config {
         bool inverted = j["inverted"];
         std::string parseDefault = j["default_position"];
 
-        // Figure out what the default position should be
+        // Calculate default position based on specified type
         u16 default_position = 0;
-        creatures::creature::Creature::default_position_type requestedDefault = creatures::creature::Creature::stringToDefaultPositionType(parseDefault);
+        creatures::creature::Creature::default_position_type requestedDefault = 
+            creatures::creature::Creature::stringToDefaultPositionType(parseDefault);
 
-        // Convert the module string to our enum
+        // Convert module string to enum
         UARTDevice::module_name output_location = UARTDevice::stringToModuleName(output_module_as_string);
-        if(output_location == creatures::config::UARTDevice::invalid_module) {
-            auto errorMessage = fmt::format("invalid servo module: {}", output_module_as_string);
+        if (output_location == creatures::config::UARTDevice::invalid_module) {
+            auto errorMessage = fmt::format("Invalid servo module: {}", output_module_as_string);
             logger->error(errorMessage);
-            return Result<std::shared_ptr<Servo>>{ControllerError(ControllerError::InvalidConfiguration, errorMessage)};
+            return Result<std::shared_ptr<Servo>>{
+                ControllerError(ControllerError::InvalidConfiguration, errorMessage)
+            };
         }
 
         ServoSpecifier output = {output_location, output_header};
 
-        switch(requestedDefault) {
+        // Set default position based on requested type
+        switch (requestedDefault) {
             case creatures::creature::Creature::center:
                 default_position = min_pulse_us + ((max_pulse_us - min_pulse_us) / 2);
                 break;
@@ -257,16 +317,20 @@ namespace creatures :: config {
                 default_position = max_pulse_us;
                 break;
             case creatures::creature::Creature::invalid_position:
-                auto errorMessage = fmt::format("invalid default position: {}", parseDefault);
+                auto errorMessage = fmt::format("Invalid default position: {}", parseDefault);
                 logger->error(errorMessage);
-                return Result<std::shared_ptr<Servo>>{ControllerError(ControllerError::InvalidConfiguration, errorMessage)};
+                return Result<std::shared_ptr<Servo>>{
+                    ControllerError(ControllerError::InvalidConfiguration, errorMessage)
+                };
         }
 
-        // Create the servo
-        auto servo = std::make_shared<Servo>(logger, id, name, output, min_pulse_us, max_pulse_us, smoothing_value,
-                                       inverted, servo_frequency, default_position);
+        // Create and return the servo
+        auto servo = std::make_shared<Servo>(
+            logger, id, name, output, min_pulse_us, max_pulse_us, 
+            smoothing_value, inverted, servo_frequency, default_position
+        );
+        
         return Result<std::shared_ptr<Servo>>{servo};
-
     }
 
-} // creatures :: config
+} // namespace creatures::config

@@ -66,7 +66,7 @@ namespace creatures {
          *
          * @return a `UARTDevice::module_name` for this serial handler
          */
-        UARTDevice::module_name getModuleName();
+        UARTDevice::module_name getModuleName() const;
 
         /**
          * Check if the resources (port, file descriptor, etc.) are valid

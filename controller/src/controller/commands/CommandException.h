@@ -6,12 +6,12 @@
 
 namespace creatures {
 
-    class CommandException : public std::exception {
-    private:
+    class CommandException final : public std::exception {
         std::string message;
     public:
         explicit CommandException(const std::string& msg) : message(msg) {}
-        virtual const char* what() const noexcept override {
+
+        const char* what() const noexcept override {
             return message.c_str();
         }
     };

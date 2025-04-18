@@ -9,11 +9,11 @@
 
 namespace creatures {
 
-    ServoConfig::ServoConfig(std::shared_ptr<Logger> logger, std::shared_ptr<Servo> servo) :
+    ServoConfig::ServoConfig(const std::shared_ptr<Logger> &logger, const std::shared_ptr<Servo> &servo) :
             logger(logger), servo(servo) {
 
         logger->debug("ServoConfig token made for servo on module {} at location {}",
-                      creatures::config::UARTDevice::moduleNameToString(servo->getOutputModule()),
+                      config::UARTDevice::moduleNameToString(servo->getOutputModule()),
                       servo->getOutputHeader());
 
     }

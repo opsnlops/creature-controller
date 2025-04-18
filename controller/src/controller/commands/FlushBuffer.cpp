@@ -11,7 +11,7 @@
 
 namespace creatures::commands {
 
-    FlushBuffer::FlushBuffer(std::shared_ptr<Logger> logger) : logger(logger) {}
+    FlushBuffer::FlushBuffer(const std::shared_ptr<Logger> &logger) : logger(logger) {}
 
     std::string FlushBuffer::toMessage() {
 

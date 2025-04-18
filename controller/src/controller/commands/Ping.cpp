@@ -20,7 +20,7 @@ namespace creatures::commands {
 
     std::string Ping::toMessage() {
 
-        auto now = std::chrono::high_resolution_clock::now();
+        const auto now = std::chrono::high_resolution_clock::now();
 
         // Start the message with the 'PING' command prefix
         std::string message = fmt::format("{}\t{}", "PING",

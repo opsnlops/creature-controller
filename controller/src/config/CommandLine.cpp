@@ -1,21 +1,27 @@
 
+// Standard library includes
 #include <algorithm>
-#include <arpa/inet.h>
-#include <ifaddrs.h>
 #include <iostream>
-#include <net/if.h>
-#include <netinet/in.h>
+#include <map>
 #include <string>
 #include <utility>
 #include <vector>
 
+// Network-related includes
+#include <arpa/inet.h>
+#include <ifaddrs.h>
+#include <net/if.h>
+#include <netinet/in.h>
+
+// Third-party includes
 #include <argparse/argparse.hpp>
 
-
-#include "ConfigurationBuilder.h"
+// Project includes
 #include "CommandLine.h"
+#include "ConfigurationBuilder.h"
 #include "Version.h"
 #include "logging/Logger.h"
+#include "logging/SpdlogLogger.h"
 #include "util/Result.h"
 
 /*
@@ -28,100 +34,122 @@ namespace creatures {
 
     class Configuration; // Forward declaration
 
-    CommandLine::CommandLine(std::shared_ptr<Logger> logger) : logger(logger) {}
+    CommandLine::CommandLine(std::shared_ptr<Logger> logger) : logger(std::move(logger)) {
+        if (!this->logger) {
+            this->logger = std::make_shared<creatures::SpdlogLogger>();
+        }
+    }
 
 
     Result<std::shared_ptr<config::Configuration>> CommandLine::parseCommandLine(int argc, char **argv) {
-
         argparse::ArgumentParser program("creature-controller", getVersion());
-
-        program.add_argument("--creature-config")
-                .help("JSON file for this creature")
-                .nargs(1)
-                .required();
-
-        program.add_argument("--config")
-                .help("Our configuration file")
-                .nargs(1)
-                .required();
-
-        program.add_argument("--list-network-devices")
-                .help("list available network devices and exit")
-                .default_value(false)
-                .implicit_value(true);
-
-        program.add_description("This application is the Linux version of the Creature Controller that's part\n"
-                                "of April's Creature Workshop! 🐰");
-        program.add_epilog("This is version " + getVersion() + "\n\n" +
-                           "🦜 Bawk!");
-
+    
+        setupCommandLineArguments(program);
+    
         try {
             program.parse_args(argc, argv);
         }
         catch (const std::exception &err) {
-
-            logger->critical(err.what());
+            logger->critical("Command line parsing error: {}", err.what());
             std::cerr << "\n" << program;
-            std::exit(1);
+            return Result<std::shared_ptr<config::Configuration>>(
+                ControllerError(ControllerError::InvalidConfiguration, err.what())
+            );
         }
-
-
-        if(program.get<bool>("--list-network-devices")) {
+    
+        if (program.get<bool>("--list-network-devices")) {
             listNetworkDevices();
             std::exit(0);
         }
-
-
-        // Parse out the  config file
+    
+        // Parse out the config files
         auto configFile = program.get<std::string>("--config");
-        logger->debug("config file {} from command line", configFile);
-        if(!configFile.empty()) {
-            logger->info("set our config file to {}", configFile);
-        }
-
-        // Parse out the creature config file
         auto creatureConfigFile = program.get<std::string>("--creature-config");
-        logger->debug("read creature file {} from command line", creatureConfigFile);
-        if(!creatureConfigFile.empty()) {
-            logger->info("set our creature config file to {}", creatureConfigFile);
+        
+        logger->debug("Config file: {}, Creature config file: {}", configFile, creatureConfigFile);
+        
+        if (!configFile.empty()) {
+            logger->info("Using config file: {}", configFile);
         }
-
-
-        // Make the builder
+        
+        if (!creatureConfigFile.empty()) {
+            logger->info("Using creature config file: {}", creatureConfigFile);
+        }
+    
+        // Build the configuration
         auto configBuilder = std::make_unique<creatures::config::ConfigurationBuilder>(logger, configFile);
         auto configResult = configBuilder->build();
-
-        // Since the creature config is also set on the command line (rather than in the main config file), pass
-        // it along to the Configuration object
-
-        // ... but only if we were successful parsing
-        if(!configResult.isSuccess()) {
+    
+        if (!configResult.isSuccess()) {
             return configResult;
         }
+        
+        // Set the creature config file in the configuration object
         configResult.getValue().value()->setCreatureConfigFile(creatureConfigFile);
-
+    
         return configResult;
+    }
+    
+    void CommandLine::setupCommandLineArguments(argparse::ArgumentParser& program) {
+        program.add_argument("--creature-config")
+                .help("JSON file for this creature")
+                .nargs(1)
+                .required();
+    
+        program.add_argument("--config")
+                .help("Our configuration file")
+                .nargs(1)
+                .required();
+    
+        program.add_argument("--list-network-devices")
+                .help("List available network devices and exit")
+                .default_value(false)
+                .implicit_value(true);
+    
+        program.add_description("This application is the Linux version of the Creature Controller that's part\n"
+                                "of April's Creature Workshop! 🐰");
+        program.add_epilog("This is version " + getVersion() + "\n\n" +
+                           "🦜 Bawk!");
     }
 
     void CommandLine::listNetworkDevices() {
-        struct ifaddrs *ifaddr, *ifa;
+        struct ifaddrs *ifaddr = nullptr, *ifa = nullptr;
         char addrBuff[INET6_ADDRSTRLEN];
-
+    
         if (getifaddrs(&ifaddr) == -1) {
             logger->critical("Unable to get network devices: {}", strerror(errno));
             return;
         }
-
+    
+        // Use RAII to ensure ifaddr is freed
+        struct IfaddrGuard {
+            struct ifaddrs* addr;
+            explicit IfaddrGuard(struct ifaddrs* addr) : addr(addr) {}
+            ~IfaddrGuard() { if (addr) freeifaddrs(addr); }
+        } guard(ifaddr);
+    
         // Map to store device name, index, and IP addresses
         std::map<std::string, std::pair<int, std::vector<std::string>>> interfaces;
-
-        for (ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next) {
+    
+        // Collect network interface information
+        collectNetworkInterfaces(ifaddr, interfaces, addrBuff);
+    
+        // Display the collected information
+        displayNetworkInterfaces(interfaces);
+    }
+    
+    void CommandLine::collectNetworkInterfaces(
+            struct ifaddrs* ifaddr,
+            std::map<std::string, std::pair<int, std::vector<std::string>>>& interfaces,
+            char* addrBuff) {
+            
+        for (auto ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next) {
             if (ifa->ifa_addr == nullptr)
                 continue;
-
+    
             void *tmpAddrPtr = nullptr;
             bool isIPv4 = false;
-
+    
             // Check if it is IP4 or IP6 and set tmpAddrPtr accordingly
             if (ifa->ifa_addr->sa_family == AF_INET) { // IPv4
                 tmpAddrPtr = &((struct sockaddr_in *)ifa->ifa_addr)->sin_addr;
@@ -129,9 +157,9 @@ namespace creatures {
             } else if (ifa->ifa_addr->sa_family == AF_INET6) { // IPv6
                 tmpAddrPtr = &((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr;
             }
-
+    
             if (tmpAddrPtr) {
-                inet_ntop(ifa->ifa_addr->sa_family, tmpAddrPtr, addrBuff, sizeof(addrBuff));
+                inet_ntop(ifa->ifa_addr->sa_family, tmpAddrPtr, addrBuff, INET6_ADDRSTRLEN);
                 // Prioritize IPv4 by inserting at the beginning of the vector
                 if (isIPv4) {
                     interfaces[ifa->ifa_name].second.insert(interfaces[ifa->ifa_name].second.begin(), addrBuff);
@@ -141,21 +169,31 @@ namespace creatures {
                 interfaces[ifa->ifa_name].first = if_nametoindex(ifa->ifa_name);
             }
         }
-
-        freeifaddrs(ifaddr);
-
+    }
+    
+    void CommandLine::displayNetworkInterfaces(
+            const std::map<std::string, std::pair<int, std::vector<std::string>>>& interfaces) {
+            
         std::cout << "List of network devices:" << std::endl;
         for (const auto &iface : interfaces) {
             std::cout << " Name: " << iface.first;
             std::cout << ", IPs: ";
-            for (const auto &ip : iface.second.second) {
-                std::cout << ip << " ";
+            
+            if (iface.second.second.empty()) {
+                std::cout << "none";
+            } else {
+                for (size_t i = 0; i < iface.second.second.size(); ++i) {
+                    std::cout << iface.second.second[i];
+                    if (i < iface.second.second.size() - 1) {
+                        std::cout << ", ";
+                    }
+                }
             }
             std::cout << std::endl;
         }
     }
 
-    std::string CommandLine::getVersion() {
+    std::string CommandLine::getVersion() const {
         return fmt::format("{}.{}.{}",
                            CREATURE_CONTROLLER_VERSION_MAJOR,
                            CREATURE_CONTROLLER_VERSION_MINOR,
