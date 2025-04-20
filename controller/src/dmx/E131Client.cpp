@@ -1,7 +1,8 @@
 
-#include <net/if.h>
+
 #include <thread>
 #include <unordered_map>
+#include <utility>
 
 #include "e131.h"
 
@@ -20,7 +21,7 @@
 
 namespace creatures::dmx {
 
-    E131Client::E131Client(const std::shared_ptr<creatures::Logger>& logger) : logger(logger) {
+    E131Client::E131Client(const std::shared_ptr<Logger>& logger) : logger(logger) {
         this->logger->info("e1.31 client created");
     }
 
@@ -28,18 +29,18 @@ namespace creatures::dmx {
         this->logger->info("e1.31 client destroyed");
     }
 
-    void E131Client::init(const std::shared_ptr<creatures::creature::Creature>& _creature,
+    void E131Client::init(const std::shared_ptr<creature::Creature>& _creature,
                           const std::shared_ptr<Controller>& _controller,
                           std::string _networkDeviceIPAddress) {
         this->creature = _creature;
         this->controller = _controller;
-        this->networkDeviceIPAddress = _networkDeviceIPAddress;
+        this->networkDeviceIPAddress = std::move(_networkDeviceIPAddress);
 
         // Create our input map
         for( const auto& input : this->creature->getInputs() ) {
 
             // Make a new Input and copy the data into it
-            auto newInput = creatures::Input(input);
+            auto newInput = Input(input);
             this->inputMap.emplace(newInput.getSlot(), newInput);
         }
         logger->debug("e1.31 client init'ed with {} inputs", this->inputMap.size());
@@ -62,7 +63,7 @@ namespace creatures::dmx {
         this->logger->info("✨e1.31 client started with {} inputs ✨", this->inputMap.size());
 
         // Start the worker
-        creatures::StoppableThread::start();
+        StoppableThread::start();
     }
 
     void E131Client::run() {
@@ -78,21 +79,21 @@ namespace creatures::dmx {
 
         // Create an e1.31 socket
         if ((sockfd = e131_socket()) < 0) {
-            std::string errorMessage = "Unable to create an e1.31 socket";
+            const std::string errorMessage = "Unable to create an e1.31 socket";
             this->logger->critical(errorMessage);
             throw E131Exception(errorMessage);
         }
 
         // Bind to the socket ⛓️
         if (e131_bind(sockfd, E131_DEFAULT_PORT) < 0) {
-            std::string errorMessage = "Unable to bind to the default e1.31 port";
+            const std::string errorMessage = "Unable to bind to the default e1.31 port";
             this->logger->critical(errorMessage);
             throw E131Exception(errorMessage);
         }
 
         // Join the multicast group
         if (e131_multicast_join_ifaddr(sockfd, creature->getUniverse(), this->networkDeviceIPAddress.c_str()) < 0) {
-            std::string errorMessage = fmt::format("Unable to join the multicast group for universe {} on interface {})",
+            const std::string errorMessage = fmt::format("Unable to join the multicast group for universe {} on interface {})",
                                                    creature->getUniverse(), this->networkDeviceIPAddress);
             this->logger->critical(errorMessage);
             throw E131Exception(errorMessage);
@@ -137,15 +138,15 @@ namespace creatures::dmx {
         }
         logger->trace("Received e1.31 packet: {}", hexString);
 
-        std::vector<creatures::Input> inputs;
+        std::vector<Input> inputs;
 
         // Walk the input map
-        for( auto& input : this->inputMap ) {
+        for( auto&[fst, snd] : this->inputMap ) {
 
-            u16 slot = input.first + creature->getChannelOffset();
-            u8 value = packet.dmp.prop_val[slot];
+            const u16 slot = fst + creature->getChannelOffset();
+            const u8 value = packet.dmp.prop_val[slot];
 
-            auto inputToSend = creatures::Input(input.second);
+            auto inputToSend = Input(snd);
             inputToSend.setIncomingRequest(value);
 
             inputs.push_back(inputToSend);

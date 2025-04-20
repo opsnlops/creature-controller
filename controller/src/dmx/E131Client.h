@@ -1,6 +1,5 @@
 #pragma once
 
-#include <atomic>
 #include <thread>
 
 #include "controller/Controller.h"
@@ -17,10 +16,10 @@ namespace creatures::dmx {
     class E131Client : public StoppableThread {
 
     public:
-        explicit E131Client(const std::shared_ptr<creatures::Logger>& logger);
+        explicit E131Client(const std::shared_ptr<Logger>& logger);
         ~E131Client() override;
 
-        void init(const std::shared_ptr<creatures::creature::Creature>& creature,
+        void init(const std::shared_ptr<creature::Creature>& creature,
                   const std::shared_ptr<Controller>& controller,
                   std::string networkDeviceIPAddress);
         void start() override;
@@ -29,15 +28,15 @@ namespace creatures::dmx {
 
     private:
 
-        std::shared_ptr<creatures::Logger> logger;
-        std::shared_ptr<creatures::creature::Creature> creature;
+        std::shared_ptr<Logger> logger;
+        std::shared_ptr<creature::Creature> creature;
         std::shared_ptr<Controller> controller;
 
         /**
          * A map of the inputs, with the slot number as the key. It's built in the
          * init() function.
          */
-        std::unordered_map<u16, creatures::Input> inputMap;
+        std::unordered_map<u16, Input> inputMap;
 
         void handlePacket(const e131_packet_t & packet);
 
