@@ -14,7 +14,7 @@
 
 #define uart_tx_wrap_target 0
 #define uart_tx_wrap 3
-#define uart_tx_pio_version 0
+#define uart_tx_pio_version 1
 
 static const uint16_t uart_tx_program_instructions[] = {
             //     .wrap_target

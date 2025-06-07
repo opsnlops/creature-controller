@@ -30,15 +30,7 @@
  */
 #define MOTOR_MAP_SIZE (1 * CONTROLLER_MOTORS_PER_MODULE)
 
-// GPIO pin definitions for all servos
-#define SERVO_0_GPIO_PIN            6               // Pin 9,  PWM  3A
-#define SERVO_1_GPIO_PIN            7               // Pin 10, PWM  3B
-#define SERVO_2_GPIO_PIN            8               // Pin 11, PWM  4A
-#define SERVO_3_GPIO_PIN            9               // Pin 12, PWM  4B
-#define SERVO_4_GPIO_PIN            10              // Pin 14, PWM  5A
-#define SERVO_5_GPIO_PIN            11              // Pin 15, PWM  5B
-#define SERVO_6_GPIO_PIN            12              // Pin 16, PWM  6A
-#define SERVO_7_GPIO_PIN            13              // Pin 17, PWM  6B
+
 
 /**
  * @brief Constant representing an invalid motor ID

@@ -49,6 +49,9 @@ bool setup_i2c(void) {
         warning("MCP9808 temperature sensor not found at address 0x%02x", I2C_DEVICE_MCP9808);
     }
 
+
+#ifdef CC_VER2
+
     // Initialize the power monitoring ICs
     if (i2c_device_present(SENSORS_I2C_BUS, I2C_MOTOR0_PAC1954)) {
         init_pac1954(I2C_MOTOR0_PAC1954);
@@ -70,6 +73,7 @@ bool setup_i2c(void) {
     } else {
         warning("Board PAC1954 not found at address 0x%02x", I2C_BOARD_PAC1954);
     }
+#endif
 
     return true;
 }

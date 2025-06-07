@@ -3,6 +3,8 @@
 #include "hardware/spi.h"
 #include "controller/config.h"
 
+#ifdef CC_VER2
+
 /**
  * @brief Flag indicating if SPI setup has been completed successfully
  */
@@ -36,3 +38,5 @@ static inline void spi_cs_select(void) {
 static inline void spi_cs_deselect(void) {
     gpio_put(SENSORS_SPI_CS_PIN, 1);
 }
+
+#endif

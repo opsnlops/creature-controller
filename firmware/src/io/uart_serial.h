@@ -12,6 +12,10 @@
 
 #include "controller/config.h"
 
+
+// There's no UART on versions 3 and up
+#ifdef CC_VER2
+
 void uart_serial_init();
 void uart_serial_start();
 
@@ -22,3 +26,5 @@ void __isr serial_reader_isr();
 
 portTASK_FUNCTION_PROTO(incoming_uart_serial_reader_task, pvParameters);
 portTASK_FUNCTION_PROTO(outgoing_uart_serial_writer_task, pvParameters);
+
+#endif

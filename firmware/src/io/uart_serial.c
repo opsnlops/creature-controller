@@ -16,6 +16,8 @@
 #include "types.h"
 
 
+#ifdef CC_VER2
+
 // Stats
 extern volatile u64 uart_characters_received;
 extern volatile u64 uart_messages_received;
@@ -238,3 +240,5 @@ void __isr serial_reader_isr() {
     // Additional safety check for null-termination
     lineBuffer[UART_SERIAL_INCOMING_MESSAGE_MAX_LENGTH - 1] = '\0';
 }
+
+#endif

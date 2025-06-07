@@ -189,12 +189,14 @@ portTASK_FUNCTION(outgoing_message_processor_task, pvParameters) {
             strncpy(uart_outgoing_message, rx_buffer, UART_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH);
 
 
-            // Send to the outgoing queues
+            // Send to the outgoing queue(s)
             if(is_safe_to_enqueue_outgoing_usb_serial())
                 xQueueSendToBack(usb_serial_outgoing_messages, usb_outgoing_message, (TickType_t) pdMS_TO_TICKS(10));
 
+#ifdef CC_VER2
             if(is_safe_to_enqueue_outgoing_uart_serial())
                 xQueueSendToBack(uart_serial_outgoing_messages, uart_outgoing_message, (TickType_t) pdMS_TO_TICKS(10));
+#endif
 
             // Wipe out the buffer for next time
             memset(rx_buffer, '\0', OUTGOING_MESSAGE_MAX_LENGTH + 3);

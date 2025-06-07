@@ -7,6 +7,8 @@
 #include "controller/config.h"
 #include "types.h"
 
+#ifdef CC_VER2
+
 /**
  * @brief Flag indicating that the SPI bus has been set up
  */
@@ -59,3 +61,5 @@ bool setup_spi(void) {
 
     return true;
 }
+
+#endif

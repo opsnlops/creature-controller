@@ -38,6 +38,7 @@ void start_sensor_reporter() {
 
 void sensorReportTimerCallback(TimerHandle_t xTimer) {
 
+#ifdef CC_VER2
     // Create a buffer for the motor messages
     char motor_message[USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH];
     memset(&motor_message, '\0', USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH);
@@ -78,8 +79,9 @@ void sensorReportTimerCallback(TimerHandle_t xTimer) {
              sensor_power_data[7].power);
 
     send_to_controller(motor_message);
+#endif CC_VER2
 
-
+#ifdef CC_VER2
     // Make a second buffer for the board's data. We can't do all of this in one message.
     char board_message[USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH];
     memset(&board_message, '\0', USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH);
@@ -119,4 +121,48 @@ void sensorReportTimerCallback(TimerHandle_t xTimer) {
           sensor_power_data[V3v3_SENSOR_SLOT].voltage,
           sensor_power_data[V5_SENSOR_SLOT].current,
           sensor_power_data[V5_SENSOR_SLOT].voltage);
+
+#endif
+
+
+#ifdef CC_VER3
+    // Make a second buffer for the board's data. We can't do all of this in one message.
+    char board_message[USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH] = {0};
+
+    snprintf(board_message, USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH,
+             "BSENSE\tTEMP %.2f\tVBUS %.3f %.3f %.3f\tMP_IN %.3f %.3f %.3f\t3V3 %.3f %.3f %.3f",
+             board_temperature,
+             sensor_power_data[VBUS_SENSOR_SLOT].voltage,
+             sensor_power_data[VBUS_SENSOR_SLOT].current,
+             sensor_power_data[VBUS_SENSOR_SLOT].power,
+             sensor_power_data[INCOMING_MOTOR_POWER_SENSOR_SLOT].voltage,
+             sensor_power_data[INCOMING_MOTOR_POWER_SENSOR_SLOT].current,
+             sensor_power_data[INCOMING_MOTOR_POWER_SENSOR_SLOT].power,
+             sensor_power_data[V3v3_SENSOR_SLOT].voltage,
+             sensor_power_data[V3v3_SENSOR_SLOT].current,
+             sensor_power_data[V3v3_SENSOR_SLOT].power);
+
+             send_to_controller(board_message);
+
+    // Log some debug information, too
+    debug("sensors: chassis: %.2fF, motor 0: pos: %u, %.2fV %.2fA %.2fW",
+          board_temperature,
+          analog_filter_get_value(&sensed_motor_position[0]),
+          sensor_power_data[0].voltage,
+          sensor_power_data[0].current,
+          sensor_power_data[0].power);
+
+    debug("board power: VBUS: %.3fA @ %.2fV, Incoming Motor: %.3fA @ %.2fV, 3v3: %.3fA @ %.2fV",
+          sensor_power_data[VBUS_SENSOR_SLOT].current,
+          sensor_power_data[VBUS_SENSOR_SLOT].voltage,
+          sensor_power_data[INCOMING_MOTOR_POWER_SENSOR_SLOT].current,
+          sensor_power_data[INCOMING_MOTOR_POWER_SENSOR_SLOT].voltage,
+          sensor_power_data[V3v3_SENSOR_SLOT].current,
+          sensor_power_data[V3v3_SENSOR_SLOT].voltage);
+
+#endif
+
+
+
 }
+

@@ -253,14 +253,19 @@ static bool initialize_communication_systems(void) {
     usb_serial_init();
     debug("USB serial initialized");
 
+#ifdef CC_VER2
     // Initialize UART serial communication
     uart_serial_init();
     debug("UART serial initialized");
+#endif
 
     // Start the communication systems
     message_processor_start();
     usb_serial_start();
+
+#ifdef CC_VER2
     uart_serial_start();
+#endif
 
     debug("Communication systems initialized and started");
     return true;
@@ -312,20 +317,24 @@ static bool initialize_status_and_monitoring(void) {
 
 #if USE_SENSORS
     bi_decl(bi_2pins_with_func(SENSORS_I2C_SDA_PIN, SENSORS_I2C_SCL_PIN, GPIO_FUNC_I2C))
+#if CC_VER2
     bi_decl(bi_4pins_with_func(SENSORS_SPI_SCK_PIN, SENSORS_SPI_TX_PIN, SENSORS_SPI_RX_PIN, SENSORS_SPI_CS_PIN, GPIO_FUNC_SPI))
-
+#endif
     // Configure i2c for our needs
     if (!setup_i2c()) {
         error("Failed to initialize I2C");
         return false;
     }
 
+#ifdef CC_VER2
     // Set up spi
     if (!setup_spi()) {
         error("Failed to initialize SPI");
         return false;
     }
     debug("I2C and SPI initialized");
+#endif
+
 
     // Start monitoring our sensors
     sensor_init();
@@ -356,7 +365,7 @@ static bool initialize_status_and_monitoring(void) {
 static bool schedule_startup_task(void) {
     TaskHandle_t startup_task_handle = NULL;
 
-    BaseType_t task_create_result = xTaskCreate(
+    const BaseType_t task_create_result = xTaskCreate(
             startup_task,
             "startup_task",
             configMINIMAL_STACK_SIZE,
@@ -384,6 +393,9 @@ static bool schedule_startup_task(void) {
  * @param pvParameters Task parameters (unused)
  */
 portTASK_FUNCTION(startup_task, pvParameters) {
+
+    (void)pvParameters;
+
     // Initialize USB after scheduler is started (required by TinyUSB)
     usb_init();
     usb_start();

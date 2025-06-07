@@ -39,6 +39,42 @@
  * EEPROM Config
  */
 
+#ifdef CC_VER3
+
+#define USE_EEPROM                          1
+
+// Define the EEPROM page size (check the EEPROM's datasheet)
+#define EEPROM_PAGE_SIZE                    64
+
+#define EEPROM_SDA_PIN                      4
+#define EEPROM_SCL_PIN                      5
+#define EEPROM_I2C_BUS                      i2c0
+#define EEPROM_I2C_ADDR                     0x50
+
+// The NeoPixel status lights
+#define STATUS_LIGHTS_TIME_MS               20
+#define STATUS_LIGHTS_PIO                   pio1
+
+#define STATUS_LIGHTS_LOGIC_BOARD_PIN       30
+#define STATUS_LIGHTS_LOGIC_BOARD_IS_RGBW   false
+
+// Max brightness of the lights on the servo modules. Max is 255.
+#define STATUS_LIGHTS_SERVOS_BRIGHTNESS     64
+
+#define STATUS_LIGHTS_SERVOS_PIN            31
+#define STATUS_LIGHTS_SERVOS_IS_RGBW        false
+
+#define USB_MOUNTED_LED_PIN                     32
+
+#define SENSOR_I2C_TIMER_TIME_MS                200
+
+#endif
+
+
+
+
+#ifdef CC_VER2
+
 #define USE_EEPROM                          0
 
 // Define the EEPROM page size (check the EEPROM's datasheet)
@@ -48,8 +84,6 @@
 #define EEPROM_SCL_PIN                      3
 #define EEPROM_I2C_BUS                      i2c1
 #define EEPROM_I2C_ADDR                     0x50
-
-
 
 // The NeoPixel status lights
 #define STATUS_LIGHTS_TIME_MS               20
@@ -63,6 +97,10 @@
 
 #define STATUS_LIGHTS_SERVOS_PIN            14
 #define STATUS_LIGHTS_SERVOS_IS_RGBW        false
+
+#define USB_MOUNTED_LED_PIN                     15
+
+#endif
 
 // How many frames do we have to go before we decide there's no IO
 #define STATUS_LIGHTS_IO_RESPONSIVENESS     25
@@ -143,7 +181,7 @@
 #define USB_SERIAL_OUTGOING_QUEUE_LENGTH        15
 #define USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH  255
 
-#define USB_MOUNTED_LED_PIN                     15
+
 
 /*
  * UART Serial Config
@@ -180,6 +218,7 @@
 /*
  * I2C Config
  */
+#ifdef CC_VER2
 #define SENSORS_I2C_BUS                         i2c1
 #define SENSORS_I2C_FREQ                        400000
 #define SENSORS_I2C_SDA_PIN                     2
@@ -198,6 +237,40 @@
 #define SENSOR_I2C_TIMER_TIME_MS                200
 #define SENSOR_SPI_TIMER_TIME_MS                50
 
+#endif
+
+#ifdef CC_VER3
+
+#define SENSORS_I2C_BUS                         i2c0
+#define SENSORS_I2C_FREQ                        400000
+#define SENSORS_I2C_SDA_PIN                     4
+#define SENSORS_I2C_SCL_PIN                     5
+
+
+
+#define I2C_DEVICE_MCP9808                      0x18
+#define I2C_DEVICE_MCP9808_PRODUCT_ID           0x400  // This is used to make sure we're talking to the right device
+
+
+#define I2C_PAC1954_SENSOR_COUNT                3
+#define I2C_PAC1954_PRODUCT_ID                  0x7B    // This is used to make sure we're talking to the right device
+
+#define I2C_BOARD_PAC1954                      0x10
+#define I2C_BOARD_PAC1954_SENSOR_COUNT         3
+
+#define VBUS_SENSOR_SLOT                        0
+#define INCOMING_MOTOR_POWER_SENSOR_SLOT        1
+#define V3v3_SENSOR_SLOT                        2
+
+
+
+
+
+
+#endif
+
+
+#ifdef CC_VER2
 
 // Various I2C devices
 #define I2C_DEVICE_MCP9808                      0x18
@@ -221,6 +294,9 @@
 #define VBUS_SENSOR_SLOT                        9
 #define INCOMING_MOTOR_POWER_SENSOR_SLOT        10
 #define V3v3_SENSOR_SLOT                        11
+
+#endif
+
 
 
 /**
@@ -248,7 +324,8 @@
 /*
  * Servo <-> GPIO Pin Mappings
  */
-#define SERVO_0_GPIO_PIN            6               // Pin 9,  PMW  3A
+#ifdef CC_VER2
+#define SERVO_0_GPIO_PIN            6               // Pin 9,  PWM  3A
 #define SERVO_1_GPIO_PIN            7               // Pin 10, PWM  3B
 #define SERVO_2_GPIO_PIN            8               // Pin 11, PWM  4A
 #define SERVO_3_GPIO_PIN            9               // Pin 12, PWM  4B
@@ -256,5 +333,16 @@
 #define SERVO_5_GPIO_PIN            11              // Pin 15, PWM  5B
 #define SERVO_6_GPIO_PIN            12              // Pin 16, PWM  6A
 #define SERVO_7_GPIO_PIN            13              // Pin 17, PWM  6B
+#endif
+#ifdef CC_VER3
+#define SERVO_0_GPIO_PIN            13
+#define SERVO_1_GPIO_PIN            12
+#define SERVO_2_GPIO_PIN            11
+#define SERVO_3_GPIO_PIN            10
+#define SERVO_4_GPIO_PIN            9
+#define SERVO_5_GPIO_PIN            8
+#define SERVO_6_GPIO_PIN            7
+#define SERVO_7_GPIO_PIN            6
+#endif
 
 #define DEBUG_CREATURE_POSITIONING  0

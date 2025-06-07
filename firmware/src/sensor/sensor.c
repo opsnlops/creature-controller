@@ -49,6 +49,7 @@ double board_temperature;
  */
 TimerHandle_t i2c_sensor_read_timer = NULL;
 
+#ifdef CC_VER2
 /**
  * Same as the above, but for SPI.
  *
@@ -56,6 +57,8 @@ TimerHandle_t i2c_sensor_read_timer = NULL;
  * the position of the servos.
  */
 TimerHandle_t spi_sensor_read_timer = NULL;
+#endif
+
 
 
 /**
@@ -69,7 +72,9 @@ void sensor_init() {
 
     // If these aren't true, very bad things will happen
     configASSERT(i2c_setup_completed);
+#ifdef CC_VER2
     configASSERT(spi_setup_completed);
+#endif
 
     // Set up the filter for the board temperature
     board_temperature = 66.6;
@@ -80,9 +85,6 @@ void sensor_init() {
         sensor_power_data[i].current = 0.0f;
         sensor_power_data[i].power = 0.0f;
     }
-
-
-
 }
 
 void sensor_start() {
@@ -107,7 +109,7 @@ void sensor_start() {
     info("started i2c sensor read timer");
 
 
-
+#ifdef CC_VER2
     // Create the timer that reads the spi sensors
     spi_sensor_read_timer = xTimerCreate(
             "SPI Sensor Read Timer",                    // Timer name
@@ -124,6 +126,7 @@ void sensor_start() {
     xTimerStart(spi_sensor_read_timer, pdMS_TO_TICKS(SENSOR_SPI_TIMER_TIME_MS) / 2);
 
     info("started spi sensor read timer");
+#endif
 }
 
 /*
@@ -145,9 +148,11 @@ void i2c_sensor_read_timer_callback(TimerHandle_t xTimer) {
     board_temperature = mcp9808_read_temperature_f(SENSORS_I2C_BUS, I2C_DEVICE_MCP9808);
 //    verbose("board temperature: %.2fF", board_temperature);
 
+    int i = 0;
     // Read the power data for all of our sensors
 
-    for(int i = 0; i < I2C_MOTOR0_PAC1954_SENSOR_COUNT; i++) {
+#ifdef CC_VER2
+    for(; i < I2C_MOTOR0_PAC1954_SENSOR_COUNT; i++) {
         sensor_power_data[i].voltage = pac1954_read_voltage(I2C_MOTOR0_PAC1954, i);
         sensor_power_data[i].current = pac1954_read_current(I2C_MOTOR0_PAC1954,i);
         sensor_power_data[i].power = pac1954_read_power(I2C_MOTOR0_PAC1954, i);
@@ -158,21 +163,23 @@ void i2c_sensor_read_timer_callback(TimerHandle_t xTimer) {
 //            sensor_power_data[2].power,
 //            sensor_power_data[3].power);
 
-    for(int i = 0; i < I2C_MOTOR1_PAC1954_SENSOR_COUNT; i++) {
-        sensor_power_data[4 + i].voltage = pac1954_read_voltage(I2C_MOTOR1_PAC1954, i);
-        sensor_power_data[4 + i].current = pac1954_read_current(I2C_MOTOR1_PAC1954,i);
-        sensor_power_data[4 + i].power = pac1954_read_power(I2C_MOTOR1_PAC1954, i);
+    for(; i < I2C_MOTOR1_PAC1954_SENSOR_COUNT; i++) {
+        sensor_power_data[i].voltage = pac1954_read_voltage(I2C_MOTOR1_PAC1954, i);
+        sensor_power_data[i].current = pac1954_read_current(I2C_MOTOR1_PAC1954,i);
+        sensor_power_data[i].power = pac1954_read_power(I2C_MOTOR1_PAC1954, i);
     }
 //    verbose("motor1 power data: %f %f %f %f",
 //            sensor_power_data[4].power,
 //            sensor_power_data[5].power,
 //            sensor_power_data[6].power,
 //            sensor_power_data[7].power);
+#endif
 
-    for(int i = 0; i < I2C_BOARD_PAC1954_SENSOR_COUNT; i++) {
-        sensor_power_data[8 + i].voltage = pac1954_read_voltage(I2C_BOARD_PAC1954, i);
-        sensor_power_data[8 + i].current = pac1954_read_current(I2C_BOARD_PAC1954,i);
-        sensor_power_data[8 + i].power = pac1954_read_power(I2C_BOARD_PAC1954, i);
+
+    for(; i < I2C_BOARD_PAC1954_SENSOR_COUNT; i++) {
+        sensor_power_data[i].voltage = pac1954_read_voltage(I2C_BOARD_PAC1954, i);
+        sensor_power_data[i].current = pac1954_read_current(I2C_BOARD_PAC1954,i);
+        sensor_power_data[i].power = pac1954_read_power(I2C_BOARD_PAC1954, i);
     }
 //    verbose("board power data: %f %f %f %f",
 //            sensor_power_data[8].power,
@@ -181,15 +188,18 @@ void i2c_sensor_read_timer_callback(TimerHandle_t xTimer) {
 //            sensor_power_data[11].power);
 
     // Send refresh command to get fresh data for next pass
+#ifdef CC_VER2
     pac1954_refresh(I2C_MOTOR0_PAC1954);
     pac1954_refresh(I2C_MOTOR1_PAC1954);
+#endif
+
     pac1954_refresh(I2C_BOARD_PAC1954);
     i2c_timer_count += 1;
 
 }
 
 
-
+#ifdef CC_VER2
 void spi_sensor_read_timer_callback(TimerHandle_t xTimer) {
 
     // We don't use this on this timer
@@ -222,3 +232,5 @@ void spi_sensor_read_timer_callback(TimerHandle_t xTimer) {
 
 
 }
+#endif
+

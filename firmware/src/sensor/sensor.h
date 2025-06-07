@@ -21,12 +21,16 @@ void sensor_start();
 void i2c_sensor_read_timer_callback(TimerHandle_t xTimer);
 
 
+#ifdef CC_VER2
+
 /**
  * Callback for the spi-based sensor read timer.
  *
  * @param xTimer The timer that called this function
  */
 void spi_sensor_read_timer_callback(TimerHandle_t xTimer);
+#endif
+
 
 
 
