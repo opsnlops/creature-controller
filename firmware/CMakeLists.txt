@@ -7,10 +7,23 @@ set(FREERTOS_PORT "TEMPLATE" CACHE STRING "" FORCE)
 set(PICO_USE_FASTEST_SUPPORTED_CLOCK 1)
 
 # Which version our code is written for
-add_compile_definitions(CC_VER3=1)
+if (NOT DEFINED HARDWARE_VERSION AND DEFINED ENV{HARDWARE_VERSION})
+    set(HARDWARE_VERSION $ENV{HARDWARE_VERSION})
+endif()
+
+if (HARDWARE_VERSION STREQUAL "2")
+    message("HARDWARE_VERSION is set to ${HARDWARE_VERSION}, setting CC_VER2=1")
+    add_compile_definitions(CC_VER2=1)
+else()
+    message("HARDWARE_VERSION not set or is set to 3, defaulting to 3")
+    set(HARDWARE_VERSION 3)
+    add_compile_definitions(CC_VER3=1)
+endif()
 
 
-set(PICO_PLATFORM rp2350)
+
+
+#set(PICO_PLATFORM rp2350)
 if (NOT PICO_PLATFORM AND NOT DEFINED ENV{PICO_PLATFORM})
     message("PICO_PLATFORM not defined, defaulting to rp2040")
     set(PICO_PLATFORM rp2040)
@@ -255,19 +268,19 @@ endfunction()
 
 
 # Create firmware targets
-create_firmware("controller-${PICO_PLATFORM}"
+create_firmware("controller-${PICO_PLATFORM}-hw${HARDWARE_VERSION}"
         "${CONTROLLER_ADDITIONAL_SOURCES}"
         "${CONTROLLER_ADDITIONAL_LIBS}"
         "${CONTROLLER_ADDITIONAL_INCLUDES}"
 )
 
-create_firmware("usbc_pd-${PICO_PLATFORM}"
+create_firmware("usbc_pd-${PICO_PLATFORM}-hw${HARDWARE_VERSION}"
         "${USBC_PD_ADDITIONAL_SOURCES}"
         "${USBC_PD_ADDITIONAL_LIBS}"
         "${USBC_PD_ADDITIONAL_INCLUDES}"
 )
 
-create_firmware("programmer-${PICO_PLATFORM}"
+create_firmware("programmer-${PICO_PLATFORM}-hw${HARDWARE_VERSION}"
         "${PROGRAMMER_ADDITIONAL_SOURCES}"
         "${PROGRAMMER_ADDITIONAL_LIBS}"
         "${PROGRAMMER_ADDITIONAL_INCLUDES}"

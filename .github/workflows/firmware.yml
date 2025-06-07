@@ -19,6 +19,9 @@ jobs:
         platform:
           - rp2040
           - rp2350
+        hardware_version:
+          - 2
+          - 3
 
     steps:
       - uses: actions/checkout@v4
@@ -58,7 +61,7 @@ jobs:
         # Note the current convention is to use the -S and -B options here to specify source
         # and build directories, but this is only available with CMake 3.13 and higher.
         # The CMake binaries on the Github Actions machines are (as of this writing) 3.12
-        run: PICO_PLATFORM=${{ matrix.platform }} PICO_SDK_PATH=$GITHUB_WORKSPACE/pico-sdk FREERTOS_KERNEL_PATH=$GITHUB_WORKSPACE/FreeRTOS-Kernel cmake $GITHUB_WORKSPACE/firmware
+        run: PICO_PLATFORM=${{ matrix.platform }} HARDWARE_VERSION=${{ matrix.hardware_version }} PICO_SDK_PATH=$GITHUB_WORKSPACE/pico-sdk FREERTOS_KERNEL_PATH=$GITHUB_WORKSPACE/FreeRTOS-Kernel cmake $GITHUB_WORKSPACE/firmware
 
       - uses: ammaraskar/gcc-problem-matcher@master
 

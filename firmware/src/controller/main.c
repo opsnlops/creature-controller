@@ -155,6 +155,13 @@ static void initialize_binary_info(void) {
     bi_decl(bi_1pin_with_name(SERVO_7_GPIO_PIN, "Servo 7"))
     bi_decl(bi_1pin_with_name(USB_MOUNTED_LED_PIN, "USB Mounted LED"))
     bi_decl(bi_1pin_with_name(CONTROLLER_RESET_PIN, "Controller Reset"))
+
+#ifdef CC_VER2
+    bi_decl(bi_program_feature("Requires Hardware Version: 2"))
+#endif
+#ifdef CC_VER3
+    bi_decl(bi_program_feature("Requires Hardware Version: 3"))
+#endif
 }
 
 /**
