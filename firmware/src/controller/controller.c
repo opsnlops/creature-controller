@@ -9,7 +9,7 @@
 #include "hardware/pwm.h"
 #include "hardware/watchdog.h"
 
-#include "device/power_relay.h"
+#include "device/power_control.h"
 #include "io/message_processor.h"
 #include "io/responsive_analog_read_filter.h"
 #include "logging/logging.h"
@@ -29,6 +29,7 @@ volatile u32 watchdog_wrap_count = 0UL;
 // Mutex for thread-safe access to motor_map
 SemaphoreHandle_t motor_map_mutex;
 
+
 /*
  * The following map is used to map motor IDs to GPIO pins!
  *
@@ -37,16 +38,19 @@ SemaphoreHandle_t motor_map_mutex;
  *
  * See `pwm.h` in the Pico SDK for more information! 😅
  *
+ * Note: Motor IDs 0-7 now map to descending GPIO pins (13 down to 6)
+ * Each motor also has an associated power control pin.
+ * All motors start unconfigured until the computer sends configuration data.
  */
 MotorMap motor_map[MOTOR_MAP_SIZE] = {
-        {"0", SERVO_0_GPIO_PIN, (SERVO_0_GPIO_PIN >> 1u) & 7u, SERVO_0_GPIO_PIN & 1u},
-        {"1", SERVO_1_GPIO_PIN, (SERVO_1_GPIO_PIN >> 1u) & 7u, SERVO_1_GPIO_PIN & 1u},
-        {"2", SERVO_2_GPIO_PIN, (SERVO_2_GPIO_PIN >> 1u) & 7u, SERVO_2_GPIO_PIN & 1u},
-        {"3", SERVO_3_GPIO_PIN, (SERVO_3_GPIO_PIN >> 1u) & 7u, SERVO_3_GPIO_PIN & 1u},
-        {"4", SERVO_4_GPIO_PIN, (SERVO_4_GPIO_PIN >> 1u) & 7u, SERVO_4_GPIO_PIN & 1u},
-        {"5", SERVO_5_GPIO_PIN, (SERVO_5_GPIO_PIN >> 1u) & 7u, SERVO_5_GPIO_PIN & 1u},
-        {"6", SERVO_6_GPIO_PIN, (SERVO_6_GPIO_PIN >> 1u) & 7u, SERVO_6_GPIO_PIN & 1u},
-        {"7", SERVO_7_GPIO_PIN, (SERVO_7_GPIO_PIN >> 1u) & 7u, SERVO_7_GPIO_PIN & 1u}
+    {"0", SERVO_0_GPIO_PIN, (SERVO_0_GPIO_PIN >> 1u) & 7u, SERVO_0_GPIO_PIN & 1u, SERVO_0_POWER_PIN, 0, 0, 0, 0, false},
+    {"1", SERVO_1_GPIO_PIN, (SERVO_1_GPIO_PIN >> 1u) & 7u, SERVO_1_GPIO_PIN & 1u, SERVO_1_POWER_PIN, 0, 0, 0, 0, false},
+    {"2", SERVO_2_GPIO_PIN, (SERVO_2_GPIO_PIN >> 1u) & 7u, SERVO_2_GPIO_PIN & 1u, SERVO_2_POWER_PIN, 0, 0, 0, 0, false},
+    {"3", SERVO_3_GPIO_PIN, (SERVO_3_GPIO_PIN >> 1u) & 7u, SERVO_3_GPIO_PIN & 1u, SERVO_3_POWER_PIN, 0, 0, 0, 0, false},
+    {"4", SERVO_4_GPIO_PIN, (SERVO_4_GPIO_PIN >> 1u) & 7u, SERVO_4_GPIO_PIN & 1u, SERVO_4_POWER_PIN, 0, 0, 0, 0, false},
+    {"5", SERVO_5_GPIO_PIN, (SERVO_5_GPIO_PIN >> 1u) & 7u, SERVO_5_GPIO_PIN & 1u, SERVO_5_POWER_PIN, 0, 0, 0, 0, false},
+    {"6", SERVO_6_GPIO_PIN, (SERVO_6_GPIO_PIN >> 1u) & 7u, SERVO_6_GPIO_PIN & 1u, SERVO_6_POWER_PIN, 0, 0, 0, 0, false},
+    {"7", SERVO_7_GPIO_PIN, (SERVO_7_GPIO_PIN >> 1u) & 7u, SERVO_7_GPIO_PIN & 1u, SERVO_7_POWER_PIN, 0, 0, 0, 0, false}
 };
 
 /**
@@ -293,6 +297,8 @@ bool configureServoMinMax(const char* motor_id, u16 minMicroseconds, u16 maxMicr
         info("updated the motor map to allow motor %s to move between %u and %u microseconds",
              motor_id, minMicroseconds, maxMicroseconds);
 
+        motor_map[motor_id_index].is_configured = true;
+
         result = true;
         xSemaphoreGive(motor_map_mutex);
     } else {
@@ -405,12 +411,17 @@ void first_frame_received(bool yesOrNo) {
 
     if(yesOrNo) {
         info("We've received our first frame from the controller!");
-        power_relay_on();
+
+#ifdef CC_VER3
+        enable_all_motors();
+#endif
     }
     else
     {
         info("We haven't received our first frame from the controller yet");
-        power_relay_off();
+#ifdef CC_VER3
+        disable_all_motors();
+#endif
     }
 }
 
@@ -430,4 +441,66 @@ void controller_reset_request_check_timer_callback(TimerHandle_t xTimer) {
         xTimerStart(controller_init_request_timer, 0);
         debug("started asking the computer for our configuration");
     }
+}
+
+/**
+ * @brief Check if a motor is configured by the computer
+ *
+ * @param motor_id The motor ID string (e.g., "0", "1", etc.)
+ * @return true if motor is configured, false if not (or motor not found)
+ */
+bool is_motor_configured(const char* motor_id) {
+    if (motor_id == NULL || motor_id[0] == '\0') {
+        warning("motor_id is null while checking motor configuration");
+        return false;
+    }
+
+    u8 motor_index = getMotorMapIndex(motor_id);
+    if (motor_index == INVALID_MOTOR_ID) {
+        warning("invalid motor ID while checking configuration: %s", motor_id);
+        return false;
+    }
+
+    bool configured = false;
+
+    // Take the mutex to ensure thread-safe access
+    if (xSemaphoreTake(motor_map_mutex, portMAX_DELAY) == pdTRUE) {
+        configured = motor_map[motor_index].is_configured;
+        xSemaphoreGive(motor_map_mutex);
+    } else {
+        warning("failed to take motor_map_mutex in is_motor_configured");
+    }
+
+    return configured;
+}
+
+/**
+ * @brief Check if all motors are configured
+ *
+ * @return true if all motors have been configured by the computer
+ */
+bool are_all_motors_configured(void) {
+    bool all_configured = true;
+
+    // Take the mutex to ensure thread-safe access
+    if (xSemaphoreTake(motor_map_mutex, portMAX_DELAY) == pdTRUE) {
+        for (size_t i = 0; i < MOTOR_MAP_SIZE; i++) {
+            if (!motor_map[i].is_configured) {
+                all_configured = false;
+                break;
+            }
+        }
+        xSemaphoreGive(motor_map_mutex);
+    } else {
+        warning("failed to take motor_map_mutex in are_all_motors_configured");
+        return false;
+    }
+
+    if (all_configured) {
+        debug("all motors are configured - ready to hop! 🐰");
+    } else {
+        debug("some motors still need configuration - patience, young grasshopper... er, bunny!");
+    }
+
+    return all_configured;
 }

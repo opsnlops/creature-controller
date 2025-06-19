@@ -58,17 +58,20 @@ extern SemaphoreHandle_t motor_map_mutex;
  * @brief Structure mapping a motor ID to its hardware configuration
  *
  * This structure contains all information needed to control a servo motor,
- * including GPIO pin, PWM slice/channel, position limits, and current state.
+ * including GPIO pin, PWM slice/channel, position limits, current state,
+ * and power control.
  */
 typedef struct {
     const char* motor_id;           /**< String identifier for this motor (e.g., "0", "1") */
     u32 gpio_pin;                   /**< GPIO pin number on the Pi Pico */
     u32 slice;                      /**< PWM slice used by this motor */
     u32 channel;                    /**< PWM channel within the slice */
+    u32 power_pin;                  /**< GPIO pin controlling power to this motor */
     u16 requested_position;         /**< Position in PWM counter ticks (not microseconds) */
     u16 min_microseconds;           /**< Minimum pulse width in microseconds */
     u16 max_microseconds;           /**< Maximum pulse width in microseconds */
     u16 current_microseconds;       /**< Current pulse width in microseconds */
+    bool is_configured;             /**< True if this motor has been configured by the computer */
 } MotorMap;
 
 /**
@@ -217,3 +220,18 @@ void first_frame_received(bool yesOrNo);
  * Kept for compatibility.
  */
 void check_for_controller_reset_request();
+
+/**
+ * @brief Check if a motor is configured by the computer
+ *
+ * @param motor_id The motor ID string (e.g., "0", "1", etc.)
+ * @return true if motor is configured, false if not (or motor not found)
+ */
+bool is_motor_configured(const char* motor_id);
+
+/**
+ * @brief Check if all motors are configured
+ *
+ * @return true if all motors have been configured by the computer
+ */
+bool are_all_motors_configured(void);

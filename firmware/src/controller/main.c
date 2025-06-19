@@ -22,7 +22,7 @@
 #include "debug/sensor_reporter.h"
 #include "debug/stats_reporter.h"
 #include "device/eeprom.h"
-#include "device/power_relay.h"
+#include "device/power_control.h"
 #include "device/status_lights.h"
 #include "io/i2c.h"
 #include "io/message_processor.h"
@@ -289,9 +289,12 @@ static bool initialize_communication_systems(void) {
  * @return true if successfully initialized, false otherwise
  */
 static bool initialize_controller_systems(void) {
-    // Set up the power relay
-    init_power_relay();
-    debug("Power relay initialized");
+
+#ifdef CC_VER3
+    // Initialize the power control pins for all motors
+    init_motor_power_control();
+    debug("set up the power control pins for all motors");
+#endif
 
     // Initialize the controller
     controller_init();

@@ -1,0 +1,18 @@
+{
+  "useGPIO": false,
+  "UARTs":
+    [
+      {
+        "enabled": true,
+        "deviceNode": "/dev/cu.usbmodem02511991",
+        "module": "A"
+      }
+    ],
+  "creatureServer": {
+    "enabled": true,
+    "port": 8000,
+    "address": "10.19.63.5"
+  },
+  "ipAddress": "10.19.63.11",
+  "universe": 2
+}

@@ -57,7 +57,7 @@ endif()
 message("Building for platform ${PICO_PLATFORM}")
 
 project(creature-firmware
-        VERSION "3.3.0"
+        VERSION "3.3.1"
         DESCRIPTION "Pi Pico Firmwares for April's Creatures"
         HOMEPAGE_URL https://github.com/opsnlops/creature-controller/firmware
         LANGUAGES C CXX ASM)
@@ -123,8 +123,8 @@ set(COMMON_SOURCES
         src/device/mcp9808.c
         src/device/pac1954.h
         src/device/pac1954.c
-        src/device/power_relay.h
-        src/device/power_relay.c
+        src/device/power_control.h
+        src/device/power_control.c
         src/device/status_lights.h
         src/device/status_lights.c
         src/freertos_hooks.c

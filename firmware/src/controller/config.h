@@ -333,6 +333,17 @@
 #define SERVO_5_GPIO_PIN            11              // Pin 15, PWM  5B
 #define SERVO_6_GPIO_PIN            12              // Pin 16, PWM  6A
 #define SERVO_7_GPIO_PIN            13              // Pin 17, PWM  6B
+
+// V2 doesn't have power control pins for the servos, so we just set them to 0
+#define SERVO_0_POWER_PIN           0
+#define SERVO_1_POWER_PIN           0
+#define SERVO_2_POWER_PIN           0
+#define SERVO_3_POWER_PIN           0
+#define SERVO_4_POWER_PIN           0
+#define SERVO_5_POWER_PIN           0
+#define SERVO_6_POWER_PIN           0
+#define SERVO_7_POWER_PIN           0
+
 #endif
 #ifdef CC_VER3
 #define SERVO_0_GPIO_PIN            13
@@ -343,6 +354,21 @@
 #define SERVO_5_GPIO_PIN            8
 #define SERVO_6_GPIO_PIN            7
 #define SERVO_7_GPIO_PIN            6
+
+#define SERVO_0_POWER_PIN           21
+#define SERVO_1_POWER_PIN           20
+#define SERVO_2_POWER_PIN           19
+#define SERVO_3_POWER_PIN           18
+#define SERVO_4_POWER_PIN           17
+#define SERVO_5_POWER_PIN           16
+#define SERVO_6_POWER_PIN           15
+#define SERVO_7_POWER_PIN           14
+
+
 #endif
+
+
+
+
 
 #define DEBUG_CREATURE_POSITIONING  0
