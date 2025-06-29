@@ -31,6 +31,6 @@ set(CPACK_DEBIAN_PACKAGE_MAINTAINER "April White <april@opsnlops.io>")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/../LICENSE")
 set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/../README.md")
 
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "locales-all, zlib1g")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "locales-all, zlib1g, libsasl2-2, libicu72, pipewire, libsdl2-mixer-2.0-0, libutf8proc2, flac,")
 
 include(CPack)

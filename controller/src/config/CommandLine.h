@@ -50,11 +50,13 @@ namespace creatures {
          */
         void listNetworkDevices();
 
+        static void listAudioDevices();
+
         /**
          * @brief Get the version string
          * @return Version in format "MAJOR.MINOR.PATCH"
          */
-        [[nodiscard]] std::string getVersion() const;
+        [[nodiscard]] static std::string getVersion();
 
     private:
         std::shared_ptr<Logger> logger;
@@ -63,7 +65,7 @@ namespace creatures {
          * @brief Set up command line arguments for argparse
          * @param program The argument parser instance
          */
-        void setupCommandLineArguments(argparse::ArgumentParser& program);
+        static void setupCommandLineArguments(argparse::ArgumentParser& program);
 
         /**
          * @brief Collect network interface information

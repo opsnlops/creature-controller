@@ -14,5 +14,7 @@
     "address": "10.19.63.5"
   },
   "ipAddress": "10.19.63.11",
-  "universe": 2
+  "universe": 2,
+  "useRTPAudio": true,
+  "audioDevice": 1
 }

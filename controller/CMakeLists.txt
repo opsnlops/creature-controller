@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.18)
 
 project(creature-controller
-        VERSION "2.5.6"
+        VERSION "2.6.1"
         DESCRIPTION "April's Creature Workshop Controller"
         HOMEPAGE_URL https://github.com/opsnlops/creature-controller
         LANGUAGES C CXX)
@@ -61,6 +61,14 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(googletest)
 
+# uvgRTP
+FetchContent_Declare(
+        uvgrtp
+        GIT_REPOSITORY https://github.com/ultravideo/uvgRTP.git
+        GIT_TAG        v3.1.6
+)
+FetchContent_MakeAvailable(uvgrtp)
+
 # Set up lib131 as an external library
 add_library(libe131 STATIC
         lib/libe131/src/e131.c
@@ -88,7 +96,9 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(ixwebsocket)
 
-
+# SDL
+find_package(SDL2 REQUIRED)
+find_package(SDL2_mixer REQUIRED)
 
 include_directories(
         src/
@@ -231,10 +241,17 @@ target_include_directories(creature_lib PUBLIC
         ${nlohmann_json_SOURCE_DIR}/include
         ${spdlog_SOURCE_DIR}/include
         ${ixwebsocket_SOURCE_DIR}
+        ${SDL2_INCLUDE_DIRS}
+        ${SDL2_MIXER_INCLUDE_DIRS}
 )
 
 add_executable(creature-controller
         src/main.cpp
+        src/audio/audio-config.h
+        src/audio/RtpAudioClient.cpp
+        src/audio/RtpAudioClient.h
+        src/audio/AudioSubsystem.cpp
+        src/audio/AudioSubsystem.h
 )
 
 target_link_libraries(creature-controller
@@ -242,10 +259,13 @@ target_link_libraries(creature-controller
         creature_lib
         libe131
         fmt::fmt
+        SDL2::SDL2
+        SDL2_mixer::SDL2_mixer
         argparse
         ixwebsocket
         spdlog::spdlog $<$<BOOL:${MINGW}>:ws2_32>
         nlohmann_json::nlohmann_json
+        uvgrtp
 )
 
 install(TARGETS creature-controller

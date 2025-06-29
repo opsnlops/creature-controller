@@ -86,6 +86,8 @@ namespace creatures :: config {
         config->setUseGPIO(j["useGPIO"]);
         config->setNetworkDeviceIPAddress(j["ipAddress"]);
         config->setUniverse(j["universe"]);
+        config->setUseAudioSubsystem(j["useRTPAudio"]);
+        config->setSoundDeviceNumber(j["audioDevice"]);
 
 
         // Log that we've gotten this far

@@ -15,11 +15,13 @@
 
 // Third-party includes
 #include <argparse/argparse.hpp>
+#include <SDL.h>
 
 // Project includes
 #include "CommandLine.h"
 #include "ConfigurationBuilder.h"
 #include "Version.h"
+#include "audio/audio-config.h"
 #include "logging/Logger.h"
 #include "logging/SpdlogLogger.h"
 #include "util/Result.h"
@@ -61,7 +63,13 @@ namespace creatures {
             listNetworkDevices();
             std::exit(0);
         }
-    
+
+        if (program.get<bool>("--list-sound-devices")) {
+            listAudioDevices();
+            std::exit(0);
+        }
+
+
         // Parse out the config files
         auto configFile = program.get<std::string>("--config");
         auto creatureConfigFile = program.get<std::string>("--creature-config");
@@ -86,7 +94,7 @@ namespace creatures {
         
         // Set the creature config file in the configuration object
         configResult.getValue().value()->setCreatureConfigFile(creatureConfigFile);
-    
+
         return configResult;
     }
     
@@ -103,6 +111,11 @@ namespace creatures {
     
         program.add_argument("--list-network-devices")
                 .help("List available network devices and exit")
+                .default_value(false)
+                .implicit_value(true);
+
+        program.add_argument("--list-sound-devices")
+                .help("List available sound devices and exit")
                 .default_value(false)
                 .implicit_value(true);
     
@@ -137,7 +150,32 @@ namespace creatures {
         // Display the collected information
         displayNetworkInterfaces(interfaces);
     }
-    
+
+    void CommandLine::listAudioDevices() {
+        std::cout << "Available audio devices for RTP playback:" << std::endl;
+
+        if (SDL_Init(SDL_INIT_AUDIO) < 0) {
+            std::cerr << "Failed to initialize SDL: " << SDL_GetError() << std::endl;
+            return;
+        }
+
+        int numDevices = SDL_GetNumAudioDevices(0);
+
+        std::cout << "Number of audio devices: " << numDevices << std::endl;
+        for (int i = 0; i < numDevices; ++i) {
+            const char* deviceName = SDL_GetAudioDeviceName(i, 0);
+            if (deviceName) {
+                std::cout << "  Device " << i << ": " << deviceName << std::endl;
+            }
+        }
+
+        std::cout << std::endl << "🎵 Audio format: " << creatures::audio::getAudioFormatDescription() << std::endl;
+        std::cout << "🔊 Volume: Set to maximum (" << static_cast<int>(creatures::audio::DEFAULT_VOLUME)
+                  << ") - use hardware controls!" << std::endl;
+
+        SDL_Quit();
+    }
+
     void CommandLine::collectNetworkInterfaces(
             struct ifaddrs* ifaddr,
             std::map<std::string, std::pair<int, std::vector<std::string>>>& interfaces,
@@ -193,7 +231,7 @@ namespace creatures {
         }
     }
 
-    std::string CommandLine::getVersion() const {
+    std::string CommandLine::getVersion() {
         return fmt::format("{}.{}.{}",
                            CREATURE_CONTROLLER_VERSION_MAJOR,
                            CREATURE_CONTROLLER_VERSION_MINOR,

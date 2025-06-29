@@ -6,6 +6,7 @@
 #include "config/UARTDevice.h"
 #include "creature/Creature.h"
 
+#include "audio/audio-config.h"
 #include "controller-config.h"
 #include "logging/Logger.h"
 
@@ -26,6 +27,9 @@ namespace creatures::config {
         friend class Configuration;
 
         bool getUseGPIO() const;
+        bool getUseAudioSubsystem() const;
+        u8 getSoundDeviceNumber() const;
+
         std::string getNetworkDeviceIPAddress() const;
         u16 getUniverse() const;
         [[nodiscard]] std::vector<UARTDevice> getUARTDevices() const;
@@ -36,6 +40,8 @@ namespace creatures::config {
         u16 getServerPort() const;
 
         void setUseGPIO(bool _useGPIO);
+        void setUseAudioSubsystem(bool _useAudioSubsystem);
+        void setSoundDeviceNumber(u8 _soundDeviceNumber);
         void setNetworkDeviceIPAddress(std::string _networkDeviceIPAddress);
         void setUniverse(u16 _universe);
         void addUARTDevice(UARTDevice _uartDevice);
@@ -50,6 +56,11 @@ namespace creatures::config {
 
         // Should we use the GPIO pins?
         bool useGPIO = false;
+
+        // Do we use the audio subsystem?
+        bool useAudioSubsystem = false;
+
+        u8 soundDeviceNumber = audio::DEFAULT_SOUND_DEVICE_NUMBER;
 
         // Which IP address to bind to?
         std::string networkDeviceIPAddress = DEFAULT_NETWORK_DEVICE_IP_ADDRESS;

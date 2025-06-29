@@ -47,6 +47,14 @@ namespace creatures::config {
         return useGPIO;
     }
 
+    bool Configuration::getUseAudioSubsystem() const {
+        return useAudioSubsystem;
+    }
+
+    u8 Configuration::getSoundDeviceNumber() const {
+        return soundDeviceNumber;
+    }
+
     /**
      * @brief Get the IP address to bind to for network communication
      * @return The network device IP address as a string
@@ -122,6 +130,16 @@ namespace creatures::config {
     void Configuration::setUseGPIO(bool _useGPIO) {
         this->useGPIO = _useGPIO;
         logger->debug("Set useGPIO to {}", this->useGPIO);
+    }
+
+    void Configuration::setSoundDeviceNumber(u8 _soundDeviceNumber) {
+        this->soundDeviceNumber = _soundDeviceNumber;
+        logger->debug("Set soundDeviceNumber to {}", this->soundDeviceNumber);
+    }
+
+    void Configuration::setUseAudioSubsystem(bool _useAudioSubsystem) {
+        this->useAudioSubsystem = _useAudioSubsystem;
+        logger->debug("Set useAudioSubsystem to {}", this->useAudioSubsystem);
     }
 
     /**

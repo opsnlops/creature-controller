@@ -20,6 +20,7 @@
 
 // Project includes
 #include "controller-config.h"
+#include "audio/AudioSubsystem.h"
 #include "config/CommandLine.h"
 #include "config/CreatureBuilder.h"
 #include "controller/Controller.h"
@@ -65,6 +66,11 @@ std::shared_ptr<creatures::Logger> makeLogger(std::string name) {
     logger->init(std::move(name));
     return logger;
 }
+
+/**
+ * @brief The audio subsystem for handling RTP audio reception
+ */
+std::shared_ptr<creatures::audio::AudioSubsystem> audioSubsystem;
 
 /**
  * @brief Main entry point for the creature controller application
@@ -153,6 +159,24 @@ int main(int argc, char **argv) {
         websocketOutgoingQueue
     );
 
+
+    if (config->getUseAudioSubsystem()) {
+        logger->info("🐰 Setting up audio subsystem...");
+
+        audioSubsystem = std::make_shared<creatures::audio::AudioSubsystem>(logger);
+
+        if (audioSubsystem->initialize(
+            audio::DEFAULT_MULTICAST_GROUP,
+            static_cast<uint16_t>(audio::DEFAULT_RTP_PORT),
+            config->getSoundDeviceNumber())) {
+
+            logger->info("🎵 Audio subsystem ready to go!");
+            } else {
+                logger->error("Failed to initialize audio subsystem");
+                audioSubsystem.reset();
+            }
+    }
+
     // Start up if we should
     if(config->isUsingServer()) {
         serverConnection->start();
@@ -218,6 +242,12 @@ int main(int argc, char **argv) {
     e131Client->init(creature, controller, config->getNetworkDeviceIPAddress());
     e131Client->start();
     workerThreads.push_back(std::move(e131Client));
+
+    // Start the audio subsystem if it was initialized
+    if (audioSubsystem) {
+        audioSubsystem->start();
+        workerThreads.push_back(audioSubsystem);
+    }
 
     // Fire up the MessageRouter
     messageRouter->start();
