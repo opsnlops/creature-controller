@@ -1,3 +1,4 @@
+#include <iostream>
 #include <unistd.h>
 
 #include "logging/Logger.h"
@@ -29,50 +30,52 @@ namespace creatures :: io {
     }
 
     void SerialWriter::run() {
-        this->threadName = fmt::format("SerialWriter::{}", this->deviceNode);
-        setThreadName(threadName);
-
         this->logger->info("hello from the writer thread for {} 📝", this->deviceNode);
 
+        this->threadName = fmt::format("SerialWriter::run for {}", this->deviceNode);
+        setThreadName(threadName);
+
         while(!stop_requested.load()) {
-            // Try to get a message with a short timeout so we stay responsive to shutdown
-            auto messageOpt = outgoingQueue->pop_timeout(std::chrono::milliseconds(100));
-
-            if (!messageOpt.has_value()) {
-                // Timeout - just continue to check stop_requested
-                continue;
-            }
-
-            Message outgoingMessage = messageOpt.value();
-
-            // Check if we're shutting down after getting the message
-            if (stop_requested.load()) {
-                break;
-            }
-
+            Message outgoingMessage = outgoingQueue->pop();
             this->logger->trace("message to write to module {} on {}: {}",
                                 UARTDevice::moduleNameToString(outgoingMessage.module),
                                 deviceNode,
                                 outgoingMessage.payload);
 
             // Append a newline character to the message
-            std::string messageToSend = outgoingMessage.payload + '\n';
+            outgoingMessage.payload += '\n';
 
-            // Write the message to the serial port
-            ssize_t bytesWritten = write(this->fileDescriptor, messageToSend.c_str(), messageToSend.length());
+            ssize_t bytesWritten = write(this->fileDescriptor, outgoingMessage.payload.c_str(), outgoingMessage.payload.length());
 
             if (bytesWritten < 0) {
-                // Write error - time to hop away! 🐰
-                this->logger->error("Write error on {}: {} - shutting down",
-                                   this->deviceNode, strerror(errno));
-                break;
-            }
+                if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                    // This could happen with non-blocking writes - retry once
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                    bytesWritten = write(this->fileDescriptor, outgoingMessage.payload.c_str(), outgoingMessage.payload.length());
 
-            if (static_cast<size_t>(bytesWritten) != messageToSend.length()) {
-                // Partial write - also an error condition
-                this->logger->error("Partial write on {} (wrote {}/{} bytes) - shutting down",
-                                   this->deviceNode, bytesWritten, messageToSend.length());
-                break;
+                    if (bytesWritten < 0) {
+                        // Still failed - this is fatal
+                        std::string errorMessage = fmt::format("FATAL: Serial port {} write error: {}",
+                                                               this->deviceNode, strerror(errno));
+                        this->logger->critical(errorMessage);
+                        std::cerr << errorMessage << " - Cannot write to serial port! Exiting immediately! 🐰💥" << std::endl;
+                        std::exit(EXIT_FAILURE);
+                    }
+                } else {
+                    // Write error is fatal
+                    std::string errorMessage = fmt::format("FATAL: Serial port {} write error: {}",
+                                                           this->deviceNode, strerror(errno));
+                    this->logger->critical(errorMessage);
+                    std::cerr << errorMessage << " - Cannot write to serial port! Exiting immediately! 🐰💥" << std::endl;
+                    std::exit(EXIT_FAILURE);
+                }
+            } else if (bytesWritten != static_cast<ssize_t>(outgoingMessage.payload.length())) {
+                // Partial write - this is also problematic for reliable communication
+                std::string errorMessage = fmt::format("FATAL: Serial port {} partial write - expected {} bytes, wrote {} bytes",
+                                                       this->deviceNode, outgoingMessage.payload.length(), bytesWritten);
+                this->logger->critical(errorMessage);
+                std::cerr << errorMessage << " - Unreliable serial communication! Exiting immediately! 🐰💥" << std::endl;
+                std::exit(EXIT_FAILURE);
             }
 
             this->logger->trace("Written {} bytes to module {} on {}",
@@ -81,7 +84,7 @@ namespace creatures :: io {
                                 deviceNode);
         }
 
-        this->logger->info("SerialWriter for {} shutting down - hopped away cleanly! 🐰", this->deviceNode);
+        this->logger->info("SerialWriter for {} shutting down normally", this->deviceNode);
     }
 
 }
