@@ -3,16 +3,16 @@
 #include <condition_variable>
 #include <deque>
 #include <mutex>
+#include <optional>
 #include <chrono>
-#include <stdexcept>
 
 namespace creatures {
-
 
     /**
      * A simple thread-safe message queue
      *
      * Used for passing messages around between threads in order
+     * Now with timeout support so threads can check for shutdown requests!
      *
      * @tparam T
      */
@@ -33,52 +33,27 @@ namespace creatures {
             return msg;
         }
 
-        /**
-         * Pop a message with a timeout
-         *
-         * @param timeout Maximum time to wait for a message
-         * @return The message if available
-         * @throws std::runtime_error if timeout is reached
-         */
-        T popWithTimeout(std::chrono::milliseconds timeout) {
+        // New method: pop with timeout
+        std::optional<T> pop_timeout(std::chrono::milliseconds timeout) {
             std::unique_lock<std::mutex> lock(mtx);
-            bool hasMessage = cond.wait_for(lock, timeout, [this] { return !queue.empty(); });
-
-            if (!hasMessage) {
-                throw std::runtime_error("Timeout waiting for message");
+            if (cond.wait_for(lock, timeout, [this] { return !queue.empty(); })) {
+                T msg = std::move(queue.front());
+                queue.pop_front();
+                return msg;
             }
-
-            T msg = std::move(queue.front());
-            queue.pop_front();
-            return msg;
+            return std::nullopt; // Timeout - no message available
         }
 
-        /**
-         * Check if the queue is empty
-         *
-         * @return true if the queue is empty
-         */
+        // Check if queue is empty (useful for non-blocking checks)
         bool empty() const {
             std::lock_guard<std::mutex> lock(mtx);
             return queue.empty();
         }
 
-        /**
-         * Get the number of messages in the queue
-         *
-         * @return The queue size
-         */
+        // Get the current size of the queue
         size_t size() const {
             std::lock_guard<std::mutex> lock(mtx);
             return queue.size();
-        }
-
-        /**
-         * Clear all messages from the queue
-         */
-        void clear() {
-            std::lock_guard<std::mutex> lock(mtx);
-            queue.clear();
         }
 
     private:

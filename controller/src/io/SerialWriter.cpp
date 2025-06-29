@@ -5,9 +5,6 @@
 #include "io/SerialWriter.h"
 #include "util/thread_name.h"
 
-// If we need to halt, we need this
-extern std::atomic<bool> shutdown_requested;
-
 namespace creatures :: io {
 
     using creatures::io::Message;
@@ -16,18 +13,14 @@ namespace creatures :: io {
                                std::string deviceNode,
                                UARTDevice::module_name moduleName,
                                int fileDescriptor,
-                               const std::shared_ptr<MessageQueue<Message>>& outgoingQueue,
-                               std::atomic<bool>& resources_valid,
-                               std::atomic<bool>& port_connected) :
+                               const std::shared_ptr<MessageQueue<Message>>& outgoingQueue) :
             logger(logger),
             outgoingQueue(outgoingQueue),
             deviceNode(std::move(deviceNode)),
             moduleName(moduleName),
-            fileDescriptor(fileDescriptor),
-            resources_valid(resources_valid),
-            port_connected(port_connected) {
+            fileDescriptor(fileDescriptor) {
 
-        this->logger->info("creating a new SerialWriter for device {}", deviceNode);
+        this->logger->info("creating a new SerialWriter for device {} 🐰", this->deviceNode);
     }
 
     void SerialWriter::start() {
@@ -35,120 +28,60 @@ namespace creatures :: io {
         creatures::StoppableThread::start();
     }
 
-
     void SerialWriter::run() {
-        this->threadName = fmt::format("SerialWriter::run for {}", this->deviceNode);
+        this->threadName = fmt::format("SerialWriter::{}", this->deviceNode);
         setThreadName(threadName);
 
         this->logger->info("hello from the writer thread for {} 📝", this->deviceNode);
 
-        // Counter for consecutive errors
-        int errorCount = 0;
-        const int MAX_CONSECUTIVE_ERRORS = 3; // After this many errors, mark device as disconnected
-
         while(!stop_requested.load()) {
-            // Check if resources are still valid
-            if (!resources_valid.load()) {
-                // Resources no longer valid, sleep briefly and check again
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            // Try to get a message with a short timeout so we stay responsive to shutdown
+            auto messageOpt = outgoingQueue->pop_timeout(std::chrono::milliseconds(100));
+
+            if (!messageOpt.has_value()) {
+                // Timeout - just continue to check stop_requested
                 continue;
             }
 
-            // Check if we have a valid outgoing queue before trying to pop from it
-            if (!this->outgoingQueue) {
-                this->logger->error("Outgoing queue is null in SerialWriter");
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                continue;
+            Message outgoingMessage = messageOpt.value();
+
+            // Check if we're shutting down after getting the message
+            if (stop_requested.load()) {
+                break;
             }
 
-            try {
-                // Pop with a timeout to avoid blocking indefinitely
-                Message outgoingMessage = outgoingQueue->popWithTimeout(std::chrono::milliseconds(100));
+            this->logger->trace("message to write to module {} on {}: {}",
+                                UARTDevice::moduleNameToString(outgoingMessage.module),
+                                deviceNode,
+                                outgoingMessage.payload);
 
-                // Reset error count on successful queue operation
-                errorCount = 0;
+            // Append a newline character to the message
+            std::string messageToSend = outgoingMessage.payload + '\n';
 
-                // Check if the file descriptor is valid
-                if (this->fileDescriptor < 0) {
-                    this->logger->warn("Invalid file descriptor in SerialWriter");
-                    // Mark the port as disconnected
-                    port_connected.store(false);
-                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                    continue;
-                }
+            // Write the message to the serial port
+            ssize_t bytesWritten = write(this->fileDescriptor, messageToSend.c_str(), messageToSend.length());
 
-                this->logger->trace("message to write to module {} on {}: {}",
-                                    UARTDevice::moduleNameToString(outgoingMessage.module),
-                                    deviceNode,
-                                    outgoingMessage.payload);
-
-                // Append a newline character to the message
-                outgoingMessage.payload += '\n';
-
-                // Verify resources are still valid before writing
-                if (!resources_valid.load() || stop_requested.load()) {
-                    continue;
-                }
-
-                // Safe write - check if we can still write
-                if (this->fileDescriptor >= 0) {
-                    ssize_t bytesWritten = write(this->fileDescriptor, outgoingMessage.payload.c_str(), outgoingMessage.payload.length());
-
-                    // Check for write errors
-                    if (bytesWritten < 0) {
-                        errorCount++;
-
-                        if (errno != EAGAIN && errno != EWOULDBLOCK) {
-                            if (!stop_requested.load() && resources_valid.load()) {
-                                this->logger->error("Error writing to serial port: {} (errno: {}, errorCount: {})",
-                                                    strerror(errno), errno, errorCount);
-
-                                // Special handling for common disconnect errors
-                                if (errno == ENXIO || errno == ENODEV || errno == ENOENT || errno == ENOTTY ||
-                                    errno == EBADF || errno == EINVAL || errno == EIO || errno == 6) { // Device not configured
-                                    this->logger->error("Device error detected, halting.");
-                                    port_connected.store(false);
-                                    shutdown_requested.store(true);
-                                    return;
-                                }
-                            }
-                        }
-
-                        // If we've had too many consecutive errors, mark the port as disconnected
-                        if (errorCount >= MAX_CONSECUTIVE_ERRORS) {
-                            this->logger->error("Too many consecutive write errors, halting");
-                            port_connected.store(false);
-                            shutdown_requested.store(true);
-                            return;
-                        }
-
-                        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-                        continue;
-                    }
-
-                    // Reset error count on successful write
-                    errorCount = 0;
-
-                    if (bytesWritten > 0) {
-                        this->logger->trace("Written {} bytes to module {} on {}",
-                                            bytesWritten,
-                                            UARTDevice::moduleNameToString(outgoingMessage.module),
-                                            deviceNode);
-                    }
-                }
-            } catch (const std::exception& e) {
-                // Timeout or other error - check if we should continue
-                if (stop_requested.load() || !resources_valid.load()) {
-                    continue;
-                }
-
-                // Most likely a timeout, which is normal - not an error condition
-                // Just loop back and try again
-                continue;
+            if (bytesWritten < 0) {
+                // Write error - time to hop away! 🐰
+                this->logger->error("Write error on {}: {} - shutting down",
+                                   this->deviceNode, strerror(errno));
+                break;
             }
+
+            if (static_cast<size_t>(bytesWritten) != messageToSend.length()) {
+                // Partial write - also an error condition
+                this->logger->error("Partial write on {} (wrote {}/{} bytes) - shutting down",
+                                   this->deviceNode, bytesWritten, messageToSend.length());
+                break;
+            }
+
+            this->logger->trace("Written {} bytes to module {} on {}",
+                                bytesWritten,
+                                UARTDevice::moduleNameToString(outgoingMessage.module),
+                                deviceNode);
         }
 
-        this->logger->info("SerialWriter thread for {} stopping", this->deviceNode);
+        this->logger->info("SerialWriter for {} shutting down - hopped away cleanly! 🐰", this->deviceNode);
     }
 
 }

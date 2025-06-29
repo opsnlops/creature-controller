@@ -1,16 +1,18 @@
-
 /**
  * @file main.cpp
  * @brief Main entry point for the creature controller application
- * 
+ *
  * Initializes the application, processes command line arguments,
  * builds the creature configuration, and runs the main controller.
+ *
+ * This version follows a simple philosophy: start things up cleanly,
+ * and when it's time to shut down, just call shutdown() and trust
+ * that everything will hop away gracefully!
  */
 
 // Standard library includes
 #include <cstdlib>
 #include <csignal>
-#include <future>
 #include <thread>
 #include <unordered_map>
 #include <utility>
@@ -51,22 +53,6 @@ void signal_handler(int signal) {
 }
 
 /**
- * @brief Shutdown a thread with timeout handling
- * @param workerThread The thread to shutdown
- * @param timeout_ms Maximum time to wait for shutdown in milliseconds
- */
-void timedShutdown(std::shared_ptr<creatures::StoppableThread> &workerThread, unsigned long timeout_ms) {
-    auto shutdownTask = std::async(std::launch::async, [&]{
-        workerThread->shutdown();
-    });
-
-    if(shutdownTask.wait_for(std::chrono::milliseconds(timeout_ms)) == std::future_status::timeout) {
-        // Timeout reached, thread didn't shut down in time
-        // Move on to the next thread
-    }
-}
-
-/**
  * @brief Create a new logger with the specified name
  * @param name The name to assign to the logger
  * @return A shared pointer to the created logger
@@ -86,6 +72,7 @@ std::shared_ptr<creatures::Logger> makeLogger(std::string name) {
 int main(int argc, char **argv) {
     using creatures::io::Message;
     using creatures::server::ServerConnection;
+    using creatures::config::UARTDevice;
 
     // Fire up the signal handlers
     std::signal(SIGINT, signal_handler);
@@ -110,7 +97,7 @@ int main(int argc, char **argv) {
     auto configResult = commandLine->parseCommandLine(argc, argv);
 
     if(!configResult.isSuccess()) {
-        auto errorMessage = fmt::format("Unable to build configuration in memory: {}", 
+        auto errorMessage = fmt::format("Unable to build configuration in memory: {}",
                                         configResult.getError().value().getMessage());
         std::cerr << errorMessage << std::endl;
         std::exit(EXIT_FAILURE);
@@ -122,7 +109,7 @@ int main(int argc, char **argv) {
     auto builder = creatures::config::CreatureBuilder(logger, config->getCreatureConfigFile());
     auto creatureResult = builder.build();
     if(!creatureResult.isSuccess()) {
-        auto errorMessage = fmt::format("Unable to build the creature: {}", 
+        auto errorMessage = fmt::format("Unable to build the creature: {}",
                                        creatureResult.getError().value().getMessage());
         std::cerr << errorMessage << std::endl;
         std::exit(EXIT_FAILURE);
@@ -134,7 +121,7 @@ int main(int argc, char **argv) {
     // Make sure the creature believes it's ready to go
     auto preFlightCheckResult = creature->performPreFlightCheck();
     if(!preFlightCheckResult.isSuccess()) {
-        auto errorMessage = fmt::format("Pre-flight check failed: {}", 
+        auto errorMessage = fmt::format("Pre-flight check failed: {}",
                                        preFlightCheckResult.getError().value().getMessage());
         std::cerr << errorMessage << std::endl;
         std::exit(EXIT_FAILURE);
@@ -149,7 +136,7 @@ int main(int argc, char **argv) {
     // Label the thread so it shows up in ps
     setThreadName("main for " + creature->getName());
 
-    // Keep track of our threads
+    // Keep track of our threads - but keep it simple!
     std::vector<std::shared_ptr<creatures::StoppableThread>> workerThreads;
 
     // Start talking to the server, if we're told to
@@ -162,7 +149,7 @@ int main(int argc, char **argv) {
         config->getServerPort(),
         websocketOutgoingQueue
     );
-    
+
     // Start up if we should
     if(config->isUsingServer()) {
         serverConnection->start();
@@ -173,10 +160,6 @@ int main(int argc, char **argv) {
     auto gpio = std::make_shared<creatures::device::GPIO>(makeLogger("gpio"), config->getUseGPIO());
     gpio->init();
     gpio->toggleFirmwareReset();
-
-    // Create the top level message queues
-    auto topLevelOutgoingQueue = std::make_shared<creatures::MessageQueue<Message>>();
-    auto topLevelIncomingQueue = std::make_shared<creatures::MessageQueue<Message>>();
 
     // Make the MessageRouter (it will be started later in the boot process)
     auto messageRouter = std::make_shared<creatures::io::MessageRouter>(makeLogger("message-router"));
@@ -206,16 +189,16 @@ int main(int argc, char **argv) {
 
         // Register the handler with the message router
         messageRouter->registerServoModuleHandler(
-            uart.getModule(), 
-            handler->getIncomingQueue(), 
+            uart.getModule(),
+            handler->getIncomingQueue(),
             handler->getOutgoingQueue()
         );
 
-        logger->debug("init'ing the ServoModuleHandler for module {}", 
+        logger->debug("init'ing the ServoModuleHandler for module {}",
                      UARTDevice::moduleNameToString(uart.getModule()));
         handler->init();
 
-        logger->debug("starting the ServoModuleHandler for module {}", 
+        logger->debug("starting the ServoModuleHandler for module {}",
                      UARTDevice::moduleNameToString(uart.getModule()));
         handler->start();
 
@@ -226,8 +209,8 @@ int main(int argc, char **argv) {
     creature->init(controller);
     creature->start();
 
-    // Create and start the e1.13 client
-    logger->debug("starting the e1.13 client");
+    // Create and start the e1.31 client
+    logger->debug("starting the e1.31 client");
     auto e131Client = std::make_unique<creatures::dmx::E131Client>(makeLogger("e131-client"));
     e131Client->init(creature, controller, config->getNetworkDeviceIPAddress());
     e131Client->start();
@@ -246,26 +229,30 @@ int main(int argc, char **argv) {
     workerThreads.push_back(std::move(pingTask));
 
     // Main loop - wait for shutdown signal
+    logger->info("All systems running! Waiting for shutdown signal...");
     while(!shutdown_requested.load()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
 
+    logger->info("Shutdown requested - time to shutdown gracefully!");
+
     // Stop the creature first
     creature->shutdown();
 
-    // Shut down the worker threads in LIFO order
-    const unsigned long timeout_ms = 150;
-    for (auto & workerThread : std::ranges::reverse_view(workerThreads)) {
-        logger->debug("shutting down {}", workerThread->getName());
-        timedShutdown(workerThread, timeout_ms);
+    // Shut down all worker threads - trust them to shut down cleanly!
+    // No more complex timeout logic - just call shutdown() and trust the StoppableThread base class
+    for (auto& workerThread : std::ranges::reverse_view(workerThreads)) {
+        if (workerThread) {
+            logger->debug("shutting down {}", workerThread->getName());
+            workerThread->shutdown();
+        }
     }
 
-    // Let's make sure we're fully cleaned up. Leaving the serial ports in a bad state really
-    // makes macOS mad. Like reboot-the-system mad.
-    logger->debug("waiting for a few seconds to let everyone clean up");
-    std::this_thread::sleep_for(std::chrono::seconds(3));
+    // Give everything a moment to clean up nicely
+    logger->debug("giving threads a moment to clean up gracefully");
+    std::this_thread::sleep_for(std::chrono::seconds(1));
 
     std::cout << "Bye! 🖖🏻" << std::endl;
+    logger->info("Creature controller shut down complete - hopped away cleanly! 🐰");
     std::exit(EXIT_SUCCESS);
 }
-

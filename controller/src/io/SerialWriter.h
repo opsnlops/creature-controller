@@ -1,6 +1,9 @@
+//
+// SerialWriter.h
+//
+
 #pragma once
 
-#include <atomic>
 #include <string>
 #include <thread>
 
@@ -16,6 +19,13 @@ namespace creatures::io {
     using creatures::config::UARTDevice;
     using creatures::io::Message;
 
+    /**
+     * A thread that writes messages to a serial port
+     *
+     * This class follows a fail-fast philosophy: if anything goes wrong with the
+     * serial port, it cleanly shuts down rather than trying to recover. Sometimes
+     * the best thing a rabbit can do is know when to hop away! 🐰
+     */
     class SerialWriter : public StoppableThread {
 
     public:
@@ -24,9 +34,7 @@ namespace creatures::io {
                      std::string deviceNode,
                      UARTDevice::module_name moduleName,
                      int fileDescriptor,
-                     const std::shared_ptr<MessageQueue<Message>>& outgoingQueue,
-        std::atomic<bool>& resources_valid,
-                std::atomic<bool>& port_connected);
+                     const std::shared_ptr<MessageQueue<Message>>& outgoingQueue);
 
         ~SerialWriter() override {
             this->logger->info("SerialWriter destroyed");
@@ -43,8 +51,6 @@ namespace creatures::io {
         std::string deviceNode;
         UARTDevice::module_name moduleName;
         int fileDescriptor;
-        std::atomic<bool>& resources_valid; // Reference to parent's resources_valid flag
-        std::atomic<bool>& port_connected;  // Reference to parent's port_connected flag
     };
 
 } // creatures::io

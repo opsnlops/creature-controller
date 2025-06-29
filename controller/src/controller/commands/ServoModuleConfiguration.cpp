@@ -1,4 +1,3 @@
-
 #include <numeric>
 #include <string>
 #include <vector>
@@ -9,34 +8,48 @@
 #include "logging/Logger.h"
 #include "util/Result.h"
 
-
 #include "ServoModuleConfiguration.h"
 
 namespace creatures::commands {
 
     ServoModuleConfiguration::ServoModuleConfiguration(std::shared_ptr<Logger> logger) :
-                                                 logger(logger) { // NOLINT(*-pass-by-value)
+                                                 logger(logger) {
         this->servoConfigurations = std::vector<ServoConfig>();
+        logger->debug("ServoModuleConfiguration created - ready to gather servo configs! 🐰");
     }
 
     Result<bool> ServoModuleConfiguration::getServoConfigurations(const std::shared_ptr<Controller>& controller,
                                                                  creatures::config::UARTDevice::module_name module) {
 
+        if (!controller) {
+            auto errorMessage = "Controller is null in getServoConfigurations";
+            logger->error(errorMessage);
+            return Result<bool>{ControllerError(ControllerError::InvalidConfiguration, errorMessage)};
+        }
+
         auto configResult = controller->getServoConfigs(module);
         if(!configResult.isSuccess()) {
-            auto errorMessage = fmt::format("Failed to get servo configurations: {}", configResult.getError()->getMessage());
-            logger->warn(errorMessage);
+            auto errorMessage = fmt::format("Failed to get servo configurations: {}",
+                                           configResult.getError()->getMessage());
+            logger->error(errorMessage);
             return Result<bool>{ControllerError(ControllerError::InvalidConfiguration, errorMessage)};
         }
 
         auto configs = configResult.getValue().value();
-        logger->debug("got the servo configurations for module {} ({} total)",
-                      UARTDevice::moduleNameToString(module),
-                      configs.size());
+        logger->debug("got {} servo configurations for module {} - time to hop them into place! 🐰",
+                      configs.size(),
+                      creatures::config::UARTDevice::moduleNameToString(module));
 
-        // Now add them to the vector
+        // Clear any existing configurations before adding new ones
+        servoConfigurations.clear();
+
+        // Add each configuration
         for (const auto& config : configs) {
-            this->addServoConfig(config);
+            auto addResult = this->addServoConfig(config);
+            if (!addResult.isSuccess()) {
+                // If any config fails to add, return the error
+                return addResult;
+            }
         }
 
         return Result<bool>{true};
@@ -44,39 +57,39 @@ namespace creatures::commands {
 
     Result<bool> ServoModuleConfiguration::addServoConfig(const ServoConfig &servoConfig) {
 
-        // Make sure we're not putting the same outputPosition in twice
-        for (const auto& existingConfigurations : servoConfigurations) {
-            if (existingConfigurations.getOutputHeader() == servoConfig.getOutputHeader()) {
-                std::string errorMessage = fmt::format("Unable to insert the same output position twice: {}", servoConfig.getOutputHeader());
+        // Check for duplicate output positions
+        for (const auto& existingConfig : servoConfigurations) {
+            if (existingConfig.getOutputHeader() == servoConfig.getOutputHeader()) {
+                std::string errorMessage = fmt::format("Duplicate output position {}: servo configurations must be unique",
+                                                       servoConfig.getOutputHeader());
                 logger->error(errorMessage);
                 return Result<bool>{ControllerError(ControllerError::InvalidConfiguration, errorMessage)};
             }
         }
 
         this->servoConfigurations.push_back(servoConfig);
-        logger->trace("Add config for servo: {}", servoConfig.toString());
+        logger->trace("Added servo config: {}", servoConfig.toString());
 
         return Result<bool>{true};
     }
 
     std::string ServoModuleConfiguration::toMessage() {
 
-        // Yell if we're doing this on a blank set of positions
+        // Make sure we have configurations to send
         if (servoConfigurations.empty()) {
-            logger->warn("attempted to call toMessage() on an empty set of servo positions! (did you forget to call getServoConfigurations?)");
-            return "";
+            logger->warn("No servo configurations to send - did you forget to call getServoConfigurations()?");
+            return "CONFIG"; // Send empty config message
         }
 
         // Start the message with the 'CONFIG' command prefix
         std::string message = "CONFIG";
 
-        // Go through each ServoConfig and accumulate with a tab separator
-        message = std::accumulate(servoConfigurations.begin(), servoConfigurations.end(), message,
-                                  [](const std::string& accumulator, const creatures::ServoConfig& config) {
-                                      return accumulator + '\t' + config.toString();
-                                  });
+        // Add each servo configuration separated by tabs
+        for (const auto& config : servoConfigurations) {
+            message += '\t' + config.toString();
+        }
 
-        logger->info("config message to send is: {}", message);
+        logger->info("servo config message ready to hop over to firmware: {}", message);
         return message;
     }
 

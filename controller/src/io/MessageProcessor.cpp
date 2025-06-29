@@ -13,7 +13,6 @@
 #include "io/handlers/PongHandler.h"
 #include "io/handlers/StatsHandler.h"
 #include "io/Message.h"
-#include "io/MessageRouter.h"
 #include "logging/Logger.h"
 #include "util/Result.h"
 #include "util/thread_name.h"
@@ -30,20 +29,18 @@ namespace creatures {
             servoModuleHandler(servoModuleHandler),
             logger(_logger),
             moduleId(moduleId),
-            websocketOutgoingQueue(websocketOutgoingQueue),
-            is_shutting_down(false) {
+            websocketOutgoingQueue(websocketOutgoingQueue) {
 
-        logger->info("Message Processor created!");
+        logger->info("Message Processor created for module {} 🐰",
+                     UARTDevice::moduleNameToString(moduleId));
 
-        // Safety check - make sure we have a valid servoModuleHandler
+        // Basic validation - fail fast if something is wrong
         if (!servoModuleHandler) {
             logger->critical("ServoModuleHandler is null in MessageProcessor constructor");
             throw MessageProcessingException("ServoModuleHandler is null");
         }
 
         this->incomingQueue = this->servoModuleHandler->getIncomingQueue();
-
-        // Safety check - make sure we have a valid incomingQueue
         if (!this->incomingQueue) {
             logger->critical("IncomingQueue is null in MessageProcessor constructor");
             throw MessageProcessingException("IncomingQueue is null");
@@ -78,40 +75,9 @@ namespace creatures {
         handlers[messageType] = std::move(handler);
     }
 
-
     void MessageProcessor::start() {
         logger->info("Starting the message processor");
         creatures::StoppableThread::start();
-    }
-
-    void MessageProcessor::shutdown() {
-        logger->info("Shutting down the message processor");
-        is_shutting_down.store(true);
-        creatures::StoppableThread::shutdown();
-    }
-
-    /**
-     * Wait for a message to be delivered from the incoming queue with a timeout
-     *
-     * @return the next message, or empty message on timeout
-     */
-    std::optional<Message> MessageProcessor::waitForMessage() {
-        logger->trace("waiting for a message");
-
-        // Make sure we have a valid queue
-        if (!this->incomingQueue) {
-            logger->error("IncomingQueue is null in waitForMessage");
-            throw MessageProcessingException("IncomingQueue is null");
-        }
-
-        try {
-            auto incomingMessage = this->incomingQueue->popWithTimeout(std::chrono::milliseconds(100));
-            logger->trace("got one!");
-            return incomingMessage;
-        } catch (const std::exception& e) {
-            // Timeout - this is normal, just return an empty optional
-            return std::nullopt;
-        }
     }
 
     /**
@@ -120,28 +86,24 @@ namespace creatures {
      * @param message the message to process
      */
     Result<bool> MessageProcessor::processMessage(const Message& message) {
-        // Don't process messages if we're shutting down
-        if (is_shutting_down.load()) {
-            return Result<bool>{ControllerError(ControllerError::UnprocessableMessage, "MessageProcessor is shutting down")};
-        }
 
 #if DEBUG_MESSAGE_PROCESSING
         this->logger->debug("processing message: {}", message.payload);
 #endif
 
-        // Make sure there's actually handlers registered
+        // Make sure we have handlers registered
         if(handlers.empty()) {
-            auto errorMessage = "There's no handlers registered and you're asking me to process a message!";
+            auto errorMessage = "No handlers registered!";
             logger->critical(errorMessage);
             return Result<bool>{ControllerError(ControllerError::UnprocessableMessage, errorMessage)};
         }
 
-        // Make sure the message has content
+        // Skip empty messages
         if (message.payload.empty()) {
-            return Result<bool>{true}; // Empty message, nothing to do
+            return Result<bool>{true};
         }
 
-        // Tokenize message
+        // Tokenize message by tabs
         std::istringstream iss(message.payload);
         std::vector<std::string> tokens;
         std::string token;
@@ -149,40 +111,26 @@ namespace creatures {
             tokens.push_back(token);
         }
 
-        // Make sure we have at least one token
+        // Need at least one token (the command)
         if (tokens.empty()) {
-            auto errorMessage = "Message has no tokens";
-            logger->warn(errorMessage);
-            return Result<bool>{ControllerError(ControllerError::UnprocessableMessage, errorMessage)};
+            logger->warn("Message has no tokens: '{}'", message.payload);
+            return Result<bool>{true}; // Not really an error, just skip it
         }
 
         // Find and invoke the handler
         auto it = handlers.find(tokens[0]);
         if (it != handlers.end()) {
-            // Handler found, make sure it's valid
-            if (!it->second) {
-                auto errorMessage = fmt::format("Handler for {} is null", tokens[0]);
-                logger->error(errorMessage);
-                return Result<bool>{ControllerError(ControllerError::UnprocessableMessage, errorMessage)};
-            }
-
             try {
-                // Invoke the handler
+                // Handler found, invoke it
                 it->second->handle(logger, tokens);
             } catch (const std::exception& e) {
                 auto errorMessage = fmt::format("Exception in message handler for {}: {}", tokens[0], e.what());
                 logger->error(errorMessage);
-                return Result<bool>{ControllerError(ControllerError::UnprocessableMessage, errorMessage)};
+                // Don't fail - just log the error and continue
             }
         } else {
-            // We didn't find a handler!
-
-            // Sanitize the input to ensure it's null-terminated in the case of junk data
-            // coming in off the wire.
-            std::string safeToken = tokens[0];
-            std::string errorMessage = fmt::format("Unknown message type: {}", safeToken);
-            logger->error(errorMessage);
-            return Result<bool>{ControllerError(ControllerError::UnprocessableMessage, errorMessage)};
+            // Unknown message type - log but don't fail
+            logger->warn("Unknown message type: '{}'", tokens[0]);
         }
 
         return Result<bool>{true};
@@ -192,38 +140,30 @@ namespace creatures {
         auto threadName = fmt::format("MessageProcessor::{}", UARTDevice::moduleNameToString(this->moduleId));
         setThreadName(threadName);
 
-        logger->debug("hello from the message processor thread for {}! 👋🏻", UARTDevice::moduleNameToString(servoModuleHandler->getModuleName()));
+        logger->debug("hello from the message processor thread for {}! 👋🏻",
+                     UARTDevice::moduleNameToString(this->moduleId));
 
         while(!this->stop_requested.load()) {
-            // Check if we're shutting down
-            if (is_shutting_down.load()) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            // Wait for a message with a short timeout so we can check stop_requested
+            auto messageOpt = this->incomingQueue->pop_timeout(std::chrono::milliseconds(100));
+
+            if (!messageOpt.has_value()) {
+                // Timeout - just continue to check stop_requested
                 continue;
             }
 
-            try {
-                auto messageOpt = waitForMessage();
-
-                // Skip processing if no message (timeout)
-                if (!messageOpt) {
-                    continue;
-                }
-
-                // Try to process the message, leaving an error if needed
-                auto processResult = processMessage(messageOpt.value());
-                if(!processResult.isSuccess()) {
-                    auto errorMessage = fmt::format("Error processing message: {}", processResult.getError()->getMessage());
-                    logger->error(errorMessage);
-                    // Don't stop the thread, just log the error and continue
-                }
-            } catch (const std::exception& e) {
-                // Catch any exceptions to prevent thread termination
-                logger->error("Exception in message processor loop: {}", e.what());
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            // Process the message
+            auto processResult = processMessage(messageOpt.value());
+            if(!processResult.isSuccess()) {
+                // Log the error but don't stop processing - keep hopping along! 🐰
+                auto errorMessage = fmt::format("Error processing message: {}",
+                                               processResult.getError()->getMessage());
+                logger->error(errorMessage);
             }
         }
 
-        logger->info("MessageProcessor thread for {} stopping", UARTDevice::moduleNameToString(this->moduleId));
+        logger->info("MessageProcessor thread for {} stopping - hopped away cleanly! 🐰",
+                    UARTDevice::moduleNameToString(this->moduleId));
     }
 
 } // creatures

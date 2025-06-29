@@ -1,9 +1,12 @@
+//
+// SerialHandler.cpp
+//
+
 #include <filesystem>
 
 #include <fcntl.h>
 #include <termios.h>
 #include <unistd.h>
-
 
 #include "controller-config.h"
 #include "config/UARTDevice.h"
@@ -15,30 +18,27 @@
 
 namespace creatures {
 
-    using config::UARTDevice;
-    using io::Message;
+    using creatures::config::UARTDevice;
+    using creatures::io::Message;
 
     /**
      * Creates a new SerialHandler
      *
-     * @param logger
      * @param deviceNode the device node to open up
-     * @param moduleName
      * @param outgoingQueue A `MessageQueue<Message>` for outgoing messages TO the remote device
      * @param incomingQueue A `MessageQueue<Message>` for incoming messages FROM the remote device
      */
     SerialHandler::SerialHandler(const std::shared_ptr<Logger>& logger,
                                  std::string deviceNode,
-                                 const UARTDevice::module_name moduleName,
+                                 UARTDevice::module_name moduleName,
                                  const std::shared_ptr<MessageQueue<Message>> &outgoingQueue,
                                  const std::shared_ptr<MessageQueue<Message>> &incomingQueue) :
-            deviceNode(deviceNode), moduleName(moduleName), logger(logger),
-            resources_valid(true), port_connected(false) {
+                                 deviceNode(deviceNode), moduleName(moduleName), logger(logger) {
 
-        this->logger->info("creating a new SerialHandler for device {} on node {} ",
+        this->logger->info("creating a new SerialHandler for device {} on node {} 🐰",
                            UARTDevice::moduleNameToString(moduleName), deviceNode);
 
-        // Do some error checking
+        // Do some basic error checking
         if (!outgoingQueue) {
             this->logger->critical("outgoingQueue is null");
             throw SerialException("outgoingQueue is null");
@@ -49,24 +49,18 @@ namespace creatures {
             throw SerialException("incomingQueue is null");
         }
 
-        try {
-            // Just check if the device node is accessible - don't open it yet
-            isDeviceNodeAccessible(logger, deviceNode);
-        } catch (const SerialException& e) {
-            // Log the error but don't propagate the exception - we'll handle reconnection later
-            this->logger->warn("Device node not initially accessible: {}", e.what());
-        }
+        // Check if the device node is accessible before we get too far
+        isDeviceNodeAccessible(logger, deviceNode);
 
         this->outgoingQueue = outgoingQueue;
         this->incomingQueue = incomingQueue;
         this->fileDescriptor = -1;
 
-        this->logger->debug("new SerialHandler created");
+        this->logger->debug("new SerialHandler created successfully");
     }
 
     // Clean up the serial port
     SerialHandler::~SerialHandler() {
-        // Make sure we're fully shut down before destruction
         shutdown();
         this->logger->debug("SerialHandler destroyed");
     }
@@ -84,56 +78,25 @@ namespace creatures {
         return this->incomingQueue;
     }
 
-    bool SerialHandler::areResourcesValid() const {
-        return resources_valid.load();
-    }
-
-    bool SerialHandler::isPortConnected() const {
-        return port_connected.load() && fileDescriptor >= 0;
-    }
-
     Result<bool> SerialHandler::setupSerialPort() {
-        // Don't set up if resources are already invalidated
-        if (!resources_valid.load()) {
-            return Result<bool>{ControllerError(ControllerError::IOError, "Resources already invalidated")};
-        }
-
-        // If the file descriptor is already open, close it first
-        if (this->fileDescriptor >= 0) {
-            closeSerialPort();
-        }
-
         this->logger->info("attempting to open {}", this->deviceNode);
-
-        // Check if the device exists before trying to open it
-        try {
-            isDeviceNodeAccessible(logger, deviceNode);
-        } catch (const SerialException& e) {
-            this->logger->error("Cannot access device node: {}", e.what());
-            port_connected.store(false);
-            return Result<bool>{ControllerError(ControllerError::IOError, e.what())};
-        }
-
         this->fileDescriptor = open(this->deviceNode.c_str(), O_RDWR | O_NONBLOCK | O_NOCTTY);
-        this->logger->debug("serial port open attempt, fileDescriptor = {}", this->fileDescriptor);
+        this->logger->debug("serial port is open, fileDescriptor = {}", this->fileDescriptor);
 
         if (this->fileDescriptor == -1) {
             // Handle error - unable to open serial port
-            const std::string errorMessage = fmt::format("Error opening {}: {}", this->deviceNode.c_str(), strerror(errno));
+            std::string errorMessage = fmt::format("Error opening {}: {}", this->deviceNode.c_str(), strerror(errno));
             this->logger->critical(errorMessage);
-            port_connected.store(false);
             return Result<bool>{ControllerError(ControllerError::IOError, errorMessage)};
         }
 
-        // Set the file descriptor to be non-blocking
-        termios tty{};
+        struct termios tty{};
         if (tcgetattr(this->fileDescriptor, &tty) != 0) {
             // Handle error in tcgetattr
-            const std::string errorMessage = fmt::format("Error from tcgetattr while opening the port: {}", strerror(errno));
+            std::string errorMessage = fmt::format("Error from tcgetattr while opening the port: {}", strerror(errno));
             this->logger->critical(errorMessage);
             close(this->fileDescriptor);
             this->fileDescriptor = -1;
-            port_connected.store(false);
             return Result<bool>{ControllerError(ControllerError::IOError, errorMessage)};
         }
 
@@ -167,17 +130,14 @@ namespace creatures {
         cfsetospeed(&tty, BAUD_RATE);      // Set out baud rate
 
         if (tcsetattr(this->fileDescriptor, TCSANOW, &tty) != 0) {
-            const std::string errorMessage = fmt::format("Error from tcsetattr while configuring the port: {}", strerror(errno));
+            std::string errorMessage = fmt::format("Error from tcsetattr while configuring the port: {}", strerror(errno));
             this->logger->critical(errorMessage);
             close(this->fileDescriptor);
             this->fileDescriptor = -1;
-            port_connected.store(false);
             return Result<bool>{ControllerError(ControllerError::IOError, errorMessage)};
         }
 
-        this->logger->debug("serial port {} is open", this->deviceNode);
-        port_connected.store(true);
-
+        this->logger->debug("serial port {} is open and configured", this->deviceNode);
         return Result<bool>{true};
     }
 
@@ -186,162 +146,92 @@ namespace creatures {
             this->logger->info("closing {}", this->deviceNode);
             close(this->fileDescriptor);
             this->fileDescriptor = -1;
-            port_connected.store(false);
         }
         return Result<bool>{true};
     }
 
     Result<bool> SerialHandler::start() {
-        // Don't start if we're already shutting down
-        if (!resources_valid.load()) {
-            return Result<bool>{ControllerError(ControllerError::IOError, "Cannot start, resources already invalidated")};
-        }
-
         this->logger->info("starting SerialHandler for device {}", deviceNode);
 
-        if (const auto setupResult = setupSerialPort(); !setupResult.isSuccess()) {
-            const auto errorMessage = fmt::format("unable to setupSerialPort: {}", setupResult.getError()->getMessage());
+        auto setupResult = setupSerialPort();
+        if (!setupResult.isSuccess()) {
+            auto errorMessage = fmt::format("unable to setupSerialPort: {}", setupResult.getError()->getMessage());
             this->logger->critical(errorMessage);
             return Result<bool>{ControllerError(ControllerError::IOError, errorMessage)};
         }
         this->logger->debug("setupSerialPort done");
 
-        // Clear any previous threads
-        threads.clear();
+        // Create the reader and writer threads - simple and straightforward! 🐰
+        reader = std::make_shared<creatures::io::SerialReader>(this->logger,
+                                                               this->deviceNode,
+                                                               this->moduleName,
+                                                               this->fileDescriptor,
+                                                               this->incomingQueue);
 
-        // Create reader and writer threads with port_connected reference
-        std::shared_ptr<creatures::StoppableThread> reader = std::make_shared<creatures::io::SerialReader>(
-                this->logger,
-                this->deviceNode,
-                this->moduleName,
-                this->fileDescriptor,
-                this->incomingQueue,
-                this->resources_valid,
-                this->port_connected
-        );
-
-        std::shared_ptr<creatures::StoppableThread> writer = std::make_shared<creatures::io::SerialWriter>(
-                this->logger,
-                this->deviceNode,
-                this->moduleName,
-                this->fileDescriptor,
-                this->outgoingQueue,
-                this->resources_valid,
-                this->port_connected
-        );
+        writer = std::make_shared<creatures::io::SerialWriter>(this->logger,
+                                                               this->deviceNode,
+                                                               this->moduleName,
+                                                               this->fileDescriptor,
+                                                               this->outgoingQueue);
 
         // Start both threads
         reader->start();
         writer->start();
 
-        // Store the workers
-        this->threads.push_back(reader);
-        this->threads.push_back(writer);
-
-        this->logger->debug("done starting SerialHandler for device {}", deviceNode);
-
-        return Result{true};
-    }
-
-    Result<bool> SerialHandler::reconnect() {
-        this->logger->info("attempting to reconnect to {}", deviceNode);
-
-        // First shutdown existing connections
-        if (const auto shutdownResult = shutdown(); !shutdownResult.isSuccess()) {
-            const auto errorMessage = fmt::format("Failed to shut down before reconnect: {}",
-                                            shutdownResult.getError()->getMessage());
-            this->logger->warn(errorMessage);
-            // Continue anyway - we'll try to reconnect
-        }
-
-        // Reset our internal state
-        resources_valid.store(true);
-        port_connected.store(false);
-
-        // Clear any pending messages in the queues
-        if (this->outgoingQueue) {
-            this->outgoingQueue->clear();
-        }
-        if (this->incomingQueue) {
-            this->incomingQueue->clear();
-        }
-
-        // Small delay to ensure the port is fully released
-        std::this_thread::sleep_for(std::chrono::milliseconds(250));
-
-        // Try to reopen and restart
-        return start();
+        this->logger->debug("done starting SerialHandler for device {} - all threads are hopping! 🐰", deviceNode);
+        return Result<bool>{true};
     }
 
     Result<bool> SerialHandler::shutdown() {
         this->logger->info("shutting down SerialHandler for device {}", deviceNode);
 
-        // First, mark resources as invalid to signal threads to stop using them
-        resources_valid.store(false);
-        port_connected.store(false);
-
-        // Stop all threads
-        for (auto& thread : threads) {
-            if (thread) {
-                this->logger->debug("stopping thread {}", thread->getName());
-                thread->shutdown();
-            }
+        // Stop the threads first - nice and simple
+        if (reader) {
+            this->logger->debug("stopping reader thread");
+            reader->shutdown();
         }
 
-        // Wait for threads to actually stop (with a timeout)
-        for (auto& thread : threads) {
-            if (thread) {
-                // Give each thread up to 500ms to stop
-                for (int i = 0; i < 50; i++) {
-                    if (!thread->isThreadJoinable()) {
-                        break;
-                    }
-                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
-                }
-
-                if (thread->isThreadJoinable()) {
-                    this->logger->warn("Thread {} did not stop in time", thread->getName());
-                }
-            }
+        if (writer) {
+            this->logger->debug("stopping writer thread");
+            writer->shutdown();
         }
-
-        // Clear threads vector
-        threads.clear();
 
         // Close the port after threads are stopped
         closeSerialPort();
 
-        return Result{true};
-    }
+        // Clear the thread pointers
+        reader.reset();
+        writer.reset();
 
+        this->logger->info("SerialHandler for {} shutdown complete - hopped away cleanly! 🐰", deviceNode);
+        return Result<bool>{true};
+    }
 
     /**
      * Makes sure that a device node exists, and is a character device
      *
-     * @param logger
-     * @param deviceNode the file system node to check
+     * @param node the file system node to check
      * @return true if all is well
      * @throws SerialException if it's not
      */
-    bool SerialHandler::isDeviceNodeAccessible(const std::shared_ptr<Logger>& logger, const std::string &deviceNode) {
+    bool SerialHandler::isDeviceNodeAccessible(const std::shared_ptr<Logger>& _logger, const std::string &node) {
         namespace fs = std::filesystem;
 
         // Check if the file exists
-        if (!fs::exists(deviceNode)) {
-            const std::string errorMessage = fmt::format("Device node does not exist: {}", deviceNode);
-            logger->critical(errorMessage);
+        if (!fs::exists(node)) {
+            std::string errorMessage = fmt::format("Device node does not exist: {}", node);
+            _logger->critical(errorMessage);
             throw SerialException(errorMessage);
         }
 
         // Check if it's a character device
-        if (!fs::is_character_file(fs::status(deviceNode))) {
-            const std::string errorMessage = fmt::format("Device node is not a character device: {}", deviceNode);
-            logger->critical(errorMessage);
+        if (!fs::is_character_file(fs::status(node))) {
+            std::string errorMessage = fmt::format("Device node is not a character device: {}", node);
+            _logger->critical(errorMessage);
             throw SerialException(errorMessage);
         }
 
         return true;
     }
-
 
 } // creatures

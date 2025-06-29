@@ -1,6 +1,9 @@
+//
+// SerialReader.h
+//
+
 #pragma once
 
-#include <atomic>
 #include <string>
 #include <thread>
 
@@ -18,6 +21,10 @@ namespace creatures::io {
 
     /**
      * A thread that reads from a serial port and places the messages into a queue
+     *
+     * This class follows a fail-fast philosophy: if anything goes wrong with the
+     * serial port, it cleanly shuts down rather than trying to recover. Sometimes
+     * the best thing a rabbit can do is know when to hop away! 🐰
      */
     class SerialReader : public StoppableThread {
 
@@ -27,9 +34,7 @@ namespace creatures::io {
                      std::string deviceNode,
                      UARTDevice::module_name moduleName,
                      int fileDescriptor,
-                     const std::shared_ptr<MessageQueue<Message>>& incomingQueue,
-        std::atomic<bool>& resources_valid,
-                std::atomic<bool>& port_connected);
+                     const std::shared_ptr<MessageQueue<Message>>& incomingQueue);
 
         ~SerialReader() override {
             this->logger->info("SerialReader destroyed");
@@ -46,8 +51,6 @@ namespace creatures::io {
         std::string deviceNode;
         UARTDevice::module_name moduleName;
         int fileDescriptor;
-        std::atomic<bool>& resources_valid; // Reference to parent's resources_valid flag
-        std::atomic<bool>& port_connected;  // Reference to parent's port_connected flag
     };
 
 } // creatures::io

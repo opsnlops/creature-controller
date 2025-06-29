@@ -5,22 +5,11 @@
 #include <vector>
 
 #include "config/UARTDevice.h"
-#include "controller/ServoModuleHandler.h"
 #include "io/Message.h"
 #include "logging/Logger.h"
 #include "util/MessageQueue.h"
 #include "util/Result.h"
 #include "util/StoppableThread.h"
-
-
-/**
- * There's a big circular dependency here. Forward declarations won't work because we need to
- * be able to call actual functions from the classes.
- *
- * Instead, let's stick to just what we _actually_ need, the message queue. It's one of the most
- * basic types in the system, and we can use it to break the dependency loop.
- */
-
 
 namespace creatures :: io {
 
@@ -34,10 +23,12 @@ namespace creatures :: io {
         stopped
     };
 
-
     /**
-     * This class is a message router! It handles messages going out to the creature
-     * and back in from it.
+     * Routes messages between the controller and servo modules
+     *
+     * This class follows a simple philosophy: route messages where they need to go,
+     * and if anything goes wrong, log it and continue. No complex recovery attempts.
+     * Keep the message flow simple, like a well-organized rabbit warren! 🐰
      */
     class MessageRouter : public StoppableThread {
     public:
@@ -49,15 +40,11 @@ namespace creatures :: io {
         }
 
         /**
-         * Register a ServoModuleHandler handler with the message router
+         * Register a ServoModuleHandler with the message router
          *
          * @param moduleName the name of the module to register
          * @param incomingMessages the incoming message queue for the handler
          * @param outgoingMessages the outgoing message queue for the handler
-         *
-         * The result will be stored in an internal map for routing messages that contains
-         * the module name as the key and a struct containing the incoming and outgoing queues.
-         *
          * @return a `Result` indicating success or failure
          */
         Result<bool> registerServoModuleHandler(creatures::config::UARTDevice::module_name moduleName,
@@ -65,9 +52,7 @@ namespace creatures :: io {
                                         std::shared_ptr<MessageQueue<Message>> outgoingMessages);
 
         /**
-         * Send a message to the creature
-         *
-         * It will be routed to the appropriate serial handler based on the `message`.
+         * Send a message to a specific creature module
          *
          * @param message the message to route
          * @return a `Result` indicating success or failure
@@ -75,34 +60,34 @@ namespace creatures :: io {
         Result<bool> sendMessageToCreature(const Message &message);
 
         /**
-         * Broadcast a message to all creatures
+         * Broadcast a message to all registered modules
          *
          * @param message the message to broadcast
          */
         void broadcastMessageToAllModules(const std::string &message);
 
         /**
-         * Received a message from the creature
+         * Receive a message from a creature module
          *
          * @param message the inbound message from the creature
          */
         Result<bool> receivedMessageFromCreature(const Message &message);
 
-        // For the controller to read messages from the creature
+        // For the controller to read messages from creatures
         std::shared_ptr<MessageQueue<Message>> getIncomingQueue();
 
         void start() override;
 
-
         /**
          * Check if all handlers are ready
          *
-         * @return true if all of our handlers are ready
+         * @return true if all registered handlers are ready
          */
         bool allHandlersReady();
 
         /**
-         * Allow a handler to set its state
+         * Set the state of a handler
+         *
          * @param moduleName the name of the module to set the state for
          * @param state the state to set
          * @return true if the state was set, false otherwise
@@ -110,12 +95,11 @@ namespace creatures :: io {
         Result<bool> setHandlerState(creatures::config::UARTDevice::module_name moduleName, MotorHandlerState state);
 
         /**
-         * Get all of the handler IDs we're using
+         * Get all registered handler IDs
          *
-         * @return a vector of module id
+         * @return a vector of module names
          */
         std::vector<creatures::config::UARTDevice::module_name> getHandleIds();
-
 
     protected:
         void run() override;
@@ -130,16 +114,14 @@ namespace creatures :: io {
 
         std::shared_ptr<Logger> logger;
 
-        // Messages in from the creature
+        // Messages in from creatures
         std::shared_ptr<MessageQueue<Message>> incomingQueue;
 
-        // Messages out to the creature
-        std::shared_ptr<MessageQueue<Message>> outgoingQueue;
-
-        // A big 'ole map of module names to their incoming queues
+        // Map of module names to their message queues
         std::unordered_map<creatures::config::UARTDevice::module_name, HandlerQueues> servoHandlers;
 
+        // Track the state of each handler
         std::unordered_map<creatures::config::UARTDevice::module_name, MotorHandlerState> handlerStates;
-
     };
+
 }

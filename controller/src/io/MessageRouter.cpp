@@ -1,46 +1,28 @@
-
 #include <string>
 
 #include "config/UARTDevice.h"
-#include "controller/ServoModuleHandler.h"
 #include "io/Message.h"
 #include "io/MessageRouter.h"
-#include "io/SerialHandler.h"
 #include "logging/Logger.h"
 #include "util/thread_name.h"
-
 
 namespace creatures :: io {
 
     using creatures::config::UARTDevice;
     using creatures::io::Message;
-    using creatures::SerialHandler;
 
     MessageRouter::MessageRouter(const std::shared_ptr<Logger>& logger) : logger(logger) {
 
         // Set up our message queues
         this->incomingQueue = std::make_shared<MessageQueue<Message>>();
-        this->outgoingQueue = std::make_shared<MessageQueue<Message>>();
 
-        // Create our map
-        this->servoHandlers = std::unordered_map<creatures::config::UARTDevice::module_name,
-                                                 HandlerQueues>();
-
-        this->handlerStates = std::unordered_map<creatures::config::UARTDevice::module_name,
-                                                 MotorHandlerState>();
+        // Initialize our maps
+        this->servoHandlers = std::unordered_map<creatures::config::UARTDevice::module_name, HandlerQueues>();
+        this->handlerStates = std::unordered_map<creatures::config::UARTDevice::module_name, MotorHandlerState>();
 
         this->threadName = "MessageRouter::run";
-        this->logger->info("MessageRouter created");
+        this->logger->info("MessageRouter created - ready to hop messages around! 🐰");
     }
-
-
-    /*
-     * The reason we're not accepting the ServoModuleHandler as a parameter is because it's a big circular
-     * dependency. The ServoModuleHandler needs a MessageRouter, and the MessageRouter needs a ServoModuleHandler.
-     *
-     * So, instead, we're just sending the queues. That's what we really care about anyhow.
-     */
-
 
     Result<bool> MessageRouter::registerServoModuleHandler(creatures::config::UARTDevice::module_name moduleName,
                                                            std::shared_ptr<MessageQueue<Message>> incomingMessages,
@@ -66,23 +48,19 @@ namespace creatures :: io {
                       UARTDevice::moduleNameToString(message.module),
                       message.payload);
 
-        for (const auto& pair : servoHandlers) {
-            creatures::config::UARTDevice::module_name key = pair.first;
-            auto handlerQueues = pair.second;
-
-            // Deliver the message to the appropriate module
-            if (message.module == key) {
-                handlerQueues.outgoingQueue->push(message);
-                return Result<bool>{true};
-            }
+        // Find the handler for this module
+        auto it = servoHandlers.find(message.module);
+        if (it != servoHandlers.end()) {
+            // Found the handler, send the message
+            it->second.outgoingQueue->push(message);
+            return Result<bool>{true};
         }
 
-        // If we get here, that's bad
-        std::string errorMessage = fmt::format("Unknown destination into the message router: {}",
+        // Module not found - this is an error
+        std::string errorMessage = fmt::format("Unknown destination module: {}",
                                                UARTDevice::moduleNameToString(message.module));
-        this->logger->critical(errorMessage);
+        this->logger->error(errorMessage);
         return Result<bool>{ControllerError(ControllerError::DestinationUnknown, errorMessage)};
-
     }
 
     void MessageRouter::broadcastMessageToAllModules(const std::string &message) {
@@ -90,17 +68,17 @@ namespace creatures :: io {
         logger->info("📣 Broadcasting message to all modules: {}", message);
 
         for (const auto& pair : servoHandlers) {
-            creatures::config::UARTDevice::module_name key = pair.first;
+            creatures::config::UARTDevice::module_name moduleName = pair.first;
             auto handlerQueues = pair.second;
 
-            // Deliver this message in all it's glory
-            handlerQueues.outgoingQueue->push(Message(key, message));
+            // Create a message for this module and send it
+            handlerQueues.outgoingQueue->push(Message(moduleName, message));
         }
     }
 
     Result<bool> MessageRouter::receivedMessageFromCreature(const Message &message) {
-            incomingQueue->push(message);
-            return Result<bool>{true};
+        incomingQueue->push(message);
+        return Result<bool>{true};
     }
 
     std::shared_ptr<MessageQueue<Message>> MessageRouter::getIncomingQueue() {
@@ -114,17 +92,24 @@ namespace creatures :: io {
 
     void MessageRouter::run() {
         setThreadName(threadName);
-        this->logger->info("MessageRouter running");
+        this->logger->info("MessageRouter running - hopping messages along! 🐰");
 
         while(!stop_requested.load()) {
 
-            // Wait for a message to come in from one of our modules
-            //  TODO: Something maybe should happen here other than logging it
-            auto incomingMessage = this->incomingQueue->pop();
-            this->logger->debug("incoming message from a creature: {}", incomingMessage.payload);
+            // Wait for a message with a short timeout so we can check stop_requested
+            auto messageOpt = this->incomingQueue->pop_timeout(std::chrono::milliseconds(100));
+
+            if (!messageOpt.has_value()) {
+                // Timeout - just continue to check stop_requested
+                continue;
+            }
+
+            // For now, we just log incoming messages
+            // In the future, this could route messages to other systems
+            this->logger->debug("incoming message from a creature: {}", messageOpt.value().payload);
         }
 
-        this->logger->debug("MessageRouter stopped!");
+        this->logger->info("MessageRouter stopped - hopped away cleanly! 🐰");
     }
 
     Result<bool> MessageRouter::setHandlerState(creatures::config::UARTDevice::module_name moduleName, MotorHandlerState state) {
@@ -138,6 +123,8 @@ namespace creatures :: io {
         }
 
         this->handlerStates[moduleName] = state;
+        this->logger->debug("Set module {} state to {}",
+                           UARTDevice::moduleNameToString(moduleName), static_cast<int>(state));
         return Result<bool>{true};
     }
 
@@ -161,6 +148,5 @@ namespace creatures :: io {
         }
         return ids;
     }
-
 
 }

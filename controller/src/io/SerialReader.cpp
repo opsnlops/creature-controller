@@ -1,3 +1,7 @@
+//
+// SerialReader.cpp
+//
+
 #include <poll.h>
 #include <unistd.h>
 
@@ -6,26 +10,20 @@
 #include "io/SerialReader.h"
 #include "util/thread_name.h"
 
-// Hook into the shutdown_requested variable
-extern std::atomic<bool> shutdown_requested;
-
 namespace creatures :: io {
 
     using creatures::config::UARTDevice;
     using creatures::io::Message;
 
     SerialReader::SerialReader(const std::shared_ptr<Logger>& logger,
-                               std::string deviceNode,
-                               UARTDevice::module_name moduleName,
-                               int fileDescriptor,
-                               const std::shared_ptr<MessageQueue<Message>>& incomingQueue,
-                               std::atomic<bool>& resources_valid,
-                               std::atomic<bool>& port_connected) :
-            logger(logger), incomingQueue(incomingQueue), deviceNode(deviceNode),
-            moduleName(moduleName), fileDescriptor(fileDescriptor),
-            resources_valid(resources_valid), port_connected(port_connected) {
+                 std::string deviceNode,
+                 UARTDevice::module_name moduleName,
+                 int fileDescriptor,
+                 const std::shared_ptr<MessageQueue<Message>>& incomingQueue) :
+                 logger(logger), incomingQueue(incomingQueue), deviceNode(deviceNode),
+                 moduleName(moduleName), fileDescriptor(fileDescriptor) {
 
-        this->logger->info("creating a new SerialReader for module {} on {}",
+        this->logger->info("creating a new SerialReader for module {} on {} 🐰",
                            UARTDevice::moduleNameToString(moduleName), deviceNode);
     }
 
@@ -34,197 +32,93 @@ namespace creatures :: io {
         creatures::StoppableThread::start();
     }
 
-
     void SerialReader::run() {
         this->logger->info("hello from the reader thread for {} 👓", this->deviceNode);
 
-        this->threadName = fmt::format("SerialReader::run for {}", this->deviceNode);
+        this->threadName = fmt::format("SerialReader::{}", this->deviceNode);
         setThreadName(threadName);
 
         struct pollfd fds[1];
-        int timeout_msecs = 100; // Shorter timeout to allow more frequent checking of stop_requested
+        int timeout_msecs = 100; // Short timeout for responsiveness to shutdown requests
+
+        fds[0].fd = this->fileDescriptor;
+        fds[0].events = POLLIN;
 
         std::string tempBuffer; // Temporary buffer to store incomplete messages
 
-        // Counter for consecutive errors
-        int errorCount = 0;
-        const int MAX_CONSECUTIVE_ERRORS = 3; // After this many errors, mark device as disconnected
-
         while(!stop_requested.load()) {
-            // Check if resources are still valid before proceeding
-            if (!resources_valid.load()) {
-                // Resources are no longer valid - sleep briefly and recheck
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
-                continue;
-            }
-
-            // Check if the file descriptor is valid
-            if (this->fileDescriptor < 0) {
-                this->logger->warn("Invalid file descriptor in SerialReader");
-                // Mark the port as disconnected
-                port_connected.store(false);
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                continue;
-            }
-
-            // Set up the poll structure
-            fds[0].fd = this->fileDescriptor;
-            fds[0].events = POLLIN;
-            fds[0].revents = 0;
-
-            // Poll with timeout
             int ret = poll(fds, 1, timeout_msecs);
 
-            // Check for poll errors
             if (ret < 0) {
-                // Poll system call failed
-                errorCount++;
-                if (!stop_requested.load() && resources_valid.load()) {
-                    this->logger->error("Error on poll: {} (errorCount: {})", strerror(errno), errorCount);
-                }
-
-                // If we've had too many consecutive errors, mark the port as disconnected
-                if (errorCount >= MAX_CONSECUTIVE_ERRORS) {
-                    this->logger->error("Too many consecutive poll errors, marking port as disconnected");
-                    port_connected.store(false);
-                    // Reset error count after taking action
-                    errorCount = 0;
-                }
-
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
-                continue;
+                // Poll error - this indicates a serious problem, time to hop away! 🐰
+                this->logger->error("Poll error on {}: {} - requesting shutdown",
+                                   this->deviceNode, strerror(errno));
+                break;
             } else if (ret == 0) {
-                // Poll timeout, just continue the loop
-                // Reset error count on successful operations
-                errorCount = 0;
+                // Timeout - just continue the loop to check stop_requested again
+                // This keeps us responsive like a quick rabbit! 🐰
                 continue;
             }
 
-            // Check if we have data to read
+            // Check for error conditions on the file descriptor
+            if (fds[0].revents & (POLLERR | POLLHUP | POLLNVAL)) {
+                this->logger->error("Serial port {} error detected (revents: 0x{:x}) - requesting shutdown",
+                                   this->deviceNode, fds[0].revents);
+                break;
+            }
+
             if (fds[0].revents & POLLIN) {
-                // Verify resources are still valid before reading
-                if (!resources_valid.load() || stop_requested.load()) {
-                    break;
-                }
-
-                // Reset error count on successful operations
-                errorCount = 0;
-
                 char readBuf[256];
                 memset(&readBuf, '\0', sizeof(readBuf));
 
-                // Safe read - check if we can still read
-                if (this->fileDescriptor >= 0) {
-                    // Read data from the serial port
-                    ssize_t numBytes = read(this->fileDescriptor, &readBuf, sizeof(readBuf) - 1); // Leave space for null terminator
+                ssize_t numBytes = read(this->fileDescriptor, &readBuf, sizeof(readBuf) - 1);
 
-                    // Check for read errors
-                    if (numBytes < 0) {
-                        errorCount++;
-                        if (errno != EAGAIN && errno != EWOULDBLOCK) {
-                            // This is a real error, not just "no data available"
-                            if (!stop_requested.load() && resources_valid.load()) {
-                                this->logger->error("Error reading from serial port: {} (errno: {}, errorCount: {})",
-                                                    strerror(errno), errno, errorCount);
-
-                                // Special handling for common disconnect errors
-                                if (errno == ENXIO || errno == ENODEV || errno == ENOENT || errno == ENOTTY ||
-                                    errno == EBADF || errno == EINVAL || errno == EIO || errno == 6) { // Device not configured
-                                    this->logger->error("Device error detected, halting.");
-                                    shutdown_requested.store(true);
-                                    return;
-                                }
-                            }
-                        }
-
-                        // If we've had too many consecutive errors, mark the port as disconnected
-                        if (errorCount >= MAX_CONSECUTIVE_ERRORS) {
-                            this->logger->error("Too many consecutive read errors, halting.");
-                            port_connected.store(false);
-                            shutdown_requested.store(true);
-                            return;
-                        }
-
-                        // Sleep briefly to avoid busy-waiting
-                        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                if (numBytes < 0) {
+                    if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                        // No data available right now, continue hopping along 🐰
                         continue;
-                    }
-
-                    // We got 0 bytes - this can happen with non-blocking reads
-                    if (numBytes == 0) {
-                        // No data available, just continue
-                        continue;
-                    }
-
-                    // We have valid data to process
-                    // Safety check to ensure numBytes is positive and not too large
-                    if (numBytes > 0 && numBytes < static_cast<ssize_t>(sizeof(readBuf))) {
-                        tempBuffer.append(readBuf, static_cast<size_t>(numBytes)); // Append new data to tempBuffer
-
-                        // Process complete messages (ending with newline)
-                        size_t newlinePos;
-                        while ((newlinePos = tempBuffer.find('\n')) != std::string::npos) {
-                            if (!resources_valid.load() || stop_requested.load()) {
-                                break;
-                            }
-
-                            // Check if we still have a valid incomingQueue
-                            if (this->incomingQueue) {
-                                // Create the message and send it
-                                Message incomingMessage = Message(this->moduleName, tempBuffer.substr(0, newlinePos));
-
-                                this->logger->trace("adding message '{}' to the incoming queue", incomingMessage.payload);
-                                this->incomingQueue->push(incomingMessage); // Push the message to the queue
-                            }
-
-                            // Remove the processed message from tempBuffer
-                            // Check if newlinePos+1 is within bounds to avoid potential issues
-                            if (newlinePos + 1 <= tempBuffer.length()) {
-                                tempBuffer.erase(0, newlinePos + 1);
-                            } else {
-                                tempBuffer.clear();
-                            }
-                        }
                     } else {
-                        // Log unexpected read size
-                        this->logger->warn("Unexpected read size: {}", numBytes);
+                        // Real read error - time to bail out gracefully
+                        this->logger->error("Read error on {}: {} - requesting shutdown",
+                                           this->deviceNode, strerror(errno));
+                        break;
                     }
+                } else if (numBytes == 0) {
+                    // EOF - device was disconnected, no point trying to recover
+                    this->logger->error("Serial port {} disconnected (EOF) - requesting shutdown",
+                                       this->deviceNode);
+                    break;
                 }
-            } else if (fds[0].revents & (POLLERR | POLLHUP | POLLNVAL)) {
-                // Handle poll errors
-                errorCount++;
 
-                if (!stop_requested.load() && resources_valid.load()) {
-                    this->logger->error("Poll error on serial port: {} (errorCount: {})",
-                                        (fds[0].revents & POLLERR) ? "POLLERR" :
-                                        (fds[0].revents & POLLHUP) ? "POLLHUP" : "POLLNVAL",
-                                        errorCount);
+                // Process the incoming data - hop through the buffer! 🐰
+                tempBuffer.append(readBuf, numBytes);
 
-                    // POLLNVAL specifically indicates the fd is not open, so mark as disconnected immediately
-                    if (fds[0].revents & POLLNVAL) {
-                        this->logger->error("POLLNVAL detected, marking port as disconnected");
-                        port_connected.store(false);
-                        // Reset error count after taking action
-                        errorCount = 0;
+                size_t newlinePos;
+                while ((newlinePos = tempBuffer.find('\n')) != std::string::npos) {
+                    // Extract the complete message
+                    std::string messagePayload = tempBuffer.substr(0, newlinePos);
+
+                    // Remove any trailing carriage return (in case of CRLF line endings)
+                    if (!messagePayload.empty() && messagePayload.back() == '\r') {
+                        messagePayload.pop_back();
                     }
+
+                    // Only process non-empty messages
+                    if (!messagePayload.empty()) {
+                        Message incomingMessage = Message(this->moduleName, messagePayload);
+                        this->logger->trace("adding message '{}' to the incoming queue",
+                                           incomingMessage.payload);
+                        this->incomingQueue->push(incomingMessage);
+                    }
+
+                    // Remove the processed message from tempBuffer
+                    tempBuffer.erase(0, newlinePos + 1);
                 }
-
-                // If we've had too many consecutive errors, mark the port as disconnected
-                if (errorCount >= MAX_CONSECUTIVE_ERRORS) {
-                    this->logger->error("Too many consecutive poll errors, marking port as disconnected");
-                    port_connected.store(false);
-                    // Reset error count after taking action
-                    errorCount = 0;
-                }
-
-                // Sleep to avoid busy-waiting and give time for the issue to resolve
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-                // Clear the buffer on error to avoid processing partial data
-                tempBuffer.clear();
             }
         }
 
-        this->logger->info("SerialReader thread for {} stopping", this->deviceNode);
+        this->logger->info("SerialReader for {} shutting down - hopping away cleanly! 🐰",
+                          this->deviceNode);
     }
+
 }
