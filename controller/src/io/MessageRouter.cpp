@@ -92,24 +92,24 @@ namespace creatures :: io {
 
     void MessageRouter::run() {
         setThreadName(threadName);
-        this->logger->info("MessageRouter running - hopping messages along! 🐰");
+        this->logger->info("MessageRouter running");
 
-        while(!stop_requested.load()) {
+        while(!this->stop_requested.load()) {
 
-            // Wait for a message with a short timeout so we can check stop_requested
+            // Wait for a message to come in from one of our modules with a timeout
+            // so we can check for shutdown requests regularly - like a rabbit with alert ears! 🐰
             auto messageOpt = this->incomingQueue->pop_timeout(std::chrono::milliseconds(100));
 
-            if (!messageOpt.has_value()) {
-                // Timeout - just continue to check stop_requested
-                continue;
-            }
+            if (messageOpt.has_value()) {
+                auto incomingMessage = messageOpt.value();
+                this->logger->debug("incoming message from a creature: {}", incomingMessage.payload);
 
-            // For now, we just log incoming messages
-            // In the future, this could route messages to other systems
-            this->logger->debug("incoming message from a creature: {}", messageOpt.value().payload);
+                // TODO: Something maybe should happen here other than logging it
+            }
+            // If no message arrived, we just continue the loop to check stop_requested
         }
 
-        this->logger->info("MessageRouter stopped - hopped away cleanly! 🐰");
+        this->logger->debug("MessageRouter stopped!");
     }
 
     Result<bool> MessageRouter::setHandlerState(creatures::config::UARTDevice::module_name moduleName, MotorHandlerState state) {

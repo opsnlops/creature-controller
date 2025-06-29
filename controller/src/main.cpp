@@ -42,13 +42,16 @@
 std::atomic<bool> shutdown_requested(false);
 
 /**
- * @brief Signal handler to gracefully shutdown the application
+ * @brief Signal handler to IMMEDIATELY shutdown the application - no more Mr. Nice Rabbit!
  * @param signal The received signal
  */
 void signal_handler(int signal) {
     if (signal == SIGINT) {
-        std::cerr << "Caught SIGINT, shutting down..." << std::endl;
-        shutdown_requested.store(true);
+        std::cerr << "Caught SIGINT, shutting down IMMEDIATELY! 💥" << std::endl;
+
+        // No more waiting around - just exit NOW!
+        std::cout << "Bye! 🖖🏻" << std::endl;
+        std::exit(EXIT_SUCCESS);
     }
 }
 
@@ -228,31 +231,13 @@ int main(int argc, char **argv) {
     pingTask->start();
     workerThreads.push_back(std::move(pingTask));
 
-    // Main loop - wait for shutdown signal
-    logger->info("All systems running! Waiting for shutdown signal...");
-    while(!shutdown_requested.load()) {
+    // Main loop - just run until the signal handler terminates us
+    logger->info("All systems running! Press Ctrl+C to exit immediately.");
+    while(true) {
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        // The signal handler will terminate the process - no graceful shutdown needed!
     }
 
-    logger->info("Shutdown requested - time to shutdown gracefully!");
-
-    // Stop the creature first
-    creature->shutdown();
-
-    // Shut down all worker threads - trust them to shut down cleanly!
-    // No more complex timeout logic - just call shutdown() and trust the StoppableThread base class
-    for (auto& workerThread : std::ranges::reverse_view(workerThreads)) {
-        if (workerThread) {
-            logger->debug("shutting down {}", workerThread->getName());
-            workerThread->shutdown();
-        }
-    }
-
-    // Give everything a moment to clean up nicely
-    logger->debug("giving threads a moment to clean up gracefully");
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-
-    std::cout << "Bye! 🖖🏻" << std::endl;
-    logger->info("Creature controller shut down complete - hopped away cleanly! 🐰");
-    std::exit(EXIT_SUCCESS);
+    // We should never reach here due to the signal handler, but just in case...
+    return EXIT_SUCCESS;
 }

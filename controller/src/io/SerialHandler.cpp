@@ -185,25 +185,20 @@ namespace creatures {
     Result<bool> SerialHandler::shutdown() {
         this->logger->info("shutting down SerialHandler for device {}", deviceNode);
 
-        // Stop the threads first - nice and simple
+        // First, stop the reader thread if it exists
         if (reader) {
             this->logger->debug("stopping reader thread");
             reader->shutdown();
         }
 
+        // Then stop the writer thread if it exists
         if (writer) {
             this->logger->debug("stopping writer thread");
             writer->shutdown();
         }
 
-        // Close the port after threads are stopped
+        // Finally, close the serial port
         closeSerialPort();
-
-        // Clear the thread pointers
-        reader.reset();
-        writer.reset();
-
-        this->logger->info("SerialHandler for {} shutdown complete - hopped away cleanly! 🐰", deviceNode);
         return Result<bool>{true};
     }
 
@@ -232,6 +227,24 @@ namespace creatures {
         }
 
         return true;
+    }
+
+    void SerialHandler::shutdownThreads() {
+        this->logger->info("shutting down SerialHandler threads for device {}", deviceNode);
+
+        // Stop the reader thread if it exists
+        if (reader) {
+            this->logger->debug("stopping reader thread {}", reader->getName());
+            reader->shutdown();
+        }
+
+        // Stop the writer thread if it exists
+        if (writer) {
+            this->logger->debug("stopping writer thread {}", writer->getName());
+            writer->shutdown();
+        }
+
+        this->logger->debug("all SerialHandler threads shutdown requested for device {}", deviceNode);
     }
 
 } // creatures

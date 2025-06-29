@@ -64,26 +64,7 @@ namespace creatures {
         logger->info("shutting down the ServoModuleHandler for module {} on node {}",
                      UARTDevice::moduleNameToString(this->moduleId), this->deviceNode);
 
-        // Set the shutdown flag to prevent new operations
-        is_shutting_down.store(true);
-
-        // Set our state to indicate we're no longer ready
-        ready.store(false);
-        configured.store(false);
-
-        // Tell the message router we're shutting down
-        this->messageRouter->setHandlerState(this->moduleId, creatures::io::MotorHandlerState::stopped);
-
-        // Stop our message processor first
-        if (this->messageProcessor) {
-            logger->debug("stopping the message processor");
-            this->messageProcessor->shutdown();
-
-            // Give the processor a moment to clean up
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
-        }
-
-        // Clear any pending messages to prevent a backlog during restart
+        // Clear the queues - clean out the rabbit hutch!
         if (this->incomingQueue) {
             this->incomingQueue->clear();
         }
@@ -92,22 +73,18 @@ namespace creatures {
             this->outgoingQueue->clear();
         }
 
-        // Gracefully shut down the SerialHandler
+        // Tell the message router we've stopped
+        this->messageRouter->setHandlerState(this->moduleId, creatures::io::MotorHandlerState::stopped);
+
+        // Gracefully shut down the SerialHandler (it will handle its own threads)
         if (this->serialHandler) {
-            logger->debug("shutting down the SerialHandler for module {} on node {}",
-                          UARTDevice::moduleNameToString(this->moduleId), this->deviceNode);
-
             this->serialHandler->shutdown();
-
-            // Give it time to clean up
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
 
-        // Call the parent class's shutdown method to stop our own thread
-        creatures::StoppableThread::shutdown();
-
-        logger->info("ServoModuleHandler for module {} shut down",
-                     UARTDevice::moduleNameToString(this->moduleId));
+        // Shut down our message processor
+        if (this->messageProcessor) {
+            this->messageProcessor->shutdown();
+        }
     }
 
     void ServoModuleHandler::start() {
@@ -208,40 +185,27 @@ namespace creatures {
     }
 
 
+
     void ServoModuleHandler::run() {
         setThreadName(threadName);
 
         logger->info("ServoModuleHandler thread started");
 
         while(!stop_requested.load()) {
-            // Check if we're shutting down
-            if (is_shutting_down.load()) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                continue;
-            }
 
-            // Make sure we have valid resources
-            if (!incomingQueue) {
-                logger->error("Incoming queue is null in ServoModuleHandler run loop");
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                continue;
-            }
+            // Wait for a message to come in from one of our modules, but with a timeout
+            // so we can hop out if we need to stop
+            auto messageOpt = this->incomingQueue->pop_timeout(std::chrono::milliseconds(100));
 
-            try {
-                // Use timeout version to avoid blocking indefinitely
-                Message incomingMessage = this->incomingQueue->popWithTimeout(std::chrono::milliseconds(100));
+            if (messageOpt.has_value()) {
+                auto incomingMessage = messageOpt.value();
+                this->logger->trace("incoming message: {}", incomingMessage.payload);
 
-                // Process the incoming message
-                if (messageProcessor) {
-                    this->logger->trace("incoming message: {}", incomingMessage.payload);
-                    messageProcessor->processMessage(incomingMessage);
-                } else {
-                    logger->warn("Message processor is null, can't process incoming message");
-                }
-            } catch (const std::exception& e) {
-                // Timeout or error - just continue the loop
-                continue;
+                // Go process it!
+                messageProcessor->processMessage(incomingMessage);
             }
+            // If no message arrived in the timeout period, we just continue the loop
+            // This allows us to check stop_requested regularly - as responsive as a rabbit's ears!
         }
 
         logger->info("ServoModuleHandler thread stopping");

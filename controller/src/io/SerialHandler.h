@@ -76,6 +76,11 @@ namespace creatures {
         std::shared_ptr<creatures::StoppableThread> reader;
         std::shared_ptr<creatures::StoppableThread> writer;
 
+        /**
+         * Shutdown all worker threads gracefully
+         */
+        void shutdownThreads();
+
     private:
         std::string deviceNode;
         UARTDevice::module_name moduleName;

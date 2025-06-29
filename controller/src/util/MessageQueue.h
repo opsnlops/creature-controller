@@ -3,8 +3,8 @@
 #include <condition_variable>
 #include <deque>
 #include <mutex>
-#include <optional>
 #include <chrono>
+#include <optional>
 
 namespace creatures {
 
@@ -12,7 +12,6 @@ namespace creatures {
      * A simple thread-safe message queue
      *
      * Used for passing messages around between threads in order
-     * Now with timeout support so threads can check for shutdown requests!
      *
      * @tparam T
      */
@@ -33,31 +32,48 @@ namespace creatures {
             return msg;
         }
 
-        // New method: pop with timeout
-        std::optional<T> pop_timeout(std::chrono::milliseconds timeout) {
+        /**
+         * Pop a message with a timeout - perfect for when you don't want to wait forever like a rabbit watching carrots grow!
+         *
+         * @param timeout how long to wait for a message
+         * @return optional containing the message if one arrived in time, nullopt if we timed out
+         */
+        std::optional<T> pop_timeout(const std::chrono::milliseconds& timeout) {
             std::unique_lock<std::mutex> lock(mtx);
             if (cond.wait_for(lock, timeout, [this] { return !queue.empty(); })) {
                 T msg = std::move(queue.front());
                 queue.pop_front();
                 return msg;
             }
-            return std::nullopt; // Timeout - no message available
+            return std::nullopt; // Timeout - no carrots today!
         }
 
-        // Check if queue is empty (useful for non-blocking checks)
+        /**
+         * Clear all messages from the queue - like cleaning out a rabbit hutch!
+         */
+        void clear() {
+            std::lock_guard<std::mutex> lock(mtx);
+            queue.clear();
+        }
+
+        /**
+         * Check if the queue is empty - useful for peeking into the rabbit hole
+         */
         bool empty() const {
             std::lock_guard<std::mutex> lock(mtx);
             return queue.empty();
         }
 
-        // Get the current size of the queue
+        /**
+         * Get the size of the queue - count how many carrots are waiting!
+         */
         size_t size() const {
             std::lock_guard<std::mutex> lock(mtx);
             return queue.size();
         }
 
     private:
-        mutable std::mutex mtx;
+        mutable std::mutex mtx;  // Made mutable so const methods can use it
         std::condition_variable cond;
         std::deque<T> queue;
     };
