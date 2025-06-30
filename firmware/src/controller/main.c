@@ -161,6 +161,14 @@ static void initialize_binary_info(void) {
 #endif
 #ifdef CC_VER3
     bi_decl(bi_program_feature("Requires Hardware Version: 3"))
+    bi_decl(bi_1pin_with_name(SERVO_0_POWER_PIN, "Servo 0 Power Control"))
+    bi_decl(bi_1pin_with_name(SERVO_1_POWER_PIN, "Servo 1 Power Control"))
+    bi_decl(bi_1pin_with_name(SERVO_2_POWER_PIN, "Servo 2 Power Control"))
+    bi_decl(bi_1pin_with_name(SERVO_3_POWER_PIN, "Servo 3 Power Control"))
+    bi_decl(bi_1pin_with_name(SERVO_4_POWER_PIN, "Servo 4 Power Control"))
+    bi_decl(bi_1pin_with_name(SERVO_5_POWER_PIN, "Servo 5 Power Control"))
+    bi_decl(bi_1pin_with_name(SERVO_6_POWER_PIN, "Servo 6 Power Control"))
+    bi_decl(bi_1pin_with_name(SERVO_7_POWER_PIN, "Servo 7 Power Control"))
 #endif
 }
 

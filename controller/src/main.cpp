@@ -168,7 +168,8 @@ int main(int argc, char **argv) {
         if (audioSubsystem->initialize(
             audio::DEFAULT_MULTICAST_GROUP,
             static_cast<uint16_t>(audio::DEFAULT_RTP_PORT),
-            config->getSoundDeviceNumber())) {
+            config->getSoundDeviceNumber(),
+            config->getNetworkDeviceIPAddress())) {
 
             logger->info("🎵 Audio subsystem ready to go!");
             } else {

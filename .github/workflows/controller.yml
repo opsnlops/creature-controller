@@ -19,7 +19,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang locales-all ninja-build cmake pkgconf git file libi2c-dev
+          sudo apt-get install -y clang locales-all ninja-build cmake pkgconf git file libi2c-dev libpipewire-0.3-dev libuv1-dev libsdl2-mixer-dev
 
       - name: Checkout
         uses: actions/checkout@v4

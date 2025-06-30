@@ -7,14 +7,14 @@
 #include <algorithm>
 #include <chrono>
 #include <cstring>
+#include <unistd.h>
 
 #include <fmt/format.h>
 #include <spdlog/spdlog.h>
+#include <sys/fcntl.h>
 
 #include "logging/Logger.h"
 #include "util/thread_name.h"
-
-
 
 namespace creatures::audio {
 
@@ -23,16 +23,18 @@ namespace creatures::audio {
                                    const std::string& multicastGroup,
                                    uint16_t port,
                                    uint8_t channels,
-                                   uint32_t sampleRate)
+                                   uint32_t sampleRate,
+                                   const std::string& networkDevice)
         : logger(std::move(logger))
         , audioDevice(audioDevice)
         , multicastGroup(multicastGroup)
         , rtpPort(port)
         , audioChannels(channels)
-        , sampleRate(sampleRate) {
-
-        this->logger->debug("🐰 Hopping into RTP audio client setup!");
-        this->logger->info("RTP Client Config: {}:{} - {} channels @ {}Hz (full volume, use hardware controls!)",
+        , sampleRate(sampleRate)
+        , networkDevice(networkDevice)
+    {
+        this->logger->debug("Initializing RTP audio client");
+        this->logger->info("RTP Client Config: {}:{} - {} channels @ {}Hz",
                           multicastGroup, port, channels, sampleRate);
     }
 
@@ -41,15 +43,15 @@ namespace creatures::audio {
     }
 
     void RtpAudioClient::start() {
-        logger->info("🐰 Starting RTP audio client - time to catch some audio packets!");
+        logger->info("Starting RTP audio client");
 
         if (!initializeSDL()) {
-            logger->error("Failed to initialize SDL audio - audio dreams dashed! 💔");
+            logger->error("Failed to initialize SDL audio");
             return;
         }
 
         if (!initializeRTP()) {
-            logger->error("Failed to initialize RTP client - no network nibbles for us!");
+            logger->error("Failed to initialize RTP client");
             cleanupSDL();
             return;
         }
@@ -57,11 +59,11 @@ namespace creatures::audio {
         // Start the thread that will receive and process RTP packets
         StoppableThread::start();
 
-        logger->info("🎵 RTP audio client is hopping and ready to receive audio!");
+        logger->info("RTP audio client started successfully");
     }
 
     void RtpAudioClient::shutdown() {
-        logger->info("🐰 Stopping RTP audio client - hop-ing off the network!");
+        logger->info("Stopping RTP audio client");
 
         // Stop the thread first
         StoppableThread::shutdown();
@@ -70,7 +72,7 @@ namespace creatures::audio {
         cleanupRTP();
         cleanupSDL();
 
-        logger->info("RTP audio client stopped cleanly");
+        logger->info("RTP audio client stopped");
     }
 
     float RtpAudioClient::getBufferLevel() const {
@@ -78,32 +80,90 @@ namespace creatures::audio {
         return static_cast<float>(audioBufferQueue.size()) / static_cast<float>(MAX_BUFFER_QUEUE_SIZE);
     }
 
-    void RtpAudioClient::run() {
+   void RtpAudioClient::run() {
         setThreadName("RtpAudioRx");
-        logger->debug("🐰 RTP audio receive thread hopping into action!");
+        logger->debug("RTP audio receive thread started");
 
         auto lastStatsTime = std::chrono::steady_clock::now();
 
-        while (!stop_requested) {
+        int receiveAttempts = 0;
+        int consecutiveTimeouts = 0;
+
+        uint8_t buffer[65536];  // Large buffer for RTP packets
+
+        fd_set readfds;
+        struct timeval timeout;
+
+        logger->info("Starting multicast reception loop");
+
+        while (!stop_requested.load()) {
             try {
-                // Receive RTP packet with timeout
-                uvgrtp::frame::rtp_frame* frame = rtpStream->pull_frame(100); // 100ms timeout
+                receiveAttempts++;
 
-                if (frame && frame->payload && frame->payload_len > 0) {
-                    // Process the received audio packet
-                    processRtpPacket(frame->payload, frame->payload_len, frame->header.timestamp);
-                    packetsReceived++;
+                // Use select() for timeout
+                FD_ZERO(&readfds);
+                FD_SET(rawMulticastSocket, &readfds);
+                timeout.tv_sec = 0;
+                timeout.tv_usec = 100000;  // 100ms timeout
 
-                    if (!receivingAudio.load()) {
-                        logger->info("🎵 First audio packet received - the music starts hopping!");
-                        receivingAudio.store(true);
+                int selectResult = select(rawMulticastSocket + 1, &readfds, nullptr, nullptr, &timeout);
+
+                if (selectResult > 0 && FD_ISSET(rawMulticastSocket, &readfds)) {
+                    // Data available - receive it
+                    struct sockaddr_in fromAddr{};
+                    socklen_t fromLen = sizeof(fromAddr);
+
+                    ssize_t bytesReceived = recvfrom(rawMulticastSocket, buffer, sizeof(buffer), 0,
+                                                   (struct sockaddr*)&fromAddr, &fromLen);
+
+                    if (bytesReceived > 0) {
+                        consecutiveTimeouts = 0;
+
+                        char fromIP[INET_ADDRSTRLEN];
+                        inet_ntop(AF_INET, &fromAddr.sin_addr, fromIP, INET_ADDRSTRLEN);
+
+                        logger->trace("Received {} bytes from {}:{}", bytesReceived, fromIP, ntohs(fromAddr.sin_port));
+
+                        // Simple RTP header parsing (12 bytes minimum)
+                        if (bytesReceived >= 12) {
+                            uint8_t version = (buffer[0] >> 6) & 0x03;
+                            uint8_t payloadType = buffer[1] & 0x7F;
+                            uint16_t sequence = (buffer[2] << 8) | buffer[3];
+                            uint32_t timestamp = (buffer[4] << 24) | (buffer[5] << 16) | (buffer[6] << 8) | buffer[7];
+
+                            logger->trace("RTP Header: Version: {}, PT: {}, Seq: {}, TS: {}",
+                                          version, payloadType, sequence, timestamp);
+
+                            // Extract audio payload (skip 12-byte RTP header)
+                            uint8_t* audioPayload = buffer + 12;
+                            size_t audioSize = bytesReceived - 12;
+
+                            if (audioSize > 0) {
+                                processRtpPacket(audioPayload, audioSize, timestamp);
+                                packetsReceived++;
+
+                                if (!receivingAudio.load()) {
+                                    logger->info("First audio packet received");
+                                    receivingAudio.store(true);
+                                }
+                            }
+                        }
                     }
 
-                    // Release the frame back to uvgRTP
-                    (void)uvgrtp::frame::dealloc_frame(frame);
+                } else if (selectResult == 0) {
+                    // Timeout
+                    consecutiveTimeouts++;
+                    if (consecutiveTimeouts % 50 == 0) {  // Log every 5 seconds (50 * 100ms)
+                        logger->debug("Socket timeout count: {}", consecutiveTimeouts);
+                    }
+                } else {
+                    // Error
+                    if (errno != EAGAIN && errno != EWOULDBLOCK) {
+                        logger->warn("Select error: {}", strerror(errno));
+                    }
                 }
 
-                // Log stats every 5 seconds
+                // Stats every 5 seconds
                 auto now = std::chrono::steady_clock::now();
                 if (std::chrono::duration_cast<std::chrono::seconds>(now - lastStatsTime).count() >= 5) {
                     logAudioStats();
@@ -111,16 +171,16 @@ namespace creatures::audio {
                 }
 
             } catch (const std::exception& e) {
-                logger->warn("Exception in RTP receive loop: {} - but we keep hopping!", e.what());
+                logger->warn("Exception in receive loop: {}", e.what());
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
             }
         }
 
-        logger->debug("🐰 RTP audio receive thread finishing its hop!");
+        logger->debug("RTP receive thread finished");
     }
 
     bool RtpAudioClient::initializeSDL() {
-        logger->debug("🐰 Initializing SDL audio - preparing our ears!");
+        logger->debug("Initializing SDL audio");
 
         if (SDL_Init(SDL_INIT_AUDIO) < 0) {
             logger->error("Failed to initialize SDL: {}", SDL_GetError());
@@ -137,14 +197,12 @@ namespace creatures::audio {
         desired.userdata = this;
 
         // Open audio device
-        // Get the name of the default
         auto audioDeviceName = SDL_GetAudioDeviceName(audioDevice, 0);
         if (!audioDeviceName) {
             logger->error("Failed to get audio device name: {}", SDL_GetError());
             return false;
         }
-        logger->debug("Using audio device name: {}", audioDeviceName);
-
+        logger->debug("Using audio device: {}", audioDeviceName);
 
         audioDevice = SDL_OpenAudioDevice(audioDeviceName, 0, &desired, &audioSpec, SDL_AUDIO_ALLOW_ANY_CHANGE);
         if (audioDevice == 0) {
@@ -153,13 +211,9 @@ namespace creatures::audio {
             return false;
         }
 
-        logger->info("🎵 SDL Audio device opened successfully!");
-        logger->debug("  • Device: {}", audioDeviceName ? audioDeviceName : "default");
-        logger->debug("  • Sample Rate: {}Hz (requested: {}Hz)", audioSpec.freq, sampleRate);
-        logger->debug("  • Channels: {} (requested: {})", audioSpec.channels, audioChannels);
-        logger->debug("  • Format: {} (requested: AUDIO_S16SYS)", audioSpec.format);
-        logger->debug("  • Buffer Size: {} frames", audioSpec.samples);
-        logger->debug("  • Volume: {} (use hardware controls for adjustment! 🐰)", audioVolume);
+        logger->info("SDL audio device opened successfully");
+        logger->debug("Audio config: {}Hz, {} channels, {} samples buffer",
+                     audioSpec.freq, audioSpec.channels, audioSpec.samples);
 
         // Start audio playback (will call our callback when it needs data)
         SDL_PauseAudioDevice(audioDevice, 0);
@@ -168,44 +222,73 @@ namespace creatures::audio {
     }
 
     bool RtpAudioClient::initializeRTP() {
-        logger->debug("🐰 Setting up RTP session - preparing to catch network packets!");
+        logger->debug("Setting up multicast socket");
 
         try {
-            // Create RTP session for multicast receiving
-            rtpSession = rtpContext.create_session(multicastGroup);
-            if (!rtpSession) {
-                logger->error("Failed to create RTP session for multicast group: {}", multicastGroup);
+            // Create raw UDP socket for multicast reception
+            rawMulticastSocket = socket(AF_INET, SOCK_DGRAM, 0);
+            if (rawMulticastSocket < 0) {
+                logger->error("Failed to create multicast socket: {}", strerror(errno));
                 return false;
             }
 
-            // Create receive-only stream
-            rtpStream = rtpSession->create_stream(
-                rtpPort, rtpPort,           // Local port, remote port (same for multicast)
-                RTP_FORMAT_GENERIC,         // Generic format (we'll handle L16 ourselves)
-                RCE_RECEIVE_ONLY           // We only receive, don't send
-            );
+            // Enable socket reuse
+            int reuse = 1;
+            if (setsockopt(rawMulticastSocket, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) < 0) {
+                logger->warn("Failed to set SO_REUSEADDR: {}", strerror(errno));
+            }
 
-            if (!rtpStream) {
-                logger->error("Failed to create RTP stream on port: {}", rtpPort);
-                rtpContext.destroy_session(rtpSession);
-                rtpSession = nullptr;
+            // Bind to the multicast port
+            struct sockaddr_in addr{};
+            addr.sin_family = AF_INET;
+            addr.sin_addr.s_addr = INADDR_ANY;  // Accept on any interface
+            addr.sin_port = htons(rtpPort);
+
+            if (bind(rawMulticastSocket, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+                logger->error("Failed to bind to port {}: {}", rtpPort, strerror(errno));
+                close(rawMulticastSocket);
+                rawMulticastSocket = -1;
                 return false;
             }
 
-            // Configure the stream for L16 audio
-            rtpStream->configure_ctx(RCC_DYN_PAYLOAD_TYPE, 97);    // L16 dynamic payload type
-            rtpStream->configure_ctx(RCC_CLOCK_RATE, sampleRate);  // Sample rate
+            // Join the multicast group on the specific interface
+            struct ip_mreq mreq{};
+            if (inet_pton(AF_INET, multicastGroup.c_str(), &mreq.imr_multiaddr) != 1) {
+                logger->error("Invalid multicast address: {}", multicastGroup);
+                close(rawMulticastSocket);
+                rawMulticastSocket = -1;
+                return false;
+            }
 
-            logger->info("🎵 RTP stream configured successfully!");
-            logger->debug("  • Multicast Group: {}", multicastGroup);
-            logger->debug("  • Port: {}", rtpPort);
-            logger->debug("  • Payload Type: 97 (L16)");
-            logger->debug("  • Sample Rate: {}Hz", sampleRate);
+            if (inet_pton(AF_INET, "10.19.63.11", &mreq.imr_interface) != 1) {
+                logger->error("Invalid interface address: 10.19.63.11");
+                close(rawMulticastSocket);
+                rawMulticastSocket = -1;
+                return false;
+            }
+
+            if (setsockopt(rawMulticastSocket, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) < 0) {
+                logger->error("Failed to join multicast group: {}", strerror(errno));
+                close(rawMulticastSocket);
+                rawMulticastSocket = -1;
+                return false;
+            }
+
+            // Set socket to non-blocking for timeout behavior
+            int flags = fcntl(rawMulticastSocket, F_GETFL, 0);
+            fcntl(rawMulticastSocket, F_SETFL, flags | O_NONBLOCK);
+
+            logger->info("Multicast socket configured: {}:{} on interface 10.19.63.11",
+                        multicastGroup, rtpPort);
 
             return true;
 
         } catch (const std::exception& e) {
-            logger->error("Exception setting up RTP: {} - network nibbles failed!", e.what());
+            logger->error("Exception setting up multicast: {}", e.what());
+            if (rawMulticastSocket >= 0) {
+                close(rawMulticastSocket);
+                rawMulticastSocket = -1;
+            }
             return false;
         }
     }
@@ -214,7 +297,7 @@ namespace creatures::audio {
         if (audioDevice != 0) {
             SDL_CloseAudioDevice(audioDevice);
             audioDevice = 0;
-            logger->debug("🐰 SDL audio device closed");
+            logger->debug("SDL audio device closed");
         }
 
         SDL_Quit();
@@ -222,18 +305,11 @@ namespace creatures::audio {
     }
 
     void RtpAudioClient::cleanupRTP() {
-        if (rtpStream && rtpSession) {
-            rtpSession->destroy_stream(rtpStream);
-            rtpStream = nullptr;
-            logger->debug("🐰 RTP stream destroyed");
+        if (rawMulticastSocket >= 0) {
+            close(rawMulticastSocket);
+            rawMulticastSocket = -1;
+            logger->debug("Multicast socket closed");
         }
-
-        if (rtpSession) {
-            rtpContext.destroy_session(rtpSession);
-            rtpSession = nullptr;
-            logger->debug("RTP session destroyed");
-        }
-
         receivingAudio.store(false);
     }
 
@@ -241,7 +317,7 @@ namespace creatures::audio {
         // Validate packet size (should be multiple of 2 bytes per sample * channels)
         size_t bytesPerFrame = sizeof(int16_t) * audioChannels;
         if (size % bytesPerFrame != 0) {
-            logger->warn("🐰 Received RTP packet with invalid size: {} bytes (not divisible by {} bytes per frame)",
+            logger->warn("Invalid RTP packet size: {} bytes (not divisible by {} bytes per frame)",
                         size, bytesPerFrame);
             return;
         }
@@ -264,7 +340,7 @@ namespace creatures::audio {
             if (audioBufferQueue.size() >= MAX_BUFFER_QUEUE_SIZE) {
                 // Buffer is full - drop oldest packet to prevent memory bloat
                 audioBufferQueue.pop();
-                logger->trace("🐰 Audio buffer overflow - dropped oldest packet to make room");
+                logger->trace("Audio buffer overflow - dropped oldest packet");
             }
 
             audioBufferQueue.push(std::move(buffer));
@@ -273,7 +349,7 @@ namespace creatures::audio {
         // Wake up audio thread if it's waiting
         bufferCondition.notify_one();
 
-        logger->trace("🎵 Processed RTP audio packet: {} frames ({} bytes) @ timestamp {}",
+        logger->trace("Processed RTP packet: {} frames ({} bytes) @ TS {}",
                      frameCount, size, timestamp);
     }
 
@@ -299,7 +375,13 @@ namespace creatures::audio {
         {
             std::lock_guard<std::mutex> lock(bufferMutex);
 
-            // Fill buffer from our audio queue - no gain processing, just raw audio! 🐰
+            // Debug occasionally to avoid spam
+            static int debugCounter = 0;
+            if (++debugCounter % 2000 == 0) {  // Every 2000th call
+                logger->trace("Audio queue size: {} (call #{})", audioBufferQueue.size(), debugCounter);
+            }
+
+            // Fill buffer from our audio queue
             while (samplesWritten < totalSamples && !audioBufferQueue.empty()) {
                 AudioBuffer& audioBuffer = audioBufferQueue.front();
 
@@ -323,10 +405,13 @@ namespace creatures::audio {
             }
         }
 
-        // Log if we had underrun (not enough audio data)
+        // Only log underruns occasionally to avoid spam
         if (samplesWritten < totalSamples) {
-            logger->trace("🐰 Audio underrun: only {} of {} samples available",
-                         samplesWritten, totalSamples);
+            static int underrunCounter = 0;
+            if (++underrunCounter % 200 == 0) {
+                logger->trace("Audio underrun #{}: {} of {} samples available",
+                             underrunCounter, samplesWritten, totalSamples);
+            }
         }
     }
 
@@ -335,16 +420,15 @@ namespace creatures::audio {
         float bufferLevel = getBufferLevel();
         bool receiving = receivingAudio.load();
 
-        logger->info("🐰 Audio Stats: {} packets received, {:.1f}% buffer, receiving: {}, volume: {}",
-                    packets, bufferLevel * 100.0f, receiving ? "yes" : "no", audioVolume);
-
+        logger->info("Audio stats: {} packets, {:.1f}% buffer, receiving: {}",
+                    packets, bufferLevel * 100.0f, receiving ? "yes" : "no");
 
         if (bufferLevel > 0.8f) {
-            logger->warn("🐰 Audio buffer getting full ({:.1%}) - might have network congestion!",
-                        bufferLevel);
+            logger->warn("Audio buffer high ({:.1f}%) - possible network congestion",
+                        bufferLevel * 100.0f);
         } else if (bufferLevel < 0.1f && receiving) {
-            logger->warn("🐰 Audio buffer getting low ({:.1%}) - might have network issues!",
-                        bufferLevel);
+            logger->warn("Audio buffer low ({:.1f}%) - possible network issues",
+                        bufferLevel * 100.0f);
         }
     }
 

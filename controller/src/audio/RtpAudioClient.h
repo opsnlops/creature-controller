@@ -13,6 +13,10 @@
 #include <condition_variable>
 #include <vector>
 
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
 #include <SDL2/SDL.h>
 #include <uvgrtp/lib.hh>
 
@@ -36,13 +40,15 @@ namespace creatures::audio {
          * @param port RTP port (e.g., 5004)
          * @param channels Number of audio channels (e.g., 17)
          * @param sampleRate Sample rate in Hz (e.g., 48000)
+         * @param networkDevice The IP address of the network device to bind to (e.g., "eth0")
          */
         RtpAudioClient(std::shared_ptr<creatures::Logger> logger,
                        uint8_t audioDevice = DEFAULT_SOUND_DEVICE_NUMBER,
                        const std::string& multicastGroup = "239.19.63.1",
                        uint16_t port = 5004,
                        uint8_t channels = 17,
-                       uint32_t sampleRate = 48000);
+                       uint32_t sampleRate = 48000,
+                       const std::string& networkDevice = "10.19.63.11");
 
         ~RtpAudioClient() override;
 
@@ -100,6 +106,8 @@ namespace creatures::audio {
         uint16_t rtpPort;
         uint8_t audioChannels;
         uint32_t sampleRate;
+        std::string networkDevice;
+        int rawMulticastSocket = -1;
 
         // uvgRTP components
         uvgrtp::context rtpContext;

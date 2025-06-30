@@ -18,17 +18,16 @@ namespace creatures::audio {
     AudioSubsystem::AudioSubsystem(std::shared_ptr<creatures::Logger> logger)
         : logger(std::move(logger)) {
 
-        this->logger->debug("🐰 AudioSubsystem created");
+        this->logger->debug("AudioSubsystem created");
     }
 
     bool AudioSubsystem::initialize(const std::string& multicastGroup,
                                    uint16_t port,
-                                   uint8_t audioDevice) {
+                                   uint8_t audioDevice,
+                                   std::string networkDevice) {
 
-        logger->info("🐰 Initializing audio subsystem...");
-        logger->debug("  • Multicast: {}", multicastGroup);
-        logger->debug("  • Port: {}", port);
-        logger->debug("  • Audio Device: {}", audioDevice);
+        logger->info("Initializing audio subsystem");
+        logger->debug("Multicast: {}, Port: {}, Device: {}", multicastGroup, port, audioDevice);
 
         // Create the RTP audio client using constants from audio-config.h
         rtpClient = std::make_shared<RtpAudioClient>(
@@ -45,25 +44,25 @@ namespace creatures::audio {
             logger->debug("Set audio device to: {}", audioDevice);
         }
 
-        // Set full volume - use hardware controls for adjustment! 🐰
+        // Set full volume - use hardware controls for adjustment
         rtpClient->setVolume(DEFAULT_VOLUME);
 
-        logger->info("🎵 Audio subsystem configured successfully");
-        logger->debug("  • Format: {}", getAudioFormatDescription());
-        logger->debug("  • Expected bandwidth: {:.1f} Mbps",
-                     static_cast<float>(getExpectedBandwidthBps()) / 1024.0f / 1024.0f);
-        logger->debug("  • Expected packet rate: {:.0f} Hz", getExpectedPacketRateHz());
+        logger->info("Audio subsystem configured successfully");
+        logger->debug("Format: {}, Bandwidth: {:.1f} Mbps, Packet rate: {:.0f} Hz",
+                     getAudioFormatDescription(),
+                     static_cast<float>(getExpectedBandwidthBps()) / 1024.0f / 1024.0f,
+                     getExpectedPacketRateHz());
 
         return true;
     }
 
     void AudioSubsystem::run() {
         if (!rtpClient) {
-            logger->error("🐰 Cannot start audio - not initialized!");
+            logger->error("Cannot start audio - not initialized");
             return;
         }
 
-        logger->info("🐰 Starting audio subsystem...");
+        logger->info("Starting audio subsystem");
 
         auto threadName = fmt::format("AudioSubsystem::{}", this->rtpClient->getName());
         setThreadName(threadName);
@@ -81,14 +80,14 @@ namespace creatures::audio {
         running.store(true);
 
         if (rtpClient->isReceiving()) {
-            logger->info("🎵 Audio is hopping in loud and clear!");
+            logger->info("Audio receiving packets");
         } else {
-            logger->info("Audio client started, waiting for packets...");
+            logger->info("Audio client started, waiting for packets");
         }
     }
 
     void AudioSubsystem::shutdown() {
-        logger->info("🐰 Stopping audio subsystem...");
+        logger->info("Stopping audio subsystem");
 
         running.store(false);
         shouldStop.store(true);
@@ -103,7 +102,7 @@ namespace creatures::audio {
             rtpClient->shutdown();
         }
 
-        logger->info("Audio subsystem stopped cleanly");
+        logger->info("Audio subsystem stopped");
     }
 
     bool AudioSubsystem::isReceiving() const {
@@ -130,19 +129,19 @@ namespace creatures::audio {
             std::this_thread::sleep_for(std::chrono::seconds(STATS_LOG_INTERVAL_SEC));
 
             if (!shouldStop.load() && rtpClient) {
-                logger->info("🎵 Audio Status: {}", getStats());
+                logger->info("Audio status: {}", getStats());
 
                 // Check for potential issues
                 float bufferLevel = rtpClient->getBufferLevel();
                 if (bufferLevel > BUFFER_HIGH_WATERMARK) {
-                    logger->warn("🐰 Audio buffer high ({:.1%}) - possible network congestion", bufferLevel);
+                    logger->warn("Audio buffer high ({:.1f}%) - possible network congestion", bufferLevel * 100.0f);
                 } else if (bufferLevel < BUFFER_LOW_WATERMARK && isReceiving()) {
-                    logger->warn("🐰 Audio buffer low ({:.1%}) - possible network issues", bufferLevel);
+                    logger->warn("Audio buffer low ({:.1f}%) - possible network issues", bufferLevel * 100.0f);
                 }
             }
         }
 
-        logger->debug("🐰 Audio monitoring thread finished");
+        logger->debug("Audio monitoring thread finished");
     }
 
 } // namespace creatures::audio

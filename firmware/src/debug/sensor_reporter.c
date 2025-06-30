@@ -79,7 +79,7 @@ void sensorReportTimerCallback(TimerHandle_t xTimer) {
              sensor_power_data[7].power);
 
     send_to_controller(motor_message);
-#endif CC_VER2
+#endif
 
 #ifdef CC_VER2
     // Make a second buffer for the board's data. We can't do all of this in one message.

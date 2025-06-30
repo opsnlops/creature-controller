@@ -23,7 +23,7 @@ endif()
 
 
 
-#set(PICO_PLATFORM rp2350)
+set(PICO_PLATFORM rp2350)
 if (NOT PICO_PLATFORM AND NOT DEFINED ENV{PICO_PLATFORM})
     message("PICO_PLATFORM not defined, defaulting to rp2040")
     set(PICO_PLATFORM rp2040)
