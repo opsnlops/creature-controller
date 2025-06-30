@@ -17,22 +17,22 @@ namespace creatures::audio {
 
     // Audio Format Configuration
     // Must match the L16 format from creature-server
-    static constexpr uint32_t   AUDIO_SAMPLE_RATE = 48000;     // 48kHz
-    static constexpr uint8_t    STREAM_AUDIO_CHANNELS = 17;           // 16 creatures + 1 BGM
-    static constexpr uint16_t   AUDIO_BITS_PER_SAMPLE = 16;    // L16 format
+    static constexpr uint32_t   AUDIO_SAMPLE_RATE = 48000;          // 48kHz
+    static constexpr uint8_t    STREAM_AUDIO_CHANNELS = 17;         // 16 creatures + 1 BGM
+    static constexpr uint16_t   AUDIO_BITS_PER_SAMPLE = 16;         // L16 format
 
     // Audio Volume Configuration
-    // Keep it simple - full volume, use hardware controls! 🐰
-    static constexpr uint8_t    DEFAULT_VOLUME = 255;          // Maximum volume
+    // Keep it simple - full volume, use hardware controls!
+    static constexpr uint8_t    DEFAULT_VOLUME = 255;               // Maximum volume
 
-    static constexpr uint8_t    DEFAULT_SOUND_DEVICE_NUMBER = 0; // Default sound device index
-    static constexpr uint8_t    DEVICE_AUDIO_CHANNELS = 2; // Number of audio channels
+    static constexpr uint8_t    DEFAULT_SOUND_DEVICE_NUMBER = 0;    // Default sound device index
+    static constexpr uint8_t    DEVICE_AUDIO_CHANNELS = 1;          // Number of audio channels (always monophonic)
 
     // Buffer Management
     // Tuned for 1ms controller timing and 5ms server chunks
-    static constexpr size_t     MAX_AUDIO_BUFFER_QUEUE = 100;  // ~500ms worth at 5ms chunks
-    static constexpr size_t     TARGET_BUFFER_SIZE = 20;       // ~100ms target buffer
-    static constexpr size_t     MIN_BUFFER_START = 5;          // Start playback after 5 chunks
+    static constexpr size_t     MAX_AUDIO_BUFFER_QUEUE = 100;       // ~500ms worth at 5ms chunks
+    static constexpr size_t     TARGET_BUFFER_SIZE = 20;            // ~100ms target buffer
+    static constexpr size_t     MIN_BUFFER_START = 5;               // Start playback after 5 chunks
 
     // SDL Audio Configuration
     static constexpr size_t     SDL_BUFFER_FRAMES = 1024;      // SDL callback buffer size

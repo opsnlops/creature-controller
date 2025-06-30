@@ -24,7 +24,7 @@ namespace creatures::audio {
     bool AudioSubsystem::initialize(const std::string& multicastGroup,
                                    uint16_t port,
                                    uint8_t audioDevice,
-                                   std::string networkDevice) {
+                                   const std::string& networkDevice) {
 
         logger->info("Initializing audio subsystem");
         logger->debug("Multicast: {}, Port: {}, Device: {}", multicastGroup, port, audioDevice);
@@ -36,7 +36,8 @@ namespace creatures::audio {
             multicastGroup,
             port,
             DEVICE_AUDIO_CHANNELS,
-            AUDIO_SAMPLE_RATE
+            AUDIO_SAMPLE_RATE,
+            networkDevice
         );
 
         if (audioDevice) {

@@ -19,7 +19,7 @@
 namespace creatures::audio {
 
     RtpAudioClient::RtpAudioClient(std::shared_ptr<creatures::Logger> logger,
-                                   uint8_t audioDevice,
+                                   const uint8_t audioDevice,
                                    const std::string& multicastGroup,
                                    uint16_t port,
                                    uint8_t channels,
@@ -153,7 +153,7 @@ namespace creatures::audio {
                 } else if (selectResult == 0) {
                     // Timeout
                     consecutiveTimeouts++;
-                    if (consecutiveTimeouts % 50 == 0) {  // Log every 5 seconds (50 * 100ms)
+                    if (consecutiveTimeouts % 150 == 0) {  // Log every 15 seconds (150 * 100ms)
                         logger->debug("Socket timeout count: {}", consecutiveTimeouts);
                     }
                 } else {
@@ -163,9 +163,9 @@ namespace creatures::audio {
                     }
                 }
 
-                // Stats every 5 seconds
+                // Stats every 15 seconds
                 auto now = std::chrono::steady_clock::now();
-                if (std::chrono::duration_cast<std::chrono::seconds>(now - lastStatsTime).count() >= 5) {
+                if (std::chrono::duration_cast<std::chrono::seconds>(now - lastStatsTime).count() >= 15) {
                     logAudioStats();
                     lastStatsTime = now;
                 }
@@ -260,8 +260,8 @@ namespace creatures::audio {
                 return false;
             }
 
-            if (inet_pton(AF_INET, "10.19.63.11", &mreq.imr_interface) != 1) {
-                logger->error("Invalid interface address: 10.19.63.11");
+            if (inet_pton(AF_INET, networkDevice.c_str(), &mreq.imr_interface) != 1) {
+                logger->error("Invalid interface address: {}", networkDevice);
                 close(rawMulticastSocket);
                 rawMulticastSocket = -1;
                 return false;
@@ -278,8 +278,8 @@ namespace creatures::audio {
             int flags = fcntl(rawMulticastSocket, F_GETFL, 0);
             fcntl(rawMulticastSocket, F_SETFL, flags | O_NONBLOCK);
 
-            logger->info("Multicast socket configured: {}:{} on interface 10.19.63.11",
-                        multicastGroup, rtpPort);
+            logger->info("Multicast socket configured: {}:{} on interface {}",
+                         multicastGroup, rtpPort, networkDevice);
 
             return true;
 

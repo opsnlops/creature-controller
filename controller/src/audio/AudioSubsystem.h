@@ -36,7 +36,7 @@ namespace creatures::audio {
         bool initialize(const std::string& multicastGroup = DEFAULT_MULTICAST_GROUP,
                        uint16_t port = DEFAULT_RTP_PORT,
                        uint8_t audioDevice = DEFAULT_SOUND_DEVICE_NUMBER,
-                       std::string networkDevice = "eth0");
+                       const std::string& networkDevice = "10.19.63.5");
 
         /**
          * Start the audio subsystem
