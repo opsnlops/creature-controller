@@ -1,440 +1,255 @@
-//
-// RtpAudioClient.cpp
-//
+/**
+ * RtpAudioClient.cpp – 2025-06-30
+ * Multicast RTP 17-channel (L16 / 48 kHz) → SDL queue streamer
+ *  • Handles uvgrtp 10-byte per-fragment headers
+ *  • Builds 5 ms mono blocks (240 frames) in a jitter FIFO
+ *  • Pre-buffers 3 blocks (15 ms) before starting playback
+ *  • Works on macOS (ip_mreq) and Linux (ip_mreqn)
+ */
 
 #include "RtpAudioClient.h"
 
+// ─── POSIX / STL ────────────────────────────────────────────────────
 #include <algorithm>
-#include <chrono>
+#include <cerrno>
 #include <cstring>
+#include <fcntl.h>
+#include <net/if.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <sys/select.h>
+#include <sys/socket.h>
 #include <unistd.h>
+#include <vector>
 
-#include <fmt/format.h>
-#include <spdlog/spdlog.h>
-#include <sys/fcntl.h>
-
-#include "logging/Logger.h"
+// ─── Project helpers ───────────────────────────────────────────────
 #include "util/thread_name.h"
 
-namespace creatures::audio {
+namespace ca = creatures::audio;
 
-    RtpAudioClient::RtpAudioClient(std::shared_ptr<creatures::Logger> logger,
-                                   const uint8_t audioDevice,
-                                   const std::string& multicastGroup,
-                                   uint16_t port,
-                                   uint8_t channels,
-                                   uint32_t sampleRate,
-                                   const std::string& networkDevice)
-        : logger(std::move(logger))
-        , audioDevice(audioDevice)
-        , multicastGroup(multicastGroup)
-        , rtpPort(port)
-        , audioChannels(channels)
-        , sampleRate(sampleRate)
-        , networkDevice(networkDevice)
-    {
-        this->logger->debug("Initializing RTP audio client");
-        this->logger->info("RTP Client Config: {}:{} - {} channels @ {}Hz",
-                          multicastGroup, port, channels, sampleRate);
-    }
+/*───────────────────────────────────────────────────────────────
+ *  ctor / dtor  (unchanged from header)
+ *─────────────────────────────────────────────────────────────*/
+ca::RtpAudioClient::RtpAudioClient(
+        std::shared_ptr<creatures::Logger> log,
+        uint8_t  audioDev,
+        std::string mc,
+        uint16_t port,
+        uint8_t  chTot,
+        uint32_t sr,
+        std::string ifaceIp,
+        uint8_t  dlgCh) noexcept
+    : log_(std::move(log))
+    , audio_dev_idx_(audioDev)
+    , mcast_group_(std::move(mc))
+    , rtp_port_(port)
+    , total_channels_(std::clamp<uint8_t>(chTot, 2u, STREAM_CH_MAX))
+    , iface_ip_(std::move(ifaceIp))
+    , creature_ch_(std::clamp<uint8_t>(dlgCh, 1u, 16u))
+{
+    (void)sr; // sample-rate is compile-time constant for now
+}
 
-    RtpAudioClient::~RtpAudioClient() {
-        shutdown();
-    }
+ca::RtpAudioClient::~RtpAudioClient()
+{
+    shutdown();
+    shutdown_sdl();
+    close_socket();
+}
 
-    void RtpAudioClient::start() {
-        logger->info("Starting RTP audio client");
+/*───────────────────────────────────────────────────────────────
+ *  public helpers  (simple setters / getters)
+ *─────────────────────────────────────────────────────────────*/
+void ca::RtpAudioClient::setCreatureChannel(uint8_t c) noexcept
+{ creature_ch_ = std::clamp<uint8_t>(c, 1u, 16u); }
 
-        if (!initializeSDL()) {
-            logger->error("Failed to initialize SDL audio");
-            return;
+void ca::RtpAudioClient::setVolume(int) noexcept {/* fixed at max */}
+bool ca::RtpAudioClient::isReceiving() const noexcept { return running_; }
+uint64_t ca::RtpAudioClient::getPacketsReceived() const noexcept { return packets_rx_; }
+float ca::RtpAudioClient::getBufferLevel() const noexcept
+{
+    return static_cast<float>(SDL_GetQueuedAudioSize(dev_)) /
+           static_cast<float>(QUEUE_TARGET_BYTES);
+}
+
+/*───────────────────────────────────────────────────────────────
+ *  thread entry
+ *─────────────────────────────────────────────────────────────*/
+void ca::RtpAudioClient::run()
+{
+    setThreadName("rtp-client");
+
+    if (!init_sdl() || !init_socket()) return;
+    running_ = true;
+
+    std::vector<std::uint8_t> pkt(9216);          // jumbo-safe
+    std::vector<int16_t>      jitter;             // FIFO of mono samples
+
+    constexpr std::size_t RTP_HDR   = 12;
+    const std::size_t tupleBytes    = total_channels_ * sizeof(int16_t);
+    bool primed                     = false;      // warm-up flag
+
+    while (!stop_requested.load()) {
+        /* ── receive one UDP datagram ──────────────────────────── */
+        if (!recv_packet(pkt)) continue;
+        std::size_t payload = pkt.size() - RTP_HDR;
+        if (!payload) continue;
+
+        /* uvgrtp adds 10-B header at start of each fragment */
+        std::size_t skip   = payload % tupleBytes;
+        std::size_t frames = (payload - skip) / tupleBytes;
+        if (!frames) continue;
+
+        ++packets_rx_;
+
+        const auto* frameBE =
+            reinterpret_cast<const int16_t*>(pkt.data() + RTP_HDR + skip);
+
+        deinterleave_and_mix(frameBE, frames);
+        jitter.insert(jitter.end(), mix_buf_, mix_buf_ + frames);
+
+        /* ── feed SDL in 240-frame (5 ms) blocks ──────────────── */
+        while (jitter.size() >= FRAMES_PER_CHUNK) {
+            queue_pcm(jitter.data(), FRAMES_PER_CHUNK);
+            jitter.erase(jitter.begin(),
+                         jitter.begin() + FRAMES_PER_CHUNK);
         }
 
-        if (!initializeRTP()) {
-            logger->error("Failed to initialize RTP client");
-            cleanupSDL();
-            return;
-        }
-
-        // Start the thread that will receive and process RTP packets
-        StoppableThread::start();
-
-        logger->info("RTP audio client started successfully");
-    }
-
-    void RtpAudioClient::shutdown() {
-        logger->info("Stopping RTP audio client");
-
-        // Stop the thread first
-        StoppableThread::shutdown();
-
-        // Clean up resources
-        cleanupRTP();
-        cleanupSDL();
-
-        logger->info("RTP audio client stopped");
-    }
-
-    float RtpAudioClient::getBufferLevel() const {
-        std::lock_guard<std::mutex> lock(bufferMutex);
-        return static_cast<float>(audioBufferQueue.size()) / static_cast<float>(MAX_BUFFER_QUEUE_SIZE);
-    }
-
-   void RtpAudioClient::run() {
-        setThreadName("RtpAudioRx");
-        logger->debug("RTP audio receive thread started");
-
-        auto lastStatsTime = std::chrono::steady_clock::now();
-
-        int receiveAttempts = 0;
-        int consecutiveTimeouts = 0;
-
-        uint8_t buffer[65536];  // Large buffer for RTP packets
-
-        fd_set readfds;
-        struct timeval timeout;
-
-        logger->info("Starting multicast reception loop");
-
-        while (!stop_requested.load()) {
-            try {
-                receiveAttempts++;
-
-                // Use select() for timeout
-                FD_ZERO(&readfds);
-                FD_SET(rawMulticastSocket, &readfds);
-                timeout.tv_sec = 0;
-                timeout.tv_usec = 100000;  // 100ms timeout
-
-                int selectResult = select(rawMulticastSocket + 1, &readfds, nullptr, nullptr, &timeout);
-
-                if (selectResult > 0 && FD_ISSET(rawMulticastSocket, &readfds)) {
-                    // Data available - receive it
-                    struct sockaddr_in fromAddr{};
-                    socklen_t fromLen = sizeof(fromAddr);
-
-                    ssize_t bytesReceived = recvfrom(rawMulticastSocket, buffer, sizeof(buffer), 0,
-                                                   (struct sockaddr*)&fromAddr, &fromLen);
-
-                    if (bytesReceived > 0) {
-                        consecutiveTimeouts = 0;
-
-                        char fromIP[INET_ADDRSTRLEN];
-                        inet_ntop(AF_INET, &fromAddr.sin_addr, fromIP, INET_ADDRSTRLEN);
-
-                        logger->trace("Received {} bytes from {}:{}", bytesReceived, fromIP, ntohs(fromAddr.sin_port));
-
-                        // Simple RTP header parsing (12 bytes minimum)
-                        if (bytesReceived >= 12) {
-                            uint8_t version = (buffer[0] >> 6) & 0x03;
-                            uint8_t payloadType = buffer[1] & 0x7F;
-                            uint16_t sequence = (buffer[2] << 8) | buffer[3];
-                            uint32_t timestamp = (buffer[4] << 24) | (buffer[5] << 16) | (buffer[6] << 8) | buffer[7];
-
-                            logger->trace("RTP Header: Version: {}, PT: {}, Seq: {}, TS: {}",
-                                          version, payloadType, sequence, timestamp);
-
-                            // Extract audio payload (skip 12-byte RTP header)
-                            uint8_t* audioPayload = buffer + 12;
-                            size_t audioSize = bytesReceived - 12;
-
-                            if (audioSize > 0) {
-                                processRtpPacket(audioPayload, audioSize, timestamp);
-                                packetsReceived++;
-
-                                if (!receivingAudio.load()) {
-                                    logger->info("First audio packet received");
-                                    receivingAudio.store(true);
-                                }
-                            }
-                        }
-                    }
-
-                } else if (selectResult == 0) {
-                    // Timeout
-                    consecutiveTimeouts++;
-                    if (consecutiveTimeouts % 150 == 0) {  // Log every 15 seconds (150 * 100ms)
-                        logger->debug("Socket timeout count: {}", consecutiveTimeouts);
-                    }
-                } else {
-                    // Error
-                    if (errno != EAGAIN && errno != EWOULDBLOCK) {
-                        logger->warn("Select error: {}", strerror(errno));
-                    }
-                }
-
-                // Stats every 15 seconds
-                auto now = std::chrono::steady_clock::now();
-                if (std::chrono::duration_cast<std::chrono::seconds>(now - lastStatsTime).count() >= 15) {
-                    logAudioStats();
-                    lastStatsTime = now;
-                }
-
-            } catch (const std::exception& e) {
-                logger->warn("Exception in receive loop: {}", e.what());
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        /* ── warm-up: queue ≥3 blocks (15 ms) *before* un-pausing ─*/
+        if (!primed) {
+            if (SDL_GetQueuedAudioSize(dev_) >=
+                FRAMES_PER_CHUNK * 3 * sizeof(int16_t)) {
+                SDL_PauseAudioDevice(dev_, 0);    // start playback
+                primed = true;
+                log_->info("audio primed, playback started");
             }
-        }
-
-        logger->debug("RTP receive thread finished");
-    }
-
-    bool RtpAudioClient::initializeSDL() {
-        logger->debug("Initializing SDL audio");
-
-        if (SDL_Init(SDL_INIT_AUDIO) < 0) {
-            logger->error("Failed to initialize SDL: {}", SDL_GetError());
-            return false;
-        }
-
-        // Configure audio specification
-        SDL_AudioSpec desired{};
-        desired.freq = static_cast<int>(sampleRate);
-        desired.format = AUDIO_S16SYS;  // 16-bit signed, system byte order (matches L16)
-        desired.channels = audioChannels;
-        desired.samples = 1024;  // Buffer size in frames
-        desired.callback = audioCallback;
-        desired.userdata = this;
-
-        // Open audio device
-        auto audioDeviceName = SDL_GetAudioDeviceName(audioDevice, 0);
-        if (!audioDeviceName) {
-            logger->error("Failed to get audio device name: {}", SDL_GetError());
-            return false;
-        }
-        logger->debug("Using audio device: {}", audioDeviceName);
-
-        audioDevice = SDL_OpenAudioDevice(audioDeviceName, 0, &desired, &audioSpec, SDL_AUDIO_ALLOW_ANY_CHANGE);
-        if (audioDevice == 0) {
-            logger->error("Failed to open audio device: {}", SDL_GetError());
-            SDL_Quit();
-            return false;
-        }
-
-        logger->info("SDL audio device opened successfully");
-        logger->debug("Audio config: {}Hz, {} channels, {} samples buffer",
-                     audioSpec.freq, audioSpec.channels, audioSpec.samples);
-
-        // Start audio playback (will call our callback when it needs data)
-        SDL_PauseAudioDevice(audioDevice, 0);
-
-        return true;
-    }
-
-    bool RtpAudioClient::initializeRTP() {
-        logger->debug("Setting up multicast socket");
-
-        try {
-            // Create raw UDP socket for multicast reception
-            rawMulticastSocket = socket(AF_INET, SOCK_DGRAM, 0);
-            if (rawMulticastSocket < 0) {
-                logger->error("Failed to create multicast socket: {}", strerror(errno));
-                return false;
-            }
-
-            // Enable socket reuse
-            int reuse = 1;
-            if (setsockopt(rawMulticastSocket, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) < 0) {
-                logger->warn("Failed to set SO_REUSEADDR: {}", strerror(errno));
-            }
-
-            // Bind to the multicast port
-            struct sockaddr_in addr{};
-            addr.sin_family = AF_INET;
-            addr.sin_addr.s_addr = INADDR_ANY;  // Accept on any interface
-            addr.sin_port = htons(rtpPort);
-
-            if (bind(rawMulticastSocket, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-                logger->error("Failed to bind to port {}: {}", rtpPort, strerror(errno));
-                close(rawMulticastSocket);
-                rawMulticastSocket = -1;
-                return false;
-            }
-
-            // Join the multicast group on the specific interface
-            struct ip_mreq mreq{};
-            if (inet_pton(AF_INET, multicastGroup.c_str(), &mreq.imr_multiaddr) != 1) {
-                logger->error("Invalid multicast address: {}", multicastGroup);
-                close(rawMulticastSocket);
-                rawMulticastSocket = -1;
-                return false;
-            }
-
-            if (inet_pton(AF_INET, networkDevice.c_str(), &mreq.imr_interface) != 1) {
-                logger->error("Invalid interface address: {}", networkDevice);
-                close(rawMulticastSocket);
-                rawMulticastSocket = -1;
-                return false;
-            }
-
-            if (setsockopt(rawMulticastSocket, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) < 0) {
-                logger->error("Failed to join multicast group: {}", strerror(errno));
-                close(rawMulticastSocket);
-                rawMulticastSocket = -1;
-                return false;
-            }
-
-            // Set socket to non-blocking for timeout behavior
-            int flags = fcntl(rawMulticastSocket, F_GETFL, 0);
-            fcntl(rawMulticastSocket, F_SETFL, flags | O_NONBLOCK);
-
-            logger->info("Multicast socket configured: {}:{} on interface {}",
-                         multicastGroup, rtpPort, networkDevice);
-
-            return true;
-
-        } catch (const std::exception& e) {
-            logger->error("Exception setting up multicast: {}", e.what());
-            if (rawMulticastSocket >= 0) {
-                close(rawMulticastSocket);
-                rawMulticastSocket = -1;
-            }
-            return false;
+        } else {
+            log_stream_stats();
         }
     }
+    running_ = false;
+}
 
-    void RtpAudioClient::cleanupSDL() {
-        if (audioDevice != 0) {
-            SDL_CloseAudioDevice(audioDevice);
-            audioDevice = 0;
-            logger->debug("SDL audio device closed");
-        }
+/*───────────────────────────────────────────────────────────────
+ *  SDL initialisation / shutdown
+ *─────────────────────────────────────────────────────────────*/
+bool ca::RtpAudioClient::init_sdl()
+{
+    if (SDL_InitSubSystem(SDL_INIT_AUDIO)) {
+        log_->error("SDL audio init: {}", SDL_GetError()); return false;
+    }
+    SDL_AudioSpec want{}, have{};
+    want.freq     = static_cast<int>(SAMPLE_RATE);
+    want.format   = AUDIO_S16SYS;
+    want.channels = 1;
+    want.samples  = 1024;
+    want.callback = nullptr;               // queue mode
 
-        SDL_Quit();
-        logger->debug("SDL audio subsystem shut down");
+    dev_ = SDL_OpenAudioDevice(nullptr, 0, &want, &have, 0);
+    if (!dev_) { log_->error("SDL_OpenAudioDevice: {}", SDL_GetError()); return false; }
+
+    SDL_PauseAudioDevice(dev_, 1);         // start paused (we’ll un-pause after warm-up)
+    log_->info("SDL audio opened: {} Hz mono queue", have.freq);
+    return true;
+}
+
+void ca::RtpAudioClient::shutdown_sdl() noexcept
+{
+    if (dev_) SDL_CloseAudioDevice(dev_);
+    SDL_QuitSubSystem(SDL_INIT_AUDIO);
+}
+
+/*───────────────────────────────────────────────────────────────
+ *  Socket initialisation / recv  (unchanged)
+ *─────────────────────────────────────────────────────────────*/
+bool ca::RtpAudioClient::init_socket()
+{
+    sock_ = ::socket(AF_INET, SOCK_DGRAM, 0);
+    if (sock_ < 0) { log_->error("socket: {}", strerror(errno)); return false; }
+
+    int reuse = 1;
+    setsockopt(sock_, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
+
+    sockaddr_in bindAddr{};
+    bindAddr.sin_family      = AF_INET;
+    bindAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    bindAddr.sin_port        = htons(rtp_port_);
+    if (bind(sock_, reinterpret_cast<sockaddr*>(&bindAddr),
+             sizeof(bindAddr))) {
+        log_->error("bind: {}", strerror(errno)); return false;
     }
 
-    void RtpAudioClient::cleanupRTP() {
-        if (rawMulticastSocket >= 0) {
-            close(rawMulticastSocket);
-            rawMulticastSocket = -1;
-            logger->debug("Multicast socket closed");
-        }
-        receivingAudio.store(false);
+#ifdef __APPLE__                              // macOS / BSD
+    ip_mreq m{};
+    m.imr_multiaddr.s_addr = inet_addr(mcast_group_.c_str());
+    m.imr_interface.s_addr = inet_addr(iface_ip_.c_str());
+#else                                          // Linux
+    ip_mreqn m{};
+    m.imr_multiaddr.s_addr = inet_addr(mcast_group_.c_str());
+    m.imr_address.s_addr   = inet_addr(iface_ip_.c_str());
+    m.imr_ifindex          = if_nametoindex("eth0"); // fallback
+#endif
+    if (setsockopt(sock_, IPPROTO_IP, IP_ADD_MEMBERSHIP,
+                   &m, sizeof(m))) {
+        log_->error("IP_ADD_MEMBERSHIP: {}", strerror(errno)); return false;
     }
 
-    void RtpAudioClient::processRtpPacket(uint8_t* data, size_t size, uint32_t timestamp) {
-        // Validate packet size (should be multiple of 2 bytes per sample * channels)
-        size_t bytesPerFrame = sizeof(int16_t) * audioChannels;
-        if (size % bytesPerFrame != 0) {
-            logger->warn("Invalid RTP packet size: {} bytes (not divisible by {} bytes per frame)",
-                        size, bytesPerFrame);
-            return;
-        }
+    int fl = fcntl(sock_, F_GETFL, 0);
+    fcntl(sock_, F_SETFL, fl | O_NONBLOCK);
+    log_->info("RTP joined {}:{} via {}", mcast_group_, rtp_port_, iface_ip_);
+    return true;
+}
 
-        size_t frameCount = size / bytesPerFrame;
+void ca::RtpAudioClient::close_socket() noexcept
+{ if (sock_ >= 0) ::close(sock_); }
 
-        // Create audio buffer
-        AudioBuffer buffer;
-        buffer.data.resize(frameCount * audioChannels);
-        buffer.timestamp = timestamp;
-        buffer.frameCount = frameCount;
+bool ca::RtpAudioClient::recv_packet(std::vector<std::uint8_t>& buf)
+{
+    fd_set rfds; FD_ZERO(&rfds); FD_SET(sock_, &rfds);
+    timeval tv{0, 50'000};
+    if (select(sock_+1, &rfds, nullptr, nullptr, &tv) <= 0) return false;
 
-        // Copy the L16 data directly (it's already in the right format)
-        std::memcpy(buffer.data.data(), data, size);
+    ssize_t n = ::recv(sock_, buf.data(), buf.size(), 0);
+    if (n <= 0) return false;
+    buf.resize(static_cast<std::size_t>(n));
+    return true;
+}
 
-        // Add to queue (with bounds checking to prevent memory issues)
-        {
-            std::lock_guard<std::mutex> lock(bufferMutex);
-
-            if (audioBufferQueue.size() >= MAX_BUFFER_QUEUE_SIZE) {
-                // Buffer is full - drop oldest packet to prevent memory bloat
-                audioBufferQueue.pop();
-                logger->trace("Audio buffer overflow - dropped oldest packet");
-            }
-
-            audioBufferQueue.push(std::move(buffer));
-        }
-
-        // Wake up audio thread if it's waiting
-        bufferCondition.notify_one();
-
-        logger->trace("Processed RTP packet: {} frames ({} bytes) @ TS {}",
-                     frameCount, size, timestamp);
+/*──────────────────────────────────────────────────────────────
+ *  Mix helpers  (dialog 100 %, bgm 50 %)
+ *────────────────────────────────────────────────────────────*/
+void ca::RtpAudioClient::deinterleave_and_mix(const int16_t* be,
+                                              std::size_t frames)
+{
+    const uint8_t dlgIdx = static_cast<uint8_t>(creature_ch_ - 1);
+    for (std::size_t f = 0; f < frames; ++f) {
+        const int16_t* in = be + f * total_channels_;
+        int32_t dlg = net_to_host_16(in[dlgIdx]);
+        int32_t bgm = net_to_host_16(in[STREAM_CH_MAX - 1]) >> 1;
+        int32_t mix = dlg + bgm;
+        mix_buf_[f] = static_cast<int16_t>(
+            std::clamp(mix, -32768, 32767));
     }
+}
 
-    void RtpAudioClient::audioCallback(void* userdata, Uint8* stream, int len) {
-        auto* client = static_cast<RtpAudioClient*>(userdata);
+void ca::RtpAudioClient::queue_pcm(const int16_t* pcm,
+                                   std::size_t frames) noexcept
+{
+    SDL_QueueAudio(dev_, pcm,
+                   static_cast<Uint32>(frames * sizeof(int16_t)));
+}
 
-        // Calculate how many frames we need
-        size_t frameCount = len / (sizeof(int16_t) * client->audioChannels);
-        auto* buffer = reinterpret_cast<int16_t*>(stream);
+/*──────────────────────────────────────────────────────────────
+ *  stats every 100 pkts
+ *────────────────────────────────────────────────────────────*/
+void ca::RtpAudioClient::log_stream_stats() const
+{
+    constexpr uint64_t EVERY = 100;
+    if (packets_rx_ % EVERY) return;
 
-        // Fill the buffer with audio data
-        client->fillAudioBuffer(buffer, frameCount);
-    }
-
-    void RtpAudioClient::fillAudioBuffer(int16_t* buffer, size_t frameCount) {
-        size_t totalSamples = frameCount * audioChannels;
-
-        // Start with silence
-        std::memset(buffer, 0, totalSamples * sizeof(int16_t));
-
-        size_t samplesWritten = 0;
-
-        {
-            std::lock_guard<std::mutex> lock(bufferMutex);
-
-            // Debug occasionally to avoid spam
-            static int debugCounter = 0;
-            if (++debugCounter % 2000 == 0) {  // Every 2000th call
-                logger->trace("Audio queue size: {} (call #{})", audioBufferQueue.size(), debugCounter);
-            }
-
-            // Fill buffer from our audio queue
-            while (samplesWritten < totalSamples && !audioBufferQueue.empty()) {
-                AudioBuffer& audioBuffer = audioBufferQueue.front();
-
-                size_t availableSamples = audioBuffer.data.size();
-                size_t samplesToWrite = std::min(totalSamples - samplesWritten, availableSamples);
-
-                // Copy audio data
-                std::memcpy(buffer + samplesWritten, audioBuffer.data.data(),
-                           samplesToWrite * sizeof(int16_t));
-
-                samplesWritten += samplesToWrite;
-
-                // Remove this buffer if we've used it all
-                if (samplesToWrite >= availableSamples) {
-                    audioBufferQueue.pop();
-                } else {
-                    // Partial use - remove the samples we used
-                    audioBuffer.data.erase(audioBuffer.data.begin(),
-                                         audioBuffer.data.begin() + samplesToWrite);
-                }
-            }
-        }
-
-        // Only log underruns occasionally to avoid spam
-        if (samplesWritten < totalSamples) {
-            static int underrunCounter = 0;
-            if (++underrunCounter % 200 == 0) {
-                logger->trace("Audio underrun #{}: {} of {} samples available",
-                             underrunCounter, samplesWritten, totalSamples);
-            }
-        }
-    }
-
-    void RtpAudioClient::logAudioStats() {
-        uint64_t packets = packetsReceived.load();
-        float bufferLevel = getBufferLevel();
-        bool receiving = receivingAudio.load();
-
-        logger->info("Audio stats: {} packets, {:.1f}% buffer, receiving: {}",
-                    packets, bufferLevel * 100.0f, receiving ? "yes" : "no");
-
-        if (bufferLevel > 0.8f) {
-            logger->warn("Audio buffer high ({:.1f}%) - possible network congestion",
-                        bufferLevel * 100.0f);
-        } else if (bufferLevel < 0.1f && receiving) {
-            logger->warn("Audio buffer low ({:.1f}%) - possible network issues",
-                        bufferLevel * 100.0f);
-        }
-    }
-
-    bool RtpAudioClient::hasEnoughBufferedAudio() const {
-        std::lock_guard<std::mutex> lock(bufferMutex);
-        return audioBufferQueue.size() >= TARGET_BUFFER_SIZE;
-    }
-
-} // namespace creatures::audio
+    Uint32 q = SDL_GetQueuedAudioSize(dev_);
+    log_->info("pkts={}  queued={} B  buf={:.0f} %",
+               packets_rx_.load(),
+               q,
+               100.0f * static_cast<float>(q) / QUEUE_TARGET_BYTES);
+}

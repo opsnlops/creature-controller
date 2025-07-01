@@ -1,188 +1,117 @@
-//
-// RtpAudioClient.h
-//
-
+/**
+ * @file   RtpAudioClient.h
+ * @brief  Multicast RTP (L16, 48 kHz) → SDL queue streamer.
+ *
+ * Streams a 17-channel program and mixes:
+ *   • creature dialog  (selectable channel 1-16)
+ *   • background music (channel 17)
+ *
+ * Pops are avoided by pushing 50 ms ahead through SDL_QueueAudio().
+ * The class derives from StoppableThread; destroy or call shutdown()
+ * to stop the worker.
+ */
 #pragma once
 
+// ────── STL
+#include <atomic>
+#include <bit>
+#include <cstdint>
 #include <memory>
 #include <string>
-#include <atomic>
-#include <thread>
-#include <queue>
-#include <mutex>
-#include <condition_variable>
-#include <vector>
 
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
+// ────── SDL2 (queue API only)
+#include <SDL.h>
 
-#include <SDL2/SDL.h>
-#include <uvgrtp/lib.hh>
-
+// ────── Project
 #include "audio-config.h"
 #include "logging/Logger.h"
 #include "util/StoppableThread.h"
 
 namespace creatures::audio {
 
-    /**
-     * RTP Audio Client for receiving and playing multicast L16 audio streams
-     * Some-bunny's got to handle those hop-coming audio packets! 🐰
-     */
-    class RtpAudioClient : public StoppableThread {
-    public:
-        /**
-         * Constructor for the RTP audio client
-         * @param logger Shared logger instance
-         * @param audioDevice SDL audio device number (DEFAULT_SOUND_DEVICE_NUMBER is default)
-         * @param multicastGroup Multicast IP address (e.g., "239.19.63.1")
-         * @param port RTP port (e.g., 5004)
-         * @param channels Number of audio channels (e.g., 17)
-         * @param sampleRate Sample rate in Hz (e.g., 48000)
-         * @param networkDevice The IP address of the network device to bind to (e.g., "eth0")
-         */
-        RtpAudioClient(std::shared_ptr<creatures::Logger> logger,
-                       uint8_t audioDevice = DEFAULT_SOUND_DEVICE_NUMBER,
-                       const std::string& multicastGroup = "239.19.63.1",
-                       uint16_t port = 5004,
-                       uint8_t channels = 17,
-                       uint32_t sampleRate = 48000,
-                       const std::string& networkDevice = "10.19.63.11");
+/*──── Endian helper ────────────────────────────────────────────────*/
+[[nodiscard]]
+constexpr int16_t net_to_host_16(int16_t be) noexcept
+{
+    return static_cast<int16_t>(ntohs(static_cast<uint16_t>(be)));
+}
 
-        ~RtpAudioClient() override;
+/*──── Client class ────────────────────────────────────────────────*/
+class RtpAudioClient final : public StoppableThread
+{
+public:
+    /*-----------------------------------------------------------------
+     *  Ctor with *eight* parameters  (matches AudioSubsystem.cpp)
+     *----------------------------------------------------------------*/
+    explicit RtpAudioClient(
+        std::shared_ptr<creatures::Logger> log,
+        uint8_t            audioDevice        = DEFAULT_SOUND_DEVICE_NUMBER,
+        std::string        mcastGroup         = "239.19.63.1",
+        uint16_t           rtpPort            = 5004,
+        uint8_t            totalChannels      = 17,
+        uint32_t           sampleRateHz       = 48'000,
+        std::string        ifaceIp            = "10.19.63.11",
+        uint8_t            creatureChannel    = 1) noexcept;
 
-        /**
-         * Start the RTP client - begins receiving and playing audio
-         * This is where the magic hoppens! 🐰
-         */
-        void start() override;
+    ~RtpAudioClient() override;
 
-        /**
-         * Stop the RTP client
-         */
-        void shutdown() override;
+    /* StoppableThread */
+    void run() override;
 
-        /**
-         * Check if the client is successfully receiving audio
-         */
-        [[nodiscard]] bool isReceiving() const { return receivingAudio.load(); }
+    /* Runtime knobs   (needed by AudioSubsystem) */
+    void           setCreatureChannel(uint8_t ch)           noexcept;
+    void           setVolume(int v /*0-128*/)               noexcept;
+    void           setAudioDevice(uint8_t)                  noexcept {/*stub*/}
+    [[nodiscard]] bool        isReceiving()        const    noexcept;
+    [[nodiscard]] uint64_t    getPacketsReceived() const    noexcept;
+    [[nodiscard]] float       getBufferLevel()     const    noexcept;
 
-        /**
-         * Get the number of audio packets received
-         */
-        [[nodiscard]] uint64_t getPacketsReceived() const { return packetsReceived.load(); }
+    /* Compile-time constants */
+    static constexpr uint32_t SAMPLE_RATE        = 48'000;   // Hz
+    static constexpr uint8_t  STREAM_CH_MAX      = 17;       // channels
+    static constexpr uint16_t FRAME_MS           = 5;        // ms
+    static constexpr uint16_t FRAMES_PER_CHUNK   =
+        SAMPLE_RATE * FRAME_MS / 1000;                       // 240
+    static constexpr int      MAX_VOLUME         = 128;      // SDL range
 
-        /**
-         * Get the current audio buffer level (0.0 to 1.0)
-         * Helps detect if we're getting audio fast enough or too slowly
-         */
-        [[nodiscard]] float getBufferLevel() const;
+private:
+    /* Init / teardown */
+    bool init_socket();
+    void close_socket()                noexcept;
+    bool init_sdl();
+    void shutdown_sdl()                noexcept;
 
-        /**
-         * Set the output audio device (call before start())
-         * @param deviceName Name of the SDL audio device, or nullptr for default
-         */
-        void setAudioDevice(uint8_t deviceNumber) { audioDevice = deviceNumber; }
+    /* Helpers */
+    bool recv_packet(std::vector<std::uint8_t>& buf);
+    void deinterleave_and_mix(const int16_t* frameBE, std::size_t frames);
+    void queue_pcm(const int16_t* pcm, std::size_t frames)    noexcept;
 
-        /**
-         * Set the audio volume (0-255, default 255 for full volume)
-         * We keep it simple - use hardware volume controls! 🐰
-         */
-        void setVolume(uint8_t volume) { audioVolume = volume; }
+    /* Immutable after construction */
+    std::shared_ptr<creatures::Logger> log_;
+    const uint8_t      audio_dev_idx_;
+    const std::string  mcast_group_;
+    const uint16_t     rtp_port_;
+    const uint8_t      total_channels_;
+    const std::string  iface_ip_;
 
-    protected:
-        /**
-         * Main thread loop - receives RTP packets and manages audio playback
-         */
-        void run() override;
+    /* Runtime state */
+    std::atomic<uint64_t> packets_rx_{0};
+    std::atomic<bool>     running_{false};
+    SDL_AudioDeviceID     dev_{0};
+    int                   volume_{MAX_VOLUME};
+    uint8_t               creature_ch_{1};          // 1-16
+    int                   sock_{-1};
 
-    private:
-        // Core components
-        std::shared_ptr<creatures::Logger> logger;
+    void log_stream_stats() const;
 
-        // RTP configuration
-        std::string multicastGroup;
-        uint16_t rtpPort;
-        uint8_t audioChannels;
-        uint32_t sampleRate;
-        std::string networkDevice;
-        int rawMulticastSocket = -1;
+    /* Buffers */
+    static constexpr std::size_t QUEUE_TARGET_BYTES =
+        SAMPLE_RATE * sizeof(int16_t) * 24 / 100;  // 480 ms = 46 080 B
+    int16_t mix_buf_[FRAMES_PER_CHUNK]{};            // scratch
 
-        // uvgRTP components
-        uvgrtp::context rtpContext;
-        uvgrtp::session* rtpSession = nullptr;
-        uvgrtp::media_stream* rtpStream = nullptr;
-
-        // SDL Audio components
-        SDL_AudioDeviceID audioDevice = DEFAULT_SOUND_DEVICE_NUMBER;
-        SDL_AudioSpec audioSpec{};
-
-        // Audio buffer management
-        struct AudioBuffer {
-            std::vector<int16_t> data;
-            uint32_t timestamp;
-            size_t frameCount;
-        };
-
-        std::queue<AudioBuffer> audioBufferQueue;
-        mutable std::mutex bufferMutex;
-        std::condition_variable bufferCondition;
-
-        // Thread state
-        std::atomic<bool> receivingAudio{false};
-        std::atomic<uint64_t> packetsReceived{0};
-        uint8_t audioVolume = 255;  // Full volume by default - use hardware controls! 🐰
-
-        // Configuration constants
-        static constexpr size_t MAX_BUFFER_QUEUE_SIZE = 100;  // About 500ms at 5ms chunks
-        static constexpr size_t TARGET_BUFFER_SIZE = 20;      // Target ~100ms buffer
-
-        /**
-         * Initialize SDL audio subsystem
-         */
-        bool initializeSDL();
-
-        /**
-         * Set up RTP receiving session
-         */
-        bool initializeRTP();
-
-        /**
-         * Clean up SDL resources
-         */
-        void cleanupSDL();
-
-        /**
-         * Clean up RTP resources
-         */
-        void cleanupRTP();
-
-        /**
-         * Process incoming RTP packet
-         * This is where we catch those hopping packets! 🐰
-         */
-        void processRtpPacket(uint8_t* data, size_t size, uint32_t timestamp);
-
-        /**
-         * SDL audio callback - called when SDL needs more audio data
-         */
-        static void audioCallback(void* userdata, Uint8* stream, int len);
-
-        /**
-         * Fill audio buffer with data from our queue
-         */
-        void fillAudioBuffer(int16_t* buffer, size_t frameCount);
-
-        /**
-         * Log audio statistics periodically
-         */
-        void logAudioStats();
-
-        /**
-         * Check if we have enough audio buffered to start playback
-         */
-        bool hasEnoughBufferedAudio() const;
-    };
+    /* Endian sanity */
+    static_assert(std::endian::native == std::endian::little,
+                  "Tested only on little-endian hosts.");
+};
 
 } // namespace creatures::audio

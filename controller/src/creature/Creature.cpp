@@ -224,6 +224,14 @@ namespace creatures::creature {
         Creature::universe = _universe;
     }
 
+    u8 Creature::getAudioChannel() const {
+        return audioChannel;
+    }
+
+    void Creature::setAudioChannel(u8 _audioChannel) {
+        Creature::audioChannel = _audioChannel;
+    }
+
     u16 Creature::getPositionMin() const {
         return positionMin;
     }

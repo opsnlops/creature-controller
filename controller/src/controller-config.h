@@ -32,7 +32,7 @@ using u64 = std::uint64_t;
 #define MAX_NUMBER_OF_STEPPERS              8
 
 // Logging levels
-#define CONTROLLER_LOG_LEVEL                "spdlog::level::debug"
+#define CONTROLLER_LOG_LEVEL                "spdlog::level::trace"
 #define RP2040_LOG_LEVEL                    "spdlog::level::trace"
 
 // The version of the firmware we are expecting

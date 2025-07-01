@@ -43,7 +43,7 @@ namespace creatures::config {
         requiredTopLevelFields = {
             "id", "type", "name", "version", "channel_offset", "universe", "motors",
             "head_offset_max", "servo_frequency", "position_min", "position_max",
-            "description",
+            "description", "audio_channel",
         };
 
         requiredServoFields = {
@@ -162,6 +162,7 @@ namespace creatures::config {
         creature->setDescription(j["description"]);
         creature->setChannelOffset(j["channel_offset"]);
         creature->setUniverse(j["universe"]);
+        creature->setAudioChannel(j["audio_channel"]);
         creature->setPositionMin(j["position_min"]);
         creature->setPositionMax(j["position_max"]);
         creature->setHeadOffsetMax(j["head_offset_max"]);

@@ -169,7 +169,8 @@ int main(int argc, char **argv) {
             audio::DEFAULT_MULTICAST_GROUP,
             static_cast<uint16_t>(audio::DEFAULT_RTP_PORT),
             config->getSoundDeviceNumber(),
-            config->getNetworkDeviceIPAddress())) {
+            config->getNetworkDeviceIPAddress(),
+            creature->getAudioChannel())) {
 
             logger->info("🎵 Audio subsystem ready to go!");
             } else {

@@ -153,6 +153,8 @@ namespace creatures::creature {
 
         u16 getUniverse() const;
 
+        u8 getAudioChannel() const;
+
         u16 getPositionMin() const;
 
         u16 getPositionMax() const;
@@ -183,6 +185,8 @@ namespace creatures::creature {
         void setChannelOffset(u16 channelOffset);
 
         void setUniverse(u16 universe);
+
+        void setAudioChannel(u8 audioChannel);
 
         void setPositionMin(u16 positionMin);
 
@@ -217,6 +221,7 @@ namespace creatures::creature {
 
         u16 universe;
         u16 channelOffset;
+        u8 audioChannel;
 
         /**
          * Inputs as defined in the config file for this creature

@@ -31,12 +31,14 @@ namespace creatures::audio {
          * @param port RTP port (defaults from audio-config.h)
          * @param audioDevice SDL audio device name, or nullptr for default
          * @param networkDevice the network device to bind to (ie eth0, wlan0, etc)
+         * @param creatureAudioChannel The channel to use for creature audio (1-16)
          * @return true if initialization succeeded
          */
         bool initialize(const std::string& multicastGroup = DEFAULT_MULTICAST_GROUP,
-                       uint16_t port = DEFAULT_RTP_PORT,
-                       uint8_t audioDevice = DEFAULT_SOUND_DEVICE_NUMBER,
-                       const std::string& networkDevice = "10.19.63.5");
+               uint16_t port = DEFAULT_RTP_PORT,
+               uint8_t audioDevice = DEFAULT_SOUND_DEVICE_NUMBER,
+               const std::string& networkDevice = "10.19.63.5",
+               uint8_t creatureAudioChannel = 1);
 
         /**
          * Start the audio subsystem

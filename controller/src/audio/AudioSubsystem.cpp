@@ -22,22 +22,24 @@ namespace creatures::audio {
     }
 
     bool AudioSubsystem::initialize(const std::string& multicastGroup,
-                                   uint16_t port,
-                                   uint8_t audioDevice,
-                                   const std::string& networkDevice) {
+                               uint16_t port,
+                               uint8_t audioDevice,
+                               const std::string& networkDevice,
+                               uint8_t creatureAudioChannel) {
 
-        logger->info("Initializing audio subsystem");
+        logger->info("Initializing audio subsystem for creature channel {}", creatureAudioChannel);
         logger->debug("Multicast: {}, Port: {}, Device: {}", multicastGroup, port, audioDevice);
 
-        // Create the RTP audio client using constants from audio-config.h
+        // Create the RTP audio client with creature channel
         rtpClient = std::make_shared<RtpAudioClient>(
             logger,
             audioDevice,
             multicastGroup,
             port,
-            DEVICE_AUDIO_CHANNELS,
+            STREAM_AUDIO_CHANNELS,  // 17 channels in the stream
             AUDIO_SAMPLE_RATE,
-            networkDevice
+            networkDevice,
+            creatureAudioChannel    // Which creature channel to extract
         );
 
         if (audioDevice) {
@@ -48,8 +50,8 @@ namespace creatures::audio {
         // Set full volume - use hardware controls for adjustment
         rtpClient->setVolume(DEFAULT_VOLUME);
 
-        logger->info("Audio subsystem configured successfully");
-        logger->debug("Format: {}, Bandwidth: {:.1f} Mbps, Packet rate: {:.0f} Hz",
+        logger->info("Audio subsystem configured for creature channel {} with BGM mixing", creatureAudioChannel);
+        logger->debug("Format: {} -> Mono output, Bandwidth: {:.1f} Mbps, Packet rate: {:.0f} Hz",
                      getAudioFormatDescription(),
                      static_cast<float>(getExpectedBandwidthBps()) / 1024.0f / 1024.0f,
                      getExpectedPacketRateHz());
