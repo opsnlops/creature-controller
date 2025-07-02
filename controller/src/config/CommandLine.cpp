@@ -169,10 +169,6 @@ namespace creatures {
             }
         }
 
-        std::cout << std::endl << "🎵 Audio format: " << creatures::audio::getAudioFormatDescription() << std::endl;
-        std::cout << "🔊 Volume: Set to maximum (" << static_cast<int>(creatures::audio::DEFAULT_VOLUME)
-                  << ") - use hardware controls!" << std::endl;
-
         SDL_Quit();
     }
 

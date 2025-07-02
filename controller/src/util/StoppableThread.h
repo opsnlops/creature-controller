@@ -1,3 +1,7 @@
+//
+// StoppableThread.h
+//
+
 #pragma once
 
 #include <atomic>

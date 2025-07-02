@@ -1,84 +1,44 @@
-//
-// AudioSubsystem.h
-//
-
 #pragma once
-
-#include <memory>
 #include <atomic>
-#include <thread>
+#include <memory>
 #include <string>
+#include <thread>
 
-#include "audio/RtpAudioClient.h"
 #include "audio/audio-config.h"
+#include "audio/OpusRtpAudioClient.h"
 #include "logging/Logger.h"
 #include "util/StoppableThread.h"
 
 namespace creatures::audio {
 
-    /**
-     * Audio subsystem manager - handles RTP audio reception independently
-     * This runs as its own subsystem and manages audio completely separate from Controller 🐰
-     */
     class AudioSubsystem : public StoppableThread {
     public:
-        explicit AudioSubsystem(std::shared_ptr<creatures::Logger> logger);
-        ~AudioSubsystem() = default;
+        explicit AudioSubsystem(std::shared_ptr<creatures::Logger> log);
 
-        /**
-         * Initialize the audio subsystem with configuration
-         * @param multicastGroup Multicast IP address (defaults from audio-config.h)
-         * @param port RTP port (defaults from audio-config.h)
-         * @param audioDevice SDL audio device name, or nullptr for default
-         * @param networkDevice the network device to bind to (ie eth0, wlan0, etc)
-         * @param creatureAudioChannel The channel to use for creature audio (1-16)
-         * @return true if initialization succeeded
-         */
-        bool initialize(const std::string& multicastGroup = DEFAULT_MULTICAST_GROUP,
-               uint16_t port = DEFAULT_RTP_PORT,
-               uint8_t audioDevice = DEFAULT_SOUND_DEVICE_NUMBER,
-               const std::string& networkDevice = "10.19.63.5",
-               uint8_t creatureAudioChannel = 1);
+        /** one-time setup – call before start() */
+        bool initialize(uint8_t creatureChannel,                // 1-16
+                        const std::string& ifaceIp   = "10.19.63.11",
+                        uint8_t audioDeviceIndex     = DEFAULT_SOUND_DEVICE_NUMBER,
+                        uint16_t port                = RTP_PORT);
 
-        /**
-         * Start the audio subsystem
-         * Begins RTP reception and audio playback
-         */
+        /* StoppableThread */
         void run() override;
-
-        /**
-         * Stop the audio subsystem
-         * Cleanly shuts down all audio operations
-         */
         void shutdown() override;
 
-        /**
-         * Check if audio is being received
-         */
-        [[nodiscard]] bool isReceiving() const;
+        [[nodiscard]] bool        isReceiving() const;
+        [[nodiscard]] std::string getStats()    const;
+        [[nodiscard]] bool        isRunning()   const { return running_.load(); }
 
-        /**
-         * Get current audio statistics as a formatted string
-         */
-        [[nodiscard]] std::string getStats() const;
-
-        /**
-         * Check if the subsystem is running
-         */
-        [[nodiscard]] bool isRunning() const { return running.load(); }
 
     private:
-        std::shared_ptr<creatures::Logger> logger;
-        std::shared_ptr<RtpAudioClient> rtpClient;
-        std::thread monitoringThread;
-        std::atomic<bool> shouldStop{false};
-        std::atomic<bool> running{false};
-
-        /**
-         * Monitoring loop that runs in a separate thread
-         * Logs periodic statistics and health checks
-         */
         void monitoringLoop();
+
+        std::shared_ptr<creatures::Logger>  log_;
+        std::shared_ptr<OpusRtpAudioClient> rtpClient_;
+        std::thread                         monThread_;
+
+        std::atomic<bool> stopMon_{false};
+        std::atomic<bool> running_{false};
     };
 
 } // namespace creatures::audio

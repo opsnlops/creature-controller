@@ -18,6 +18,8 @@
 #include <utility>
 #include <vector>
 
+#include <opus.h>
+
 // Project includes
 #include "controller-config.h"
 #include "audio/AudioSubsystem.h"
@@ -100,6 +102,7 @@ int main(int argc, char **argv) {
     // Leave some version info to be found
     logger->debug("spdlog version {}.{}.{}", SPDLOG_VER_MAJOR, SPDLOG_VER_MINOR, SPDLOG_VER_PATCH);
     logger->debug("fmt version {}", FMT_VERSION);
+    logger->debug("opus version {}", opus_get_version_string());
 
     // Parse out the command line options
     auto commandLine = std::make_unique<creatures::CommandLine>(logger);
@@ -166,8 +169,6 @@ int main(int argc, char **argv) {
         audioSubsystem = std::make_shared<creatures::audio::AudioSubsystem>(logger);
 
         if (audioSubsystem->initialize(
-            audio::DEFAULT_MULTICAST_GROUP,
-            static_cast<uint16_t>(audio::DEFAULT_RTP_PORT),
             config->getSoundDeviceNumber(),
             config->getNetworkDeviceIPAddress(),
             creature->getAudioChannel())) {

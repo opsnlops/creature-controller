@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.18)
 
 project(creature-controller
-        VERSION "2.6.1"
+        VERSION "2.6.2"
         DESCRIPTION "April's Creature Workshop Controller"
         HOMEPAGE_URL https://github.com/opsnlops/creature-controller
         LANGUAGES C CXX)
@@ -68,6 +68,24 @@ FetchContent_Declare(
         GIT_TAG        v3.1.6
 )
 FetchContent_MakeAvailable(uvgrtp)
+
+# Opus
+# Force Opus' own CMake options *before* the project is configured
+set(OPUS_BUILD_SHARED_LIBRARY OFF CACHE BOOL "" FORCE)
+set(OPUS_BUILD_STATIC         ON  CACHE BOOL "" FORCE)
+set(OPUS_BUILD_PROGRAMS       OFF CACHE BOOL "" FORCE)   # cli tools
+set(OPUS_BUILD_TESTING        OFF CACHE BOOL "" FORCE)
+
+FetchContent_Declare(
+        opus
+        GIT_REPOSITORY  https://github.com/xiph/opus.git
+        GIT_TAG         v1.5.2
+)
+FetchContent_MakeAvailable(opus)
+# Optimise Opus even when the rest of the build is Debug
+target_compile_options(opus PRIVATE
+        $<$<CONFIG:Debug>:-O3>
+)
 
 # Set up lib131 as an external library
 add_library(libe131 STATIC
@@ -243,15 +261,17 @@ target_include_directories(creature_lib PUBLIC
         ${ixwebsocket_SOURCE_DIR}
         ${SDL2_INCLUDE_DIRS}
         ${SDL2_MIXER_INCLUDE_DIRS}
+        ${opus_SOURCE_DIR}/include
 )
+
 
 add_executable(creature-controller
         src/main.cpp
         src/audio/audio-config.h
-        src/audio/RtpAudioClient.cpp
-        src/audio/RtpAudioClient.h
         src/audio/AudioSubsystem.cpp
         src/audio/AudioSubsystem.h
+        src/audio/OpusRtpAudioClient.cpp
+        src/audio/OpusRtpAudioClient.h
 )
 
 target_link_libraries(creature-controller
@@ -266,6 +286,7 @@ target_link_libraries(creature-controller
         spdlog::spdlog $<$<BOOL:${MINGW}>:ws2_32>
         nlohmann_json::nlohmann_json
         uvgrtp
+        opus
 )
 
 install(TARGETS creature-controller
