@@ -1,6 +1,5 @@
-//
 // OpusRtpAudioClient.h
-//
+
 
 #pragma once
 #include <atomic>
@@ -8,6 +7,8 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <thread>
+#include <mutex>
 
 #include <opus.h>
 #include <SDL.h>
@@ -31,24 +32,28 @@ namespace creatures::audio {
 
         /* stats for AudioSubsystem */
         [[nodiscard]] bool     isReceiving()        const { return running_.load(); }
-        [[nodiscard]] uint64_t getPacketsReceived() const { return pkts_.load();    }
-        [[nodiscard]] float    getBufferLevel()     const { return bufLvl_.load();  }
+        [[nodiscard]] uint64_t getPacketsReceived() const { return totalPkts_.load(); }
+        [[nodiscard]] float    getBufferLevel()     const { return bufLvl_.load(); }
 
     private:
         void run() override;
 
+        /* Stream handling threads */
+        void dialogStreamThread();
+        void bgmStreamThread();
+        void audioMixingThread();
+
         /* helpers */
         bool openSocket(int& sock, const std::string& group);
-        bool recvPkt(int sock, std::vector<uint8_t>& pkt);
-        void mixAndQueue(const int16_t* dlg, const int16_t* bgm, int frames);
+        static bool recvPacket(int sock, std::vector<uint8_t>& pkt);
 
         /* RTP packet parsing */
-        uint32_t extractSSRC(const std::vector<uint8_t>& packet) const;
-        bool isValidRtpPacket(const std::vector<uint8_t>& packet) const;
+        uint32_t extractSSRC(const std::vector<uint8_t>& packet) ;
+        bool isValidRtpPacket(const std::vector<uint8_t>& packet) ;
 
         /* SSRC change detection and decoder reset */
         void checkAndHandleSSRCChange(uint32_t newSSRC, OpusDecoder* decoder,
-                                     uint32_t& lastSSRC, const std::string& streamName);
+                                     std::atomic<uint32_t>& lastSSRC, const std::string& streamName);
 
         /* immutable after ctor */
         std::shared_ptr<creatures::Logger> log_;
@@ -62,18 +67,44 @@ namespace creatures::audio {
         OpusDecoder* decBgm_{nullptr};
         SDL_AudioDeviceID dev_{0};
 
-        std::array<int16_t, FRAMES_PER_CHUNK> bgmBuf_{};   // latest bgm slice
+        /* Audio buffers with thread synchronization */
+        struct AudioFrame {
+            std::array<int16_t, FRAMES_PER_CHUNK> data{};
+            std::atomic<bool> ready{false};
+        };
+
+        // Ring buffers for each stream (small buffer since we mix immediately)
+        static constexpr size_t RING_BUFFER_SIZE = 8;
+        std::array<AudioFrame, RING_BUFFER_SIZE> dialogFrames_;
+        std::array<AudioFrame, RING_BUFFER_SIZE> bgmFrames_;
+
+        std::atomic<size_t> dialogWriteIdx_{0};
+        std::atomic<size_t> dialogReadIdx_{0};
+        std::atomic<size_t> bgmWriteIdx_{0};
+        std::atomic<size_t> bgmReadIdx_{0};
+
+        /* Worker threads */
+        std::thread dialogThread_;
+        std::thread bgmThread_;
+        std::thread mixingThread_;
 
         /* SSRC tracking for decoder reset detection */
-        uint32_t lastDialogSSRC_{0};
-        uint32_t lastBgmSSRC_{0};
-        bool dialogSSRCInitialized_{false};
-        bool bgmSSRCInitialized_{false};
+        std::atomic<uint32_t> lastDialogSSRC_{0};
+        std::atomic<uint32_t> lastBgmSSRC_{0};
+        std::atomic<bool> dialogSSRCInitialized_{false};
+        std::atomic<bool> bgmSSRCInitialized_{false};
 
+        /* Thread-safe decoder access */
+        std::mutex dialogDecoderMutex_;
+        std::mutex bgmDecoderMutex_;
+
+        /* Statistics */
         std::atomic<bool>     running_{false};
-        std::atomic<uint64_t> pkts_{0};
+        std::atomic<uint64_t> totalPkts_{0};
+        std::atomic<uint64_t> dialogPkts_{0};
+        std::atomic<uint64_t> bgmPkts_{0};
         std::atomic<float>    bufLvl_{0.0f};
-        std::atomic<uint64_t> ssrcResets_{0};  // Track the number of decoder resets
+        std::atomic<uint64_t> ssrcResets_{0};
     };
 
 } // namespace creatures::audio

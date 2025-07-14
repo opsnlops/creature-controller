@@ -106,7 +106,7 @@ std::string AudioSubsystem::getStats() const
         return "audio disabled";
     }
 
-    return fmt::format("packets={}, buffer={:.1f}%, receiving={}",
+    return fmt::format("packets received={}, buffer={:.1f}%, receiving={}",
                        rtpClient_->getPacketsReceived(),
                        rtpClient_->getBufferLevel() * 100.0f,
                        rtpClient_->isReceiving() ? "yes" : "no");

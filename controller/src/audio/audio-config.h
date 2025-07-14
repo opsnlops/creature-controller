@@ -31,6 +31,6 @@ namespace creatures::audio {
     // ── Monitoring thresholds ────────────────────────────────
     inline constexpr float  BUF_HIGH_WATERMARK = 0.8f;
     inline constexpr float  BUF_LOW_WATERMARK  = 0.1f;
-    inline constexpr int    STATS_INTERVAL_SEC = 10;
+    inline constexpr int    STATS_INTERVAL_SEC = 5;
 
 } // namespace creatures::audio
