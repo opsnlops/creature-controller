@@ -15,21 +15,21 @@ namespace creatures::commands {
     ServoModuleConfiguration::ServoModuleConfiguration(std::shared_ptr<Logger> logger) :
                                                  logger(logger) {
         this->servoConfigurations = std::vector<ServoConfig>();
-        logger->debug("ServoModuleConfiguration created - ready to gather servo configs! 🐰");
+        logger->debug("ServoModuleConfiguration created - ready to gather servo configs!");
     }
 
     Result<bool> ServoModuleConfiguration::getServoConfigurations(const std::shared_ptr<Controller>& controller,
                                                                  creatures::config::UARTDevice::module_name module) {
 
         if (!controller) {
-            auto errorMessage = "Controller is null in getServoConfigurations";
+            const auto errorMessage = "Controller is null in getServoConfigurations";
             logger->error(errorMessage);
             return Result<bool>{ControllerError(ControllerError::InvalidConfiguration, errorMessage)};
         }
 
         auto configResult = controller->getServoConfigs(module);
         if(!configResult.isSuccess()) {
-            auto errorMessage = fmt::format("Failed to get servo configurations: {}",
+            const auto errorMessage = fmt::format("Failed to get servo configurations: {}",
                                            configResult.getError()->getMessage());
             logger->error(errorMessage);
             return Result<bool>{ControllerError(ControllerError::InvalidConfiguration, errorMessage)};
@@ -45,8 +45,7 @@ namespace creatures::commands {
 
         // Add each configuration
         for (const auto& config : configs) {
-            auto addResult = this->addServoConfig(config);
-            if (!addResult.isSuccess()) {
+            if (auto addResult = this->addServoConfig(config); !addResult.isSuccess()) {
                 // If any config fails to add, return the error
                 return addResult;
             }
@@ -60,7 +59,7 @@ namespace creatures::commands {
         // Check for duplicate output positions
         for (const auto& existingConfig : servoConfigurations) {
             if (existingConfig.getOutputHeader() == servoConfig.getOutputHeader()) {
-                std::string errorMessage = fmt::format("Duplicate output position {}: servo configurations must be unique",
+                const auto errorMessage = fmt::format("Duplicate output position {}: servo configurations must be unique",
                                                        servoConfig.getOutputHeader());
                 logger->error(errorMessage);
                 return Result<bool>{ControllerError(ControllerError::InvalidConfiguration, errorMessage)};

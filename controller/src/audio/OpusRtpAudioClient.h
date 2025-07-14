@@ -1,10 +1,12 @@
+//
+// OpusRtpAudioClient.h
+//
+
 #pragma once
 #include <atomic>
 #include <array>
-#include <cstdint>
 #include <memory>
 #include <string>
-#include <thread>
 #include <vector>
 
 #include <opus.h>
@@ -40,6 +42,14 @@ namespace creatures::audio {
         bool recvPkt(int sock, std::vector<uint8_t>& pkt);
         void mixAndQueue(const int16_t* dlg, const int16_t* bgm, int frames);
 
+        /* RTP packet parsing */
+        uint32_t extractSSRC(const std::vector<uint8_t>& packet) const;
+        bool isValidRtpPacket(const std::vector<uint8_t>& packet) const;
+
+        /* SSRC change detection and decoder reset */
+        void checkAndHandleSSRCChange(uint32_t newSSRC, OpusDecoder* decoder,
+                                     uint32_t& lastSSRC, const std::string& streamName);
+
         /* immutable after ctor */
         std::shared_ptr<creatures::Logger> log_;
         const std::string dlgGrp_, bgmGrp_, ifaceIp_;
@@ -54,9 +64,16 @@ namespace creatures::audio {
 
         std::array<int16_t, FRAMES_PER_CHUNK> bgmBuf_{};   // latest bgm slice
 
+        /* SSRC tracking for decoder reset detection */
+        uint32_t lastDialogSSRC_{0};
+        uint32_t lastBgmSSRC_{0};
+        bool dialogSSRCInitialized_{false};
+        bool bgmSSRCInitialized_{false};
+
         std::atomic<bool>     running_{false};
         std::atomic<uint64_t> pkts_{0};
         std::atomic<float>    bufLvl_{0.0f};
+        std::atomic<uint64_t> ssrcResets_{0};  // Track the number of decoder resets
     };
 
 } // namespace creatures::audio

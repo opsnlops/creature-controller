@@ -151,7 +151,7 @@ int main(int argc, char **argv) {
     // Keep track of our threads - but keep it simple!
     std::vector<std::shared_ptr<creatures::StoppableThread>> workerThreads;
 
-    // Start talking to the server, if we're told to
+    // Start talking to the server if we're told to
     auto websocketOutgoingQueue = std::make_shared<creatures::MessageQueue<creatures::server::ServerMessage>>();
     auto serverConnection = std::make_shared<ServerConnection>(
         makeLogger("server"),
@@ -164,16 +164,27 @@ int main(int argc, char **argv) {
 
 
     if (config->getUseAudioSubsystem()) {
-        logger->info("🐰 Setting up audio subsystem...");
+        logger->info("Setting up audio subsystem...");
 
         audioSubsystem = std::make_shared<creatures::audio::AudioSubsystem>(logger);
 
-        if (audioSubsystem->initialize(
-            config->getSoundDeviceNumber(),
-            config->getNetworkDeviceIPAddress(),
-            creature->getAudioChannel())) {
+        // Use the creature's audio channel for dialog stream
+        uint8_t creatureAudioChannel = creature->getAudioChannel();
 
-            logger->info("🎵 Audio subsystem ready to go!");
+        // Validate that the creature has a valid audio channel
+        if (creatureAudioChannel < 1 || creatureAudioChannel > 16) {
+            logger->warn("Creature {} has invalid audio channel {}, using channel 1",
+                        creature->getName(), creatureAudioChannel);
+            creatureAudioChannel = 1;
+        }
+
+        if (audioSubsystem->initialize(
+            creatureAudioChannel,                    // Dialog channel (1-16)
+            config->getNetworkDeviceIPAddress(),     // Network interface
+            config->getSoundDeviceNumber())) {       // SDL device (unused but maintained for compatibility)
+
+            logger->info("Audio subsystem initialized: dialog channel {}, BGM channel 17",
+                        creatureAudioChannel);
             } else {
                 logger->error("Failed to initialize audio subsystem");
                 audioSubsystem.reset();

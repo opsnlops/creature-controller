@@ -23,7 +23,7 @@ namespace creatures::commands {
         const auto now = std::chrono::high_resolution_clock::now();
 
         // Start the message with the 'PING' command prefix
-        std::string message = fmt::format("{}\t{}", "PING",
+        const auto message = fmt::format("{}\t{}", "PING",
                                           std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count());
 
         logger->trace("message is: {}", message);

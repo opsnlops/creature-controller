@@ -18,11 +18,9 @@ namespace creatures::commands {
 
     public:
         explicit FlushBuffer(const std::shared_ptr<Logger> &logger);
-
         std::string toMessage() override;
 
     private:
-
         std::shared_ptr<Logger> logger;
     };
 

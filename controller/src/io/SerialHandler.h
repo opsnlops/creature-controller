@@ -33,7 +33,7 @@ namespace creatures {
      * This class follows a simple philosophy: set up the port once, and if
      * anything goes wrong, shut down cleanly. No complex recovery attempts
      * that can introduce bugs. Sometimes the best thing a rabbit can do is
-     * know when to hop away cleanly! 🐰
+     * know when to hop away cleanly!
      */
     class SerialHandler {
 
@@ -67,7 +67,7 @@ namespace creatures {
          *
          * @return a `UARTDevice::module_name` for this serial handler
          */
-        UARTDevice::module_name getModuleName() const;
+        [[nodiscard]] UARTDevice::module_name getModuleName() const;
 
         /*
          * Public access to threads for shutdown coordination

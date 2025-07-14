@@ -24,7 +24,7 @@ namespace creatures::io {
      *
      * This class follows a fail-fast philosophy: if anything goes wrong with the
      * serial port, it cleanly shuts down rather than trying to recover. Sometimes
-     * the best thing a rabbit can do is know when to hop away! 🐰
+     * the best thing a rabbit can do is know when to hop away!
      */
     class SerialWriter : public StoppableThread {
 

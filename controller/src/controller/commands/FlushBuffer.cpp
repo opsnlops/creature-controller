@@ -16,7 +16,7 @@ namespace creatures::commands {
     std::string FlushBuffer::toMessage() {
 
         // Only one character, the bell! 🔔
-        std::string message = "\a";
+        constexpr auto message = "\a";
 
         logger->debug("constructed a FlushBuffer message 🔔");
         return message;

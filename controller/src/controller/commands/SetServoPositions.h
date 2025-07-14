@@ -14,7 +14,7 @@
 
 namespace creatures::commands {
 
-    class SetServoPositions : public ICommand {
+    class SetServoPositions final : public ICommand {
 
     public:
         explicit SetServoPositions(std::shared_ptr<Logger> logger);

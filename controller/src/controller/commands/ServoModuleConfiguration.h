@@ -22,7 +22,7 @@ namespace creatures::commands {
      * them into a message that the firmware can understand. Keep it simple and
      * reliable, like a well-organized rabbit burrow! 🐰
      */
-    class ServoModuleConfiguration : public ICommand  {
+    class ServoModuleConfiguration final : public ICommand  {
 
     public:
         explicit ServoModuleConfiguration(std::shared_ptr<Logger> logger);

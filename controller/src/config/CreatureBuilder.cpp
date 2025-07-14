@@ -138,7 +138,7 @@ namespace creatures::config {
             };
         }
 
-        // Create creature instance based on type
+        // Create a creature instance based on type
         std::shared_ptr<creatures::creature::Creature> creature;
         switch (type) {
             case creatures::creature::Creature::parrot:
@@ -179,8 +179,7 @@ namespace creatures::config {
 
             // Validate motor fields
             for (const auto& fieldName : requiredServoFields) {
-                auto fieldResult = checkJsonField(motor, fieldName);
-                if (!fieldResult.isSuccess()) {
+                if (auto fieldResult = checkJsonField(motor, fieldName); !fieldResult.isSuccess()) {
                     auto errorMessage = fieldResult.getError().value().getMessage();
                     logger->error(errorMessage);
                     return Result<std::shared_ptr<creatures::creature::Creature>>{
@@ -256,7 +255,7 @@ namespace creatures::config {
         }
 
         logger->info("Creature configuration complete");
-        return Result<std::shared_ptr<creatures::creature::Creature>>{creature};
+        return Result{creature};
     }
 
     /**

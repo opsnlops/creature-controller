@@ -23,7 +23,7 @@ namespace creatures::commands {
         // Make sure we're not putting the same outputPosition in twice
         for (const auto& existingServoPosition : servoPositions) {
             if (existingServoPosition.getServoId() == servoPosition.getServoId()) {
-                std::string errorMessage = fmt::format("Unable to insert the same output position twice: module {}, pin {}",
+                const auto errorMessage = fmt::format("Unable to insert the same output position twice: module {}, pin {}",
                                                        creatures::config::UARTDevice::moduleNameToString(servoPosition.getServoId().module),
                                                        servoPosition.getServoId().pin);
                 logger->error(errorMessage);
