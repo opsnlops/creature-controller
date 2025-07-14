@@ -166,7 +166,7 @@ int main(int argc, char **argv) {
     if (config->getUseAudioSubsystem()) {
         logger->info("Setting up audio subsystem...");
 
-        audioSubsystem = std::make_shared<creatures::audio::AudioSubsystem>(logger);
+        audioSubsystem = std::make_shared<creatures::audio::AudioSubsystem>(makeLogger("audio"));
 
         // Use the creature's audio channel for dialog stream
         uint8_t creatureAudioChannel = creature->getAudioChannel();
