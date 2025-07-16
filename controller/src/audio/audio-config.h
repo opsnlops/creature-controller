@@ -1,5 +1,5 @@
 //
-// audio-config.h  — final tidy
+// audio-config.h
 //
 #pragma once
 #include <cstdint>
@@ -25,7 +25,7 @@ namespace creatures::audio {
     // inline constexpr size_t  CHUNK_BYTES = FRAMES_PER_CHUNK * sizeof(int16_t);
 
     // ── SDL queue / buffering ─────────────────────────────────
-    inline constexpr size_t SDL_BUFFER_FRAMES = 2048;  // ≈21 ms
+    inline constexpr size_t SDL_BUFFER_FRAMES = 2048;  // ~42 ms
     inline constexpr size_t PREFILL_FRAMES    = 3;     // 30 ms warm-up
 
     // ── Monitoring thresholds ────────────────────────────────

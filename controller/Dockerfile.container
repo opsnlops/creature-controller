@@ -2,7 +2,7 @@ FROM debian:bookworm AS build
 
 RUN apt update -y && apt upgrade -y
 
-RUN apt install -y clang locales-all ninja-build cmake pkgconf git file zlib1g-dev
+RUN apt install -y clang locales-all ninja-build cmake pkgconf git file zlib1g-dev libsdl2-mixer-dev libsdl2-dev
 
 WORKDIR /build/creature-controller
 COPY . .

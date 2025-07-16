@@ -2,7 +2,7 @@ FROM debian:bookworm AS build
 
 RUN apt update -y && apt upgrade -y
 
-RUN apt install -y build-essential cmake ninja-build locales-all pkgconf git file dpkg-dev zlib1g-dev
+RUN apt install -y build-essential cmake ninja-build locales-all pkgconf git file dpkg-dev zlib1g-dev libsdl2-dev libsdl2-mixer-dev
 
 WORKDIR /build
 COPY . .
