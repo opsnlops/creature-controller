@@ -2,7 +2,7 @@ FROM debian:bookworm AS build
 
 RUN apt update -y && apt upgrade -y
 
-RUN apt install -y clang-19 clang-tools-19 locales-all libssl-dev ninja-build cmake git \
+RUN apt install -y clang-16 clang-tools-16 locales-all libssl-dev ninja-build cmake git \
                    pkgconf libbson-dev libpthreadpool-dev libutf8proc-dev \
                    file zlib1g-dev libsdl2-mixer-dev libsdl2-dev
 
@@ -18,8 +18,8 @@ COPY README.md /build/creature-controller/README.md
 
 WORKDIR /build/creature-controller
 RUN cmake -DCMAKE_BUILD_TYPE=Release -B build -G Ninja \
-    -DCMAKE_CXX_COMPILER=/usr/bin/clang++-19 \
-    -DCMAKE_C_COMPILER=/usr/bin/clang-19
+    -DCMAKE_CXX_COMPILER=/usr/bin/clang++-16 \
+    -DCMAKE_C_COMPILER=/usr/bin/clang-16
 
 # Run the build in a different layer so we avoid grabbing the code over
 # and over again
