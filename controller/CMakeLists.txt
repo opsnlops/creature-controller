@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.18)
 
 project(creature-controller
-        VERSION "2.6.5"
+        VERSION "2.6.6"
         DESCRIPTION "April's Creature Workshop Controller"
         HOMEPAGE_URL https://github.com/opsnlops/creature-controller
         LANGUAGES C CXX)
@@ -15,7 +15,10 @@ add_compile_options(-Wshadow)
 add_compile_options(-Wall)
 add_compile_options(-Wextra)
 add_compile_options(-Wpedantic)
-add_compile_options(-fexperimental-library)
+
+if(APPLE)
+    add_compile_options(-fexperimental-library)
+endif()
 
 set(PACKAGE_AUTHOR "April White")
 
@@ -123,6 +126,14 @@ include_directories(
         src/
         PRIVATE ${CMAKE_BINARY_DIR}
 )
+
+# Force O3 optimization for Release builds
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+        set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
+        set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG")
+    endif()
+endif()
 
 add_library(creature_lib
 

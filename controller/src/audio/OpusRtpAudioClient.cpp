@@ -2,6 +2,7 @@
 // OpusRtpAudioClient.cpp - Enhanced with separate stream debugging
 //
 
+#include <algorithm>
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <netinet/in.h>
