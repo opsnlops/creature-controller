@@ -30,7 +30,11 @@ namespace creatures::config {
         bool getUseAudioSubsystem() const;
         u8 getSoundDeviceNumber() const;
 
+        // Networking details
         std::string getNetworkDeviceIPAddress() const;
+        uint getNetworkDeviceIndex() const;
+        std::string getNetworkDeviceName();
+
         u16 getUniverse() const;
         [[nodiscard]] std::vector<UARTDevice> getUARTDevices() const;
         std::shared_ptr<creatures::creature::Creature> getCreature() const;
@@ -42,7 +46,7 @@ namespace creatures::config {
         void setUseGPIO(bool _useGPIO);
         void setUseAudioSubsystem(bool _useAudioSubsystem);
         void setSoundDeviceNumber(u8 _soundDeviceNumber);
-        void setNetworkDeviceIPAddress(std::string _networkDeviceIPAddress);
+        void setNetworkDeviceName(const std::string &_deviceName);
         void setUniverse(u16 _universe);
         void addUARTDevice(UARTDevice _uartDevice);
         void setCreature(std::shared_ptr<creatures::creature::Creature> _creature);
@@ -53,6 +57,11 @@ namespace creatures::config {
 
 
     private:
+        /**
+         * Look up the IP address and the interface index from the network interface supplied
+         * in the configuration.
+         */
+        void resolveNetworkInterfaceDetails();
 
         // Should we use the GPIO pins?
         bool useGPIO = false;
@@ -62,8 +71,11 @@ namespace creatures::config {
 
         u8 soundDeviceNumber = audio::DEFAULT_SOUND_DEVICE_NUMBER;
 
-        // Which IP address to bind to?
+        // Which network interface to bind to?
+        std::string networkDeviceName = DEFAULT_NETWORK_INTERFACE_NAME;
         std::string networkDeviceIPAddress = DEFAULT_NETWORK_DEVICE_IP_ADDRESS;
+        uint networkDeviceIndex = 0;
+
 
         // Which e1.31 universe are we using?
         u16 universe = DEFAULT_UNIVERSE;

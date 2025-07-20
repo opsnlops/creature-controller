@@ -21,7 +21,9 @@ namespace creatures::dmx {
 
         void init(const std::shared_ptr<creature::Creature>& creature,
                   const std::shared_ptr<Controller>& controller,
-                  std::string networkDeviceIPAddress);
+                  std::string networkInterfaceName,
+                  uint networkInterfaceIndex,
+                  std::string networkInterfaceAddress);
         void start() override;
         void run() override;
 
@@ -40,7 +42,10 @@ namespace creatures::dmx {
 
         void handlePacket(const e131_packet_t & packet);
 
-        std::string networkDeviceIPAddress = DEFAULT_NETWORK_DEVICE_IP_ADDRESS;
+        std::string networkInterfaceName = DEFAULT_NETWORK_INTERFACE_NAME;
+        std::string networkInterfaceAddress = DEFAULT_NETWORK_DEVICE_IP_ADDRESS;
+        uint networkInterfaceIndex = 0;
+
     };
 
 } // creatures::dmx

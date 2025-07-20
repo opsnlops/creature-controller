@@ -8,6 +8,9 @@
 #include <string>
 #include <vector>
 #include <utility>
+#include <ifaddrs.h>
+#include <net/if.h>
+#include <arpa/inet.h>
 
 // Project includes
 #include "controller-config.h" // For u16 type definition
@@ -53,6 +56,14 @@ namespace creatures::config {
 
     u8 Configuration::getSoundDeviceNumber() const {
         return soundDeviceNumber;
+    }
+
+    uint Configuration::getNetworkDeviceIndex() const {
+        return networkDeviceIndex;
+    }
+
+    std::string Configuration::getNetworkDeviceName() {
+        return networkDeviceName;
     }
 
     /**
@@ -143,12 +154,12 @@ namespace creatures::config {
     }
 
     /**
-     * @brief Set the IP address to bind to for network communication
-     * @param _networkDeviceIPAddress The network device IP address
+     * @brief Set the network interface to use
+     * @param _networkDeviceName The network interface (eg eth0)
      */
-    void Configuration::setNetworkDeviceIPAddress(std::string _networkDeviceIPAddress) {
-        this->networkDeviceIPAddress = std::move(_networkDeviceIPAddress);
-        logger->debug("Set networkDeviceIPAddress to {}", this->networkDeviceIPAddress);
+    void Configuration::setNetworkDeviceName(const std::string& _networkDeviceName) {
+        this->networkDeviceName = _networkDeviceName;
+        logger->debug("Set networkDeviceName to {}", this->networkDeviceName);
     }
 
     /**
@@ -214,5 +225,74 @@ namespace creatures::config {
         this->serverPort = _serverPort;
         logger->debug("Set server port to {}", this->serverPort);
     }
+
+
+    void Configuration::resolveNetworkInterfaceDetails() {
+    struct ifaddrs* ifap = nullptr;
+    if (getifaddrs(&ifap) != 0) {
+        const std::string errorMessage = fmt::format(
+            "getifaddrs() failed while resolving network interface '{}': {} (errno {})",
+            this->networkDeviceName,
+            strerror(errno),
+            errno);
+        logger->critical(errorMessage);
+        throw std::runtime_error(errorMessage);
+    }
+
+    bool foundIp = false;
+    int interfacesScanned = 0;
+
+    for (auto* p = ifap; p != nullptr; p = p->ifa_next) {
+        if (!p->ifa_addr || p->ifa_addr->sa_family != AF_INET) continue;
+        if (!p->ifa_name) continue;
+
+        interfacesScanned++;
+
+        if (this->networkDeviceName == p->ifa_name) {
+            char buf[INET_ADDRSTRLEN];
+            auto* sin = reinterpret_cast<sockaddr_in*>(p->ifa_addr);
+            if (inet_ntop(AF_INET, &sin->sin_addr, buf, sizeof(buf))) {
+                this->networkDeviceIPAddress = buf;
+                foundIp = true;
+                logger->debug("Resolved IP address for interface '{}': {}", this->networkDeviceName, buf);
+                break;
+            } else {
+                const std::string errorMessage = fmt::format(
+                    "inet_ntop() failed for interface '{}': {} (errno {})",
+                    this->networkDeviceName,
+                    strerror(errno),
+                    errno);
+                logger->critical(errorMessage);
+                freeifaddrs(ifap);
+                throw std::runtime_error(errorMessage);
+            }
+        }
+    }
+
+    if (!foundIp) {
+        const std::string errorMessage = fmt::format(
+            "Could not find an IPv4 address for network interface '{}'. Interfaces scanned: {}",
+            this->networkDeviceName,
+            interfacesScanned);
+        logger->critical(errorMessage);
+        freeifaddrs(ifap);
+        throw std::runtime_error(errorMessage);
+    }
+
+    freeifaddrs(ifap);
+
+    this->networkDeviceIndex = if_nametoindex(this->networkDeviceName.c_str());
+    if (this->networkDeviceIndex == 0) {
+        const std::string errorMessage = fmt::format(
+            "if_nametoindex() failed for interface '{}': {} (errno {})",
+                this->networkDeviceName,
+                strerror(errno),
+                errno);
+        logger->critical(errorMessage);
+        throw std::runtime_error(errorMessage);
+    }
+
+    logger->info("Resolved interface '{}' to IP {} and index {}", this->networkDeviceName, this->networkDeviceIPAddress, this->networkDeviceIndex);
+}
 
 } // namespace creatures::config

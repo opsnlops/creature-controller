@@ -86,6 +86,7 @@ using u64 = std::uint64_t;
 
 
 #define DEFAULT_NETWORK_DEVICE_IP_ADDRESS   "10.1.1.1"
+#define DEFAULT_NETWORK_INTERFACE_NAME      "eth0"
 #define DEFAULT_UNIVERSE                    3000
 
 /**

@@ -22,7 +22,7 @@ namespace creatures :: config {
 
         // Define the required config file fields
         requiredTopLevelFields = {
-                "useGPIO", "UARTs", "ipAddress", "universe",
+                "useGPIO", "UARTs", "networkInterface", "universe",
         };
 
         requiredUARTFields = {
@@ -84,15 +84,20 @@ namespace creatures :: config {
 
         // Fill in the easy ones
         config->setUseGPIO(j["useGPIO"]);
-        config->setNetworkDeviceIPAddress(j["ipAddress"]);
         config->setUniverse(j["universe"]);
         config->setUseAudioSubsystem(j["useRTPAudio"]);
         config->setSoundDeviceNumber(j["audioDevice"]);
+        config->setNetworkDeviceName(j["networkInterface"]);
 
 
         // Log that we've gotten this far
-        logger->info("successfully parsed the main config file! useGPIO: {}, ipAddress: {}, universe: {}",
-                     config->getUseGPIO(), config->getNetworkDeviceIPAddress(), config->getUniverse());
+        logger->info("successfully parsed the main config file! useGPIO: {}, networkInterface: {}, universe: {}",
+                     config->getUseGPIO(), config->getNetworkDeviceName(), config->getUniverse());
+
+        // Now go look up the network information
+        config->resolveNetworkInterfaceDetails();
+        logger->debug("successfully resolved network interface {}. IP Address: {}, index: {}",
+            config->getNetworkDeviceName(), config->getNetworkDeviceIPAddress(), config->getNetworkDeviceIndex());
 
         // Now let's handle the UARTs
         for(auto& uart : j["UARTs"]) {

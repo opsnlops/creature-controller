@@ -253,7 +253,8 @@ int main(int argc, char **argv) {
     // Create and start the e1.31 client
     logger->debug("starting the e1.31 client");
     auto e131Client = std::make_unique<creatures::dmx::E131Client>(makeLogger("e131-client"));
-    e131Client->init(creature, controller, config->getNetworkDeviceIPAddress());
+    e131Client->init(creature, controller, config->getNetworkDeviceName(),
+        config->getNetworkDeviceIndex(), config->getNetworkDeviceIPAddress());
     e131Client->start();
     workerThreads.push_back(std::move(e131Client));
 
@@ -277,7 +278,7 @@ int main(int argc, char **argv) {
 
     // Main loop - just run until the signal handler terminates us
     logger->info("All systems running! Press Ctrl+C to exit immediately.");
-    while(true) {
+    for (EVER) {
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
         // The signal handler will terminate the process - no graceful shutdown needed!
     }

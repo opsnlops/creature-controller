@@ -7,6 +7,7 @@
 #include <utility>
 #include <cerrno>        // For errno
 #include <cstring>       // For strerror
+#include <arpa/inet.h>
 #include <sys/socket.h>  // For socket error constants
 #include <netinet/in.h>  // For network structures
 
@@ -33,12 +34,17 @@ namespace creatures::dmx {
         this->logger->info("e1.31 client destroyed");
     }
 
+
     void E131Client::init(const std::shared_ptr<creature::Creature>& _creature,
                           const std::shared_ptr<Controller>& _controller,
-                          std::string _networkDeviceIPAddress) {
+                          std::string _networkInterfaceName,
+                          uint _networkInterfaceIndex,
+                          std::string _networkInterfaceAddress) {
         this->creature = _creature;
         this->controller = _controller;
-        this->networkDeviceIPAddress = std::move(_networkDeviceIPAddress);
+        this->networkInterfaceName = _networkInterfaceName;
+        this->networkInterfaceIndex = _networkInterfaceIndex;
+        this->networkInterfaceAddress = _networkInterfaceAddress;
 
         // Create our input map
         for( const auto& input : this->creature->getInputs() ) {
@@ -125,97 +131,90 @@ namespace creatures::dmx {
     }
 
     void E131Client::run() {
-        setThreadName("E131Client::run");
+    setThreadName("E131Client::run");
 
-        this->logger->info("e1.31 worker thread going");
+    logger->info("e1.31 worker thread starting");
 
-        int sockfd;
-        e131_packet_t packet;
-        e131_error_t error;
-        u8 last_seq = 0x00;
-
-        // Validate configuration before attempting connection
-        validateNetworkConfig(logger, creature->getUniverse(), networkDeviceIPAddress);
-
-        // Create an e1.31 socket with detailed error reporting
-        logger->debug("Creating E1.31 socket...");
-        if ((sockfd = e131_socket()) < 0) {
-            const std::string errorMessage = fmt::format("Unable to create an e1.31 socket: {}",
-                                                        getDetailedSocketError("e131_socket"));
-            this->logger->critical(errorMessage);
-            throw E131Exception(errorMessage);
-        }
-        logger->debug("Socket created successfully (fd: {})", sockfd);
-
-        // Bind to the socket with detailed error reporting
-        logger->debug("Binding to E1.31 port {}...", E131_DEFAULT_PORT);
-        if (e131_bind(sockfd, E131_DEFAULT_PORT) < 0) {
-            const std::string errorMessage = fmt::format("Unable to bind to the default e1.31 port {}: {}",
-                                                        E131_DEFAULT_PORT,
-                                                        getDetailedSocketError("e131_bind"));
-            this->logger->critical(errorMessage);
-            close(sockfd);
-            throw E131Exception(errorMessage);
-        }
-        logger->debug("Socket bound successfully to port {}", E131_DEFAULT_PORT);
-
-        // Log multicast join attempt with all details
-        logger->info("Attempting to join multicast group:");
-        logger->info("  Universe: {}", creature->getUniverse());
-        logger->info("  Interface IP: {}", networkDeviceIPAddress);
-        logger->info("  Socket FD: {}", sockfd);
-
-        // Join the multicast group with enhanced error reporting
-        if (e131_multicast_join_ifaddr(sockfd, creature->getUniverse(), this->networkDeviceIPAddress.c_str()) < 0) {
-            // Get the detailed system error
-            std::string systemError = getDetailedSocketError("e131_multicast_join_ifaddr");
-
-            const std::string errorMessage = fmt::format(
-                "Unable to join the multicast group for universe {} on interface {}. {}",
-                creature->getUniverse(),
-                this->networkDeviceIPAddress,
-                systemError);
-
-            this->logger->critical(errorMessage);
-
-            close(sockfd);
-            throw E131Exception(errorMessage);
-        }
-
-        logger->info("Successfully joined multicast group for universe {} on {}",
-                    creature->getUniverse(), networkDeviceIPAddress);
-
-        // loop to receive E1.31 packets
-        this->logger->info("Waiting for E1.31 packets on network device {}", this->networkDeviceIPAddress);
-        while (!stop_requested.load()) {
-
-            if (e131_recv(sockfd, &packet) < 0) {
-                std::string errorMessage = fmt::format("Unable to receive an e1.31 packet: {}",
-                                                      getDetailedSocketError("e131_recv"));
-                this->logger->critical(errorMessage);
-                // Should we throw here?
-                continue;
-            }
-
-            if ((error = e131_pkt_validate(&packet)) != E131_ERR_NONE) {
-                logger->warn("E1.31 packet error: {}", e131_strerror(error));
-                continue;
-            }
-
-            if (e131_pkt_discard(&packet, last_seq)) {
-                logger->warn("E1.31 packet out of order received (seq: {}, last: {})",
-                           packet.frame.seq_number, last_seq);
-                last_seq = packet.frame.seq_number;
-                continue;
-            }
-
-            handlePacket(packet);
-            last_seq = packet.frame.seq_number;
-        }
-
-        logger->info("e1.31 client shutting down");
-        close(sockfd);
+    int sockfd = e131_socket();
+    if (sockfd < 0) {
+        const std::string errorMessage = fmt::format(
+            "Unable to create e1.31 socket: {} (errno {})",
+            getDetailedSocketError("e131_socket"),
+            errno);
+        logger->critical(errorMessage);
+        throw E131Exception(errorMessage);
     }
+
+    logger->debug("E1.31 socket created (fd: {})", sockfd);
+
+    if (e131_bind(sockfd, E131_DEFAULT_PORT) < 0) {
+        const std::string errorMessage = fmt::format(
+            "Unable to bind E1.31 socket to port {}: {} (errno {})",
+            E131_DEFAULT_PORT,
+            getDetailedSocketError("e131_bind"),
+            errno);
+        logger->critical(errorMessage);
+        close(sockfd);
+        throw E131Exception(errorMessage);
+    }
+
+    logger->debug("E1.31 socket bound to port {}", E131_DEFAULT_PORT);
+
+    // Gather resolved interface info
+    uint16_t universe            = creature->getUniverse();
+
+    logger->info("Joining multicast group for universe {} on interface '{}'", universe, networkInterfaceName);
+    logger->info("  IP address: {}", networkInterfaceAddress);
+    logger->info("  Interface index: {}", networkInterfaceIndex);
+    logger->info("  Socket FD: {}", sockfd);
+
+    if (e131_multicast_join_iface(sockfd, universe, networkInterfaceIndex) < 0) {
+        const std::string errorMessage = fmt::format(
+            "Failed to join multicast group for universe {} on interface '{}': {} (errno {})",
+            universe,
+            networkInterfaceName,
+            getDetailedSocketError("e131_multicast_join_iface"),
+            errno);
+        logger->critical(errorMessage);
+        close(sockfd);
+        throw E131Exception(errorMessage);
+    }
+
+    logger->info("Successfully joined multicast group 239.255.0.{} on {}", universe, networkInterfaceAddress);
+    logger->info("Waiting for E1.31 packets on interface '{}'", networkInterfaceName);
+
+    // Receive loop
+    e131_packet_t packet;
+    e131_error_t error;
+    uint8_t last_seq = 0;
+
+    while (!stop_requested.load()) {
+        if (e131_recv(sockfd, &packet) < 0) {
+            logger->error("e131_recv() failed: {} (errno {})",
+                          getDetailedSocketError("e131_recv"),
+                          errno);
+            continue;
+        }
+
+        if ((error = e131_pkt_validate(&packet)) != E131_ERR_NONE) {
+            logger->warn("Invalid E1.31 packet: {}", e131_strerror(error));
+            continue;
+        }
+
+        if (e131_pkt_discard(&packet, last_seq)) {
+            logger->warn("Out-of-order packet received (seq: {}, last: {})",
+                         packet.frame.seq_number, last_seq);
+            last_seq = packet.frame.seq_number;
+            continue;
+        }
+
+        handlePacket(packet);
+        last_seq = packet.frame.seq_number;
+    }
+
+    logger->info("e1.31 client shutting down");
+    close(sockfd);
+}
 
     void E131Client::handlePacket(const e131_packet_t &packet) {
         std::string hexString;
