@@ -281,8 +281,8 @@ void OpusRtpAudioClient::dialogStreamThread()
                        packetsReceived, packet.size(), packet.size() - 12, rtpHeader.sequenceNumber);
         }
 
-        // Enhanced logging every 50 packets to catch issues faster
-        if (packetsReceived % 50 == 0) {
+        // Enhanced logging every 250 packets to catch issues faster
+        if (packetsReceived % 250 == 0) {
             logRingBufferState("Dialog", dialogWriteIdx_.load(), dialogReadIdx_.load(), dialogFrames_);
             log_->debug("Dialog: rx={}, drop={}, decode_ok={}, decode_fail={}, buf_overrun={}, seq={}, ts={}, ssrc={:#x}",
                        packetsReceived, packetsDropped, successfulDecodes, decodeErrors, bufferOverruns,
@@ -423,8 +423,8 @@ void OpusRtpAudioClient::bgmStreamThread()
                        packetsReceived, packet.size(), packet.size() - 12, rtpHeader.sequenceNumber);
         }
 
-        // Enhanced logging every 50 packets to catch issues faster - SAME AS DIALOG
-        if (packetsReceived % 50 == 0) {
+        // Enhanced logging every 250 packets to catch issues faster - SAME AS DIALOG
+        if (packetsReceived % 250 == 0) {
             logRingBufferState("BGM", bgmWriteIdx_.load(), bgmReadIdx_.load(), bgmFrames_);
             log_->debug("BGM: rx={}, drop={}, decode_ok={}, decode_fail={}, buf_overrun={}, seq={}, ts={}, ssrc={:#x}",
                        packetsReceived, packetsDropped, successfulDecodes, decodeErrors, bufferOverruns,

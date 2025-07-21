@@ -16,7 +16,7 @@ namespace creatures::audio {
 
     // ── Opus framing ──────────────────────────────────────────
     inline constexpr uint32_t SAMPLE_RATE  = 48'000;   // Hz
-    inline constexpr uint16_t FRAME_MS     = 20;       // Opus ptime
+    inline constexpr uint16_t FRAME_MS     = 10;       // Opus ptime
     inline constexpr uint16_t FRAMES_PER_CHUNK =
         SAMPLE_RATE * FRAME_MS / 1000;                 // 480 samples
     inline constexpr uint8_t  OUTPUT_CH    = 1;        // mono out
@@ -25,7 +25,7 @@ namespace creatures::audio {
     // inline constexpr size_t  CHUNK_BYTES = FRAMES_PER_CHUNK * sizeof(int16_t);
 
     // ── SDL queue / buffering ─────────────────────────────────
-    inline constexpr size_t SDL_BUFFER_FRAMES = 2048;  // ~42 ms
+    inline constexpr size_t SDL_BUFFER_FRAMES = 2048;  // ~20 ms
     inline constexpr size_t PREFILL_FRAMES    = 3;     // 30 ms warm-up
 
     // ── Monitoring thresholds ────────────────────────────────
