@@ -64,11 +64,11 @@ namespace creatures::audio {
         void audioMixingThread();
 
         /* helpers */
-        bool openSocket(int& sock, const std::string& group);
+        bool openSocket(int& sock, const std::string& group) const;
         static bool recvPacket(int sock, std::vector<uint8_t>& pkt);
 
         /* RTP packet parsing */
-        uint32_t extractSSRC(const std::vector<uint8_t>& packet);
+        static uint32_t extractSSRC(const std::vector<uint8_t>& packet);
         bool isValidRtpPacket(const std::vector<uint8_t>& packet);
 
         /* SSRC change detection and decoder reset */

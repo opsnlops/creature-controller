@@ -296,7 +296,7 @@ void OpusRtpAudioClient::dialogStreamThread()
             if (rtpHeader.sequenceNumber != expectedSeq) {
                 log_->warn("Dialog sequence jump: expected {}, got {} (gap: {})",
                           expectedSeq, rtpHeader.sequenceNumber,
-                          (int16_t)(rtpHeader.sequenceNumber - expectedSeq));
+                          static_cast<int16_t>(rtpHeader.sequenceNumber - expectedSeq));
             }
         } else {
             dialogSeqInit_.store(true);
@@ -304,8 +304,8 @@ void OpusRtpAudioClient::dialogStreamThread()
         lastDialogSeq_.store(rtpHeader.sequenceNumber);
 
         // Check for SSRC changes
-        uint32_t currentSSRC = rtpHeader.ssrc;
         {
+            uint32_t currentSSRC = rtpHeader.ssrc;
             std::lock_guard<std::mutex> lock(dialogDecoderMutex_);
             checkAndHandleSSRCChange(currentSSRC, decDlg_, lastDialogSSRC_, "Dialog");
 
@@ -446,8 +446,8 @@ void OpusRtpAudioClient::bgmStreamThread()
         lastBgmSeq_.store(rtpHeader.sequenceNumber);
 
         // Check for SSRC changes
-        uint32_t currentSSRC = rtpHeader.ssrc;
         {
+            const uint32_t currentSSRC = rtpHeader.ssrc;
             std::lock_guard<std::mutex> lock(bgmDecoderMutex_);
             checkAndHandleSSRCChange(currentSSRC, decBgm_, lastBgmSSRC_, "BGM");
 
@@ -536,7 +536,7 @@ void OpusRtpAudioClient::audioMixingThread()
 
     // More precise timing
     auto frameStart = std::chrono::steady_clock::now();
-    const auto frameDuration = std::chrono::microseconds(FRAME_MS * 1000); // 20ms
+    constexpr auto frameDuration = std::chrono::microseconds(FRAME_MS * 1000); // 20ms
 
     uint64_t frameCount = 0;
     uint64_t underruns = 0;
@@ -557,15 +557,15 @@ void OpusRtpAudioClient::audioMixingThread()
         frameStart += frameDuration;
 
         // Get current read positions
-        size_t dialogReadIdx = dialogReadIdx_.load();
-        size_t bgmReadIdx = bgmReadIdx_.load();
+        const size_t dialogReadIdx = dialogReadIdx_.load();
+        const size_t bgmReadIdx = bgmReadIdx_.load();
 
         // Check frame availability
         AudioFrame& dialogFrame = dialogFrames_[dialogReadIdx];
         AudioFrame& bgmFrame = bgmFrames_[bgmReadIdx];
 
-        bool hasDialog = dialogFrame.ready.load();
-        bool hasBgm = bgmFrame.ready.load();
+        const bool hasDialog = dialogFrame.ready.load();
+        const bool hasBgm = bgmFrame.ready.load();
 
         // Track hits and misses for debugging
         if (hasDialog) {
@@ -582,8 +582,8 @@ void OpusRtpAudioClient::audioMixingThread()
 
         // Debug frame production rate every 512 frames
         if (frameCount % 512 == 0) {
-            uint64_t currentDialogFrames = dialogFramesProduced_.load();
-            uint64_t currentBgmFrames = bgmFramesProduced_.load();
+            const uint64_t currentDialogFrames = dialogFramesProduced_.load();
+            const uint64_t currentBgmFrames = bgmFramesProduced_.load();
 
             uint64_t dialogFrameRate = currentDialogFrames - lastDialogFramesSeen;
             uint64_t bgmFrameRate = currentBgmFrames - lastBgmFramesSeen;
@@ -600,8 +600,8 @@ void OpusRtpAudioClient::audioMixingThread()
 
         // Mix available audio with proper clamping
         for (int i = 0; i < FRAMES_PER_CHUNK; ++i) {
-            int32_t dialogSample = hasDialog ? dialogFrame.data[i] : 0;
-            int32_t bgmSample = hasBgm ? bgmFrame.data[i] : 0;
+            const int32_t dialogSample = hasDialog ? dialogFrame.data[i] : 0;
+            const int32_t bgmSample = hasBgm ? bgmFrame.data[i] : 0;
 
             // Simple addition mixing - you mentioned 1:1 volume
             int32_t mixed = dialogSample + bgmSample;
@@ -711,8 +711,7 @@ void OpusRtpAudioClient::checkAndHandleSSRCChange(uint32_t newSSRC,
     }
 }
 
-bool OpusRtpAudioClient::openSocket(int& sock, const std::string& group)
-{
+bool OpusRtpAudioClient::openSocket(int& sock, const std::string& group) const {
     sock = ::socket(AF_INET, SOCK_DGRAM, 0);
     if (sock < 0) {
         log_->error("Failed to create socket: {}", strerror(errno));
