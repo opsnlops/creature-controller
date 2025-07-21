@@ -724,11 +724,8 @@ bool OpusRtpAudioClient::openSocket(int& sock, const std::string& group) const {
         log_->warn("Failed to set SO_REUSEADDR: {}", strerror(errno));
     }
 
-#ifdef SO_REUSEPORT
-    if (setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &reuse, sizeof(reuse)) < 0) {
-        log_->warn("Failed to set SO_REUSEPORT: {}", strerror(errno));
-    }
-#endif
+    // DON'T set SO_REUSEPORT for multicast - it can cause packet duplication
+    // Remove the SO_REUSEPORT section entirely
 
     // Increase receive buffer size to handle bursts
     int rcvBufSize = 256 * 1024; // 256KB
@@ -736,14 +733,14 @@ bool OpusRtpAudioClient::openSocket(int& sock, const std::string& group) const {
         log_->warn("Failed to increase receive buffer: {}", strerror(errno));
     }
 
-    // Bind to the port
+    // CRITICAL FIX: Bind to the specific multicast group, not INADDR_ANY
     sockaddr_in addr{};
     addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    addr.sin_addr.s_addr = inet_addr(group.c_str());  // ← Bind to specific group!
     addr.sin_port = htons(port_);
 
     if (bind(sock, reinterpret_cast<sockaddr*>(&addr), sizeof(addr))) {
-        log_->error("Failed to bind socket to port {}: {}", port_, strerror(errno));
+        log_->error("Failed to bind socket to {}:{}: {}", group, port_, strerror(errno));
         close(sock);
         sock = -1;
         return false;
@@ -770,7 +767,8 @@ bool OpusRtpAudioClient::openSocket(int& sock, const std::string& group) const {
         return false;
     }
 
-    log_->info("Successfully joined multicast group: {} on interface: {}", group, ifaceIp_);
+    log_->info("Successfully bound to and joined multicast group: {} on interface: {}",
+               group, ifaceIp_);
     return true;
 }
 
