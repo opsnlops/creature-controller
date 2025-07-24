@@ -6,29 +6,27 @@
 
 #include "controller-config.h"
 
-
 #include "controller/commands/tokens/ServoPosition.h"
 
 #include "CommandException.h"
 #include "Ping.h"
 
-
-
 namespace creatures::commands {
 
-    Ping::Ping(std::shared_ptr<Logger> logger) : logger(logger) {}
+Ping::Ping(std::shared_ptr<Logger> logger) : logger(logger) {}
 
-    std::string Ping::toMessage() {
+std::string Ping::toMessage() {
 
-        const auto now = std::chrono::high_resolution_clock::now();
+    const auto now = std::chrono::high_resolution_clock::now();
 
-        // Start the message with the 'PING' command prefix
-        const auto message = fmt::format("{}\t{}", "PING",
-                                          std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count());
+    // Start the message with the 'PING' command prefix
+    const auto message = fmt::format(
+        "{}\t{}", "PING",
+        std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch())
+            .count());
 
-        logger->trace("message is: {}", message);
-        return message;
-    }
+    logger->trace("message is: {}", message);
+    return message;
+}
 
-} // creatures::commands
-
+} // namespace creatures::commands

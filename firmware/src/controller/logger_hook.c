@@ -8,7 +8,6 @@
 #include "config.h"
 #include "types.h"
 
-
 /**
  * Called at the end of the logging process. Used to allow
  * for a hook to be called after logging has been completed.
@@ -18,7 +17,7 @@
  */
 void acw_post_logging_hook(char *message, uint8_t message_length) {
 
-    (void) message_length;
+    (void)message_length;
 
     // Send the message to the controller
     send_to_controller(message);

@@ -11,8 +11,9 @@
 
 class StepperHandler {
 
-public:
-    StepperHandler(std::shared_ptr<creatures::Logger> logger, std::shared_ptr<Controller> controller);
+  public:
+    StepperHandler(std::shared_ptr<creatures::Logger> logger,
+                   std::shared_ptr<Controller> controller);
 
     bool stepper_timer_handler(struct repeating_timer *t);
 
@@ -21,10 +22,9 @@ public:
     // Toggle the latch
     void inline toggle_latch();
 
-
     bool home_stepper(uint8_t slot);
 
-private:
+  private:
     std::shared_ptr<creatures::Logger> logger;
     std::shared_ptr<Controller> controller;
 };

@@ -1,12 +1,12 @@
 
 #pragma once
 
-#include <string>
 #include <charconv>
 #include <cstdint>
-#include <vector>
 #include <ranges>
 #include <sstream>
+#include <string>
+#include <vector>
 
 #include "controller-config.h"
 
@@ -16,7 +16,7 @@
  * @param str the string to parse
  * @return a u32 of the string, if possible
  */
-u32 stringToU32(const std::string& str);
+u32 stringToU32(const std::string &str);
 
 /**
  * Convert a string into a u64 safely
@@ -24,7 +24,7 @@ u32 stringToU32(const std::string& str);
  * @param str the string to parse
  * @return a u64 of the string, if possible
  */
-u64 stringToU64(const std::string& str);
+u64 stringToU64(const std::string &str);
 
 /**
  * Convert a string into a double safely
@@ -32,7 +32,7 @@ u64 stringToU64(const std::string& str);
  * @param str the string to parse
  * @return a double of the string, if possible, otherwise NaN
  */
-double stringToDouble(const std::string& str);
+double stringToDouble(const std::string &str);
 
 /**
  * Split a string into pieces in a safe way
@@ -40,4 +40,4 @@ double stringToDouble(const std::string& str);
  * @param str the string to split
  * @return a vector containing the pieces
  */
-std::vector<std::string> splitString(const std::string& str);
+std::vector<std::string> splitString(const std::string &str);

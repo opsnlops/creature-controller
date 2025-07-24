@@ -3,21 +3,19 @@
 
 #include "controller-config.h"
 
-#include "logging/Logger.h"
 #include "controller/commands/ICommand.h"
-
+#include "logging/Logger.h"
 
 namespace creatures::commands {
 
-    class Ping final : public ICommand {
+class Ping final : public ICommand {
 
-    public:
-        explicit Ping(std::shared_ptr<Logger> logger);
-        std::string toMessage() override;
+  public:
+    explicit Ping(std::shared_ptr<Logger> logger);
+    std::string toMessage() override;
 
-    private:
-        std::shared_ptr<Logger> logger;
-    };
+  private:
+    std::shared_ptr<Logger> logger;
+};
 
-} // creatures::commands
-
+} // namespace creatures::commands

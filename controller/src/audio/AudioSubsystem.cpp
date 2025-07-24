@@ -13,23 +13,18 @@
 
 using namespace creatures::audio;
 
-AudioSubsystem::AudioSubsystem(std::shared_ptr<creatures::Logger> log)
-    : log_(log)
-{
+AudioSubsystem::AudioSubsystem(std::shared_ptr<creatures::Logger> log) : log_(log) {
     log_->debug("AudioSubsystem created");
 }
 
-bool AudioSubsystem::initialize(uint8_t creatureChannel,
-                                const std::string& ifaceIp,
-                                uint8_t audioDev,
-                                uint16_t port)
-{
+bool AudioSubsystem::initialize(uint8_t creatureChannel, const std::string &ifaceIp, uint8_t audioDev, uint16_t port) {
     if (creatureChannel < 1 || creatureChannel > 16) {
         log_->error("Invalid creature channel: {} (must be 1-16)", creatureChannel);
         return false;
     }
 
-    log_->info("Initializing audio subsystem: creature channel {}, interface {}, port {}",
+    log_->info("Initializing audio subsystem: creature channel {}, interface "
+               "{}, port {}",
                creatureChannel, ifaceIp, port);
 
     // Construct multicast addresses
@@ -41,11 +36,9 @@ bool AudioSubsystem::initialize(uint8_t creatureChannel,
 
     rtpClient_ = std::make_shared<OpusRtpAudioClient>(
         log_,
-        dialogGroup,     // Dialog channel for this creature
-        bgmGroup,        // BGM channel (always channel 17)
-        port,
-        creatureChannel,
-        ifaceIp);
+                                                      dialogGroup, // Dialog channel for this creature
+                                                      bgmGroup,    // BGM channel (always channel 17)
+                                                      port, creatureChannel, ifaceIp);
 
     if (!rtpClient_) {
         log_->error("Failed to create RTP audio client");
@@ -56,8 +49,7 @@ bool AudioSubsystem::initialize(uint8_t creatureChannel,
     return true;
 }
 
-void AudioSubsystem::run()
-{
+void AudioSubsystem::run() {
     if (!rtpClient_) {
         log_->error("Audio subsystem not initialized - cannot start");
         return;
@@ -75,8 +67,7 @@ void AudioSubsystem::run()
     log_->info("Audio subsystem running");
 }
 
-void AudioSubsystem::shutdown()
-{
+void AudioSubsystem::shutdown() {
     log_->info("Shutting down audio subsystem");
 
     running_.store(false);
@@ -95,13 +86,10 @@ void AudioSubsystem::shutdown()
     log_->info("Audio subsystem shutdown complete");
 }
 
-bool AudioSubsystem::isReceiving() const
-{
-    return rtpClient_ && rtpClient_->isReceiving();
+bool AudioSubsystem::isReceiving() const { return rtpClient_ && rtpClient_->isReceiving();
 }
 
-std::string AudioSubsystem::getStats() const
-{
+std::string AudioSubsystem::getStats() const {
     if (!rtpClient_) {
         return "audio disabled";
     }
@@ -112,15 +100,15 @@ std::string AudioSubsystem::getStats() const
                        rtpClient_->isReceiving() ? "yes" : "no");
 }
 
-void AudioSubsystem::monitoringLoop()
-{
+void AudioSubsystem::monitoringLoop() {
     setThreadName("AudioMon");
 
     log_->debug("Audio monitoring loop started");
 
     while (!stopMon_.load()) {
         std::this_thread::sleep_for(std::chrono::seconds(STATS_INTERVAL_SEC));
-        if (stopMon_.load()) break;
+        if (stopMon_.load())
+            break;
 
         if (rtpClient_) {
             log_->info("Audio stats: {}", getStats());

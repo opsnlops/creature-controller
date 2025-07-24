@@ -9,12 +9,8 @@ using json = nlohmann::json;
 #include "util/StoppableThread.h"
 #include "util/thread_name.h"
 
-namespace creatures :: server {
+namespace creatures ::server {
 
-    class ServerMessageProcessor : public StoppableThread {
+class ServerMessageProcessor : public StoppableThread {};
 
-    };
-
-
-
-} // creatures :: server
+} // namespace creatures::server

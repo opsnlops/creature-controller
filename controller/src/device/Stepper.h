@@ -5,17 +5,12 @@
 
 #include <cstdio>
 
-
 #if USE_STEPPERS
 
 class StepperState {
 
-public:
-
+  public:
     StepperState();
-
-
-
 
     /**
      * Used to determine how aggressive when we should switch to microsteps.
@@ -52,12 +47,10 @@ public:
      */
     u64 actualSteps;
 
-
     /**
      * Which frame did we fall asleep at?
      */
     u64 startedSleepingAt;
-
 
     /**
      * How many frames of idle time do we have to wait before going to sleep?
@@ -73,15 +66,15 @@ public:
      * How many frames do we have to wait to wake up?
      */
     u32 framesRequiredToWakeUp{};
-
-
 };
 
 class Stepper {
 
-public:
-    Stepper(std::shared_ptr<creatures::Logger> logger,u8 slot, const std::string& name, u32 maxSteps,
-            u16 decelerationAggressiveness, u32 sleepWakeupPauseTimeUs, u32 sleepAfterUs, bool inverted);
+  public:
+    Stepper(std::shared_ptr<creatures::Logger> logger, u8 slot,
+            const std::string &name, u32 maxSteps,
+            u16 decelerationAggressiveness, u32 sleepWakeupPauseTimeUs,
+            u32 sleepAfterUs, bool inverted);
     int init();
     int start();
 
@@ -93,7 +86,7 @@ public:
     std::string name;
     bool inverted;
 
-    StepperState* state;
+    StepperState *state;
 
     u32 maxSteps;
     u32 maxMicrosteps;
@@ -124,7 +117,7 @@ public:
     u32 getSleepWakeupFrames();
     u32 getSleepAfterIdleFrames();
 
-private:
+  private:
     std::shared_ptr<creatures::Logger> logger;
 };
 

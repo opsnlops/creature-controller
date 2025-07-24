@@ -4,13 +4,13 @@
 
 // Our modules
 #include "hardware/gpio.h"
+#include "hardware/irq.h"
 #include "hardware/pwm.h"
 #include "hardware/uart.h"
-#include "hardware/irq.h"
 
 #include <FreeRTOS.h>
-#include <timers.h>
 #include <semphr.h>
+#include <timers.h>
 
 #include "config.h"
 
@@ -30,21 +30,19 @@
  */
 #define MOTOR_MAP_SIZE (1 * CONTROLLER_MOTORS_PER_MODULE)
 
-
-
 /**
  * @brief Constant representing an invalid motor ID
  *
  * Used when a motor cannot be found or an operation fails.
  */
-#define INVALID_MOTOR_ID            UINT8_MAX
+#define INVALID_MOTOR_ID UINT8_MAX
 
 /**
  * @brief Constant representing an invalid motor index
  *
  * Used when a motor index is out of bounds or invalid.
  */
-#define INVALID_MOTOR_INDEX         UINT16_MAX
+#define INVALID_MOTOR_INDEX UINT16_MAX
 
 /**
  * @brief Mutex for thread-safe access to motor_map
@@ -62,16 +60,19 @@ extern SemaphoreHandle_t motor_map_mutex;
  * and power control.
  */
 typedef struct {
-    const char* motor_id;           /**< String identifier for this motor (e.g., "0", "1") */
-    u32 gpio_pin;                   /**< GPIO pin number on the Pi Pico */
-    u32 slice;                      /**< PWM slice used by this motor */
-    u32 channel;                    /**< PWM channel within the slice */
-    u32 power_pin;                  /**< GPIO pin controlling power to this motor */
-    u16 requested_position;         /**< Position in PWM counter ticks (not microseconds) */
-    u16 min_microseconds;           /**< Minimum pulse width in microseconds */
-    u16 max_microseconds;           /**< Maximum pulse width in microseconds */
-    u16 current_microseconds;       /**< Current pulse width in microseconds */
-    bool is_configured;             /**< True if this motor has been configured by the computer */
+    const char
+        *motor_id; /**< String identifier for this motor (e.g., "0", "1") */
+    u32 gpio_pin;  /**< GPIO pin number on the Pi Pico */
+    u32 slice;     /**< PWM slice used by this motor */
+    u32 channel;   /**< PWM channel within the slice */
+    u32 power_pin; /**< GPIO pin controlling power to this motor */
+    u16 requested_position;   /**< Position in PWM counter ticks (not
+                                 microseconds) */
+    u16 min_microseconds;     /**< Minimum pulse width in microseconds */
+    u16 max_microseconds;     /**< Maximum pulse width in microseconds */
+    u16 current_microseconds; /**< Current pulse width in microseconds */
+    bool is_configured;       /**< True if this motor has been configured by the
+                                 computer */
 } MotorMap;
 
 /**
@@ -81,19 +82,20 @@ typedef struct {
  * This state is reflected in the status LEDs.
  */
 enum FirmwareState {
-    idle,           /**< Not active, waiting for commands */
-    configuring,    /**< Receiving configuration from host computer */
-    running,        /**< Normal operation mode */
-    errored_out     /**< An error occurred that prevents normal operation */
+    idle,        /**< Not active, waiting for commands */
+    configuring, /**< Receiving configuration from host computer */
+    running,     /**< Normal operation mode */
+    errored_out  /**< An error occurred that prevents normal operation */
 };
 
 /**
  * @brief Converts a motor ID string to an index in the motor_map array
  *
  * @param motor_id The motor ID string to convert (e.g., "0", "1", etc.)
- * @return The corresponding index in the motor_map array, or INVALID_MOTOR_ID if not found
+ * @return The corresponding index in the motor_map array, or INVALID_MOTOR_ID
+ * if not found
  */
-u8 getMotorMapIndex(const char* motor_id);
+u8 getMotorMapIndex(const char *motor_id);
 
 /**
  * @brief Interrupt Service Routine for PWM wrap events
@@ -127,10 +129,12 @@ void controller_start();
  * configured min/max limits for the servo before applying it.
  *
  * @param motor_id The motor ID string (e.g., "0", "1", etc.)
- * @param requestedMicroseconds The pulse width in microseconds (typically 1000-2000)
- * @return true if the position was set successfully, false if there was an error
+ * @param requestedMicroseconds The pulse width in microseconds (typically
+ * 1000-2000)
+ * @return true if the position was set successfully, false if there was an
+ * error
  */
-bool requestServoPosition(const char* motor_id, u16 requestedMicroseconds);
+bool requestServoPosition(const char *motor_id, u16 requestedMicroseconds);
 
 /**
  * @brief Configure the minimum and maximum position limits for a servo
@@ -144,13 +148,15 @@ bool requestServoPosition(const char* motor_id, u16 requestedMicroseconds);
  * @param maxMicroseconds The maximum allowed pulse width in microseconds
  * @return true if configuration was successful, false if there was an error
  */
-bool configureServoMinMax(const char* motor_id, u16 minMicroseconds, u16 maxMicroseconds);
+bool configureServoMinMax(const char *motor_id, u16 minMicroseconds,
+                          u16 maxMicroseconds);
 
 /**
  * @brief Configure PWM frequency and duty cycle for a channel
  *
  * Sets up a PWM channel with the specified frequency and duty cycle.
- * Calculates appropriate clock dividers and wrap values for the Pi Pico PWM hardware.
+ * Calculates appropriate clock dividers and wrap values for the Pi Pico PWM
+ * hardware.
  *
  * @param slice_num The PWM slice number
  * @param chan The PWM channel number within the slice
@@ -216,8 +222,8 @@ void first_frame_received(bool yesOrNo);
 /**
  * @brief Check for controller reset requests
  *
- * Legacy function now replaced by controller_reset_request_check_timer_callback().
- * Kept for compatibility.
+ * Legacy function now replaced by
+ * controller_reset_request_check_timer_callback(). Kept for compatibility.
  */
 void check_for_controller_reset_request();
 
@@ -227,7 +233,7 @@ void check_for_controller_reset_request();
  * @param motor_id The motor ID string (e.g., "0", "1", etc.)
  * @return true if motor is configured, false if not (or motor not found)
  */
-bool is_motor_configured(const char* motor_id);
+bool is_motor_configured(const char *motor_id);
 
 /**
  * @brief Check if all motors are configured

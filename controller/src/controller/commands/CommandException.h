@@ -6,14 +6,15 @@
 
 namespace creatures {
 
-    class CommandException final : public std::exception {
-        std::string message;
-    public:
-        explicit CommandException(const std::string& msg) : message(msg) {}
+class CommandException final : public std::exception {
+    std::string message;
 
-        [[nodiscard]] const char* what() const noexcept override {
-            return message.c_str();
-        }
-    };
+  public:
+    explicit CommandException(const std::string &msg) : message(msg) {}
 
-} // creatures
+    [[nodiscard]] const char *what() const noexcept override {
+        return message.c_str();
+    }
+};
+
+} // namespace creatures

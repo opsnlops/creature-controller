@@ -6,31 +6,27 @@
 
 #include "controller-config.h"
 
-#include "logging/Logger.h"
 #include "config/UARTDevice.h"
 #include "controller/commands/ICommand.h"
 #include "controller/commands/tokens/ServoPosition.h"
-
+#include "logging/Logger.h"
 
 namespace creatures::commands {
 
-    class SetServoPositions final : public ICommand {
+class SetServoPositions final : public ICommand {
 
-    public:
-        explicit SetServoPositions(std::shared_ptr<Logger> logger);
-        void addServoPosition(const ServoPosition& servoPosition);
+  public:
+    explicit SetServoPositions(std::shared_ptr<Logger> logger);
+    void addServoPosition(const ServoPosition &servoPosition);
 
-        void setFilter(creatures::config::UARTDevice::module_name _filter);
+    void setFilter(creatures::config::UARTDevice::module_name _filter);
 
-        std::string toMessage() override;
+    std::string toMessage() override;
 
-    private:
+  private:
+    std::vector<ServoPosition> servoPositions;
+    std::shared_ptr<Logger> logger;
+    creatures::config::UARTDevice::module_name filter;
+};
 
-        std::vector<ServoPosition> servoPositions;
-        std::shared_ptr<Logger> logger;
-        creatures::config::UARTDevice::module_name filter;
-    };
-
-} // creatures::commands
-
-
+} // namespace creatures::commands

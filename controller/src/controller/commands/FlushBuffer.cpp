@@ -1,25 +1,22 @@
 
 
-
 #include "controller-config.h"
-
 
 #include "CommandException.h"
 #include "FlushBuffer.h"
 
-
-
 namespace creatures::commands {
 
-    FlushBuffer::FlushBuffer(const std::shared_ptr<Logger> &logger) : logger(logger) {}
+FlushBuffer::FlushBuffer(const std::shared_ptr<Logger> &logger)
+    : logger(logger) {}
 
-    std::string FlushBuffer::toMessage() {
+std::string FlushBuffer::toMessage() {
 
-        // Only one character, the bell! 🔔
-        constexpr auto message = "\a";
+    // Only one character, the bell! 🔔
+    constexpr auto message = "\a";
 
-        logger->debug("constructed a FlushBuffer message 🔔");
-        return message;
-    }
+    logger->debug("constructed a FlushBuffer message 🔔");
+    return message;
+}
 
-} // creatures::commands
+} // namespace creatures::commands

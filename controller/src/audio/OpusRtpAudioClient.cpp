@@ -4,17 +4,17 @@
 
 #include <algorithm>
 #include <arpa/inet.h>
+#include <chrono>
 #include <fcntl.h>
+#include <fstream>
+#include <iostream>
 #include <netinet/in.h>
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <unistd.h>
-#include <chrono>
-#include <fstream>
-#include <iostream>
 
-#include "util/thread_name.h"
 #include "OpusRtpAudioClient.h"
+#include "util/thread_name.h"
 
 using namespace creatures::audio;
 
@@ -50,31 +50,32 @@ void AudioDebugger::enableDebugging() {
     }
 }
 
-void AudioDebugger::writeDialogAudio(const int16_t* samples, size_t count) {
+void AudioDebugger::writeDialogAudio(const int16_t *samples, size_t count) {
     if (debugEnabled_.load() && dialogAudioFile_.is_open()) {
-        dialogAudioFile_.write(reinterpret_cast<const char*>(samples), count * sizeof(int16_t));
+        dialogAudioFile_.write(reinterpret_cast<const char *>(samples), count * sizeof(int16_t));
         dialogAudioFile_.flush();
     }
 }
 
-void AudioDebugger::writeBgmAudio(const int16_t* samples, size_t count) {
+void AudioDebugger::writeBgmAudio(const int16_t *samples, size_t count) {
     if (debugEnabled_.load() && bgmAudioFile_.is_open()) {
-        bgmAudioFile_.write(reinterpret_cast<const char*>(samples), count * sizeof(int16_t));
+        bgmAudioFile_.write(reinterpret_cast<const char *>(samples), count * sizeof(int16_t));
         bgmAudioFile_.flush();
     }
 }
 
-void AudioDebugger::writeMixedAudio(const int16_t* samples, size_t count) {
+void AudioDebugger::writeMixedAudio(const int16_t *samples, size_t count) {
     if (debugEnabled_.load() && mixedAudioFile_.is_open()) {
-        mixedAudioFile_.write(reinterpret_cast<const char*>(samples), count * sizeof(int16_t));
+        mixedAudioFile_.write(reinterpret_cast<const char *>(samples), count * sizeof(int16_t));
         mixedAudioFile_.flush();
     }
 }
 
-void AudioDebugger::writeRtpPacket(const std::vector<uint8_t>& packet, const std::string& streamType) {
-    if (!debugEnabled_.load()) return;
+void AudioDebugger::writeRtpPacket(const std::vector<uint8_t> &packet, const std::string &streamType) {
+    if (!debugEnabled_.load())
+        return;
 
-    std::ofstream* rtpFile = nullptr;
+    std::ofstream *rtpFile = nullptr;
     if (streamType == "dialog" && dialogRtpFile_.is_open()) {
         rtpFile = &dialogRtpFile_;
     } else if (streamType == "bgm" && bgmRtpFile_.is_open()) {
@@ -83,27 +84,28 @@ void AudioDebugger::writeRtpPacket(const std::vector<uint8_t>& packet, const std
 
     if (rtpFile) {
         uint32_t size = packet.size();
-        rtpFile->write(reinterpret_cast<const char*>(&size), sizeof(size));
-        rtpFile->write(reinterpret_cast<const char*>(packet.data()), packet.size());
+        rtpFile->write(reinterpret_cast<const char *>(&size), sizeof(size));
+        rtpFile->write(reinterpret_cast<const char *>(packet.data()), packet.size());
         rtpFile->flush();
     }
 }
 
 /* ── Enhanced packet structure with RTP header parsing ──── */
 struct RtpHeader {
-    uint8_t  version;
-    bool     padding;
-    bool     extension;
-    uint8_t  csrcCount;
-    bool     marker;
-    uint8_t  payloadType;
+    uint8_t version;
+    bool padding;
+    bool extension;
+    uint8_t csrcCount;
+    bool marker;
+    uint8_t payloadType;
     uint16_t sequenceNumber;
     uint32_t timestamp;
     uint32_t ssrc;
 
-    static RtpHeader parse(const std::vector<uint8_t>& packet) {
+    static RtpHeader parse(const std::vector<uint8_t> &packet) {
         RtpHeader header{};
-        if (packet.size() < 12) return header;
+        if (packet.size() < 12)
+            return header;
 
         header.version = (packet[0] >> 6) & 0x03;
         header.padding = (packet[0] >> 5) & 0x01;
@@ -120,23 +122,14 @@ struct RtpHeader {
 };
 
 /* ── Enhanced constructor with debugging ──────────────────── */
-OpusRtpAudioClient::OpusRtpAudioClient(
-        std::shared_ptr<creatures::Logger> log,
-        std::string dlg, std::string bgm,
-        uint16_t port, uint8_t dlgIdx,
-        std::string iface)
-    : log_(std::move(log))
-    , dlgGrp_(std::move(dlg))
-    , bgmGrp_(std::move(bgm))
-    , ifaceIp_(std::move(iface))
-    , port_(port)
-    , dialogIdx_(dlgIdx)
-{
-    log_->debug("Created OpusRtpAudioClient: dialog={}, bgm={}, port={}, idx={}",
-                dlgGrp_, bgmGrp_, port_, dialogIdx_);
+OpusRtpAudioClient::OpusRtpAudioClient(std::shared_ptr<creatures::Logger> log, std::string dlg, std::string bgm,
+                                       uint16_t port, uint8_t dlgIdx, std::string iface)
+    : log_(std::move(log)), dlgGrp_(std::move(dlg)), bgmGrp_(std::move(bgm)), ifaceIp_(std::move(iface)), port_(port),
+      dialogIdx_(dlgIdx) {
+    log_->debug("Created OpusRtpAudioClient: dialog={}, bgm={}, port={}, idx={}", dlgGrp_, bgmGrp_, port_, dialogIdx_);
 
     // Enable debugging for the first 30 seconds
-    //AudioDebugger::enableDebugging();
+    // AudioDebugger::enableDebugging();
 
     // Initialize audio frames with proper indexing
     for (size_t i = 0; i < RING_BUFFER_SIZE; ++i) {
@@ -158,29 +151,35 @@ OpusRtpAudioClient::OpusRtpAudioClient(
     bgmSeqInit_.store(false);
 }
 
-OpusRtpAudioClient::~OpusRtpAudioClient()
-{
+OpusRtpAudioClient::~OpusRtpAudioClient() {
     stop_requested.store(true);
 
     // Join all worker threads
-    if (dialogThread_.joinable()) dialogThread_.join();
-    if (bgmThread_.joinable()) bgmThread_.join();
-    if (mixingThread_.joinable()) mixingThread_.join();
+    if (dialogThread_.joinable())
+        dialogThread_.join();
+    if (bgmThread_.joinable())
+        bgmThread_.join();
+    if (mixingThread_.joinable())
+        mixingThread_.join();
 
     // Clean up resources
-    if (sockDlg_ >= 0) close(sockDlg_);
-    if (sockBgm_ >= 0) close(sockBgm_);
-    if (decDlg_) opus_decoder_destroy(decDlg_);
-    if (decBgm_) opus_decoder_destroy(decBgm_);
-    if (dev_) SDL_CloseAudioDevice(dev_);
+    if (sockDlg_ >= 0)
+        close(sockDlg_);
+    if (sockBgm_ >= 0)
+        close(sockBgm_);
+    if (decDlg_)
+        opus_decoder_destroy(decDlg_);
+    if (decBgm_)
+        opus_decoder_destroy(decBgm_);
+    if (dev_)
+        SDL_CloseAudioDevice(dev_);
     SDL_QuitSubSystem(SDL_INIT_AUDIO);
 
     log_->debug("OpusRtpAudioClient destroyed, {} SSRC resets occurred", ssrcResets_.load());
 }
 
 /* ── main thread entry ───────────────────────────────────── */
-void OpusRtpAudioClient::run()
-{
+void OpusRtpAudioClient::run() {
     setThreadName("opus-rtp-main");
 
     /* Initialize SDL Audio */
@@ -232,8 +231,7 @@ void OpusRtpAudioClient::run()
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
         // Update buffer level periodically
-        bufLvl_ = static_cast<float>(SDL_GetQueuedAudioSize(dev_)) /
-                  (SAMPLE_RATE * sizeof(int16_t));
+        bufLvl_ = static_cast<float>(SDL_GetQueuedAudioSize(dev_)) / (SAMPLE_RATE * sizeof(int16_t));
 
         // Update total packet count
         totalPkts_.store(dialogPkts_.load() + bgmPkts_.load());
@@ -244,8 +242,7 @@ void OpusRtpAudioClient::run()
 }
 
 /* ── Dialog stream thread ────── */
-void OpusRtpAudioClient::dialogStreamThread()
-{
+void OpusRtpAudioClient::dialogStreamThread() {
     setThreadName("opus-dialog");
     log_->debug("Dialog stream thread started (channel {})", dialogIdx_);
 
@@ -275,18 +272,21 @@ void OpusRtpAudioClient::dialogStreamThread()
         // Parse RTP header for detailed analysis
         RtpHeader rtpHeader = RtpHeader::parse(packet);
 
-        // Debug every single packet for the first 100 packets to see decode flow
+        // Debug every single packet for the first 100 packets to see decode
+        // flow
         if (packetsReceived <= 100) {
-            log_->debug("Dialog packet {}: size={}, payload_size={}, seq={}, attempting decode...",
-                       packetsReceived, packet.size(), packet.size() - 12, rtpHeader.sequenceNumber);
+            log_->debug("Dialog packet {}: size={}, payload_size={}, seq={}, "
+                        "attempting decode...",
+                        packetsReceived, packet.size(), packet.size() - 12, rtpHeader.sequenceNumber);
         }
 
         // Enhanced logging every 250 packets to catch issues faster
         if (packetsReceived % 250 == 0) {
             logRingBufferState("Dialog", dialogWriteIdx_.load(), dialogReadIdx_.load(), dialogFrames_);
-            log_->debug("Dialog: rx={}, drop={}, decode_ok={}, decode_fail={}, buf_overrun={}, seq={}, ts={}, ssrc={:#x}",
-                       packetsReceived, packetsDropped, successfulDecodes, decodeErrors, bufferOverruns,
-                       rtpHeader.sequenceNumber, rtpHeader.timestamp, rtpHeader.ssrc);
+            log_->debug("Dialog: rx={}, drop={}, decode_ok={}, decode_fail={}, "
+                        "buf_overrun={}, seq={}, ts={}, ssrc={:#x}",
+                        packetsReceived, packetsDropped, successfulDecodes, decodeErrors, bufferOverruns,
+                        rtpHeader.sequenceNumber, rtpHeader.timestamp, rtpHeader.ssrc);
         }
 
         // Check for sequence number issues
@@ -294,9 +294,8 @@ void OpusRtpAudioClient::dialogStreamThread()
             uint16_t lastSeq = lastDialogSeq_.load();
             uint16_t expectedSeq = (lastSeq + 1) & 0xFFFF;
             if (rtpHeader.sequenceNumber != expectedSeq) {
-                log_->warn("Dialog sequence jump: expected {}, got {} (gap: {})",
-                          expectedSeq, rtpHeader.sequenceNumber,
-                          static_cast<int16_t>(rtpHeader.sequenceNumber - expectedSeq));
+                log_->warn("Dialog sequence jump: expected {}, got {} (gap: {})", expectedSeq, rtpHeader.sequenceNumber,
+                           static_cast<int16_t>(rtpHeader.sequenceNumber - expectedSeq));
             }
         } else {
             dialogSeqInit_.store(true);
@@ -314,10 +313,11 @@ void OpusRtpAudioClient::dialogStreamThread()
             size_t nextIdx = (writeIdx + 1) % RING_BUFFER_SIZE;
 
             // Check if we're about to overwrite an unread frame
-            AudioFrame& nextFrame = dialogFrames_[nextIdx];
+            AudioFrame &nextFrame = dialogFrames_[nextIdx];
             if (nextFrame.ready.load()) {
-                log_->warn("Dialog ring buffer overrun - dropping frame (write={}, read={})",
-                          writeIdx, dialogReadIdx_.load());
+                log_->warn("Dialog ring buffer overrun - dropping frame "
+                           "(write={}, read={})",
+                           writeIdx, dialogReadIdx_.load());
                 bufferOverruns++;
                 dialogBufferOverruns_.fetch_add(1);
                 packetsDropped++;
@@ -325,25 +325,24 @@ void OpusRtpAudioClient::dialogStreamThread()
             }
 
             // Decode into current frame
-            AudioFrame& frame = dialogFrames_[writeIdx];
+            AudioFrame &frame = dialogFrames_[writeIdx];
             frame.sequenceNumber = rtpHeader.sequenceNumber;
             frame.timestamp = rtpHeader.timestamp;
 
             // Extract Opus payload (skip RTP header)
-            const uint8_t* opusPayload = packet.data() + 12;
+            const uint8_t *opusPayload = packet.data() + 12;
             int opusPayloadSize = packet.size() - 12;
 
-            log_->trace("Dialog decode: payload_size={}, expected_frames={}",
-                       opusPayloadSize, FRAMES_PER_CHUNK);
+            log_->trace("Dialog decode: payload_size={}, expected_frames={}", opusPayloadSize, FRAMES_PER_CHUNK);
 
-            int decodedFrames = opus_decode(decDlg_, opusPayload, opusPayloadSize,
-                                          frame.data.data(), FRAMES_PER_CHUNK, 0);
+            int decodedFrames =
+                opus_decode(decDlg_, opusPayload, opusPayloadSize, frame.data.data(), FRAMES_PER_CHUNK, 0);
 
             if (decodedFrames == FRAMES_PER_CHUNK) {
                 // Success! Write debug audio and advance
                 AudioDebugger::writeDialogAudio(frame.data.data(), FRAMES_PER_CHUNK);
 
-                frame.ready.store(true);  // Mark ready LAST
+                frame.ready.store(true); // Mark ready LAST
                 dialogWriteIdx_.store(nextIdx);
                 dialogPkts_.fetch_add(1);
                 successfulDecodes++;
@@ -367,10 +366,12 @@ void OpusRtpAudioClient::dialogStreamThread()
             } else {
                 decodeErrors++;
                 dialogDecodeFailed_.fetch_add(1);
-                log_->error("Dialog decode FAILED: {} (payload_size={}, total_errors={})",
-                           decodedFrames, opusPayloadSize, decodeErrors);
+                log_->error("Dialog decode FAILED: {} (payload_size={}, "
+                            "total_errors={})",
+                            decodedFrames, opusPayloadSize, decodeErrors);
 
-                // Still produce a frame filled with silence so we don't fall behind
+                // Still produce a frame filled with silence so we don't fall
+                // behind
                 frame.data.fill(0);
                 frame.ready.store(true);
                 dialogWriteIdx_.store(nextIdx);
@@ -379,15 +380,16 @@ void OpusRtpAudioClient::dialogStreamThread()
         }
     }
 
-    log_->info("Dialog stream thread stopped - received: {}, dropped: {}, decode_ok: {}, decode_errors: {}, overruns: {}",
+    log_->info("Dialog stream thread stopped - received: {}, dropped: {}, "
+               "decode_ok: {}, decode_errors: {}, overruns: {}",
                packetsReceived, packetsDropped, successfulDecodes, decodeErrors, bufferOverruns);
 }
 
 /* ── BGM stream thread ──────── */
-// Replace the BGM thread with this enhanced version that matches the dialog pattern exactly:
+// Replace the BGM thread with this enhanced version that matches the dialog
+// pattern exactly:
 
-void OpusRtpAudioClient::bgmStreamThread()
-{
+void OpusRtpAudioClient::bgmStreamThread() {
     setThreadName("opus-bgm");
     log_->debug("BGM stream thread started");
 
@@ -417,18 +419,22 @@ void OpusRtpAudioClient::bgmStreamThread()
         // Parse RTP header for detailed analysis
         RtpHeader rtpHeader = RtpHeader::parse(packet);
 
-        // Debug every single packet for the first 100 packets to see decode flow
+        // Debug every single packet for the first 100 packets to see decode
+        // flow
         if (packetsReceived <= 100) {
-            log_->debug("BGM packet {}: size={}, payload_size={}, seq={}, attempting decode...",
-                       packetsReceived, packet.size(), packet.size() - 12, rtpHeader.sequenceNumber);
+            log_->debug("BGM packet {}: size={}, payload_size={}, seq={}, "
+                        "attempting decode...",
+                        packetsReceived, packet.size(), packet.size() - 12, rtpHeader.sequenceNumber);
         }
 
-        // Enhanced logging every 250 packets to catch issues faster - SAME AS DIALOG
+        // Enhanced logging every 250 packets to catch issues faster - SAME AS
+        // DIALOG
         if (packetsReceived % 250 == 0) {
             logRingBufferState("BGM", bgmWriteIdx_.load(), bgmReadIdx_.load(), bgmFrames_);
-            log_->debug("BGM: rx={}, drop={}, decode_ok={}, decode_fail={}, buf_overrun={}, seq={}, ts={}, ssrc={:#x}",
-                       packetsReceived, packetsDropped, successfulDecodes, decodeErrors, bufferOverruns,
-                       rtpHeader.sequenceNumber, rtpHeader.timestamp, rtpHeader.ssrc);
+            log_->debug("BGM: rx={}, drop={}, decode_ok={}, decode_fail={}, "
+                        "buf_overrun={}, seq={}, ts={}, ssrc={:#x}",
+                        packetsReceived, packetsDropped, successfulDecodes, decodeErrors, bufferOverruns,
+                        rtpHeader.sequenceNumber, rtpHeader.timestamp, rtpHeader.ssrc);
         }
 
         // Check for sequence number issues
@@ -436,9 +442,8 @@ void OpusRtpAudioClient::bgmStreamThread()
             uint16_t lastSeq = lastBgmSeq_.load();
             uint16_t expectedSeq = (lastSeq + 1) & 0xFFFF;
             if (rtpHeader.sequenceNumber != expectedSeq) {
-                log_->warn("BGM sequence jump: expected {}, got {} (gap: {})",
-                          expectedSeq, rtpHeader.sequenceNumber,
-                          (int16_t)(rtpHeader.sequenceNumber - expectedSeq));
+                log_->warn("BGM sequence jump: expected {}, got {} (gap: {})", expectedSeq, rtpHeader.sequenceNumber,
+                           (int16_t)(rtpHeader.sequenceNumber - expectedSeq));
             }
         } else {
             bgmSeqInit_.store(true);
@@ -456,10 +461,11 @@ void OpusRtpAudioClient::bgmStreamThread()
             size_t nextIdx = (writeIdx + 1) % RING_BUFFER_SIZE;
 
             // Check if we're about to overwrite an unread frame
-            AudioFrame& nextFrame = bgmFrames_[nextIdx];
+            AudioFrame &nextFrame = bgmFrames_[nextIdx];
             if (nextFrame.ready.load()) {
-                log_->warn("BGM ring buffer overrun - dropping frame (write={}, read={})",
-                          writeIdx, bgmReadIdx_.load());
+                log_->warn("BGM ring buffer overrun - dropping frame "
+                           "(write={}, read={})",
+                           writeIdx, bgmReadIdx_.load());
                 bufferOverruns++;
                 bgmBufferOverruns_.fetch_add(1);
                 packetsDropped++;
@@ -467,25 +473,24 @@ void OpusRtpAudioClient::bgmStreamThread()
             }
 
             // Decode into current frame
-            AudioFrame& frame = bgmFrames_[writeIdx];
+            AudioFrame &frame = bgmFrames_[writeIdx];
             frame.sequenceNumber = rtpHeader.sequenceNumber;
             frame.timestamp = rtpHeader.timestamp;
 
             // Extract Opus payload (skip RTP header)
-            const uint8_t* opusPayload = packet.data() + 12;
+            const uint8_t *opusPayload = packet.data() + 12;
             int opusPayloadSize = packet.size() - 12;
 
-            log_->trace("BGM decode: payload_size={}, expected_frames={}",
-                       opusPayloadSize, FRAMES_PER_CHUNK);
+            log_->trace("BGM decode: payload_size={}, expected_frames={}", opusPayloadSize, FRAMES_PER_CHUNK);
 
-            int decodedFrames = opus_decode(decBgm_, opusPayload, opusPayloadSize,
-                                          frame.data.data(), FRAMES_PER_CHUNK, 0);
+            int decodedFrames =
+                opus_decode(decBgm_, opusPayload, opusPayloadSize, frame.data.data(), FRAMES_PER_CHUNK, 0);
 
             if (decodedFrames == FRAMES_PER_CHUNK) {
                 // Success! Write debug audio and advance
                 AudioDebugger::writeBgmAudio(frame.data.data(), FRAMES_PER_CHUNK);
 
-                frame.ready.store(true);  // Mark ready LAST
+                frame.ready.store(true); // Mark ready LAST
                 bgmWriteIdx_.store(nextIdx);
                 bgmPkts_.fetch_add(1);
                 successfulDecodes++;
@@ -509,10 +514,11 @@ void OpusRtpAudioClient::bgmStreamThread()
             } else {
                 decodeErrors++;
                 bgmDecodeFailed_.fetch_add(1);
-                log_->error("BGM decode FAILED: {} (payload_size={}, total_errors={})",
-                           decodedFrames, opusPayloadSize, decodeErrors);
+                log_->error("BGM decode FAILED: {} (payload_size={}, total_errors={})", decodedFrames, opusPayloadSize,
+                            decodeErrors);
 
-                // Still produce a frame filled with silence so we don't fall behind
+                // Still produce a frame filled with silence so we don't fall
+                // behind
                 frame.data.fill(0);
                 frame.ready.store(true);
                 bgmWriteIdx_.store(nextIdx);
@@ -521,13 +527,13 @@ void OpusRtpAudioClient::bgmStreamThread()
         }
     }
 
-    log_->info("BGM stream thread stopped - received: {}, dropped: {}, decode_ok: {}, decode_errors: {}, overruns: {}",
+    log_->info("BGM stream thread stopped - received: {}, dropped: {}, "
+               "decode_ok: {}, decode_errors: {}, overruns: {}",
                packetsReceived, packetsDropped, successfulDecodes, decodeErrors, bufferOverruns);
 }
 
 /* ── Audio mixing thread ─────────── */
-void OpusRtpAudioClient::audioMixingThread()
-{
+void OpusRtpAudioClient::audioMixingThread() {
     setThreadName("opus-mixer");
     log_->debug("Audio mixing thread started");
 
@@ -561,8 +567,8 @@ void OpusRtpAudioClient::audioMixingThread()
         const size_t bgmReadIdx = bgmReadIdx_.load();
 
         // Check frame availability
-        AudioFrame& dialogFrame = dialogFrames_[dialogReadIdx];
-        AudioFrame& bgmFrame = bgmFrames_[bgmReadIdx];
+        AudioFrame &dialogFrame = dialogFrames_[dialogReadIdx];
+        AudioFrame &bgmFrame = bgmFrames_[bgmReadIdx];
 
         const bool hasDialog = dialogFrame.ready.load();
         const bool hasBgm = bgmFrame.ready.load();
@@ -589,10 +595,10 @@ void OpusRtpAudioClient::audioMixingThread()
             uint64_t bgmFrameRate = currentBgmFrames - lastBgmFramesSeen;
 
             log_->debug("Frame production rates: dialog={}/512, bgm={}/512 (expected=512/512 if audio is playing)",
-                       dialogFrameRate, bgmFrameRate);
+                        dialogFrameRate, bgmFrameRate);
             log_->debug("Decode stats: dialog_ok={}, dialog_fail={}, bgm_ok={}, bgm_fail={}",
-                       dialogDecodeSuccess_.load(), dialogDecodeFailed_.load(),
-                       bgmDecodeSuccess_.load(), bgmDecodeFailed_.load());
+                        dialogDecodeSuccess_.load(), dialogDecodeFailed_.load(), bgmDecodeSuccess_.load(),
+                        bgmDecodeFailed_.load());
 
             lastDialogFramesSeen = currentDialogFrames;
             lastBgmFramesSeen = currentBgmFrames;
@@ -642,10 +648,9 @@ void OpusRtpAudioClient::audioMixingThread()
             float dialogHitRate = (float)dialogHits / frameCount * 100.0f;
             float bgmHitRate = (float)bgmHits / frameCount * 100.0f;
 
-            log_->info("Mix stats: frames={}, underruns={}, dialog_hits={:.1f}%, bgm_hits={:.1f}%, queued={}bytes",
-                      frameCount, underruns, dialogHitRate, bgmHitRate, queuedBytes);
-            log_->info("Buffer overruns: dialog={}, bgm={}",
-                      dialogBufferOverruns_.load(), bgmBufferOverruns_.load());
+            log_->info("Mix stats: frames={}, underruns={}, dialog_hits={:.1f}%, bgm_hits={:.1f}%, queued={} bytes",
+                       frameCount, underruns, dialogHitRate, bgmHitRate, queuedBytes);
+            log_->info("Buffer overruns: dialog={}, bgm={}", dialogBufferOverruns_.load(), bgmBufferOverruns_.load());
         }
     }
 
@@ -653,8 +658,7 @@ void OpusRtpAudioClient::audioMixingThread()
 }
 
 /* ── Helper methods ──────────────────────────────────────── */
-bool OpusRtpAudioClient::isValidRtpPacket(const std::vector<uint8_t>& packet)
-{
+bool OpusRtpAudioClient::isValidRtpPacket(const std::vector<uint8_t> &packet) {
     if (packet.size() < 12) {
         log_->warn("Received RTP packet too small: {} bytes", packet.size());
         return false;
@@ -668,24 +672,18 @@ bool OpusRtpAudioClient::isValidRtpPacket(const std::vector<uint8_t>& packet)
     return true;
 }
 
-uint32_t OpusRtpAudioClient::extractSSRC(const std::vector<uint8_t>& packet)
-{
+uint32_t OpusRtpAudioClient::extractSSRC(const std::vector<uint8_t> &packet) {
     if (packet.size() < 12) {
         return 0;
     }
-    return (static_cast<uint32_t>(packet[8]) << 24) |
-           (static_cast<uint32_t>(packet[9]) << 16) |
-           (static_cast<uint32_t>(packet[10]) << 8) |
-           static_cast<uint32_t>(packet[11]);
+    return (static_cast<uint32_t>(packet[8]) << 24) | (static_cast<uint32_t>(packet[9]) << 16) |
+           (static_cast<uint32_t>(packet[10]) << 8) | static_cast<uint32_t>(packet[11]);
 }
 
-void OpusRtpAudioClient::checkAndHandleSSRCChange(uint32_t newSSRC,
-                                                  OpusDecoder* decoder,
-                                                  std::atomic<uint32_t>& lastSSRC,
-                                                  const std::string& streamName)
-{
+void OpusRtpAudioClient::checkAndHandleSSRCChange(uint32_t newSSRC, OpusDecoder *decoder,
+                                                  std::atomic<uint32_t> &lastSSRC, const std::string &streamName) {
     bool isDialog = (streamName == "Dialog");
-    std::atomic<bool>& initialized = isDialog ? dialogSSRCInitialized_ : bgmSSRCInitialized_;
+    std::atomic<bool> &initialized = isDialog ? dialogSSRCInitialized_ : bgmSSRCInitialized_;
 
     if (!initialized.load()) {
         lastSSRC.store(newSSRC);
@@ -696,8 +694,7 @@ void OpusRtpAudioClient::checkAndHandleSSRCChange(uint32_t newSSRC,
 
     uint32_t oldSSRC = lastSSRC.load();
     if (newSSRC != oldSSRC) {
-        log_->info("{} SSRC changed: {} -> {}, resetting decoder",
-                  streamName, oldSSRC, newSSRC);
+        log_->info("{} SSRC changed: {} -> {}, resetting decoder", streamName, oldSSRC, newSSRC);
 
         opus_decoder_ctl(decoder, OPUS_RESET_STATE);
 
@@ -711,7 +708,7 @@ void OpusRtpAudioClient::checkAndHandleSSRCChange(uint32_t newSSRC,
     }
 }
 
-bool OpusRtpAudioClient::openSocket(int& sock, const std::string& group) const {
+bool OpusRtpAudioClient::openSocket(int &sock, const std::string &group) const {
     sock = ::socket(AF_INET, SOCK_DGRAM, 0);
     if (sock < 0) {
         log_->error("Failed to create socket: {}", strerror(errno));
@@ -736,10 +733,10 @@ bool OpusRtpAudioClient::openSocket(int& sock, const std::string& group) const {
     // CRITICAL FIX: Bind to the specific multicast group, not INADDR_ANY
     sockaddr_in addr{};
     addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = inet_addr(group.c_str());  // ← Bind to specific group!
+    addr.sin_addr.s_addr = inet_addr(group.c_str()); // ← Bind to specific group!
     addr.sin_port = htons(port_);
 
-    if (bind(sock, reinterpret_cast<sockaddr*>(&addr), sizeof(addr))) {
+    if (bind(sock, reinterpret_cast<sockaddr *>(&addr), sizeof(addr))) {
         log_->error("Failed to bind socket to {}:{}: {}", group, port_, strerror(errno));
         close(sock);
         sock = -1;
@@ -767,13 +764,11 @@ bool OpusRtpAudioClient::openSocket(int& sock, const std::string& group) const {
         return false;
     }
 
-    log_->info("Successfully bound to and joined multicast group: {} on interface: {}",
-               group, ifaceIp_);
+    log_->info("Successfully bound to and joined multicast group: {} on interface: {}", group, ifaceIp_);
     return true;
 }
 
-bool OpusRtpAudioClient::recvPacket(int sock, std::vector<uint8_t>& pkt)
-{
+bool OpusRtpAudioClient::recvPacket(int sock, std::vector<uint8_t> &pkt) {
     // Use a shorter timeout to reduce latency
     fd_set readfds;
     FD_ZERO(&readfds);
