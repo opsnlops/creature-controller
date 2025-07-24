@@ -8,8 +8,7 @@
 #include "util/thread_name.h"
 
 // Keep track of the last time we sent a ping
-std::chrono::time_point<std::chrono::high_resolution_clock> lastPingSentAt =
-    std::chrono::high_resolution_clock::now();
+std::chrono::time_point<std::chrono::high_resolution_clock> lastPingSentAt = std::chrono::high_resolution_clock::now();
 
 #define PING_LOOP_TIME 1000
 
@@ -43,8 +42,7 @@ void PingTask::run() {
         // don't ping each time 😅
         if (totalMilliseconds % (PING_SECONDS * PING_LOOP_TIME) == 0) {
             auto pingCommand = creatures::commands::Ping(logger);
-            messageRouter->broadcastMessageToAllModules(
-                pingCommand.toMessageWithChecksum());
+            messageRouter->broadcastMessageToAllModules(pingCommand.toMessageWithChecksum());
             lastPingSentAt = std::chrono::high_resolution_clock::now();
 
             logger->debug("sent pings");

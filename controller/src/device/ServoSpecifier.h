@@ -12,12 +12,10 @@ struct ServoSpecifier {
     creatures::config::UARTDevice::module_name module;
     u16 pin;
 
-    ServoSpecifier(creatures::config::UARTDevice::module_name module, u16 pin)
-        : module(module), pin(pin) {}
+    ServoSpecifier(creatures::config::UARTDevice::module_name module, u16 pin) : module(module), pin(pin) {}
 
     // Allow for direct comparision
-    friend bool operator==(const ServoSpecifier &lhs,
-                           const ServoSpecifier &rhs) {
+    friend bool operator==(const ServoSpecifier &lhs, const ServoSpecifier &rhs) {
         return lhs.module == rhs.module && lhs.pin == rhs.pin;
     }
 };

@@ -12,9 +12,7 @@ class ServoException : public std::exception {
 
   public:
     explicit ServoException(const std::string &msg) : message(msg) {}
-    virtual const char *what() const noexcept override {
-        return message.c_str();
-    }
+    virtual const char *what() const noexcept override { return message.c_str(); }
 };
 
 } // namespace creatures

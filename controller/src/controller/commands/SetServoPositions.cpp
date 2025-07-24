@@ -12,23 +12,19 @@
 
 namespace creatures::commands {
 
-SetServoPositions::SetServoPositions(std::shared_ptr<Logger> logger)
-    : logger(logger) { // NOLINT(*-pass-by-value)
+SetServoPositions::SetServoPositions(std::shared_ptr<Logger> logger) : logger(logger) { // NOLINT(*-pass-by-value)
     this->servoPositions = std::vector<ServoPosition>();
     this->filter = creatures::config::UARTDevice::invalid_module;
 }
 
-void SetServoPositions::addServoPosition(
-    const creatures::ServoPosition &servoPosition) {
+void SetServoPositions::addServoPosition(const creatures::ServoPosition &servoPosition) {
 
     // Make sure we're not putting the same outputPosition in twice
     for (const auto &existingServoPosition : servoPositions) {
         if (existingServoPosition.getServoId() == servoPosition.getServoId()) {
             const auto errorMessage =
-                fmt::format("Unable to insert the same output position twice: "
-                            "module {}, pin {}",
-                            creatures::config::UARTDevice::moduleNameToString(
-                                servoPosition.getServoId().module),
+                fmt::format("Unable to insert the same output position twice: module {}, pin {}",
+                            creatures::config::UARTDevice::moduleNameToString(servoPosition.getServoId().module),
                             servoPosition.getServoId().pin);
             logger->error(errorMessage);
             throw CommandException(errorMessage);
@@ -43,8 +39,7 @@ std::string SetServoPositions::toMessage() {
 
     // Yell if we're doing this on a blank set of positions
     if (servoPositions.empty()) {
-        logger->warn(
-            "attempted to call toMessage() on an empty SetServoPositions");
+        logger->warn("attempted to call toMessage() on an empty SetServoPositions");
         return "";
     }
 

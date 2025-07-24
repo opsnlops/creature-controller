@@ -44,10 +44,9 @@ class Servo {
      * @param default_position_microseconds Default position in microseconds to
      * use on startup
      */
-    Servo(std::shared_ptr<creatures::Logger> logger, std::string id,
-          std::string name, ServoSpecifier outputLocation, u16 min_pulse_us,
-          u16 max_pulse_us, float smoothingValue, bool inverted,
-          u16 servo_update_frequency_hz, u16 default_position_microseconds);
+    Servo(std::shared_ptr<creatures::Logger> logger, std::string id, std::string name, ServoSpecifier outputLocation,
+          u16 min_pulse_us, u16 max_pulse_us, float smoothingValue, bool inverted, u16 servo_update_frequency_hz,
+          u16 default_position_microseconds);
 
     /**
      * @brief Enables the servo's PWM output
@@ -138,8 +137,7 @@ class Servo {
      * @brief Gets the module this servo is connected to
      * @return Module name enumeration
      */
-    [[nodiscard]] creatures::config::UARTDevice::module_name
-    getOutputModule() const;
+    [[nodiscard]] creatures::config::UARTDevice::module_name getOutputModule() const;
 
     /**
      * @brief Gets the pin number this servo is connected to
@@ -172,21 +170,21 @@ class Servo {
     [[nodiscard]] u32 getFrameLengthMicroseconds() const;
 
   private:
-    std::string id;                ///< Unique identifier for this servo
-    ServoSpecifier outputLocation; ///< Hardware location (module and pin)
-    u16 min_pulse_us;              ///< Lower bound pulse size in microseconds
-    u16 max_pulse_us;              ///< Upper bound pulse size in microseconds
-    u16 servo_update_frequency_hz; ///< Update frequency in Hz (typically 50Hz)
-    u32 frame_length_microseconds; ///< Calculated from
-                                   ///< servo_update_frequency_hz
-    u16 current_position;          ///< Current position in position units
-    u16 default_microseconds;      ///< Default position in microseconds
-    bool on;                       ///< Whether servo is enabled
-    bool inverted;                 ///< Whether direction is inverted
-    u32 desired_microseconds;      ///< Target position in microseconds
-    u32 current_microseconds;      ///< Current position in microseconds
-    std::string name;              ///< Human-readable name
-    float smoothingValue;          ///< Movement smoothing factor (0.0-1.0)
+    std::string id;                            ///< Unique identifier for this servo
+    ServoSpecifier outputLocation;             ///< Hardware location (module and pin)
+    u16 min_pulse_us;                          ///< Lower bound pulse size in microseconds
+    u16 max_pulse_us;                          ///< Upper bound pulse size in microseconds
+    u16 servo_update_frequency_hz;             ///< Update frequency in Hz (typically 50Hz)
+    u32 frame_length_microseconds;             ///< Calculated from
+                                               ///< servo_update_frequency_hz
+    u16 current_position;                      ///< Current position in position units
+    u16 default_microseconds;                  ///< Default position in microseconds
+    bool on;                                   ///< Whether servo is enabled
+    bool inverted;                             ///< Whether direction is inverted
+    u32 desired_microseconds;                  ///< Target position in microseconds
+    u32 current_microseconds;                  ///< Current position in microseconds
+    std::string name;                          ///< Human-readable name
+    float smoothingValue;                      ///< Movement smoothing factor (0.0-1.0)
     std::shared_ptr<creatures::Logger> logger; ///< Logger instance
 
     /**

@@ -39,10 +39,9 @@ class MessageRouter; // Forward declaration
 class Controller : public creatures::StoppableThread {
 
   public:
-    explicit Controller(
-        const std::shared_ptr<creatures::Logger> &logger,
-        const std::shared_ptr<creatures::creature::Creature> &creature,
-        std::shared_ptr<creatures::io::MessageRouter> messageRouter);
+    explicit Controller(const std::shared_ptr<creatures::Logger> &logger,
+                        const std::shared_ptr<creatures::creature::Creature> &creature,
+                        std::shared_ptr<creatures::io::MessageRouter> messageRouter);
 
     void start() override;
 
@@ -83,9 +82,7 @@ class Controller : public creatures::StoppableThread {
      * `std::shared_ptr<creatures::MessageQueue<std::unordered_map<std::string,
      * creatures::Input>>>` 😅
      */
-    std::shared_ptr<creatures::MessageQueue<
-        std::unordered_map<std::string, creatures::Input>>>
-    getInputQueue();
+    std::shared_ptr<creatures::MessageQueue<std::unordered_map<std::string, creatures::Input>>> getInputQueue();
 
     u8 getNumberOfServosInUse();
 
@@ -134,9 +131,7 @@ class Controller : public creatures::StoppableThread {
      * Our queue of inputs from the I/O handlers. A reference to this
      * queue is made available to the creature.
      */
-    std::shared_ptr<creatures::MessageQueue<
-        std::unordered_map<std::string, creatures::Input>>>
-        inputQueue;
+    std::shared_ptr<creatures::MessageQueue<std::unordered_map<std::string, creatures::Input>>> inputQueue;
 
     /**
      * Keeps track of if we are considered "online."

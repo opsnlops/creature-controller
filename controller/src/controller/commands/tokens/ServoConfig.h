@@ -26,8 +26,7 @@ class ServoConfig {
      * @param logger Shared pointer to the logging system
      * @param servo Shared pointer to the Servo being configured
      */
-    ServoConfig(const std::shared_ptr<Logger> &logger,
-                const std::shared_ptr<Servo> &servo);
+    ServoConfig(const std::shared_ptr<Logger> &logger, const std::shared_ptr<Servo> &servo);
 
     /**
      * @brief Default destructor

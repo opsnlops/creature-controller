@@ -21,17 +21,13 @@ class MessageRouter;
 namespace creatures {
 class MessageProcessor;
 
-class ServoModuleHandler
-    : public StoppableThread,
-      public std::enable_shared_from_this<ServoModuleHandler> {
+class ServoModuleHandler : public StoppableThread, public std::enable_shared_from_this<ServoModuleHandler> {
 
   public:
-    ServoModuleHandler(
-        std::shared_ptr<Logger> logger, std::shared_ptr<Controller> controller,
-        UARTDevice::module_name moduleId, std::string deviceNode,
-        std::shared_ptr<creatures::io::MessageRouter> messageRouter,
-        std::shared_ptr<MessageQueue<creatures::server::ServerMessage>>
-            websocketOutgoingQueue);
+    ServoModuleHandler(std::shared_ptr<Logger> logger, std::shared_ptr<Controller> controller,
+                       UARTDevice::module_name moduleId, std::string deviceNode,
+                       std::shared_ptr<creatures::io::MessageRouter> messageRouter,
+                       std::shared_ptr<MessageQueue<creatures::server::ServerMessage>> websocketOutgoingQueue);
 
     void init();
 
@@ -178,8 +174,7 @@ class ServoModuleHandler
     /**
      * Our websocket outgoing queue
      */
-    std::shared_ptr<MessageQueue<creatures::server::ServerMessage>>
-        websocketOutgoingQueue;
+    std::shared_ptr<MessageQueue<creatures::server::ServerMessage>> websocketOutgoingQueue;
 };
 
 } // namespace creatures

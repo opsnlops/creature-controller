@@ -6,48 +6,46 @@
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
-#include "config/CommandLine.h"
 #include "config/BaseBuilder.h"
+#include "config/CommandLine.h"
 #include "config/UARTDevice.h"
 #include "logging/Logger.h"
 #include "util/Result.h"
 
-
 using namespace creatures;
 using namespace creatures::config;
 
-namespace creatures :: config {
+namespace creatures ::config {
 
-    class Configuration; // Forward declaration
+class Configuration; // Forward declaration
 
+/**
+ * This file loads in our configuration from a JSON file and returns a `Configuration` object
+ */
+class ConfigurationBuilder : public BaseBuilder {
+
+    friend class Configuration;
+    friend class CommandLine;
+
+  public:
     /**
-     * This file loads in our configuration from a JSON file and returns a `Configuration` object
+     * Parses out the creature configuration from the JSON file
+     *
+     * @return a shared_ptr to our prize
      */
-    class ConfigurationBuilder : public BaseBuilder {
+    Result<std::shared_ptr<Configuration>> build();
 
-        friend class Configuration;
-        friend class CommandLine;
+    ConfigurationBuilder(std::shared_ptr<Logger> logger, std::string configFileName);
+    ~ConfigurationBuilder() = default;
 
-    public:
-        /**
-         * Parses out the creature configuration from the JSON file
-         *
-         * @return a shared_ptr to our prize
-         */
-        Result<std::shared_ptr<Configuration>> build();
+  private:
+    std::vector<std::string> requiredTopLevelFields;
+    std::vector<std::string> requiredUARTFields;
 
-        ConfigurationBuilder(std::shared_ptr<Logger> logger, std::string configFileName);
-        ~ConfigurationBuilder() = default;
+    const std::string serverNode = "creatureServer";
+    std::vector<std::string> requiredServerFields;
 
-    private:
-        std::vector<std::string> requiredTopLevelFields;
-        std::vector<std::string> requiredUARTFields;
+    Result<std::shared_ptr<Configuration>> makeError(const std::string &errorMessage);
+};
 
-        const std::string serverNode = "creatureServer";
-        std::vector<std::string> requiredServerFields;
-
-        Result<std::shared_ptr<Configuration>> makeError(const std::string &errorMessage);
-
-    };
-
-} // creatures :: config
+} // namespace creatures::config

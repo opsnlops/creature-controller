@@ -12,8 +12,7 @@
 class StepperHandler {
 
   public:
-    StepperHandler(std::shared_ptr<creatures::Logger> logger,
-                   std::shared_ptr<Controller> controller);
+    StepperHandler(std::shared_ptr<creatures::Logger> logger, std::shared_ptr<Controller> controller);
 
     bool stepper_timer_handler(struct repeating_timer *t);
 

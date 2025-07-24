@@ -45,15 +45,12 @@ extern u64 number_of_moves;
  * @param default_position_microseconds the default position to set the servo to
  * at start
  */
-Servo::Servo(std::shared_ptr<creatures::Logger> logger, std::string id,
-             std::string name, ServoSpecifier outputLocation, u16 min_pulse_us,
-             u16 max_pulse_us, float smoothingValue, bool inverted,
-             u16 servo_update_frequency_hz, u16 default_position_microseconds)
-    : id(id), outputLocation(outputLocation), min_pulse_us(min_pulse_us),
-      max_pulse_us(max_pulse_us),
-      servo_update_frequency_hz(servo_update_frequency_hz),
-      default_microseconds(default_position_microseconds), inverted(inverted),
-      name(name), smoothingValue(smoothingValue), logger(logger) {
+Servo::Servo(std::shared_ptr<creatures::Logger> logger, std::string id, std::string name, ServoSpecifier outputLocation,
+             u16 min_pulse_us, u16 max_pulse_us, float smoothingValue, bool inverted, u16 servo_update_frequency_hz,
+             u16 default_position_microseconds)
+    : id(id), outputLocation(outputLocation), min_pulse_us(min_pulse_us), max_pulse_us(max_pulse_us),
+      servo_update_frequency_hz(servo_update_frequency_hz), default_microseconds(default_position_microseconds),
+      inverted(inverted), name(name), smoothingValue(smoothingValue), logger(logger) {
 
     // Calculate the length of a frame in microseconds based on the frequency
     this->frame_length_microseconds = 1000000 / servo_update_frequency_hz;
@@ -61,15 +58,11 @@ Servo::Servo(std::shared_ptr<creatures::Logger> logger, std::string id,
     // Default to setting all of our values to the default that the config file
     // said we should use as our default
     this->desired_microseconds =
-        inverted ? max_pulse_us - (getDefaultMicroseconds() - min_pulse_us)
-                 : getDefaultMicroseconds();
+        inverted ? max_pulse_us - (getDefaultMicroseconds() - min_pulse_us) : getDefaultMicroseconds();
     this->current_microseconds =
-        inverted ? max_pulse_us - (getDefaultMicroseconds() - min_pulse_us)
-                 : getDefaultMicroseconds();
-    this->current_position =
-        inverted ? MAX_POSITION - microsecondsToPosition(
-                                      getDefaultMicroseconds() - min_pulse_us)
-                 : microsecondsToPosition(getDefaultMicroseconds());
+        inverted ? max_pulse_us - (getDefaultMicroseconds() - min_pulse_us) : getDefaultMicroseconds();
+    this->current_position = inverted ? MAX_POSITION - microsecondsToPosition(getDefaultMicroseconds() - min_pulse_us)
+                                      : microsecondsToPosition(getDefaultMicroseconds());
 
     // Force a calculation for the current tick
     calculateNextTick();
@@ -79,10 +72,8 @@ Servo::Servo(std::shared_ptr<creatures::Logger> logger, std::string id,
 
     logger->info("set up servo on module {}, pin {}: id: {}m name: {}, "
                  "min_pulse: {}, max_pulse: {}, default: {}, inverted: {}",
-                 creatures::config::UARTDevice::moduleNameToString(
-                     outputLocation.module),
-                 outputLocation.pin, id, name, min_pulse_us, max_pulse_us,
-                 default_position_microseconds, inverted ? "yes" : "no");
+                 creatures::config::UARTDevice::moduleNameToString(outputLocation.module), outputLocation.pin, id, name,
+                 min_pulse_us, max_pulse_us, default_position_microseconds, inverted ? "yes" : "no");
 }
 
 /**
@@ -96,9 +87,7 @@ void Servo::turnOn() {
     on = true;
 
     logger->info("Enabled servo at module {}, pin {}",
-                 creatures::config::UARTDevice::moduleNameToString(
-                     outputLocation.module),
-                 outputLocation.pin);
+                 creatures::config::UARTDevice::moduleNameToString(outputLocation.module), outputLocation.pin);
 }
 
 /**
@@ -112,9 +101,7 @@ void Servo::turnOff() {
     on = false;
 
     logger->info("Disabled servo at module {}, pin {}",
-                 creatures::config::UARTDevice::moduleNameToString(
-                     outputLocation.module),
-                 outputLocation.pin);
+                 creatures::config::UARTDevice::moduleNameToString(outputLocation.module), outputLocation.pin);
 }
 
 /**
@@ -146,13 +133,12 @@ creatures::Result<std::string> Servo::move(u16 position) {
     // Error checking. This could result in damage to a motor or
     // creature if not met, so this is a hard stop if it's wrong. 😱
     if (!(position >= MIN_POSITION && position <= MAX_POSITION)) {
-        auto errorMessage =
-            fmt::format("Servo::move() called with invalid position! min: {}, "
-                        "max: {}, requested: {}",
-                        MIN_POSITION, MAX_POSITION, position);
+        auto errorMessage = fmt::format("Servo::move() called with invalid position! min: {}, "
+                                        "max: {}, requested: {}",
+                                        MIN_POSITION, MAX_POSITION, position);
         logger->critical(errorMessage);
-        return creatures::Result<std::string>{creatures::ControllerError(
-            creatures::ControllerError::InvalidData, errorMessage)};
+        return creatures::Result<std::string>{
+            creatures::ControllerError(creatures::ControllerError::InvalidData, errorMessage)};
     };
 
     // If this servo is inverted, do it now
@@ -165,12 +151,10 @@ creatures::Result<std::string> Servo::move(u16 position) {
     // Save the position for debugging
     current_position = position;
 
-    std::string successMessage =
-        fmt::format("requesting servo on output module {}, pin {} to be set to "
-                    "position {} ({}us)",
-                    creatures::config::UARTDevice::moduleNameToString(
-                        outputLocation.module),
-                    outputLocation.pin, current_position, desired_microseconds);
+    std::string successMessage = fmt::format("requesting servo on output module {}, pin {} to be set to "
+                                             "position {} ({}us)",
+                                             creatures::config::UARTDevice::moduleNameToString(outputLocation.module),
+                                             outputLocation.pin, current_position, desired_microseconds);
     logger->trace(successMessage);
 
     number_of_moves = number_of_moves + 1;
@@ -179,13 +163,11 @@ creatures::Result<std::string> Servo::move(u16 position) {
 }
 
 u32 Servo::positionToMicroseconds(u16 position) {
-    return convertRange(logger, position, MIN_POSITION, MAX_POSITION,
-                        min_pulse_us, max_pulse_us);
+    return convertRange(logger, position, MIN_POSITION, MAX_POSITION, min_pulse_us, max_pulse_us);
 }
 
 u16 Servo::microsecondsToPosition(u32 microseconds) {
-    return convertRange(logger, microseconds, min_pulse_us, max_pulse_us,
-                        MIN_POSITION, MAX_POSITION);
+    return convertRange(logger, microseconds, min_pulse_us, max_pulse_us, MIN_POSITION, MAX_POSITION);
 }
 
 std::string Servo::getName() const { return name; }
@@ -214,8 +196,7 @@ void Servo::calculateNextTick() {
     u32 last_tick = current_microseconds;
 
     current_microseconds =
-        lround(((double)desired_microseconds * (1.0 - smoothingValue)) +
-               ((double)last_tick * smoothingValue));
+        lround(((double)desired_microseconds * (1.0 - smoothingValue)) + ((double)last_tick * smoothingValue));
     // debug("-- set current_microseconds to {}", current_microseconds);
 }
 
@@ -223,9 +204,7 @@ bool Servo::isInverted() const { return inverted; };
 
 ServoSpecifier Servo::getOutputLocation() const { return outputLocation; }
 
-creatures::config::UARTDevice::module_name Servo::getOutputModule() const {
-    return outputLocation.module;
-}
+creatures::config::UARTDevice::module_name Servo::getOutputModule() const { return outputLocation.module; }
 
 u16 Servo::getOutputHeader() const { return outputLocation.pin; }
 
@@ -233,10 +212,6 @@ u16 Servo::getMinPulseUs() const { return min_pulse_us; }
 
 u16 Servo::getMaxPulseUs() const { return max_pulse_us; }
 
-u16 Servo::getServoUpdateFrequencyHz() const {
-    return servo_update_frequency_hz;
-}
+u16 Servo::getServoUpdateFrequencyHz() const { return servo_update_frequency_hz; }
 
-u32 Servo::getFrameLengthMicroseconds() const {
-    return frame_length_microseconds;
-}
+u32 Servo::getFrameLengthMicroseconds() const { return frame_length_microseconds; }

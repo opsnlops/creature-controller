@@ -21,69 +21,67 @@
 
 namespace creatures {
 
-    namespace config {
-        class Configuration; // Proper forward declaration with namespace
-    }
+namespace config {
+class Configuration; // Proper forward declaration with namespace
+}
+
+/**
+ * @class CommandLine
+ * @brief Handles command-line argument parsing and network device discovery
+ */
+class CommandLine {
+  public:
+    /**
+     * @brief Constructor
+     * @param logger Logger instance for the class
+     */
+    explicit CommandLine(std::shared_ptr<Logger> logger);
 
     /**
-     * @class CommandLine
-     * @brief Handles command-line argument parsing and network device discovery
+     * @brief Parse command line arguments and build configuration
+     * @param argc Argument count
+     * @param argv Argument values
+     * @return Result containing Configuration or error
      */
-    class CommandLine {
-    public:
-        /**
-         * @brief Constructor
-         * @param logger Logger instance for the class
-         */
-        explicit CommandLine(std::shared_ptr<Logger> logger);
+    Result<std::shared_ptr<config::Configuration>> parseCommandLine(int argc, char **argv);
 
-        /**
-         * @brief Parse command line arguments and build configuration
-         * @param argc Argument count
-         * @param argv Argument values
-         * @return Result containing Configuration or error
-         */
-        Result<std::shared_ptr<config::Configuration>> parseCommandLine(int argc, char **argv);
+    /**
+     * @brief Lists all network devices and their IP addresses
+     */
+    void listNetworkDevices();
 
-        /**
-         * @brief Lists all network devices and their IP addresses
-         */
-        void listNetworkDevices();
+    static void listAudioDevices();
 
-        static void listAudioDevices();
+    /**
+     * @brief Get the version string
+     * @return Version in format "MAJOR.MINOR.PATCH"
+     */
+    [[nodiscard]] static std::string getVersion();
 
-        /**
-         * @brief Get the version string
-         * @return Version in format "MAJOR.MINOR.PATCH"
-         */
-        [[nodiscard]] static std::string getVersion();
+  private:
+    std::shared_ptr<Logger> logger;
 
-    private:
-        std::shared_ptr<Logger> logger;
+    /**
+     * @brief Set up command line arguments for argparse
+     * @param program The argument parser instance
+     */
+    static void setupCommandLineArguments(argparse::ArgumentParser &program);
 
-        /**
-         * @brief Set up command line arguments for argparse
-         * @param program The argument parser instance
-         */
-        static void setupCommandLineArguments(argparse::ArgumentParser& program);
+    /**
+     * @brief Collect network interface information
+     * @param ifaddr Pointer to ifaddrs structures
+     * @param interfaces Map to store interface information
+     * @param addrBuff Buffer for address string conversion
+     */
+    void collectNetworkInterfaces(struct ifaddrs *ifaddr,
+                                  std::map<std::string, std::pair<int, std::vector<std::string>>> &interfaces,
+                                  char *addrBuff);
 
-        /**
-         * @brief Collect network interface information
-         * @param ifaddr Pointer to ifaddrs structures
-         * @param interfaces Map to store interface information
-         * @param addrBuff Buffer for address string conversion
-         */
-        void collectNetworkInterfaces(
-            struct ifaddrs* ifaddr,
-            std::map<std::string, std::pair<int, std::vector<std::string>>>& interfaces,
-            char* addrBuff);
+    /**
+     * @brief Display collected network interface information
+     * @param interfaces Map containing interface information
+     */
+    void displayNetworkInterfaces(const std::map<std::string, std::pair<int, std::vector<std::string>>> &interfaces);
+};
 
-        /**
-         * @brief Display collected network interface information
-         * @param interfaces Map containing interface information
-         */
-        void displayNetworkInterfaces(
-            const std::map<std::string, std::pair<int, std::vector<std::string>>>& interfaces);
-    };
-
-}
+} // namespace creatures

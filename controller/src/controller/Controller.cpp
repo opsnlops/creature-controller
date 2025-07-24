@@ -18,10 +18,9 @@
 
 u64 number_of_moves = 0UL;
 
-Controller::Controller(
-    const std::shared_ptr<creatures::Logger> &logger,
-    const std::shared_ptr<creatures::creature::Creature> &creature,
-    std::shared_ptr<creatures::io::MessageRouter> messageRouter)
+Controller::Controller(const std::shared_ptr<creatures::Logger> &logger,
+                       const std::shared_ptr<creatures::creature::Creature> &creature,
+                       std::shared_ptr<creatures::io::MessageRouter> messageRouter)
     : creature(creature), logger(logger), messageRouter(messageRouter) {
 
     logger->debug("setting up the controller");
@@ -31,20 +30,17 @@ Controller::Controller(
     this->numberOfChannels = DMX_NUMBER_OF_CHANNELS;
 
     // Create our input queue
-    inputQueue = std::make_shared<creatures::MessageQueue<
-        std::unordered_map<std::string, creatures::Input>>>();
+    inputQueue = std::make_shared<creatures::MessageQueue<std::unordered_map<std::string, creatures::Input>>>();
     logger->debug("created the input queue");
 
     logger->info("Controller for {} initialized", creature->getName());
 }
 
-void Controller::sendCommand(
-    const std::shared_ptr<creatures::ICommand> &command,
-    creatures::config::UARTDevice::module_name destModule) {
+void Controller::sendCommand(const std::shared_ptr<creatures::ICommand> &command,
+                             creatures::config::UARTDevice::module_name destModule) {
     logger->trace("sending command {}", command->toMessageWithChecksum());
 
-    this->messageRouter->sendMessageToCreature(
-        creatures::io::Message(destModule, command->toMessageWithChecksum()));
+    this->messageRouter->sendMessageToCreature(creatures::io::Message(destModule, command->toMessageWithChecksum()));
 }
 
 void Controller::start() {
@@ -75,8 +71,7 @@ bool Controller::acceptInput(const std::vector<creatures::Input> &inputs) {
     }
 
     // Assign this to the input queue and hope the creature sees it!
-    logger->trace("sending {} inputs to the input queue",
-                  creatureInputs.size());
+    logger->trace("sending {} inputs to the input queue", creatureInputs.size());
     inputQueue->push(creatureInputs);
 
     return true;
@@ -89,8 +84,7 @@ void Controller::sendFlushBufferRequest() {
     // character that the firmware is looking for to know it's time to reset the
     // buffer.
     auto flushBufferCommand = creatures::commands::FlushBuffer(logger);
-    this->messageRouter->broadcastMessageToAllModules(
-        flushBufferCommand.toMessage()); // No checksum, only 🔔
+    this->messageRouter->broadcastMessageToAllModules(flushBufferCommand.toMessage()); // No checksum, only 🔔
 }
 
 creatures::Result<std::vector<creatures::ServoConfig>>
@@ -98,28 +92,22 @@ Controller::getServoConfigs(creatures::config::UARTDevice::module_name module) {
 
     auto configs = creature->getServoConfigs(module);
     if (configs.empty()) {
-        auto errorMessage = fmt::format(
-            "no servo configurations found for module {}",
-            creatures::config::UARTDevice::moduleNameToString(module));
+        auto errorMessage = fmt::format("no servo configurations found for module {}",
+                                        creatures::config::UARTDevice::moduleNameToString(module));
         logger->error(errorMessage);
         return creatures::Result<std::vector<creatures::ServoConfig>>{
-            creatures::ControllerError(
-                creatures::ControllerError::InvalidConfiguration,
-                errorMessage)};
+            creatures::ControllerError(creatures::ControllerError::InvalidConfiguration, errorMessage)};
     }
 
     return creatures::Result<std::vector<creatures::ServoConfig>>{configs};
 }
 
-std::shared_ptr<
-    creatures::MessageQueue<std::unordered_map<std::string, creatures::Input>>>
+std::shared_ptr<creatures::MessageQueue<std::unordered_map<std::string, creatures::Input>>>
 Controller::getInputQueue() {
     return inputQueue;
 }
 
-std::shared_ptr<creatures::creature::Creature> Controller::getCreature() {
-    return creature;
-}
+std::shared_ptr<creatures::creature::Creature> Controller::getCreature() { return creature; }
 
 bool Controller::hasReceivedFirstFrame() const { return receivedFirstFrame; }
 
@@ -141,8 +129,7 @@ void Controller::run() {
 
     logger->info("controller worker now running");
 
-    auto target_delta =
-        microseconds(1000000 / creature->getServoUpdateFrequencyHz());
+    auto target_delta = microseconds(1000000 / creature->getServoUpdateFrequencyHz());
     auto next_target_time = high_resolution_clock::now() + target_delta;
 
     while (!stop_requested.load()) {
@@ -165,9 +152,7 @@ void Controller::run() {
                 std::vector<creatures::ServoPosition> requestedPositions =
                     creature->getRequestedServoPositions(handlerId);
 
-                auto command =
-                    std::make_shared<creatures::commands::SetServoPositions>(
-                        logger);
+                auto command = std::make_shared<creatures::commands::SetServoPositions>(logger);
                 for (auto &position : requestedPositions) {
                     command->addServoPosition(position);
                 }
@@ -184,8 +169,7 @@ void Controller::run() {
             if (number_of_frames % 100 == 0) {
                 logger->warn("not sending frames because we're not ready! "
                              "receivedFirstFrame: {}, firmwareReady: {}",
-                             receivedFirstFrame,
-                             messageRouter->allHandlersReady());
+                             receivedFirstFrame, messageRouter->allHandlersReady());
             }
         }
 

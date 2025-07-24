@@ -17,8 +17,7 @@
 
 namespace creatures::device {
 
-GPIO::GPIO(const std::shared_ptr<creatures::Logger> &logger, bool enabled)
-    : enabled(enabled), logger(logger) {}
+GPIO::GPIO(const std::shared_ptr<creatures::Logger> &logger, bool enabled) : enabled(enabled), logger(logger) {}
 
 void GPIO::init() {
 
@@ -30,22 +29,20 @@ void GPIO::init() {
 
     int mem_fd;
     if ((mem_fd = open(GPIO_DEVICE, O_RDWR | O_SYNC)) < 0) {
-        std::string errorMessage =
-            fmt::format("Cannot open {}: {} (Hint, are we on a Raspberry Pi, "
-                        "and in the gpio group?)",
-                        GPIO_DEVICE, std::strerror(errno));
+        std::string errorMessage = fmt::format("Cannot open {}: {} (Hint, are we on a Raspberry Pi, "
+                                               "and in the gpio group?)",
+                                               GPIO_DEVICE, std::strerror(errno));
         logger->error(errorMessage);
         throw GPIOException(std::move(errorMessage));
     }
 
     // Memory map GPIO
-    gpio_map = mmap(
-        nullptr,                // Any address will do
-        GPIO_SIZE,              // Map length
-        PROT_READ | PROT_WRITE, // Enable reading & writing to mapped memory
-        MAP_SHARED,             // Shared with other processes
-        mem_fd,                 // File to map
-        GPIO_BASE               // Offset to GPIO peripheral
+    gpio_map = mmap(nullptr,                // Any address will do
+                    GPIO_SIZE,              // Map length
+                    PROT_READ | PROT_WRITE, // Enable reading & writing to mapped memory
+                    MAP_SHARED,             // Shared with other processes
+                    mem_fd,                 // File to map
+                    GPIO_BASE               // Offset to GPIO peripheral
     );
 
     close(mem_fd); // We don't need the file descriptor after mmap

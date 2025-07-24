@@ -16,8 +16,7 @@ using creatures::io::MessageRouter;
 class PingTask : public StoppableThread {
 
   public:
-    PingTask(std::shared_ptr<Logger> logger,
-             const std::shared_ptr<MessageRouter> &messageRouter)
+    PingTask(std::shared_ptr<Logger> logger, const std::shared_ptr<MessageRouter> &messageRouter)
         : logger(logger), messageRouter(messageRouter) {}
     ~PingTask();
 

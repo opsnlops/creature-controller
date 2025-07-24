@@ -1,18 +1,16 @@
 
 #pragma once
 
-#include "logging/Logger.h"
 #include "io/handlers/IMessageHandler.h"
+#include "logging/Logger.h"
 
-
-#define SENSOR_MESSAGE      "SENSOR"
-
+#define SENSOR_MESSAGE "SENSOR"
 
 namespace creatures {
 
-    class StatsHandler : public IMessageHandler {
-    public:
-        void handle(std::shared_ptr<Logger> logger, const std::vector<std::string>& tokens) override;
-    };
+class StatsHandler : public IMessageHandler {
+  public:
+    void handle(std::shared_ptr<Logger> logger, const std::vector<std::string> &tokens) override;
+};
 
-} // creatures
+} // namespace creatures

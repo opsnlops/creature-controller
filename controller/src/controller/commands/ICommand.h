@@ -43,9 +43,7 @@ class ICommand {
      *
      * @return the complete message with a checksum
      */
-    std::string toMessageWithChecksum() {
-        return fmt::format("{}\tCS {}", toMessage(), getChecksum());
-    }
+    std::string toMessageWithChecksum() { return fmt::format("{}\tCS {}", toMessage(), getChecksum()); }
 };
 
 } // namespace creatures

@@ -35,8 +35,7 @@ static bool stepperAddressMapping[MAX_NUMBER_OF_STEPPERS][STEPPER_MUX_BITS] = {
 // END OF STEPPER TIMER STUFFS
 //
 
-StepperHandler::StepperHandler(std::shared_ptr<creatures::Logger> logger,
-                               std::shared_ptr<Controller> controller)
+StepperHandler::StepperHandler(std::shared_ptr<creatures::Logger> logger, std::shared_ptr<Controller> controller)
     : logger(logger), controller(controller) {
     logger->debug("new StepperHandler made");
 }
@@ -131,9 +130,7 @@ bool StepperHandler::stepper_timer_handler(struct repeating_timer *t) {
         }
 
         // Should we go to sleep?
-        if (state->isAwake &&
-            state->updatedFrame + state->sleepAfterIdleFrames <
-                stepper_frame_count) {
+        if (state->isAwake && state->updatedFrame + state->sleepAfterIdleFrames < stepper_frame_count) {
             state->isAwake = false;
             state->startedSleepingAt = stepper_frame_count;
             u64 _frame = stepper_frame_count; // this is an atomic, so copy what
@@ -143,8 +140,7 @@ bool StepperHandler::stepper_timer_handler(struct repeating_timer *t) {
         }
 
         // If we're at the position where we need to be, stop
-        if (state->currentMicrostep == state->desiredMicrostep &&
-            !state->moveRequested) {
+        if (state->currentMicrostep == state->desiredMicrostep && !state->moveRequested) {
             goto end;
         }
 
@@ -152,8 +148,7 @@ bool StepperHandler::stepper_timer_handler(struct repeating_timer *t) {
         // move.
         if (!state->isAwake) {
             state->isAwake = true;
-            state->awakeAt =
-                stepper_frame_count + state->framesRequiredToWakeUp;
+            state->awakeAt = stepper_frame_count + state->framesRequiredToWakeUp;
             u64 _frame = stepper_frame_count; // this is an atomic, so copy what
                                               // it is right now
             logger->debug("waking up stepper {} at frame {}", slot, _frame);
@@ -167,8 +162,7 @@ bool StepperHandler::stepper_timer_handler(struct repeating_timer *t) {
          * don't, the stepper will drift (pretty badly) over time.
          */
         if (state->currentMicrostep % STEPPER_MICROSTEP_MAX == 0)
-            state->desiredMicrostep =
-                state->requestedSteps * STEPPER_MICROSTEP_MAX;
+            state->desiredMicrostep = state->requestedSteps * STEPPER_MICROSTEP_MAX;
 
         /*
          * So now we know we need to move. Let's figure out which direction.
@@ -240,10 +234,9 @@ bool StepperHandler::stepper_timer_handler(struct repeating_timer *t) {
 
 uint32_t StepperHandler::set_ms1_ms2_and_get_steps(StepperState *state) {
 
-    uint32_t stepsToGo =
-        (state->currentMicrostep > state->desiredMicrostep)
-            ? (state->currentMicrostep - state->desiredMicrostep)
-            : (state->desiredMicrostep - state->currentMicrostep);
+    uint32_t stepsToGo = (state->currentMicrostep > state->desiredMicrostep)
+                             ? (state->currentMicrostep - state->desiredMicrostep)
+                             : (state->desiredMicrostep - state->currentMicrostep);
 
     uint32_t microSteps = STEPPER_SPEED_0_MICROSTEPS;
 
@@ -255,16 +248,14 @@ uint32_t StepperHandler::set_ms1_ms2_and_get_steps(StepperState *state) {
     }
 
     // Do full steps
-    if (stepsToGo >
-        (STEPPER_MICROSTEP_MAX * state->decelerationAggressiveness * 8)) {
+    if (stepsToGo > (STEPPER_MICROSTEP_MAX * state->decelerationAggressiveness * 8)) {
         state->ms1State = false;
         state->ms2State = false;
         microSteps = STEPPER_SPEED_0_MICROSTEPS;
         goto end;
     }
 
-    if (stepsToGo >
-        (STEPPER_MICROSTEP_MAX * state->decelerationAggressiveness * 4)) {
+    if (stepsToGo > (STEPPER_MICROSTEP_MAX * state->decelerationAggressiveness * 4)) {
         state->ms1State = true;
         state->ms2State = false;
 
@@ -272,8 +263,7 @@ uint32_t StepperHandler::set_ms1_ms2_and_get_steps(StepperState *state) {
         goto end;
     }
 
-    if (stepsToGo >
-        (STEPPER_MICROSTEP_MAX * state->decelerationAggressiveness * 2)) {
+    if (stepsToGo > (STEPPER_MICROSTEP_MAX * state->decelerationAggressiveness * 2)) {
         state->ms1State = false;
         state->ms2State = true;
 

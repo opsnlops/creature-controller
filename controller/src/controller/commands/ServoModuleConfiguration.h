@@ -34,9 +34,8 @@ class ServoModuleConfiguration final : public ICommand {
      * @param module the module to get configurations for
      * @return Result indicating success or failure
      */
-    Result<bool>
-    getServoConfigurations(const std::shared_ptr<Controller> &controller,
-                           creatures::config::UARTDevice::module_name module);
+    Result<bool> getServoConfigurations(const std::shared_ptr<Controller> &controller,
+                                        creatures::config::UARTDevice::module_name module);
 
     std::string toMessage() override;
 

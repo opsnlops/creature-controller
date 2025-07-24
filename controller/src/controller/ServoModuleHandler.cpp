@@ -21,60 +21,48 @@ using creatures::io::Message;
 using creatures::io::MessageRouter;
 
 ServoModuleHandler::ServoModuleHandler(
-    std::shared_ptr<Logger> logger, std::shared_ptr<Controller> controller,
-    UARTDevice::module_name moduleId, std::string deviceNode,
-    std::shared_ptr<MessageRouter> messageRouter,
-    std::shared_ptr<MessageQueue<creatures::server::ServerMessage>>
-        websocketOutgoingQueue)
-    : logger(logger), controller(controller), deviceNode(std::move(deviceNode)),
-      moduleId(moduleId), messageRouter(messageRouter),
-      websocketOutgoingQueue(websocketOutgoingQueue) {
+    std::shared_ptr<Logger> logger, std::shared_ptr<Controller> controller, UARTDevice::module_name moduleId,
+    std::string deviceNode, std::shared_ptr<MessageRouter> messageRouter,
+    std::shared_ptr<MessageQueue<creatures::server::ServerMessage>> websocketOutgoingQueue)
+    : logger(logger), controller(controller), deviceNode(std::move(deviceNode)), moduleId(moduleId),
+      messageRouter(messageRouter), websocketOutgoingQueue(websocketOutgoingQueue) {
 
-    logger->info("creating a new ServoModuleHandler for module {} on node {}",
-                 UARTDevice::moduleNameToString(moduleId), this->deviceNode);
+    logger->info("creating a new ServoModuleHandler for module {} on node {}", UARTDevice::moduleNameToString(moduleId),
+                 this->deviceNode);
 
     // Make our queues
     this->outgoingQueue = std::make_shared<MessageQueue<Message>>();
     this->incomingQueue = std::make_shared<MessageQueue<Message>>();
 
-    this->messageRouter->setHandlerState(
-        this->moduleId, creatures::io::MotorHandlerState::idle);
+    this->messageRouter->setHandlerState(this->moduleId, creatures::io::MotorHandlerState::idle);
 
-    this->threadName =
-        fmt::format("ServoModuleHandler-{}",
-                    UARTDevice::moduleNameToString(this->moduleId));
+    this->threadName = fmt::format("ServoModuleHandler-{}", UARTDevice::moduleNameToString(this->moduleId));
 }
 
 void ServoModuleHandler::init() {
     // Don't initialize if we're shutting down
     if (is_shutting_down.load()) {
-        logger->warn(
-            "Attempted to init ServoModuleHandler while shutting down");
+        logger->warn("Attempted to init ServoModuleHandler while shutting down");
         return;
     }
 
     logger->info("initializing the ServoModuleHandler for module {} on node {}",
-                 UARTDevice::moduleNameToString(this->moduleId),
-                 this->deviceNode);
+                 UARTDevice::moduleNameToString(this->moduleId), this->deviceNode);
 
     // Make our message processor
-    this->messageProcessor = std::make_unique<MessageProcessor>(
-        logger, moduleId, shared_from_this(), websocketOutgoingQueue);
+    this->messageProcessor =
+        std::make_unique<MessageProcessor>(logger, moduleId, shared_from_this(), websocketOutgoingQueue);
 
     // Create the SerialHandler
-    this->serialHandler = std::make_shared<SerialHandler>(
-        logger, this->deviceNode, this->moduleId, this->outgoingQueue,
-        this->incomingQueue);
+    this->serialHandler = std::make_shared<SerialHandler>(logger, this->deviceNode, this->moduleId, this->outgoingQueue,
+                                                          this->incomingQueue);
 
-    this->messageRouter->setHandlerState(
-        this->moduleId,
-        creatures::io::MotorHandlerState::awaitingConfiguration);
+    this->messageRouter->setHandlerState(this->moduleId, creatures::io::MotorHandlerState::awaitingConfiguration);
 }
 
 void ServoModuleHandler::shutdown() {
-    logger->info(
-        "shutting down the ServoModuleHandler for module {} on node {}",
-        UARTDevice::moduleNameToString(this->moduleId), this->deviceNode);
+    logger->info("shutting down the ServoModuleHandler for module {} on node {}",
+                 UARTDevice::moduleNameToString(this->moduleId), this->deviceNode);
 
     // Clear the queues - clean out the rabbit hutch!
     if (this->incomingQueue) {
@@ -86,8 +74,7 @@ void ServoModuleHandler::shutdown() {
     }
 
     // Tell the message router we've stopped
-    this->messageRouter->setHandlerState(
-        this->moduleId, creatures::io::MotorHandlerState::stopped);
+    this->messageRouter->setHandlerState(this->moduleId, creatures::io::MotorHandlerState::stopped);
 
     // Gracefully shut down the SerialHandler (it will handle its own threads)
     if (this->serialHandler) {
@@ -103,8 +90,7 @@ void ServoModuleHandler::shutdown() {
 void ServoModuleHandler::start() {
     // Don't start if we're shutting down
     if (is_shutting_down.load()) {
-        logger->warn(
-            "Attempted to start ServoModuleHandler while shutting down");
+        logger->warn("Attempted to start ServoModuleHandler while shutting down");
         return;
     }
 
@@ -119,55 +105,43 @@ void ServoModuleHandler::start() {
     creatures::StoppableThread::start();
 }
 
-std::shared_ptr<MessageQueue<Message>> ServoModuleHandler::getIncomingQueue() {
-    return this->incomingQueue;
-}
+std::shared_ptr<MessageQueue<Message>> ServoModuleHandler::getIncomingQueue() { return this->incomingQueue; }
 
-std::shared_ptr<MessageQueue<Message>> ServoModuleHandler::getOutgoingQueue() {
-    return this->outgoingQueue;
-}
+std::shared_ptr<MessageQueue<Message>> ServoModuleHandler::getOutgoingQueue() { return this->outgoingQueue; }
 
-Result<bool>
-ServoModuleHandler::firmwareReadyForInitialization(u32 firmwareVer) {
+Result<bool> ServoModuleHandler::firmwareReadyForInitialization(u32 firmwareVer) {
     // Don't process if we're shutting down
     if (is_shutting_down.load()) {
-        return Result<bool>{ControllerError(
-            ControllerError::InvalidConfiguration, "Module is shutting down")};
+        return Result<bool>{ControllerError(ControllerError::InvalidConfiguration, "Module is shutting down")};
     }
 
     // Make sure we got the version of the firmware we were built against
     if (firmwareVer != FIRMWARE_VERSION) {
-        std::string errorMessage = fmt::format(
-            "Firmware version mismatch on module {}! Expected {}, got {}",
-            UARTDevice::moduleNameToString(getModuleName()), FIRMWARE_VERSION,
-            firmwareVer);
+        std::string errorMessage =
+            fmt::format("Firmware version mismatch on module {}! Expected {}, got {}",
+                        UARTDevice::moduleNameToString(getModuleName()), FIRMWARE_VERSION, firmwareVer);
         logger->critical(errorMessage);
-        return Result<bool>{ControllerError(
-            ControllerError::InvalidConfiguration, errorMessage)};
+        return Result<bool>{ControllerError(ControllerError::InvalidConfiguration, errorMessage)};
     }
 
     // Save the firmware version
     this->firmwareVersion = firmwareVer;
 
-    logger->debug("firmware is ready for initialization (version {})",
-                  firmwareVer);
-    this->messageRouter->setHandlerState(
-        this->moduleId, creatures::io::MotorHandlerState::configuring);
+    logger->debug("firmware is ready for initialization (version {})", firmwareVer);
+    this->messageRouter->setHandlerState(this->moduleId, creatures::io::MotorHandlerState::configuring);
 
     // Go gather the configuration from the creature
-    auto creatureConfigCommand =
-        creatures::commands::ServoModuleConfiguration(logger);
+    auto creatureConfigCommand = creatures::commands::ServoModuleConfiguration(logger);
     creatureConfigCommand.getServoConfigurations(controller, getModuleName());
 
     // ...and toss it to the serial handler
-    creatures::io::Message message = creatures::io::Message(
-        getModuleName(), creatureConfigCommand.toMessageWithChecksum());
+    creatures::io::Message message =
+        creatures::io::Message(getModuleName(), creatureConfigCommand.toMessageWithChecksum());
 
     auto sendResult = this->messageRouter->sendMessageToCreature(message);
     if (!sendResult.isSuccess()) {
-        logger->critical(
-            "Failed to send the creature configuration to the firmware: {}",
-            sendResult.getError()->getMessage());
+        logger->critical("Failed to send the creature configuration to the firmware: {}",
+                         sendResult.getError()->getMessage());
     }
 
     return Result<bool>{true};
@@ -183,16 +157,13 @@ void ServoModuleHandler::firmwareReadyToOperate() {
     logger->info("firmware is ready to operate");
     this->ready.store(true);
     this->configured.store(true);
-    this->messageRouter->setHandlerState(
-        this->moduleId, creatures::io::MotorHandlerState::ready);
+    this->messageRouter->setHandlerState(this->moduleId, creatures::io::MotorHandlerState::ready);
 }
 
-Result<bool>
-ServoModuleHandler::sendMessageToController(std::string messagePayload) {
+Result<bool> ServoModuleHandler::sendMessageToController(std::string messagePayload) {
     // Don't process if we're shutting down
     if (is_shutting_down.load()) {
-        return Result<bool>{ControllerError(
-            ControllerError::InvalidConfiguration, "Module is shutting down")};
+        return Result<bool>{ControllerError(ControllerError::InvalidConfiguration, "Module is shutting down")};
     }
 
     logger->trace("sending message to controller: {}", messagePayload);
@@ -202,8 +173,7 @@ ServoModuleHandler::sendMessageToController(std::string messagePayload) {
     auto result = this->messageRouter->receivedMessageFromCreature(message);
     if (!result.isSuccess()) {
         auto errorMessage =
-            fmt::format("Failed to send message to the message router: {}",
-                        result.getError()->getMessage());
+            fmt::format("Failed to send message to the message router: {}", result.getError()->getMessage());
         logger->error(errorMessage);
         return result;
     }
@@ -219,13 +189,11 @@ void ServoModuleHandler::run() {
 
         // Wait for a message to come in from one of our modules, but with a
         // timeout so we can hop out if we need to stop
-        auto messageOpt =
-            this->incomingQueue->pop_timeout(std::chrono::milliseconds(100));
+        auto messageOpt = this->incomingQueue->pop_timeout(std::chrono::milliseconds(100));
 
         if (messageOpt.has_value()) {
             auto incomingMessage = messageOpt.value();
-            this->logger->trace("incoming message: {}",
-                                incomingMessage.payload);
+            this->logger->trace("incoming message: {}", incomingMessage.payload);
 
             // Go process it!
             messageProcessor->processMessage(incomingMessage);
@@ -238,10 +206,7 @@ void ServoModuleHandler::run() {
     logger->info("ServoModuleHandler thread stopping");
 }
 
-creatures::config::UARTDevice::module_name
-ServoModuleHandler::getModuleName() const {
-    return this->moduleId;
-}
+creatures::config::UARTDevice::module_name ServoModuleHandler::getModuleName() const { return this->moduleId; }
 
 bool ServoModuleHandler::isReady() const { return ready.load(); }
 

@@ -12,9 +12,7 @@ class ControllerException : public std::exception {
 
   public:
     explicit ControllerException(const std::string &msg) : message(msg) {}
-    virtual const char *what() const noexcept override {
-        return message.c_str();
-    }
+    virtual const char *what() const noexcept override { return message.c_str(); }
 };
 
 } // namespace creatures

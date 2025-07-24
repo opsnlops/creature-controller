@@ -12,9 +12,7 @@ class CommandException final : public std::exception {
   public:
     explicit CommandException(const std::string &msg) : message(msg) {}
 
-    [[nodiscard]] const char *what() const noexcept override {
-        return message.c_str();
-    }
+    [[nodiscard]] const char *what() const noexcept override { return message.c_str(); }
 };
 
 } // namespace creatures

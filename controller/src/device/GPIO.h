@@ -7,9 +7,8 @@
 #define GPIO_BASE 0x3F200000 // Raspberry Pi 2/3/4
 #define GPIO_SIZE (256)
 
-#define GPIO_SET *(gpio + 7) // sets bits which are 1, ignores bits which are 0
-#define GPIO_CLR                                                               \
-    *(gpio + 10) // clears bits which are 1, ignores bits which are 0
+#define GPIO_SET *(gpio + 7)                 // sets bits which are 1, ignores bits which are 0
+#define GPIO_CLR *(gpio + 10)                // clears bits which are 1, ignores bits which are 0
 #define GPIO_IN(g) (*(gpio + 13) & (1 << g)) // 0 if LOW, (1<<g) if HIGH
 
 namespace creatures::device {

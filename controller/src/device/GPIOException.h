@@ -13,9 +13,7 @@ class GPIOException : public std::exception {
 
   public:
     explicit GPIOException(std::string msg) : message(std::move(msg)) {}
-    virtual const char *what() const noexcept override {
-        return message.c_str();
-    }
+    virtual const char *what() const noexcept override { return message.c_str(); }
 };
 
 } // namespace creatures::device
