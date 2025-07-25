@@ -56,8 +56,8 @@ volatile size_t xFreeHeapSpace;
 /**
  * @brief Main entry point for the program
  *
- * Initializes all subsystems in a structured sequence and starts the RTOS
- * scheduler. The initialization follows this sequence:
+ * Initializes all subsystems in a structured sequence and starts the RTOS scheduler.
+ * The initialization follows this sequence:
  * 1. Binary info for debugging
  * 2. Core systems (logging, stdlib)
  * 3. EEPROM configuration (if enabled)
@@ -111,8 +111,7 @@ int main() {
 
     // Initialize the watchdog timer
     if (!init_watchdog()) {
-        warning("Failed to initialize watchdog timer - continuing without "
-                "watchdog protection");
+        warning("Failed to initialize watchdog timer - continuing without watchdog protection");
     } else {
         debug("Watchdog init'ed successfully");
     }
@@ -135,111 +134,41 @@ int main() {
  * critical hardware configuration details.
  */
 static void initialize_binary_info(void) {
-    bi_decl(bi_program_name("controller-firmware")) bi_decl(
-        bi_program_description("April's Creature Workshop Controller"))
-        bi_decl(bi_program_version_string(CREATURE_FIRMWARE_VERSION_STRING)) bi_decl(
-            bi_program_feature("FreeRTOS Version: " tskKERNEL_VERSION_NUMBER))
-            bi_decl(bi_program_feature(CREATURE_PROTOCOL_VERSION_STRING)) bi_decl(
-                bi_program_feature(
-                    "Baud: 115200,N,8,1")) bi_decl(bi_program_url("https://"
-                                                                  "creature."
-                                                                  "engineering/"
-                                                                  "hardware/"
-                                                                  "creature-"
-                                                                  "controller"
-                                                                  "/"))
-                bi_decl(bi_1pin_with_name(POWER_PIN, "Power Relay")) bi_decl(
-                    bi_1pin_with_name(STATUS_LIGHTS_LOGIC_BOARD_PIN,
-                                      "Status Lights for Logic Board"))
-                    bi_decl(bi_1pin_with_name(STATUS_LIGHTS_SERVOS_PIN, "Status"
-                                                                        " Light"
-                                                                        "s for "
-                                                                        "the "
-                                                                        "Servo"
-                                                                        "s")) bi_decl(
-                        bi_2pins_with_func(
-                            UART_TX_PIN, UART_RX_PIN,
-                            GPIO_FUNC_UART)) bi_decl(bi_1pin_with_name(SERVO_0_GPIO_PIN,
-                                                                       "Servo "
-                                                                       "0"))
-                        bi_decl(bi_1pin_with_name(SERVO_1_GPIO_PIN, "Servo 1")) bi_decl(
-                            bi_1pin_with_name(
-                                SERVO_2_GPIO_PIN,
-                                "Servo 2")) bi_decl(bi_1pin_with_name(SERVO_3_GPIO_PIN,
-                                                                      "Servo "
-                                                                      "3"))
-                            bi_decl(bi_1pin_with_name(SERVO_4_GPIO_PIN, "Servo "
-                                                                        "4")) bi_decl(
-                                bi_1pin_with_name(
-                                    SERVO_5_GPIO_PIN,
-                                    "Servo 5")) bi_decl(bi_1pin_with_name(SERVO_6_GPIO_PIN,
-                                                                          "Serv"
-                                                                          "o "
-                                                                          "6"))
-                                bi_decl(bi_1pin_with_name(SERVO_7_GPIO_PIN, "Se"
-                                                                            "rv"
-                                                                            "o "
-                                                                            "7")) bi_decl(
-                                    bi_1pin_with_name(USB_MOUNTED_LED_PIN,
-                                                      "USB Mounted LED"))
-                                    bi_decl(
-                                        bi_1pin_with_name(CONTROLLER_RESET_PIN,
-                                                          "Controller Reset"))
+    bi_decl(bi_program_name("controller-firmware"))
+    bi_decl(bi_program_description("April's Creature Workshop Controller"))
+    bi_decl(bi_program_version_string(CREATURE_FIRMWARE_VERSION_STRING))
+    bi_decl(bi_program_feature("FreeRTOS Version: " tskKERNEL_VERSION_NUMBER))
+    bi_decl(bi_program_feature(CREATURE_PROTOCOL_VERSION_STRING))
+    bi_decl(bi_program_feature("Baud: 115200,N,8,1"))
+    bi_decl(bi_program_url("https://creature.engineering/hardware/creature-controller/"))
+    bi_decl(bi_1pin_with_name(POWER_PIN, "Power Relay"))
+    bi_decl(bi_1pin_with_name(STATUS_LIGHTS_LOGIC_BOARD_PIN, "Status Lights for Logic Board"))
+    bi_decl(bi_1pin_with_name(STATUS_LIGHTS_SERVOS_PIN, "Status Lights for the Servos"))
+    bi_decl(bi_2pins_with_func(UART_TX_PIN, UART_RX_PIN, GPIO_FUNC_UART))
+    bi_decl(bi_1pin_with_name(SERVO_0_GPIO_PIN, "Servo 0"))
+    bi_decl(bi_1pin_with_name(SERVO_1_GPIO_PIN, "Servo 1"))
+    bi_decl(bi_1pin_with_name(SERVO_2_GPIO_PIN, "Servo 2"))
+    bi_decl(bi_1pin_with_name(SERVO_3_GPIO_PIN, "Servo 3"))
+    bi_decl(bi_1pin_with_name(SERVO_4_GPIO_PIN, "Servo 4"))
+    bi_decl(bi_1pin_with_name(SERVO_5_GPIO_PIN, "Servo 5"))
+    bi_decl(bi_1pin_with_name(SERVO_6_GPIO_PIN, "Servo 6"))
+    bi_decl(bi_1pin_with_name(SERVO_7_GPIO_PIN, "Servo 7"))
+    bi_decl(bi_1pin_with_name(USB_MOUNTED_LED_PIN, "USB Mounted LED"))
+    bi_decl(bi_1pin_with_name(CONTROLLER_RESET_PIN, "Controller Reset"))
 
 #ifdef CC_VER2
-                                        bi_decl(bi_program_feature(
-                                            "Requires Hardware Version: 2"))
+    bi_decl(bi_program_feature("Requires Hardware Version: 2"))
 #endif
 #ifdef CC_VER3
-                                            bi_decl(bi_program_feature("Require"
-                                                                       "s "
-                                                                       "Hardwar"
-                                                                       "e "
-                                                                       "Version"
-                                                                       ": 3")) bi_decl(
-                                                bi_1pin_with_name(
-                                                    SERVO_0_POWER_PIN,
-                                                    "Servo 0 Power Control"))
-                                                bi_decl(bi_1pin_with_name(
-                                                    SERVO_1_POWER_PIN,
-                                                    "Servo 1 Power Control"))
-                                                    bi_decl(bi_1pin_with_name(
-                                                        SERVO_2_POWER_PIN,
-                                                        "Servo 2 Power "
-                                                        "Control"))
-                                                        bi_decl(bi_1pin_with_name(
-                                                            SERVO_3_POWER_PIN,
-                                                            "Servo 3 Power "
-                                                            "Control"))
-                                                            bi_decl(bi_1pin_with_name(
-                                                                SERVO_4_POWER_PIN,
-                                                                "Servo 4 Power "
-                                                                "Control"))
-                                                                bi_decl(bi_1pin_with_name(
-                                                                    SERVO_5_POWER_PIN,
-                                                                    "Servo 5 "
-                                                                    "Power "
-                                                                    "Control"))
-                                                                    bi_decl(bi_1pin_with_name(
-                                                                        SERVO_6_POWER_PIN,
-                                                                        "Servo "
-                                                                        "6 "
-                                                                        "Power "
-                                                                        "Contro"
-                                                                        "l"))
-                                                                        bi_decl(bi_1pin_with_name(
-                                                                            SERVO_7_POWER_PIN,
-                                                                            "Se"
-                                                                            "rv"
-                                                                            "o "
-                                                                            "7 "
-                                                                            "Po"
-                                                                            "we"
-                                                                            "r "
-                                                                            "Co"
-                                                                            "nt"
-                                                                            "ro"
-                                                                            "l"))
+    bi_decl(bi_program_feature("Requires Hardware Version: 3"))
+    bi_decl(bi_1pin_with_name(SERVO_0_POWER_PIN, "Servo 0 Power Control"))
+    bi_decl(bi_1pin_with_name(SERVO_1_POWER_PIN, "Servo 1 Power Control"))
+    bi_decl(bi_1pin_with_name(SERVO_2_POWER_PIN, "Servo 2 Power Control"))
+    bi_decl(bi_1pin_with_name(SERVO_3_POWER_PIN, "Servo 3 Power Control"))
+    bi_decl(bi_1pin_with_name(SERVO_4_POWER_PIN, "Servo 4 Power Control"))
+    bi_decl(bi_1pin_with_name(SERVO_5_POWER_PIN, "Servo 5 Power Control"))
+    bi_decl(bi_1pin_with_name(SERVO_6_POWER_PIN, "Servo 6 Power Control"))
+    bi_decl(bi_1pin_with_name(SERVO_7_POWER_PIN, "Servo 7 Power Control"))
 #endif
 }
 
@@ -253,14 +182,13 @@ static void initialize_binary_info(void) {
 void initialize_eeprom(void) {
 #if USE_EEPROM
     bi_decl(bi_2pins_with_func(EEPROM_SDA_PIN, EEPROM_SCL_PIN, GPIO_FUNC_I2C))
-        eeprom_setup_i2c();
+    eeprom_setup_i2c();
     read_eeprom_and_configure();
     usb_descriptors_init();
 #else
     // Mark the build as not having EEPROM enabled
     warning("   *** NOTE: EEPROM is disabled in this build! ***");
-    bi_decl(bi_program_feature(
-        " ->> *** NOTE: EEPROM has been disabled in this build *** <<-"))
+    bi_decl(bi_program_feature(" ->> *** NOTE: EEPROM has been disabled in this build *** <<-"))
 #endif
 }
 
@@ -299,8 +227,7 @@ static bool initialize_core_systems(void) {
  */
 static void log_system_info(void) {
     info("----------------------------------------");
-    info("April's Creature Workshop Controller v%s",
-         CREATURE_FIRMWARE_VERSION_STRING);
+    info("April's Creature Workshop Controller v%s", CREATURE_FIRMWARE_VERSION_STRING);
     info("FreeRTOS Version: %s", tskKERNEL_VERSION_NUMBER);
     info(CREATURE_PROTOCOL_VERSION_STRING);
     info("Platform: %s", PICO_PLATFORM_STRING);
@@ -407,15 +334,12 @@ static bool initialize_status_and_monitoring(void) {
     debug("Stats reporter started");
 
 #if USE_SENSORS
-    bi_decl(bi_2pins_with_func(SENSORS_I2C_SDA_PIN, SENSORS_I2C_SCL_PIN,
-                               GPIO_FUNC_I2C))
+    bi_decl(bi_2pins_with_func(SENSORS_I2C_SDA_PIN, SENSORS_I2C_SCL_PIN, GPIO_FUNC_I2C))
 #if CC_VER2
-        bi_decl(bi_4pins_with_func(SENSORS_SPI_SCK_PIN, SENSORS_SPI_TX_PIN,
-                                   SENSORS_SPI_RX_PIN, SENSORS_SPI_CS_PIN,
-                                   GPIO_FUNC_SPI))
+    bi_decl(bi_4pins_with_func(SENSORS_SPI_SCK_PIN, SENSORS_SPI_TX_PIN, SENSORS_SPI_RX_PIN, SENSORS_SPI_CS_PIN, GPIO_FUNC_SPI))
 #endif
-        // Configure i2c for our needs
-        if (!setup_i2c()) {
+    // Configure i2c for our needs
+    if (!setup_i2c()) {
         error("Failed to initialize I2C");
         return false;
     }
@@ -429,6 +353,7 @@ static bool initialize_status_and_monitoring(void) {
     debug("I2C and SPI initialized");
 #endif
 
+
     // Start monitoring our sensors
     sensor_init();
     sensor_start();
@@ -440,8 +365,7 @@ static bool initialize_status_and_monitoring(void) {
 #else
     // Mark the build as not having sensor enabled
     warning("   *** NOTE: Sensors are disabled in this build! ***");
-    bi_decl(bi_program_feature(
-        " ->> *** NOTE: Sensors have been disabled in this build *** <<-"))
+    bi_decl(bi_program_feature(" ->> *** NOTE: Sensors have been disabled in this build *** <<-"))
 #endif
 
     debug("Status and monitoring systems initialized");
@@ -459,9 +383,14 @@ static bool initialize_status_and_monitoring(void) {
 static bool schedule_startup_task(void) {
     TaskHandle_t startup_task_handle = NULL;
 
-    const BaseType_t task_create_result =
-        xTaskCreate(startup_task, "startup_task", configMINIMAL_STACK_SIZE,
-                    NULL, 1, &startup_task_handle);
+    const BaseType_t task_create_result = xTaskCreate(
+            startup_task,
+            "startup_task",
+            configMINIMAL_STACK_SIZE,
+            NULL,
+            1,
+            &startup_task_handle
+    );
 
     if (task_create_result != pdPASS || startup_task_handle == NULL) {
         error("Failed to create startup task");
