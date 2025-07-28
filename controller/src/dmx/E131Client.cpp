@@ -154,14 +154,34 @@ void E131Client::run() {
     logger->info("  Interface index: {}", networkInterfaceIndex);
     logger->info("  Socket FD: {}", sockfd);
 
-    if (e131_multicast_join_iface(sockfd, universe, networkInterfaceIndex) < 0) {
+    // if (e131_multicast_join_iface(sockfd, universe, networkInterfaceIndex) < 0) {
+    //     const std::string errorMessage =
+    //         fmt::format("Failed to join multicast group for universe {} on interface '{}': {} (errno {})", universe,
+    //                     networkInterfaceName, getDetailedSocketError("e131_multicast_join_iface"), errno);
+    //     logger->critical(errorMessage);
+    //     close(sockfd);
+    //     throw E131Exception(errorMessage);
+    // }
+
+
+    // The above code isn't binding to the specific multicast group correctly, so let's do it manually.
+    /// Start of manual multicast join
+    struct ip_mreqn mreq;
+    memset(&mreq, 0, sizeof(mreq));
+    mreq.imr_multiaddr.s_addr = htonl(0xEFFF0000 | universe); // 239.255.x.x format
+    mreq.imr_address.s_addr = inet_addr(networkInterfaceAddress.c_str());
+    mreq.imr_ifindex = networkInterfaceIndex;
+
+    if (setsockopt(sockfd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) < 0) {
         const std::string errorMessage =
-            fmt::format("Failed to join multicast group for universe {} on interface '{}': {} (errno {})", universe,
-                        networkInterfaceName, getDetailedSocketError("e131_multicast_join_iface"), errno);
+            fmt::format("Failed to join multicast group for universe {} on interface '{}': {} (errno {})",
+                       universe, networkInterfaceName, getDetailedSocketError("setsockopt IP_ADD_MEMBERSHIP"), errno);
         logger->critical(errorMessage);
         close(sockfd);
         throw E131Exception(errorMessage);
     }
+    /// End of manual multicast join
+
 
     logger->info("Successfully joined multicast group 239.255.0.{} on {}", universe, networkInterfaceAddress);
     logger->info("Waiting for E1.31 packets on interface '{}'", networkInterfaceName);
