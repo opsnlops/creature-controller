@@ -37,7 +37,7 @@ void BoardSensorHandler::handle(std::shared_ptr<Logger> handleLogger, const std:
 
     handleLogger->debug("received board sensor report");
 
-    if (tokens.size() < 6) {
+    if (tokens.size() < 5) {
         handleLogger->error("Invalid number of tokens in a board sensor message message: {}", tokens.size());
         return;
     }
@@ -58,7 +58,7 @@ void BoardSensorHandler::handle(std::shared_ptr<Logger> handleLogger, const std:
     };
 
     // This is fine
-    for (int i = 2; i < 6; i++) {
+    for (int i = 2; i < 5; i++) {
         auto sensorReport = tokens[i];
         split = splitString(sensorReport);
         if (split.size() != 4) {
@@ -74,8 +74,6 @@ void BoardSensorHandler::handle(std::shared_ptr<Logger> handleLogger, const std:
             sensorName = "motor_power_in";
         } else if (split[0] == "3V3") {
             sensorName = "3v3";
-        } else if (split[0] == "5V") {
-            sensorName = "5v";
         } else {
             handleLogger->warn("Unknown sensor name: {}", split[0]);
             continue;

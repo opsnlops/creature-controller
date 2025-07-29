@@ -414,6 +414,10 @@ portTASK_FUNCTION(startup_task, pvParameters) {
 
     (void)pvParameters;
 
+    // Start off with all of the motors off, in case we are recovering from
+    // a weird state
+    disable_all_motors();
+
     // Initialize USB after scheduler is started (required by TinyUSB)
     usb_init();
     usb_start();
