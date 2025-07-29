@@ -194,9 +194,9 @@ bool disable_all_motors(void) {
     }
 
     if (all_successful) {
-        info("all motors safely powered down - bunny is now stationary! 🐰");
+        info("all motors safely powered down");
     } else {
-        error("some motors failed to power down - that's a hare-raising situation!");
+        error("only some motors failed to power down");
     }
 
     return all_successful;
