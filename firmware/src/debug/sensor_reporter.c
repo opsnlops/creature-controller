@@ -7,6 +7,7 @@
 #include <task.h>
 #include <timers.h>
 
+#include "controller/config.h"
 #include "controller/controller.h"
 #include "debug/sensor_reporter.h"
 #include "device/pac1954.h"
@@ -24,7 +25,7 @@ void start_sensor_reporter() {
 
     TimerHandle_t statsReportTimer = xTimerCreate(
             "SensorReportTimer",              // Timer name
-            pdMS_TO_TICKS(5 * 1000),            // Timer period (20 seconds)
+            pdMS_TO_TICKS(SENSOR_REPORT_INTERVAL_MS),            // Timer period (20 seconds)
             pdTRUE,                          // Auto-reload
             (void *) 0,                        // Timer ID (not used here)
             sensorReportTimerCallback         // Callback function
