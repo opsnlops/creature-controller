@@ -64,12 +64,20 @@ void ServoModuleHandler::shutdown() {
     logger->info("shutting down the ServoModuleHandler for module {} on node {}",
                  UARTDevice::moduleNameToString(this->moduleId), this->deviceNode);
 
-    // Clear the queues - clean out the rabbit hutch!
+    // Set shutdown flag to prevent new operations
+    is_shutting_down.store(true);
+
+    // Signal our own thread to stop
+    stop_requested.store(true);
+
+    // Request shutdown on queues to wake up blocked threads
     if (this->incomingQueue) {
+        this->incomingQueue->request_shutdown();
         this->incomingQueue->clear();
     }
 
     if (this->outgoingQueue) {
+        this->outgoingQueue->request_shutdown();
         this->outgoingQueue->clear();
     }
 
@@ -85,6 +93,9 @@ void ServoModuleHandler::shutdown() {
     if (this->messageProcessor) {
         this->messageProcessor->shutdown();
     }
+
+    // Call parent shutdown to clean up the thread
+    StoppableThread::shutdown();
 }
 
 void ServoModuleHandler::start() {

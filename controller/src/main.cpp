@@ -7,12 +7,12 @@
  *
  * This version follows a simple philosophy: start things up cleanly,
  * and when it's time to shut down, just call shutdown() and trust
- * that everything will hop away gracefully!
+ * that everything will shut down gracefully!
  */
 
 // Standard library includes
-#include <cstdlib>
 #include <csignal>
+#include <cstdlib>
 #include <thread>
 #include <unordered_map>
 #include <utility>
@@ -21,10 +21,11 @@
 #include <opus.h>
 
 // Project includes
-#include "controller-config.h"
+#include "Version.h"
 #include "audio/AudioSubsystem.h"
 #include "config/CommandLine.h"
 #include "config/CreatureBuilder.h"
+#include "controller-config.h"
 #include "controller/Controller.h"
 #include "controller/ServoModuleHandler.h"
 #include "controller/tasks/PingTask.h"
@@ -37,24 +38,20 @@
 #include "logging/SpdlogLogger.h"
 #include "server/ServerConnection.h"
 #include "server/ServerMessage.h"
-#include "util/thread_name.h"
 #include "util/StoppableThread.h"
-#include "Version.h"
+#include "util/thread_name.h"
 
 // Default to not shutting down
 std::atomic<bool> shutdown_requested(false);
 
 /**
- * @brief Signal handler to IMMEDIATELY shutdown the application - no more Mr. Nice Rabbit!
+ * @brief Signal handler to gracefully shutdown the application
  * @param signal The received signal
  */
 void signal_handler(int signal) {
     if (signal == SIGINT) {
-        std::cerr << "Caught SIGINT, shutting down IMMEDIATELY! 💥" << std::endl;
-
-        // No more waiting around - just exit NOW!
-        std::cout << "Bye! 🖖🏻" << std::endl;
-        std::exit(EXIT_SUCCESS);
+        std::cerr << "Caught SIGINT, requesting graceful shutdown..." << std::endl;
+        shutdown_requested.store(true);
     }
 }
 
@@ -81,23 +78,21 @@ std::shared_ptr<creatures::audio::AudioSubsystem> audioSubsystem;
  * @return EXIT_SUCCESS on normal termination, EXIT_FAILURE otherwise
  */
 int main(int argc, char **argv) {
+    using creatures::config::UARTDevice;
     using creatures::io::Message;
     using creatures::server::ServerConnection;
-    using creatures::config::UARTDevice;
 
     // Fire up the signal handlers
     std::signal(SIGINT, signal_handler);
 
-    std::string version = fmt::format("{}.{}.{}",
-                                      CREATURE_CONTROLLER_VERSION_MAJOR,
-                                      CREATURE_CONTROLLER_VERSION_MINOR,
+    std::string version = fmt::format("{}.{}.{}", CREATURE_CONTROLLER_VERSION_MAJOR, CREATURE_CONTROLLER_VERSION_MINOR,
                                       CREATURE_CONTROLLER_VERSION_PATCH);
 
     // Get the logger up and running ASAP
     std::shared_ptr<creatures::Logger> logger = makeLogger("main");
 
     // Print to the console as we start
-    std::cout << fmt::format("Welcome to the Creature Controller! v{} 🦜", version) << std::endl << std::endl;
+    std::cout << fmt::format("Welcome to the Creature Controller! v{}", version) << std::endl << std::endl;
 
     // Leave some version info to be found
     logger->debug("spdlog version {}.{}.{}", SPDLOG_VER_MAJOR, SPDLOG_VER_MINOR, SPDLOG_VER_PATCH);
@@ -108,9 +103,9 @@ int main(int argc, char **argv) {
     auto commandLine = std::make_unique<creatures::CommandLine>(logger);
     auto configResult = commandLine->parseCommandLine(argc, argv);
 
-    if(!configResult.isSuccess()) {
-        auto errorMessage = fmt::format("Unable to build configuration in memory: {}",
-                                        configResult.getError().value().getMessage());
+    if (!configResult.isSuccess()) {
+        auto errorMessage =
+            fmt::format("Unable to build configuration in memory: {}", configResult.getError().value().getMessage());
         std::cerr << errorMessage << std::endl;
         std::exit(EXIT_FAILURE);
     }
@@ -120,9 +115,9 @@ int main(int argc, char **argv) {
 
     auto builder = creatures::config::CreatureBuilder(logger, config->getCreatureConfigFile());
     auto creatureResult = builder.build();
-    if(!creatureResult.isSuccess()) {
-        auto errorMessage = fmt::format("Unable to build the creature: {}",
-                                       creatureResult.getError().value().getMessage());
+    if (!creatureResult.isSuccess()) {
+        auto errorMessage =
+            fmt::format("Unable to build the creature: {}", creatureResult.getError().value().getMessage());
         std::cerr << errorMessage << std::endl;
         std::exit(EXIT_FAILURE);
     }
@@ -132,9 +127,9 @@ int main(int argc, char **argv) {
 
     // Make sure the creature believes it's ready to go
     auto preFlightCheckResult = creature->performPreFlightCheck();
-    if(!preFlightCheckResult.isSuccess()) {
-        auto errorMessage = fmt::format("Pre-flight check failed: {}",
-                                       preFlightCheckResult.getError().value().getMessage());
+    if (!preFlightCheckResult.isSuccess()) {
+        auto errorMessage =
+            fmt::format("Pre-flight check failed: {}", preFlightCheckResult.getError().value().getMessage());
         std::cerr << errorMessage << std::endl;
         std::exit(EXIT_FAILURE);
     }
@@ -142,8 +137,8 @@ int main(int argc, char **argv) {
 
     // Hooray, we did it!
     logger->info("working with {}! ({})", creature->getName(), creature->getDescription());
-    logger->debug("{} has {} servos and {} steppers", creature->getName(),
-          creature->getNumberOfServos(), creature->getNumberOfSteppers());
+    logger->debug("{} has {} servos and {} steppers", creature->getName(), creature->getNumberOfServos(),
+                  creature->getNumberOfSteppers());
 
     // Label the thread so it shows up in ps
     setThreadName("main for " + creature->getName());
@@ -153,15 +148,9 @@ int main(int argc, char **argv) {
 
     // Start talking to the server if we're told to
     auto websocketOutgoingQueue = std::make_shared<creatures::MessageQueue<creatures::server::ServerMessage>>();
-    auto serverConnection = std::make_shared<ServerConnection>(
-        makeLogger("server"),
-        creature,
-        config->isUsingServer(),
-        config->getServerAddress(),
-        config->getServerPort(),
-        websocketOutgoingQueue
-    );
-
+    auto serverConnection =
+        std::make_shared<ServerConnection>(makeLogger("server"), creature, config->isUsingServer(),
+                                           config->getServerAddress(), config->getServerPort(), websocketOutgoingQueue);
 
     if (config->getUseAudioSubsystem()) {
         logger->info("Setting up audio subsystem...");
@@ -173,26 +162,25 @@ int main(int argc, char **argv) {
 
         // Validate that the creature has a valid audio channel
         if (creatureAudioChannel < 1 || creatureAudioChannel > 16) {
-            logger->warn("Creature {} has invalid audio channel {}, using channel 1",
-                        creature->getName(), creatureAudioChannel);
+            logger->warn("Creature {} has invalid audio channel {}, using channel 1", creature->getName(),
+                         creatureAudioChannel);
             creatureAudioChannel = 1;
         }
 
         if (audioSubsystem->initialize(
-            creatureAudioChannel,                    // Dialog channel (1-16)
-            config->getNetworkDeviceIPAddress(),     // Network interface
-            config->getSoundDeviceNumber())) {       // SDL device (unused but maintained for compatibility)
+                creatureAudioChannel,                // Dialog channel (1-16)
+                config->getNetworkDeviceIPAddress(), // Network interface
+                config->getSoundDeviceNumber())) {   // SDL device (unused but maintained for compatibility)
 
-            logger->info("Audio subsystem initialized: dialog channel {}, BGM channel 17",
-                        creatureAudioChannel);
-            } else {
-                logger->error("Failed to initialize audio subsystem");
-                audioSubsystem.reset();
-            }
+            logger->info("Audio subsystem initialized: dialog channel {}, BGM channel 17", creatureAudioChannel);
+        } else {
+            logger->error("Failed to initialize audio subsystem");
+            audioSubsystem.reset();
+        }
     }
 
     // Start up if we should
-    if(config->isUsingServer()) {
+    if (config->isUsingServer()) {
         serverConnection->start();
         workerThreads.push_back(serverConnection);
     }
@@ -213,34 +201,25 @@ int main(int argc, char **argv) {
     /**
      * Create and start the ServoModuleHandler for the UART devices that were found in the config file
      */
-    for(const auto& uart : config->getUARTDevices()) {
+    for (const auto &uart : config->getUARTDevices()) {
         logger->debug("creating a ServoModuleHandler for module {} on {}",
-                      UARTDevice::moduleNameToString(uart.getModule()),
-                      uart.getDeviceNode());
+                      UARTDevice::moduleNameToString(uart.getModule()), uart.getDeviceNode());
 
         std::string loggerName = fmt::format("uart-{}", UARTDevice::moduleNameToString(uart.getModule()));
-        auto handler = std::make_shared<ServoModuleHandler>(
-            makeLogger(loggerName),
-            controller,
-            uart.getModule(),
-            uart.getDeviceNode(),
-            messageRouter,
-            websocketOutgoingQueue
-        );
+        auto handler =
+            std::make_shared<ServoModuleHandler>(makeLogger(loggerName), controller, uart.getModule(),
+                                                 uart.getDeviceNode(), messageRouter, websocketOutgoingQueue);
 
         // Register the handler with the message router
-        messageRouter->registerServoModuleHandler(
-            uart.getModule(),
-            handler->getIncomingQueue(),
-            handler->getOutgoingQueue()
-        );
+        messageRouter->registerServoModuleHandler(uart.getModule(), handler->getIncomingQueue(),
+                                                  handler->getOutgoingQueue());
 
         logger->debug("init'ing the ServoModuleHandler for module {}",
-                     UARTDevice::moduleNameToString(uart.getModule()));
+                      UARTDevice::moduleNameToString(uart.getModule()));
         handler->init();
 
         logger->debug("starting the ServoModuleHandler for module {}",
-                     UARTDevice::moduleNameToString(uart.getModule()));
+                      UARTDevice::moduleNameToString(uart.getModule()));
         handler->start();
 
         workerThreads.push_back(handler);
@@ -253,8 +232,8 @@ int main(int argc, char **argv) {
     // Create and start the e1.31 client
     logger->debug("starting the e1.31 client");
     auto e131Client = std::make_unique<creatures::dmx::E131Client>(makeLogger("e131-client"));
-    e131Client->init(creature, controller, config->getNetworkDeviceName(),
-        config->getNetworkDeviceIndex(), config->getNetworkDeviceIPAddress());
+    e131Client->init(creature, controller, config->getNetworkDeviceName(), config->getNetworkDeviceIndex(),
+                     config->getNetworkDeviceIPAddress());
     e131Client->start();
     workerThreads.push_back(std::move(e131Client));
 
@@ -276,13 +255,36 @@ int main(int argc, char **argv) {
     pingTask->start();
     workerThreads.push_back(std::move(pingTask));
 
-    // Main loop - just run until the signal handler terminates us
-    logger->info("All systems running! Press Ctrl+C to exit immediately.");
-    for (EVER) {
+    // Main loop - run until shutdown is requested
+    logger->info("All systems running! Press Ctrl+C to shutdown gracefully.");
+    while (!shutdown_requested.load()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
-        // The signal handler will terminate the process - no graceful shutdown needed!
     }
 
-    // We should never reach here due to the signal handler, but just in case...
+    // Graceful shutdown sequence
+    logger->info("Shutdown requested, stopping all threads...");
+
+    // Stop all threads in reverse order of creation
+    for (auto it = workerThreads.rbegin(); it != workerThreads.rend(); ++it) {
+        if (*it) {
+            logger->debug("Stopping thread: {}", (*it)->getName());
+            (*it)->shutdown();
+        }
+    }
+
+    // Stop the creature
+    if (creature) {
+        logger->debug("Stopping creature: {}", creature->getName());
+        creature->shutdown();
+    }
+
+    // Clean up audio subsystem
+    if (audioSubsystem) {
+        logger->debug("Stopping audio subsystem");
+        audioSubsystem->shutdown();
+        audioSubsystem.reset();
+    }
+
+    logger->info("Graceful shutdown complete.");
     return EXIT_SUCCESS;
 }

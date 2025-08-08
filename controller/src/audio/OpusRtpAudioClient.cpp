@@ -40,7 +40,7 @@ void AudioDebugger::enableDebugging() {
     bgmRtpFile_.open("debug_bgm_rtp.bin", std::ios::binary);
 
     if (dialogAudioFile_.is_open()) {
-        std::cout << "🐰 Debug files created:\n";
+        std::cout << "Debug files created:\n";
         std::cout << "  - debug_dialog_audio.pcm (48kHz mono S16LE)\n";
         std::cout << "  - debug_bgm_audio.pcm (48kHz mono S16LE)\n";
         std::cout << "  - debug_mixed_audio.pcm (48kHz mono S16LE)\n";
@@ -152,15 +152,10 @@ OpusRtpAudioClient::OpusRtpAudioClient(std::shared_ptr<creatures::Logger> log, s
 }
 
 OpusRtpAudioClient::~OpusRtpAudioClient() {
-    stop_requested.store(true);
-
-    // Join all worker threads
-    if (dialogThread_.joinable())
-        dialogThread_.join();
-    if (bgmThread_.joinable())
-        bgmThread_.join();
-    if (mixingThread_.joinable())
-        mixingThread_.join();
+    // Ensure shutdown is called
+    if (running_.load()) {
+        shutdown();
+    }
 
     // Clean up resources
     if (sockDlg_ >= 0)
@@ -176,6 +171,30 @@ OpusRtpAudioClient::~OpusRtpAudioClient() {
     SDL_QuitSubSystem(SDL_INIT_AUDIO);
 
     log_->debug("OpusRtpAudioClient destroyed, {} SSRC resets occurred", ssrcResets_.load());
+}
+
+void OpusRtpAudioClient::shutdown() {
+    log_->info("Shutting down OpusRtpAudioClient");
+
+    // Signal all threads to stop
+    stop_requested.store(true);
+    running_.store(false);
+
+    // Wait for all worker threads to finish
+    if (dialogThread_.joinable()) {
+        log_->debug("Waiting for dialog thread to finish");
+        dialogThread_.join();
+    }
+    if (bgmThread_.joinable()) {
+        log_->debug("Waiting for BGM thread to finish");
+        bgmThread_.join();
+    }
+    if (mixingThread_.joinable()) {
+        log_->debug("Waiting for mixing thread to finish");
+        mixingThread_.join();
+    }
+
+    log_->debug("OpusRtpAudioClient shutdown complete");
 }
 
 /* ── main thread entry ───────────────────────────────────── */

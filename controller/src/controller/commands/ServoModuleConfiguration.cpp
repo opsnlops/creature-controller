@@ -35,8 +35,8 @@ Result<bool> ServoModuleConfiguration::getServoConfigurations(const std::shared_
     }
 
     auto configs = configResult.getValue().value();
-    logger->debug("got {} servo configurations for module {}",
-                  configs.size(), creatures::config::UARTDevice::moduleNameToString(module));
+    logger->debug("got {} servo configurations for module {}", configs.size(),
+                  creatures::config::UARTDevice::moduleNameToString(module));
 
     // Clear any existing configurations before adding new ones
     servoConfigurations.clear();
@@ -87,7 +87,7 @@ std::string ServoModuleConfiguration::toMessage() {
         message += '\t' + config.toString();
     }
 
-    logger->info("servo config message ready to hop over to firmware: {}", message);
+    logger->info("servo config message ready for transmission to firmware: {}", message);
     return message;
 }
 

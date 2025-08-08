@@ -50,6 +50,9 @@ class OpusRtpAudioClient final : public StoppableThread {
 
     ~OpusRtpAudioClient() override;
 
+    /* shutdown method for explicit cleanup */
+    void shutdown() override;
+
     /* stats for AudioSubsystem */
     [[nodiscard]] bool isReceiving() const { return running_.load(); }
     [[nodiscard]] uint64_t getPacketsReceived() const { return totalPkts_.load(); }

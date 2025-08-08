@@ -34,8 +34,7 @@ bool AudioSubsystem::initialize(uint8_t creatureChannel, const std::string &ifac
     log_->debug("Dialog multicast group: {}", dialogGroup);
     log_->debug("BGM multicast group: {}", bgmGroup);
 
-    rtpClient_ = std::make_shared<OpusRtpAudioClient>(
-        log_,
+    rtpClient_ = std::make_shared<OpusRtpAudioClient>(log_,
                                                       dialogGroup, // Dialog channel for this creature
                                                       bgmGroup,    // BGM channel (always channel 17)
                                                       port, creatureChannel, ifaceIp);
@@ -86,18 +85,15 @@ void AudioSubsystem::shutdown() {
     log_->info("Audio subsystem shutdown complete");
 }
 
-bool AudioSubsystem::isReceiving() const { return rtpClient_ && rtpClient_->isReceiving();
-}
+bool AudioSubsystem::isReceiving() const { return rtpClient_ && rtpClient_->isReceiving(); }
 
 std::string AudioSubsystem::getStats() const {
     if (!rtpClient_) {
         return "audio disabled";
     }
 
-    return fmt::format("packets received={}, buffer={:.1f}%, receiving={}",
-                       rtpClient_->getPacketsReceived(),
-                       rtpClient_->getBufferLevel() * 100.0f,
-                       rtpClient_->isReceiving() ? "yes" : "no");
+    return fmt::format("packets received={}, buffer={:.1f}%, receiving={}", rtpClient_->getPacketsReceived(),
+                       rtpClient_->getBufferLevel() * 100.0f, rtpClient_->isReceiving() ? "yes" : "no");
 }
 
 void AudioSubsystem::monitoringLoop() {
@@ -106,7 +102,10 @@ void AudioSubsystem::monitoringLoop() {
     log_->debug("Audio monitoring loop started");
 
     while (!stopMon_.load()) {
-        std::this_thread::sleep_for(std::chrono::seconds(STATS_INTERVAL_SEC));
+        // Sleep in smaller increments to be more responsive to shutdown
+        for (int i = 0; i < STATS_INTERVAL_SEC * 10 && !stopMon_.load(); ++i) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
         if (stopMon_.load())
             break;
 
