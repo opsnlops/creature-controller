@@ -49,7 +49,7 @@ namespace creatures::io {
         std::shared_ptr<Logger> logger;
         std::shared_ptr<MessageQueue<Message>> outgoingQueue;
         std::string deviceNode;
-        UARTDevice::module_name moduleName;
+        [[maybe_unused]] UARTDevice::module_name moduleName;
         int fileDescriptor;
     };
 

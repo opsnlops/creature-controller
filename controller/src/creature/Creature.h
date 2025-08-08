@@ -47,6 +47,7 @@ class Creature {
     enum default_position_type { min, max, center, invalid_position };
 
     explicit Creature(const std::shared_ptr<creatures::Logger> &logger);
+    virtual ~Creature() = default;
 
     /**
      * Set up the controller

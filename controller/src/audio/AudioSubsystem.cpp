@@ -37,7 +37,7 @@ bool AudioSubsystem::initialize(uint8_t creatureChannel, const std::string &ifac
     rtpClient_ = std::make_shared<OpusRtpAudioClient>(log_,
                                                       dialogGroup, // Dialog channel for this creature
                                                       bgmGroup,    // BGM channel (always channel 17)
-                                                      port, creatureChannel, ifaceIp);
+                                                      port, creatureChannel, ifaceIp, audioDev);
 
     if (!rtpClient_) {
         log_->error("Failed to create RTP audio client");

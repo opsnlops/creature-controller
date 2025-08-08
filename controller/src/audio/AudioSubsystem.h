@@ -24,8 +24,7 @@ class AudioSubsystem : public StoppableThread {
      * Initialize the audio subsystem with creature-specific configuration
      * @param creatureChannel The dialog channel for this creature (1-16)
      * @param ifaceIp The network interface IP address
-     * @param audioDeviceIndex SDL audio device index (unused but kept for
-     * compatibility)
+     * @param audioDeviceIndex SDL audio device index (from --list-sound-devices)
      * @param port RTP port number
      * @return true if initialization succeeded
      */

@@ -156,4 +156,10 @@ The application has been recently updated with comprehensive threading fixes:
 - Responsive monitoring thread with 100ms shutdown responsiveness
 - Clean resource cleanup for SDL, Opus decoders, and network sockets
 
-All subsystems now shutdown gracefully within 100-500ms of receiving SIGINT.
+All subsystems now shutdown gracefully within 2-5 seconds of receiving SIGINT.
+
+**Recent Shutdown Timeout Fixes:**
+- Increased `StoppableThread::shutdown()` timeout from 200ms to 2000ms
+- Added proper shutdown sequencing in `ServoModuleHandler` (serial first, then message processor)
+- Enhanced shutdown logging to track thread termination progress
+- Fixed race conditions where message processing continued after shutdown request

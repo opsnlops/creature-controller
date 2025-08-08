@@ -123,9 +123,9 @@ struct RtpHeader {
 
 /* ── Enhanced constructor with debugging ──────────────────── */
 OpusRtpAudioClient::OpusRtpAudioClient(std::shared_ptr<creatures::Logger> log, std::string dlg, std::string bgm,
-                                       uint16_t port, uint8_t dlgIdx, std::string iface)
+                                       uint16_t port, uint8_t dlgIdx, std::string iface, uint8_t audioDeviceIndex)
     : log_(std::move(log)), dlgGrp_(std::move(dlg)), bgmGrp_(std::move(bgm)), ifaceIp_(std::move(iface)), port_(port),
-      dialogIdx_(dlgIdx) {
+      dialogIdx_(dlgIdx), audioDeviceIndex_(audioDeviceIndex) {
     log_->debug("Created OpusRtpAudioClient: dialog={}, bgm={}, port={}, idx={}", dlgGrp_, bgmGrp_, port_, dialogIdx_);
 
     // Enable debugging for the first 30 seconds
@@ -208,7 +208,25 @@ void OpusRtpAudioClient::run() {
     want.channels = 1;
     want.format = AUDIO_S16SYS;
     want.samples = SDL_BUFFER_FRAMES;
-    dev_ = SDL_OpenAudioDevice(nullptr, 0, &want, &have, 0);
+    // Get the device name for the specified device index
+    const char* deviceName = nullptr;
+    
+    // Check if we have a valid device index (from --list-sound-devices output)
+    int numDevices = SDL_GetNumAudioDevices(0);
+    if (audioDeviceIndex_ < numDevices) {
+        deviceName = SDL_GetAudioDeviceName(audioDeviceIndex_, 0);
+        if (deviceName) {
+            log_->info("Opening audio device {}: {}", audioDeviceIndex_, deviceName);
+        } else {
+            log_->warn("Audio device {} name not available, trying by index", audioDeviceIndex_);
+        }
+    } else if (audioDeviceIndex_ > 0) {
+        log_->warn("Audio device {} not found (only {} devices available), using default", 
+                   audioDeviceIndex_, numDevices);
+    } else {
+        log_->info("Using default audio device");
+    }
+    dev_ = SDL_OpenAudioDevice(deviceName, 0, &want, &have, 0);
     if (!dev_) {
         log_->error("SDL_OpenAudioDevice failed: {}", SDL_GetError());
         return;
@@ -565,8 +583,8 @@ void OpusRtpAudioClient::audioMixingThread() {
 
     uint64_t frameCount = 0;
     uint64_t underruns = 0;
-    uint64_t dialogMisses = 0;
-    uint64_t bgmMisses = 0;
+    [[maybe_unused]] uint64_t dialogMisses = 0;
+    [[maybe_unused]] uint64_t bgmMisses = 0;
     uint64_t dialogHits = 0;
     uint64_t bgmHits = 0;
 

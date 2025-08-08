@@ -114,7 +114,7 @@ void CommandLine::setupCommandLineArguments(argparse::ArgumentParser &program) {
 }
 
 void CommandLine::listNetworkDevices() {
-    struct ifaddrs *ifaddr = nullptr, *ifa = nullptr;
+    struct ifaddrs *ifaddr = nullptr;
     char addrBuff[INET6_ADDRSTRLEN];
 
     if (getifaddrs(&ifaddr) == -1) {

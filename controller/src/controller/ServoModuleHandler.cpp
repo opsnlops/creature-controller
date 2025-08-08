@@ -84,18 +84,23 @@ void ServoModuleHandler::shutdown() {
     // Tell the message router we've stopped
     this->messageRouter->setHandlerState(this->moduleId, creatures::io::MotorHandlerState::stopped);
 
-    // Gracefully shut down the SerialHandler (it will handle its own threads)
+    // IMPORTANT: Shut down serial handler FIRST to stop new messages coming in
     if (this->serialHandler) {
+        logger->debug("Shutting down SerialHandler for module {}", UARTDevice::moduleNameToString(this->moduleId));
         this->serialHandler->shutdown();
     }
 
     // Shut down our message processor
     if (this->messageProcessor) {
+        logger->debug("Shutting down MessageProcessor for module {}", UARTDevice::moduleNameToString(this->moduleId));
         this->messageProcessor->shutdown();
     }
 
-    // Call parent shutdown to clean up the thread
+    // Call parent shutdown to clean up our main thread
+    logger->debug("Shutting down main thread for module {}", UARTDevice::moduleNameToString(this->moduleId));
     StoppableThread::shutdown();
+
+    logger->debug("ServoModuleHandler shutdown complete for module {}", UARTDevice::moduleNameToString(this->moduleId));
 }
 
 void ServoModuleHandler::start() {

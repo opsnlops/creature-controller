@@ -19,7 +19,7 @@ std::atomic<u64> time_spent_in_stepper_handler = 0L;
 /**
  * Simple array for setting the address lines of the stepper latches
  */
-static bool stepperAddressMapping[MAX_NUMBER_OF_STEPPERS][STEPPER_MUX_BITS] = {
+[[maybe_unused]] static bool stepperAddressMapping[MAX_NUMBER_OF_STEPPERS][STEPPER_MUX_BITS] = {
 
     {false, false, false}, // 0
     {false, false, true},  // 1
@@ -79,11 +79,10 @@ void inline StepperHandler::toggle_latch() {
  * @param t the repeating timer
  * @return true
  */
-bool StepperHandler::stepper_timer_handler(struct repeating_timer *t) {
+bool StepperHandler::stepper_timer_handler(struct repeating_timer * /* t */) {
 
     // Let's keep some metrics of how long this takes
     // TODO: Chrono action time
-    uint64_t start_time = 0;
     // uint64_t start_time = time_us_64();
 
     // Keep track of which frame we're in
@@ -315,7 +314,7 @@ bool StepperHandler::home_stepper(uint8_t slot) {
     // TODO: Thread.sleep
     // vTaskDelay(pdMS_TO_TICKS(500));
 
-    uint32_t steps_moved = 0;
+    // uint32_t steps_moved = 0;
 
     /*
     bool high = false;

@@ -29,7 +29,7 @@ MessageProcessor::MessageProcessor(
     : servoModuleHandler(servoModuleHandler), logger(_logger), moduleId(moduleId),
       websocketOutgoingQueue(websocketOutgoingQueue) {
 
-    logger->info("Message Processor created for module {} 🐰", UARTDevice::moduleNameToString(moduleId));
+    logger->info("MessageProcessor created for module {}", UARTDevice::moduleNameToString(moduleId));
 
     // Basic validation - fail fast if something is wrong
     if (!servoModuleHandler) {
@@ -134,11 +134,10 @@ Result<bool> MessageProcessor::processMessage(const Message &message) {
 }
 
 void MessageProcessor::run() {
-    auto threadName = fmt::format("MessageProcessor::{}", UARTDevice::moduleNameToString(this->moduleId));
-    setThreadName(threadName);
+    this->threadName = fmt::format("MessageProcessor::{}", UARTDevice::moduleNameToString(this->moduleId));
+    setThreadName(this->threadName);
 
-    logger->debug("hello from the message processor thread for {}! 👋🏻",
-                  UARTDevice::moduleNameToString(this->moduleId));
+    logger->debug("MessageProcessor thread started for module {}", UARTDevice::moduleNameToString(this->moduleId));
 
     while (!this->stop_requested.load()) {
         // Wait for a message with a short timeout so we can check stop_requested

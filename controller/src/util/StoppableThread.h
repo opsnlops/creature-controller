@@ -39,13 +39,13 @@ class StoppableThread {
     virtual void shutdown() {
         stop_requested.store(true);
 
-        // Give the thread a reasonable amount of time to finish
-        joinWithTimeout(std::chrono::milliseconds(200));
+        // Give threads more time to shutdown gracefully - especially important for
+        // threads that may be processing messages or handling network I/O
+        joinWithTimeout(std::chrono::milliseconds(2000));
     }
 
   protected:
-    virtual void
-    run() = 0; // This is the method that will be called when the thread starts
+    virtual void run() = 0; // This is the method that will be called when the thread starts
 
     std::atomic<bool> stop_requested;
     std::string threadName = "unnamed thread";

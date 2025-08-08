@@ -46,7 +46,8 @@ class OpusRtpAudioClient final : public StoppableThread {
                        std::string bgmGroup,    // 239.19.63.17
                        uint16_t port,           // 5004
                        uint8_t dialogIdx,       // 1-16
-                       std::string ifaceIp);
+                       std::string ifaceIp,
+                       uint8_t audioDeviceIndex = 0);
 
     ~OpusRtpAudioClient() override;
 
@@ -83,6 +84,7 @@ class OpusRtpAudioClient final : public StoppableThread {
     const std::string dlgGrp_, bgmGrp_, ifaceIp_;
     const uint16_t port_;
     const uint8_t dialogIdx_;
+    const uint8_t audioDeviceIndex_;
 
     /* runtime */
     int sockDlg_{-1}, sockBgm_{-1};
