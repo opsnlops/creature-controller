@@ -46,7 +46,6 @@ std::atomic<bool> shutdown_requested(false);
 
 // Track SIGINT signals for fail-safe mechanism
 std::atomic<int> sigint_count(0);
-std::atomic<std::chrono::steady_clock::time_point> first_sigint_time;
 
 /**
  * @brief Signal handler to gracefully shutdown the application
@@ -55,27 +54,16 @@ std::atomic<std::chrono::steady_clock::time_point> first_sigint_time;
 void signal_handler(int signal) {
     if (signal == SIGINT) {
         int current_count = sigint_count.fetch_add(1) + 1;
-        
+
         if (current_count == 1) {
             // First SIGINT - start graceful shutdown
-            first_sigint_time.store(std::chrono::steady_clock::now());
             std::cerr << "Caught SIGINT, requesting graceful shutdown..." << std::endl;
-            std::cerr << "(Press Ctrl+C again within 10 seconds for immediate hard shutdown)" << std::endl;
+            std::cerr << "(Press Ctrl+C again for immediate hard shutdown)" << std::endl;
             shutdown_requested.store(true);
         } else {
-            // Second or subsequent SIGINT - check timing
-            auto now = std::chrono::steady_clock::now();
-            auto first_time = first_sigint_time.load();
-            auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - first_time);
-            
-            if (elapsed.count() <= 10) {
-                // Within 10 seconds - perform hard shutdown
-                std::cerr << "Second SIGINT received, performing immediate hard shutdown..." << std::endl;
-                std::_Exit(EXIT_FAILURE);
-            } else {
-                // More than 10 seconds - treat as new graceful shutdown request
-                std::cerr << "SIGINT received, graceful shutdown already in progress..." << std::endl;
-            }
+            // Second or subsequent SIGINT - perform immediate hard shutdown
+            std::cerr << "Second SIGINT received, performing immediate hard shutdown..." << std::endl;
+            std::_Exit(EXIT_FAILURE);
         }
     }
 }
@@ -192,10 +180,9 @@ int main(int argc, char **argv) {
             creatureAudioChannel = 1;
         }
 
-        if (audioSubsystem->initialize(
-                creatureAudioChannel,                // Dialog channel (1-16)
-                config->getNetworkDeviceIPAddress(), // Network interface
-                config->getSoundDeviceNumber())) {   // SDL audio device index
+        if (audioSubsystem->initialize(creatureAudioChannel,                // Dialog channel (1-16)
+                                       config->getNetworkDeviceIPAddress(), // Network interface
+                                       config->getSoundDeviceNumber())) {   // SDL audio device index
 
             logger->info("Audio subsystem initialized: dialog channel {}, BGM channel 17", creatureAudioChannel);
         } else {

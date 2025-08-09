@@ -9,22 +9,19 @@
 
 #include "server/ServerConnection.h"
 
-#define SERVER_CONNECTION_LOOP_TIME                                            \
-    500 // How long should we wait between checking to see if we should stop?
+#define SERVER_CONNECTION_LOOP_TIME 500 // How long should we wait between checking to see if we should stop?
 
 namespace creatures::server {
 
-ServerConnection::~ServerConnection() {
-    logger->info("server connection destroyed");
-}
+ServerConnection::~ServerConnection() { logger->info("server connection destroyed"); }
 
 void ServerConnection::start() {
 
     // We always need to make the writer, even if we're not enabled so that
     // messages that get sent don't just sit in the queue forever and leak
     // memory.
-    websocketWriter = std::make_unique<WebsocketWriter>(
-        logger, webSocket, outgoingMessagesQueue, creature->getId(), enabled);
+    websocketWriter =
+        std::make_unique<WebsocketWriter>(logger, webSocket, outgoingMessagesQueue, creature->getId(), enabled);
     websocketWriter->start();
 
     if (!enabled) {
@@ -36,8 +33,7 @@ void ServerConnection::start() {
     logger->info("server url: {}", serverUrl);
     webSocket->setUrl(serverUrl);
 
-    webSocket->setOnMessageCallback(
-        [this](auto &&PH1) { onMessage(std::forward<decltype(PH1)>(PH1)); });
+    webSocket->setOnMessageCallback([this](auto &&PH1) { onMessage(std::forward<decltype(PH1)>(PH1)); });
 
     logger->info("starting the server connection");
     creatures::StoppableThread::start();
@@ -66,9 +62,16 @@ void ServerConnection::run() {
     }
     logger->debug("ServerConnection thread stopping");
 
+    // Signal shutdown to the message queue so websocketWriter can exit gracefully
+    outgoingMessagesQueue->request_shutdown();
+
     // Stop our threads (we need to do this ourselves since it's a unique ptr)
     websocketWriter->shutdown();
 
+    // Close and stop the websocket - this can block, but we need to clean it up
+    logger->debug("Closing websocket connection");
+    webSocket->setOnMessageCallback(nullptr);
+    webSocket->close();
     webSocket->stop();
     logger->info("Creature Server connection shut down");
 }

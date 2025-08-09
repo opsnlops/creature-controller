@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.18)
 
 project(creature-controller
-        VERSION "2.6.15"
+        VERSION "2.6.16"
         DESCRIPTION "April's Creature Workshop Controller"
         HOMEPAGE_URL https://github.com/opsnlops/creature-controller
         LANGUAGES C CXX)

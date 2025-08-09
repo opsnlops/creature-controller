@@ -13,11 +13,9 @@
 
 namespace creatures::server {
 
-WebsocketWriter::WebsocketWriter(
-    const std::shared_ptr<Logger> &logger,
-    std::shared_ptr<ix::WebSocket> webSocket,
-    const std::shared_ptr<MessageQueue<ServerMessage>> &outgoingQueue,
-    std::string creatureId, bool enabled) {
+WebsocketWriter::WebsocketWriter(const std::shared_ptr<Logger> &logger, std::shared_ptr<ix::WebSocket> webSocket,
+                                 const std::shared_ptr<MessageQueue<ServerMessage>> &outgoingQueue,
+                                 std::string creatureId, bool enabled) {
     this->logger = logger;
     this->webSocket = webSocket;
     this->outgoingQueue = outgoingQueue;
@@ -40,7 +38,11 @@ void WebsocketWriter::run() {
     this->logger->info("hello from the WebsocketWriter thread!");
 
     while (!stop_requested.load()) {
-        ServerMessage outgoingMessage = outgoingQueue->pop();
+        auto outgoingMessage = outgoingQueue->pop_timeout(std::chrono::milliseconds(100));
+
+        if (!outgoingMessage.has_value()) {
+            continue;
+        }
 
         // If we're not enabled, just continue and don't send the message. We
         // need to chew things off the queue so that we don't leak memory 😅
@@ -49,10 +51,9 @@ void WebsocketWriter::run() {
             continue;
         }
 
-        auto messageResult = outgoingMessage.toWebSocketMessage(creatureId);
+        auto messageResult = outgoingMessage.value().toWebSocketMessage(creatureId);
         if (!messageResult.isSuccess()) {
-            this->logger->error(
-                "failed to convert message to websocket message");
+            this->logger->error("failed to convert message to websocket message");
             continue;
         }
         auto message = messageResult.getValue().value();
