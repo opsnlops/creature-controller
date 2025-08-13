@@ -33,7 +33,7 @@
 #include "usb_descriptors.h"
 
 // USB descriptor definitions
-#define USB_BCD              0x0400   // 0x0400 is 4.0 in BCD format
+#define USB_BCD              0x0200   // USB 2.0
 
 // Endpoint definitions
 #define EPNUM_CDC_NOTIF      0x83
@@ -92,6 +92,21 @@ char const *static_string_desc_arr[] = {
         "Unnamed Creature Controller",  // 2: Fallback Product
         "Unknown S/N",                  // 3: Fallback Serial
         "Creature Communications"       // 4: CDC 0 Description
+};
+
+// BOS (Binary Object Store) descriptor - minimal implementation to suppress Linux warnings
+static u8 const desc_bos[] = {
+        // BOS descriptor header
+        0x05,                           // bLength: 5 bytes
+        TUSB_DESC_BOS,                  // bDescriptorType: BOS
+        0x0C, 0x00,                     // wTotalLength: 12 bytes (5 + 7)
+        0x01,                           // bNumDeviceCaps: 1 capability
+
+        // USB 2.0 Extension capability
+        0x07,                           // bLength: 7 bytes
+        TUSB_DESC_DEVICE_CAPABILITY,    // bDescriptorType: Device Capability
+        0x02,                           // bDevCapabilityType: USB 2.0 Extension
+        0x00, 0x00, 0x00, 0x00          // bmAttributes: no LPM support
 };
 
 /**
@@ -200,4 +215,18 @@ u16 const *tud_descriptor_string_cb(u8 index, u16 langid) {
     // First element: descriptor header with length and type
     _desc_str[0] = (TUSB_DESC_STRING << 8) | (2 * chr_count + 2);
     return _desc_str;
+}
+
+/**
+ * @brief TinyUSB BOS descriptor callback
+ *
+ * This callback is invoked by the TinyUSB stack when the host requests
+ * the BOS (Binary Object Store) descriptor. This provides a minimal
+ * BOS descriptor to suppress Linux kernel warnings about missing descriptors.
+ *
+ * @return Pointer to the BOS descriptor
+ */
+u8 const *tud_descriptor_bos_cb(void) {
+    debug("tud_descriptor_bos_cb() called");
+    return desc_bos;
 }
