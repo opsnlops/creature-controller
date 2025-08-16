@@ -45,7 +45,7 @@ class ConfigurationBuilder : public BaseBuilder {
     const std::string serverNode = "creatureServer";
     std::vector<std::string> requiredServerFields;
 
-    Result<std::shared_ptr<Configuration>> makeError(const std::string &errorMessage);
+    Result<std::shared_ptr<Configuration>> makeError(const std::string &errorMessage) const;
 };
 
 } // namespace creatures::config

@@ -34,8 +34,8 @@ add_compile_definitions(PICO_PLATFORM=${PICO_PLATFORM})
 include($ENV{PICO_SDK_PATH}/external/pico_sdk_import.cmake)
 
 # Make sure we have the right version of the SDK
-if (PICO_SDK_VERSION_STRING VERSION_LESS "2.1.1")
-    message(FATAL_ERROR "Raspberry Pi Pico SDK version 2.1.1 (or later) required. Your version is ${PICO_SDK_VERSION_STRING}")
+if (PICO_SDK_VERSION_STRING VERSION_LESS "2.2.0")
+    message(FATAL_ERROR "Raspberry Pi Pico SDK version 2.2.0 (or later) required. Your version is ${PICO_SDK_VERSION_STRING}")
 endif()
 
 
@@ -57,7 +57,7 @@ endif()
 message("Building for platform ${PICO_PLATFORM}")
 
 project(creature-firmware
-        VERSION "3.3.4"
+        VERSION "3.4.0"
         DESCRIPTION "Pi Pico Firmwares for April's Creatures"
         HOMEPAGE_URL https://github.com/opsnlops/creature-controller/firmware
         LANGUAGES C CXX ASM)
@@ -174,6 +174,8 @@ set(CONTROLLER_ADDITIONAL_SOURCES
         src/messaging/messaging.c
         src/messaging/processors/config_message.h
         src/messaging/processors/config_message.c
+        src/messaging/processors/emergency_stop_message.h
+        src/messaging/processors/emergency_stop_message.c
         src/messaging/processors/ping_message.h
         src/messaging/processors/ping_message.c
         src/messaging/processors/position_message.h
@@ -231,9 +233,6 @@ set(PROGRAMMER_ADDITIONAL_INCLUDES
 
 
 
-
-
-
 # Function to create firmware targets
 function(create_firmware TARGET_NAME ADDITIONAL_SOURCES ADDITIONAL_LIBS ADDITIONAL_INCLUDES)
     add_executable(${TARGET_NAME}
@@ -261,9 +260,6 @@ function(create_firmware TARGET_NAME ADDITIONAL_SOURCES ADDITIONAL_LIBS ADDITION
     pico_enable_stdio_uart(${TARGET_NAME} 1)
     pico_add_extra_outputs(${TARGET_NAME})
 endfunction()
-
-
-
 
 
 

@@ -42,6 +42,14 @@ class Configuration {
     std::string getServerAddress() const;
     u16 getServerPort() const;
 
+    // Watchdog configuration getters
+    [[nodiscard]] double getPowerDrawLimitWatts() const;
+    [[nodiscard]] double getPowerDrawWarningWatts() const;
+    [[nodiscard]] double getPowerDrawResponseSeconds() const;
+    [[nodiscard]] double getTemperatureLimitDegrees() const;
+    [[nodiscard]] double getTemperatureWarningDegrees() const;
+    [[nodiscard]] double getTemperatureLimitSeconds() const;
+
     void setUseGPIO(bool _useGPIO);
     void setUseAudioSubsystem(bool _useAudioSubsystem);
     void setSoundDeviceNumber(u8 _soundDeviceNumber);
@@ -53,6 +61,14 @@ class Configuration {
     void setUseServer(bool _useServer);
     void setServerAddress(std::string _serverAddress);
     void setServerPort(u16 _serverPort);
+
+    // Watchdog configuration setters
+    void setPowerDrawLimitWatts(double _powerDrawLimitWatts);
+    void setPowerDrawWarningWatts(double _powerDrawWarningWatts);
+    void setPowerDrawResponseSeconds(double _powerDrawResponseSeconds);
+    void setTemperatureLimitDegrees(double _temperatureLimitDegrees);
+    void setTemperatureWarningDegrees(double _temperatureWarningDegrees);
+    void setTemperatureLimitSeconds(double _temperatureLimitSeconds);
 
   private:
     /**
@@ -91,6 +107,14 @@ class Configuration {
     bool useServer = false;
     std::string serverAddress;
     u16 serverPort;
+
+    // Watchdog configuration
+    double powerDrawLimitWatts = 0.0;
+    double powerDrawWarningWatts = 0.0;
+    double powerDrawResponseSeconds = 0.0;
+    double temperatureLimitDegrees = 0.0;
+    double temperatureWarningDegrees = 0.0;
+    double temperatureLimitSeconds = 0.0;
 };
 
 } // namespace creatures::config

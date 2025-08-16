@@ -206,7 +206,7 @@
 #define USE_SENSORS 1
 
 // How often should we report sensor data?
-#define SENSOR_REPORT_INTERVAL_MS 2000
+#define SENSOR_REPORT_INTERVAL_MS 1000
 
 /*
  * I2C Config

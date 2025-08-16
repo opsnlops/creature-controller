@@ -24,6 +24,12 @@ ConfigurationBuilder::ConfigurationBuilder(std::shared_ptr<Logger> logger, std::
         "UARTs",
         "networkInterface",
         "universe",
+        "powerDrawLimitWatts",
+        "powerDrawWarningWatts",
+        "powerDrawResponseSeconds",
+        "temperatureLimitDegrees",
+        "temperatureWarningDegrees",
+        "temperatureLimitSeconds",
     };
 
     requiredUARTFields = {
@@ -95,6 +101,14 @@ Result<std::shared_ptr<creatures::config::Configuration>> ConfigurationBuilder::
     config->setUseAudioSubsystem(j["useRTPAudio"]);
     config->setSoundDeviceNumber(j["audioDevice"]);
     config->setNetworkDeviceName(j["networkInterface"]);
+
+    // Set watchdog configuration
+    config->setPowerDrawLimitWatts(j["powerDrawLimitWatts"]);
+    config->setPowerDrawWarningWatts(j["powerDrawWarningWatts"]);
+    config->setPowerDrawResponseSeconds(j["powerDrawResponseSeconds"]);
+    config->setTemperatureLimitDegrees(j["temperatureLimitDegrees"]);
+    config->setTemperatureWarningDegrees(j["temperatureWarningDegrees"]);
+    config->setTemperatureLimitSeconds(j["temperatureLimitSeconds"]);
 
     // Log that we've gotten this far
     logger->info("successfully parsed the main config file! useGPIO: {}, "
@@ -176,7 +190,7 @@ Result<std::shared_ptr<creatures::config::Configuration>> ConfigurationBuilder::
  * @return A Result object with the error message
  */
 Result<std::shared_ptr<creatures::config::Configuration>>
-ConfigurationBuilder::makeError(const std::string &errorMessage) {
+ConfigurationBuilder::makeError(const std::string &errorMessage) const {
     logger->error(errorMessage);
     return Result<std::shared_ptr<creatures::config::Configuration>>{
         ControllerError(ControllerError::InvalidConfiguration, errorMessage)};

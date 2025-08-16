@@ -40,6 +40,7 @@
 #include "server/ServerMessage.h"
 #include "util/StoppableThread.h"
 #include "util/thread_name.h"
+#include "watchdog/WatchdogThread.h"
 
 // Default to not shutting down
 std::atomic<bool> shutdown_requested(false);
@@ -258,6 +259,13 @@ int main(int argc, char **argv) {
     // Fire up the MessageRouter
     messageRouter->start();
     workerThreads.push_back(messageRouter);
+
+    // Start the watchdog thread
+    logger->debug("starting the watchdog thread");
+    auto watchdogThread = std::make_shared<creatures::watchdog::WatchdogThread>(makeLogger("watchdog"), config,
+                                                                                websocketOutgoingQueue, messageRouter);
+    watchdogThread->start();
+    workerThreads.push_back(watchdogThread);
 
     // Before we start sending pings, ask the controller to flush its buffer
     controller->sendFlushBufferRequest();

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.18)
 
 project(creature-controller
-        VERSION "2.6.16"
+        VERSION "2.7.0"
         DESCRIPTION "April's Creature Workshop Controller"
         HOMEPAGE_URL https://github.com/opsnlops/creature-controller
         LANGUAGES C CXX)
@@ -153,6 +153,8 @@ add_library(creature_lib
         src/controller/commands/SetServoPositions.cpp
         src/controller/commands/SetServoPositions.h
         src/controller/commands/CommandException.h
+        src/controller/commands/EmergencyStop.cpp
+        src/controller/commands/EmergencyStop.h
         src/controller/commands/Ping.cpp
         src/controller/commands/Ping.h
         src/controller/commands/tokens/ServoPosition.cpp
@@ -259,8 +261,16 @@ add_library(creature_lib
         src/server/ServerMessage.cpp
         src/server/BoardSensorReportMessage.h
         src/server/MotorSensorReportMessage.h
+        src/server/WatchdogWarningMessage.h
+        src/server/EstopMessage.h
         src/server/WebsocketWriter.h
         src/server/WebsocketWriter.cpp
+
+        # Watchdog Sources
+        src/watchdog/WatchdogGlobals.h
+        src/watchdog/WatchdogGlobals.cpp
+        src/watchdog/WatchdogThread.h
+        src/watchdog/WatchdogThread.cpp
 )
 
 target_include_directories(creature_lib PUBLIC

@@ -16,5 +16,11 @@
   "networkInterface": "en10",
   "universe": 2,
   "useRTPAudio": true,
-  "audioDevice": 1
+  "audioDevice": 1,
+  "powerDrawLimitWatts": 30.0,
+  "powerDrawWarningWatts": 25.0,
+  "powerDrawResponseSeconds": 5.0,
+  "temperatureLimitDegrees": 165.0,
+  "temperatureWarningDegrees": 150.0,
+  "temperatureLimitSeconds": 10.0
 }

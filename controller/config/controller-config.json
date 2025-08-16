@@ -14,5 +14,14 @@
       }
     ],
   "ipAddress": "10.19.63.11",
-  "universe": 2
+  "universe": 2,
+  "networkInterface": "eth0",
+  "useRTPAudio": false,
+  "audioDevice": 0,
+  "powerDrawLimitWatts": 40.0,
+  "powerDrawWarningWatts": 32.0,
+  "powerDrawResponseSeconds": 4.0,
+  "temperatureLimitDegrees": 175.0,
+  "temperatureWarningDegrees": 160.0,
+  "temperatureLimitSeconds": 7.0
 }

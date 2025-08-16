@@ -102,6 +102,42 @@ std::string Configuration::getServerAddress() const { return serverAddress; }
  */
 u16 Configuration::getServerPort() const { return serverPort; }
 
+/**
+ * @brief Get the power draw limit in watts
+ * @return The power draw limit in watts
+ */
+double Configuration::getPowerDrawLimitWatts() const { return powerDrawLimitWatts; }
+
+/**
+ * @brief Get the power draw warning threshold in watts
+ * @return The power draw warning threshold in watts
+ */
+double Configuration::getPowerDrawWarningWatts() const { return powerDrawWarningWatts; }
+
+/**
+ * @brief Get the power draw response time in seconds
+ * @return The power draw response time in seconds
+ */
+double Configuration::getPowerDrawResponseSeconds() const { return powerDrawResponseSeconds; }
+
+/**
+ * @brief Get the temperature limit in degrees
+ * @return The temperature limit in degrees
+ */
+double Configuration::getTemperatureLimitDegrees() const { return temperatureLimitDegrees; }
+
+/**
+ * @brief Get the temperature warning threshold in degrees
+ * @return The temperature warning threshold in degrees
+ */
+double Configuration::getTemperatureWarningDegrees() const { return temperatureWarningDegrees; }
+
+/**
+ * @brief Get the temperature limit response time in seconds
+ * @return The temperature limit response time in seconds
+ */
+double Configuration::getTemperatureLimitSeconds() const { return temperatureLimitSeconds; }
+
 //----------------------------------------------------------------------------
 // Setter Methods
 //----------------------------------------------------------------------------
@@ -195,6 +231,60 @@ void Configuration::setServerAddress(std::string _serverAddress) {
 void Configuration::setServerPort(u16 _serverPort) {
     this->serverPort = _serverPort;
     logger->debug("Set server port to {}", this->serverPort);
+}
+
+/**
+ * @brief Set the power draw limit in watts
+ * @param _powerDrawLimitWatts The power draw limit in watts
+ */
+void Configuration::setPowerDrawLimitWatts(double _powerDrawLimitWatts) {
+    this->powerDrawLimitWatts = _powerDrawLimitWatts;
+    logger->debug("Set power draw limit to {} watts", this->powerDrawLimitWatts);
+}
+
+/**
+ * @brief Set the power draw warning threshold in watts
+ * @param _powerDrawWarningWatts The power draw warning threshold in watts
+ */
+void Configuration::setPowerDrawWarningWatts(double _powerDrawWarningWatts) {
+    this->powerDrawWarningWatts = _powerDrawWarningWatts;
+    logger->debug("Set power draw warning to {} watts", this->powerDrawWarningWatts);
+}
+
+/**
+ * @brief Set the power draw response time in seconds
+ * @param _powerDrawResponseSeconds The power draw response time in seconds
+ */
+void Configuration::setPowerDrawResponseSeconds(double _powerDrawResponseSeconds) {
+    this->powerDrawResponseSeconds = _powerDrawResponseSeconds;
+    logger->debug("Set power draw response time to {} seconds", this->powerDrawResponseSeconds);
+}
+
+/**
+ * @brief Set the temperature limit in degrees
+ * @param _temperatureLimitDegrees The temperature limit in degrees
+ */
+void Configuration::setTemperatureLimitDegrees(double _temperatureLimitDegrees) {
+    this->temperatureLimitDegrees = _temperatureLimitDegrees;
+    logger->debug("Set temperature limit to {} degrees", this->temperatureLimitDegrees);
+}
+
+/**
+ * @brief Set the temperature warning threshold in degrees
+ * @param _temperatureWarningDegrees The temperature warning threshold in degrees
+ */
+void Configuration::setTemperatureWarningDegrees(double _temperatureWarningDegrees) {
+    this->temperatureWarningDegrees = _temperatureWarningDegrees;
+    logger->debug("Set temperature warning to {} degrees", this->temperatureWarningDegrees);
+}
+
+/**
+ * @brief Set the temperature limit response time in seconds
+ * @param _temperatureLimitSeconds The temperature limit response time in seconds
+ */
+void Configuration::setTemperatureLimitSeconds(double _temperatureLimitSeconds) {
+    this->temperatureLimitSeconds = _temperatureLimitSeconds;
+    logger->debug("Set temperature limit response time to {} seconds", this->temperatureLimitSeconds);
 }
 
 void Configuration::resolveNetworkInterfaceDetails() {

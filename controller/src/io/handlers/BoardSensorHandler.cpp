@@ -11,6 +11,7 @@
 #include "server/ServerMessage.h"
 #include "util/MessageQueue.h"
 #include "util/string_utils.h"
+#include "watchdog/WatchdogGlobals.h"
 
 /*
  * This is the message from the firmware:
@@ -53,6 +54,9 @@ void BoardSensorHandler::handle(std::shared_ptr<Logger> handleLogger, const std:
     boardTemperature = stringToDouble(split[1]);
     handleLogger->info("Chassis temperature: {:.2f}F", boardTemperature);
 
+    // Update watchdog global temperature
+    creatures::watchdog::WatchdogGlobals::updateTemperature(boardTemperature);
+
     json payloadJson = {
         {"board_temperature", boardTemperature},
     };
@@ -94,6 +98,11 @@ void BoardSensorHandler::handle(std::shared_ptr<Logger> handleLogger, const std:
 
         handleLogger->info("Sensor {}: voltage: {:.2f}V, current: {:.2f}A, power: {:.2f}W", sensorName, voltage,
                            current, power);
+
+        // Update watchdog global power draw for motor power sensor
+        if (sensorName == "motor_power_in") {
+            creatures::watchdog::WatchdogGlobals::updatePowerDraw(power);
+        }
     }
 
     // Send the message to the websocket

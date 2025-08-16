@@ -13,6 +13,7 @@
 
 // Various handlers
 #include "messaging/processors/config_message.h"
+#include "messaging/processors/emergency_stop_message.h"
 #include "messaging/processors/ping_message.h"
 #include "messaging/processors/position_message.h"
 
@@ -22,9 +23,10 @@ volatile u64 failed_messages_parsed = 0UL;
 volatile u64 checksum_errors = 0UL;
 
 const MessageTypeHandler messageHandlers[] = {
+        {"CONFIG", handleConfigMessage},
+        {"ESTOP", handleEmergencyStopMessage},
         {"PING", handlePingMessage},
         {"POS",  handlePositionMessage},
-        {"CONFIG", handleConfigMessage},
 };
 
 

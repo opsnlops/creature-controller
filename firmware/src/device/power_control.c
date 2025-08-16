@@ -184,7 +184,7 @@ bool enable_all_motors(void) {
 bool disable_all_motors(void) {
     bool all_successful = true;
 
-    warning("disabling power to all motors - emergency bunny brake!");
+    warning("disabling power to all motors - emergency stop initiated");
 
     for (size_t i = 0; i < MOTOR_MAP_SIZE; i++) {
         if (!disable_motor_power(motor_map[i].motor_id)) {
