@@ -61,6 +61,42 @@ Result<bool> BaseBuilder::checkJsonField(const nlohmann::json &jsonObj, const st
     return Result<bool>(true);
 }
 
+/**
+ * Safely extracts a boolean value from a JSON object with proper type validation
+ * and error handling.
+ *
+ * @param jsonObj the json object to extract from
+ * @param fieldName the field name we're looking for
+ * @return Result containing the boolean value or an error with descriptive message
+ */
+Result<bool> BaseBuilder::getBooleanField(const nlohmann::json &jsonObj, const std::string &fieldName) {
+    try {
+        // First check if the field exists
+        if (!jsonObj.contains(fieldName)) {
+            auto errorMessage = fmt::format("Missing required boolean field: '{}'", fieldName);
+            return Result<bool>(ControllerError(ControllerError::InvalidData, errorMessage));
+        }
+
+        // Check if the field is actually a boolean
+        if (!jsonObj[fieldName].is_boolean()) {
+            auto errorMessage = fmt::format("Field '{}' must be a boolean (true/false), but found: {}", fieldName,
+                                            jsonObj[fieldName].dump());
+            return Result<bool>(ControllerError(ControllerError::InvalidData, errorMessage));
+        }
+
+        // Extract the boolean value
+        bool value = jsonObj[fieldName].get<bool>();
+        return Result<bool>(value);
+
+    } catch (const nlohmann::json::exception &e) {
+        auto errorMessage = fmt::format("JSON error when accessing boolean field '{}': {}", fieldName, e.what());
+        return Result<bool>(ControllerError(ControllerError::InvalidData, errorMessage));
+    } catch (const std::exception &e) {
+        auto errorMessage = fmt::format("Unexpected error when accessing boolean field '{}': {}", fieldName, e.what());
+        return Result<bool>(ControllerError(ControllerError::InternalError, errorMessage));
+    }
+}
+
 Result<std::string> BaseBuilder::loadFile(std::shared_ptr<Logger> logger, std::string filename) {
 
     logger->debug("turning {} into an istream", filename);

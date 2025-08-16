@@ -21,6 +21,8 @@ ConfigurationBuilder::ConfigurationBuilder(std::shared_ptr<Logger> logger, std::
     // Define the required config file fields
     requiredTopLevelFields = {
         "useGPIO",
+        "useRTPAudio",
+        "audioDevice",
         "UARTs",
         "networkInterface",
         "universe",
@@ -96,9 +98,20 @@ Result<std::shared_ptr<creatures::config::Configuration>> ConfigurationBuilder::
     auto config = std::make_shared<creatures::config::Configuration>(logger);
 
     // Fill in the easy ones
-    config->setUseGPIO(j["useGPIO"]);
+    auto useGPIOResult = getBooleanField(j, "useGPIO");
+    if (!useGPIOResult.isSuccess()) {
+        return makeError(useGPIOResult.getError().value().getMessage());
+    }
+    config->setUseGPIO(useGPIOResult.getValue().value());
+
     config->setUniverse(j["universe"]);
-    config->setUseAudioSubsystem(j["useRTPAudio"]);
+
+    auto useRTPAudioResult = getBooleanField(j, "useRTPAudio");
+    if (!useRTPAudioResult.isSuccess()) {
+        return makeError(useRTPAudioResult.getError().value().getMessage());
+    }
+    config->setUseAudioSubsystem(useRTPAudioResult.getValue().value());
+
     config->setSoundDeviceNumber(j["audioDevice"]);
     config->setNetworkDeviceName(j["networkInterface"]);
 
@@ -129,7 +142,12 @@ Result<std::shared_ptr<creatures::config::Configuration>> ConfigurationBuilder::
         }
 
         std::string deviceNode = uart["deviceNode"];
-        bool enabled = uart["enabled"];
+        auto enabledResult = getBooleanField(uart, "enabled");
+        if (!enabledResult.isSuccess()) {
+            return makeError(
+                fmt::format("Error in UART configuration: {}", enabledResult.getError().value().getMessage()));
+        }
+        bool enabled = enabledResult.getValue().value();
         std::string moduleAsString = uart["module"];
 
         logger->debug("working on UART: {}", deviceNode);
@@ -166,7 +184,12 @@ Result<std::shared_ptr<creatures::config::Configuration>> ConfigurationBuilder::
             checkJsonField(j[serverNode], fieldName);
         }
 
-        bool enabled = j[serverNode]["enabled"];
+        auto enabledResult = getBooleanField(j[serverNode], "enabled");
+        if (!enabledResult.isSuccess()) {
+            return makeError(
+                fmt::format("Error in server configuration: {}", enabledResult.getError().value().getMessage()));
+        }
+        bool enabled = enabledResult.getValue().value();
         std::string address = j[serverNode]["address"];
         u16 port = j[serverNode]["port"];
 

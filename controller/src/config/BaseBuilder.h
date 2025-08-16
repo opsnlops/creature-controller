@@ -34,6 +34,9 @@ class BaseBuilder {
     // Make sure a JSON field is present
     static Result<bool> checkJsonField(const json &jsonObj, const std::string &fieldName);
 
+    // Safely extract a boolean value with proper error handling
+    static Result<bool> getBooleanField(const json &jsonObj, const std::string &fieldName);
+
     std::shared_ptr<Logger> logger;
 };
 
