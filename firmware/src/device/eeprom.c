@@ -129,8 +129,8 @@ int parse_eeprom_data(const u8 *data, size_t len) {
     usb_pid = (data[offset] << 8) | data[offset + 1];
     offset += 2;
 
-    // Read version (BCD format, big-endian).
-    usb_version = (data[offset] << 8) | data[offset + 1];
+    // Skip version (BCD format, big-endian) - use firmware version instead
+    // usb_version = (data[offset] << 8) | data[offset + 1];
     offset += 2;
 
     // Read logging level.

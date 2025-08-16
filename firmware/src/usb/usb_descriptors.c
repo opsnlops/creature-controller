@@ -31,6 +31,7 @@
 #include "logging/logging.h"
 #include "types.h"
 #include "usb_descriptors.h"
+#include "version.h"
 
 // USB descriptor definitions
 #define USB_BCD              0x0200   // USB 2.0
@@ -53,7 +54,7 @@ enum {
 // USB descriptor variables
 u16 usb_pid = 0x1100;               // 0x1100 is "Creature Controller"
 u16 usb_vid = 0x2E8A;               // 0x2E8A is the default VID for Pico projects
-u16 usb_version = USB_BCD;
+u16 usb_version = CREATURE_FIRMWARE_BCD_DEVICE;
 char usb_serial[16] = {0};
 char usb_product[16] = {0};
 char usb_manufacturer[32] = {0};
@@ -79,7 +80,7 @@ static tusb_desc_device_t usb_device_descriptor = {
 // Configuration descriptor
 u8 const desc_configuration[] = {
         // Config number, interface count, string index, total length, attribute, power in mA
-        TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, 0, CONFIG_TOTAL_LEN, 0x00, 200),
+        TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, 0, CONFIG_TOTAL_LEN, 0x00, 100),
 
         // Main CDC interface
         TUD_CDC_DESCRIPTOR(ITF_NUM_CDC, 4, EPNUM_CDC_NOTIF, 8, EPNUM_CDC_OUT, EPNUM_CDC_IN, 64)
