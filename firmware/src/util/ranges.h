@@ -1,6 +1,6 @@
 
 #pragma once
 
-#include <stdint.h>
+#include "types.h"
 
-int32_t convertRange(int32_t input, int32_t oldMin, int32_t oldMax, int32_t newMin, int32_t newMax);
+i32 convertRange(i32 input, i32 oldMin, i32 oldMax, i32 newMin, i32 newMax);

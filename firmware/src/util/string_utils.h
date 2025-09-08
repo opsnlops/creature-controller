@@ -1,14 +1,6 @@
 
 #pragma once
 
-#include <ctype.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <errno.h>
-
-#include "logging/logging.h"
-
 #include "types.h"
 
 

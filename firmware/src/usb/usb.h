@@ -71,6 +71,6 @@ void is_cdc_connected_timer(TimerHandle_t xTimer);
  * If the device is not connected, the message is silently dropped and a
  * verbose log entry is generated.
  *
- * @param line Null-terminated string to transmit
+ * @param message Null-terminated string to transmit
  */
-void cdc_send(const char *line);
+void cdc_send(const char *message);

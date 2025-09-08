@@ -1,5 +1,4 @@
 
-
 #include <stddef.h>
 #include <stdio.h>
 
@@ -21,7 +20,7 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName) {
     // Halt the system on a stack overflow.
     taskDISABLE_INTERRUPTS();
 
-    // Print to the console that something really bad happened
+    // Print to the console that something terrible happened
     printf("Stack overflow in task: %s\n", pcTaskName);
 
     // Assert to halt the system
@@ -30,7 +29,7 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName) {
 
 void vApplicationIdleHook(void) {
 
-    // Record the free heap space for the stats handler
+    // Record the free heap space for the stat handler
     xFreeHeapSpace = xPortGetFreeHeapSize();
 }
 

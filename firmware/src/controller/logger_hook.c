@@ -15,7 +15,7 @@
  * @param message the message that was logged
  * @param message_length the length of the message that was logged
  */
-void acw_post_logging_hook(char *message, uint8_t message_length) {
+void acw_post_logging_hook(char *message, const u8 message_length) {
 
     (void)message_length;
 

@@ -99,6 +99,9 @@ void usb_start() {
  * @param xTimer Timer handle (unused)
  */
 void usbDeviceTimerCallback(TimerHandle_t xTimer) {
+
+    (void) xTimer;  // Unused parameter
+
     tud_task();  // Process TinyUSB tasks
 }
 
@@ -112,6 +115,9 @@ void usbDeviceTimerCallback(TimerHandle_t xTimer) {
  * @param xTimer Timer handle (unused)
  */
 void is_cdc_connected_timer(TimerHandle_t xTimer) {
+
+    (void) xTimer;  // Unused parameter
+
     if (tud_cdc_connected()) {
         // CDC is connected
         gpio_put(USB_MOUNTED_LED_PIN, true);  // Turn on LED
@@ -171,7 +177,7 @@ void tud_umount_cb(void) {
  *
  * @param remote_wakeup_en True if host allows remote wakeup
  */
-void tud_suspend_cb(bool remote_wakeup_en) {
+void tud_suspend_cb(const bool remote_wakeup_en) {
     (void) remote_wakeup_en;  // Unused parameter
     debug("USB bus suspended");
 

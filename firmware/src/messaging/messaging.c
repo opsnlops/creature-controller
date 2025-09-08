@@ -48,14 +48,13 @@ u16 calculateChecksum(const char *message) {
 bool parseMessage(const char *rawMessage, GenericMessage *outMessage) {
 
     // Temporary buffer to hold parts of the message
-    char buffer[USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH];
-    memset(buffer, '\0', USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH);
+    char buffer[USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH] = {0};
 
     strncpy(buffer, rawMessage, USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH);
     buffer[USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH - 1] = '\0';
 
     // Tokenize the message
-    char *token = strtok(buffer, TOKEN_SEPERATOR);
+    const char *token = strtok(buffer, TOKEN_SEPERATOR);
     int tokenIndex = 0;
 
     while (token != NULL && tokenIndex < MAX_TOKENS - 1) {
@@ -82,8 +81,8 @@ bool parseMessage(const char *rawMessage, GenericMessage *outMessage) {
     outMessage->tokenCount = tokenIndex - 2; // Exclude checksum token in count
 
     // Extract the expected checksum from the last token
-    char *checksumToken = outMessage->tokens[outMessage->tokenCount];
-    char *spacePos = strchr(checksumToken, ' ');
+    const char *checksumToken = outMessage->tokens[outMessage->tokenCount];
+    const char *spacePos = strchr(checksumToken, ' ');
     if (spacePos != NULL && *(spacePos + 1) != '\0') {
         outMessage->expectedChecksum = stringToU16(spacePos + 1);  // Convert the part after the space
     } else {
@@ -96,7 +95,7 @@ bool parseMessage(const char *rawMessage, GenericMessage *outMessage) {
     const char *lastTabPos = strrchr(rawMessage, TOKEN_SEPERATOR[0]);
     if (lastTabPos != NULL) {
         // Calculate the length of the message part that should be included in the checksum calculation
-        size_t checksumLength = lastTabPos - rawMessage;
+        const size_t checksumLength = lastTabPos - rawMessage;
 
         // Create a temporary buffer to hold this part of the message
         char checksumPart[checksumLength + 1]; // +1 for null terminator
@@ -119,8 +118,7 @@ void processMessage(const char *rawMessage) {
     verbose("processing message: %s", rawMessage);
 
     // Create a message object and null it out for safety
-    GenericMessage msg;
-    memset(&msg, '\0', sizeof(GenericMessage));
+    GenericMessage msg = {0};
 
     // Parse the message
     if (!parseMessage(rawMessage, &msg)) {
@@ -145,10 +143,11 @@ void processMessage(const char *rawMessage) {
             if (messageHandlers[i].handler(&msg)) {
                 verbose("%s message handled!", messageHandlers[i].messageType);
                 return;
-            } else {
-                warning("message handler failed!");
-                return;
             }
+
+            // Ut oh
+            warning("message handler failed! type: %s", messageHandlers[i].messageType);
+            return;
         }
     }
 

@@ -1,7 +1,6 @@
 #include <hardware/watchdog.h>
 
 #include <FreeRTOS.h>
-#include <timers.h>
 
 #include "controller/config.h"
 #include "logging/logging.h"

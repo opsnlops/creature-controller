@@ -16,8 +16,7 @@ bool handlePingMessage(const GenericMessage *msg) {
     debug("received ping with time: %s", msg->tokens[0]);
 
     // Send back a pong
-    char message[USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH];
-    memset(&message, '\0', USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH);
+    char message[USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH] = {0};
 
     snprintf(message, USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH,
              "PONG\t%lu", to_ms_since_boot(get_absolute_time()));

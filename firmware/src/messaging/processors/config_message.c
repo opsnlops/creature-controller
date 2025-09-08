@@ -68,7 +68,7 @@ bool handleConfigMessage(const GenericMessage *msg) {
             xTimerStart(controller_init_request_timer, 0);
             return false;
         }
-        u16 min_us = stringToU16(min_us_str);
+        const u16 min_us = stringToU16(min_us_str);
         if (min_us == 0) {
             error("min_us_str can't be parsed to u16: %s", min_us_str);
             xTimerStart(controller_init_request_timer, 0);
@@ -76,14 +76,13 @@ bool handleConfigMessage(const GenericMessage *msg) {
         }
         verbose("min_us: %u", min_us);
 
-
-        char *max_us_str = strtok_r(NULL, " ", &temp_token);
+        const char *max_us_str = strtok_r(NULL, " ", &temp_token);
         if (max_us_str == NULL) {
             error("no max_us_str specified: %s", output_position);
             xTimerStart(controller_init_request_timer, 0);
             return false;
         }
-        u16 max_us = stringToU16(max_us_str);
+        const u16 max_us = stringToU16(max_us_str);
         if (max_us == 0) {
             error("max_us_str can't be parsed to u16: %s", min_us_str);
             xTimerStart(controller_init_request_timer, 0);

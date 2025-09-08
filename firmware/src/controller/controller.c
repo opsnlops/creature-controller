@@ -187,7 +187,7 @@ void controller_start() {
     info("starting the controller");
 
     // Fire up PWM
-    u32 wrap;
+    u32 wrap = 0UL;
     for (size_t i = 0; i < sizeof(motor_map) / sizeof(motor_map[0]); ++i) {
         gpio_set_function(motor_map[i].gpio_pin, GPIO_FUNC_PWM);
         wrap = pwm_set_freq_duty(motor_map[i].slice, motor_map[i].channel,
@@ -219,7 +219,7 @@ u8 getMotorMapIndex(const char *motor_id) {
         return INVALID_MOTOR_ID;
     }
 
-    u8 motor_number =
+    const u8 motor_number =
         motor_id[0] - '0'; // Convert '0', '1', ..., '7' to 0, 1, ..., 7
 
     // Make sure the controller requested a valid motor
@@ -231,14 +231,14 @@ u8 getMotorMapIndex(const char *motor_id) {
     return motor_number;
 }
 
-bool requestServoPosition(const char *motor_id, u16 requestedMicroseconds) {
+bool requestServoPosition(const char *motor_id, const u16 requestedMicroseconds) {
     if (motor_id == NULL || motor_id[0] == '\0') {
         warning("motor_id is null while requesting servo position");
         return false;
     }
 
     // Get the index in the array
-    u8 motor_id_index = getMotorMapIndex(motor_id);
+    const u8 motor_id_index = getMotorMapIndex(motor_id);
     if (motor_id_index == INVALID_MOTOR_ID) {
         warning("Invalid motor ID: %s", motor_id);
         return false;
@@ -266,11 +266,11 @@ bool requestServoPosition(const char *motor_id, u16 requestedMicroseconds) {
         motor_map[motor_id_index].current_microseconds = requestedMicroseconds;
 
         // What percentage of the frame is going to be set to on?
-        double frame_active =
+        const double frame_active =
             (float)requestedMicroseconds / (float)frame_length_microseconds;
 
         // ...and what counter value is that?
-        u32 desired_ticks = (u32)((float)pwm_resolution * frame_active);
+        const u32 desired_ticks = (u32)((float)pwm_resolution * frame_active);
 
         verbose("Requested position for %s: %u ticks -> %u microseconds",
                 motor_id, desired_ticks, requestedMicroseconds);
@@ -285,15 +285,15 @@ bool requestServoPosition(const char *motor_id, u16 requestedMicroseconds) {
     return result;
 }
 
-bool configureServoMinMax(const char *motor_id, u16 minMicroseconds,
-                          u16 maxMicroseconds) {
+bool configureServoMinMax(const char *motor_id, const u16 minMicroseconds,
+                          const u16 maxMicroseconds) {
     if (motor_id == NULL || motor_id[0] == '\0') {
         debug("motor_id is null while setting configureServoMinMax");
         return false;
     }
 
     // Get the index in the array
-    u8 motor_id_index = getMotorMapIndex(motor_id);
+    const u8 motor_id_index = getMotorMapIndex(motor_id);
     if (motor_id_index == INVALID_MOTOR_ID) {
         warning("Invalid motor ID while configuring: %s", motor_id);
         return false;
@@ -326,7 +326,7 @@ void __isr on_pwm_wrap_handler() {
     // Using local variable to safely access volatile flag
     // In an ISR we want to be quick, so we'll just use a local copy
     // rather than a full critical section, since this is just reading a bool
-    bool is_safe = controller_safe_to_run;
+    const bool is_safe = controller_safe_to_run;
 
     // Don't actually wiggle the motors if we haven't been told it's safe
     if (is_safe) {
@@ -349,8 +349,11 @@ void __isr on_pwm_wrap_handler() {
 }
 
 void send_init_request(TimerHandle_t xTimer) {
-    char message[USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH];
-    memset(&message, '\0', USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH);
+
+    // Avoid unused parameter warning
+    (void) xTimer;
+
+    char message[USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH] = {0};
 
     snprintf(message, USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH, "INIT\t%u",
              PROTOCOL_VERSION);
@@ -359,13 +362,13 @@ void send_init_request(TimerHandle_t xTimer) {
     debug("sent init request");
 }
 
-u32 pwm_set_freq_duty(u32 slice_num, u32 chan, u32 frequency, int d) {
-    u32 clock = 125000000;
+u32 pwm_set_freq_duty(const u32 slice_num, const u32 chan, const u32 frequency, const int d) {
+    const u32 clock = 125000000;
     u32 divider16 =
         clock / frequency / 4096 + (clock % (frequency * 4096) != 0);
     if (divider16 / 16 == 0)
         divider16 = 16;
-    u32 wrap = (clock << 4) / divider16 / frequency -
+    const u32 wrap = (clock << 4) / divider16 / frequency -
                1; // Using bit shift for efficiency
     pwm_set_clkdiv_int_frac(slice_num, divider16 / 16, divider16 & 0xF);
     pwm_set_wrap(slice_num, wrap);
@@ -417,7 +420,7 @@ void firmware_configuration_received() {
     send_to_controller("READY\t1");
 }
 
-void first_frame_received(bool yesOrNo) {
+void first_frame_received(const bool yesOrNo) {
     has_first_frame_been_received = yesOrNo;
 
     if (yesOrNo) {
@@ -464,7 +467,7 @@ bool is_motor_configured(const char *motor_id) {
         return false;
     }
 
-    u8 motor_index = getMotorMapIndex(motor_id);
+    const u8 motor_index = getMotorMapIndex(motor_id);
     if (motor_index == INVALID_MOTOR_ID) {
         warning("invalid motor ID while checking configuration: %s", motor_id);
         return false;
@@ -506,10 +509,9 @@ bool are_all_motors_configured(void) {
     }
 
     if (all_configured) {
-        debug("all motors are configured - ready to hop! 🐰");
+        debug("all motors are configured");
     } else {
-        debug("some motors still need configuration - patience, young "
-              "grasshopper... er, bunny!");
+        warning("some motors still need configuration");
     }
 
     return all_configured;

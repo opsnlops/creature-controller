@@ -29,12 +29,12 @@ u16 stringToU16(const char *str) {
     }
 
     // Detect hexadecimal (starts with "0x" or "0X")
-    bool isHex = (str[0] == '0' && (str[1] == 'x' || str[1] == 'X'));
+    const bool isHex = str[0] == '0' && (str[1] == 'x' || str[1] == 'X');
     char *endPointer;
     errno = 0;
 
     // Convert to u16
-    unsigned long value = isHex ? strtoul(str, &endPointer, 16) : strtoul(str, &endPointer, 10);
+    const unsigned long value = isHex ? strtoul(str, &endPointer, 16) : strtoul(str, &endPointer, 10);
 
     // Check for conversion errors
     if (str == endPointer || errno == ERANGE || value > UINT16_MAX) {
@@ -47,7 +47,7 @@ u16 stringToU16(const char *str) {
 
 
 
-const char* to_binary_string(u8 value) {
+const char* to_binary_string(const u8 value) {
     static char bStr[9];
     bStr[8] = '\0'; // Null terminator
     for (int i = 7; i >= 0; i--) {
