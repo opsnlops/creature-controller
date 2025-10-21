@@ -1,4 +1,4 @@
-FROM debian:bookworm AS build
+FROM debian:trixie AS build
 
 RUN apt update -y && apt upgrade -y
 

@@ -1,4 +1,4 @@
-FROM debian:bookworm AS build
+FROM debian:trixie AS build
 
 # Set up the build environment
 RUN apt update -y && apt upgrade -y
@@ -24,11 +24,11 @@ RUN cmake -DCMAKE_BUILD_TYPE=Release -B build -G Ninja
 RUN cd /build/creature-controller/build && ninja
 
 
-FROM debian:bookworm-slim AS runtime
+FROM debian:trixie-slim AS runtime
 
 RUN apt update -y && apt upgrade -y
-RUN apt install -y locales-all file zlib1g libsasl2-2 libicu72 libsdl2-mixer-2.0-0 flac locales-all libutf8proc2 \
-                   libuuid1 util-linux pipewire libuv1 libcurl4 libprotobuf32 && \
+RUN apt install -y locales-all file zlib1g libsasl2-2 libicu76 libsdl2-mixer-2.0-0 flac libutf8proc3 \
+                   libuuid1 util-linux pipewire libuv1 libcurl4 libprotobuf32t64 && \
     rm -rf /var/lib/apt/lists
 
 WORKDIR /app

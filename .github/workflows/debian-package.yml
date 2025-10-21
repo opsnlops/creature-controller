@@ -24,7 +24,7 @@ jobs:
           submodules: 'true'
 
       - name: Build in container
-        run: docker build -f ${{github.workspace}}/controller/Dockerfile controller/ -t temp-image
+        run: docker build --pull -f ${{github.workspace}}/controller/Dockerfile controller/ -t temp-image
 
       - name: Build temp container
         run: docker create --name temp-container temp-image
