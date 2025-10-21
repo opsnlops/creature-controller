@@ -42,7 +42,8 @@ protected:
       "version": "0.1.0",
       "description": "This is a fake creature for testing",
       "channel_offset": 1,
-      "universe": 234,
+      "audio_channel": 1,
+      "mouth_slot": 4,
       "position_min": 0,
       "position_max": 1023,
       "head_offset_max": 0.4,
@@ -120,7 +121,7 @@ TEST_F(CreatureBuilderTest, BuildsCorrectlyWithValidData) {
     EXPECT_EQ("Test Creature", creature->getName());
     EXPECT_EQ("This is a fake creature for testing", creature->getDescription());
     EXPECT_EQ(1, creature->getChannelOffset());
-    EXPECT_EQ(234, creature->getUniverse());
+    EXPECT_EQ(4, creature->getMouthSlot());
     EXPECT_EQ(0, creature->getPositionMin());
     EXPECT_EQ(1023, creature->getPositionMax());
     EXPECT_NEAR(expectedHeadOffsetMax, creature->getHeadOffsetMax(), tolerance);

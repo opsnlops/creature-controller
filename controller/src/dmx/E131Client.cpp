@@ -32,10 +32,11 @@ E131Client::E131Client(const std::shared_ptr<Logger> &logger) : logger(logger) {
 E131Client::~E131Client() { this->logger->info("e1.31 client destroyed"); }
 
 void E131Client::init(const std::shared_ptr<creature::Creature> &_creature,
-                      const std::shared_ptr<Controller> &_controller, std::string _networkInterfaceName,
+                      const std::shared_ptr<Controller> &_controller, u16 _universe, std::string _networkInterfaceName,
                       uint _networkInterfaceIndex, std::string _networkInterfaceAddress) {
     this->creature = _creature;
     this->controller = _controller;
+    this->universe = _universe;
     this->networkInterfaceName = _networkInterfaceName;
     this->networkInterfaceIndex = _networkInterfaceIndex;
     this->networkInterfaceAddress = _networkInterfaceAddress;
@@ -144,9 +145,6 @@ void E131Client::run() {
     }
 
     logger->debug("E1.31 socket bound to port {}", E131_DEFAULT_PORT);
-
-    // Gather resolved interface info
-    uint16_t universe = creature->getUniverse();
 
     logger->info("Joining multicast group for universe {} on interface '{}'", universe, networkInterfaceName);
     logger->info("  IP address: {}", networkInterfaceAddress);

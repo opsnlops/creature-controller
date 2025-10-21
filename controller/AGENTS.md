@@ -161,3 +161,12 @@ The shutdown path has been tightened recently:
 - Enhanced logging for shutdown progress.
 - Fixed race conditions where processing continued post-shutdown request.
 
+## Future Work / Known TODOs
+
+**TLS Support for Server Communication**
+- Add TLS/SSL support for WebSocket connections (`ServerConnection`)
+- Add TLS/SSL support for RESTful API calls (creature registration endpoint)
+- Requires adding a configuration option for enabling TLS
+- Currently both use unencrypted HTTP/WS protocols
+- This is a larger architectural change that should be done holistically
+

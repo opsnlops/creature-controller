@@ -136,9 +136,9 @@ class Creature {
 
     u16 getChannelOffset() const;
 
-    u16 getUniverse() const;
-
     u8 getAudioChannel() const;
+
+    u8 getMouthSlot() const;
 
     u16 getPositionMin() const;
 
@@ -169,9 +169,9 @@ class Creature {
 
     void setChannelOffset(u16 channelOffset);
 
-    void setUniverse(u16 universe);
-
     void setAudioChannel(u8 audioChannel);
+
+    void setMouthSlot(u8 mouthSlot);
 
     void setPositionMin(u16 positionMin);
 
@@ -202,9 +202,9 @@ class Creature {
     float headOffsetMax;
     u16 servoUpdateFrequencyHz;
 
-    u16 universe;
     u16 channelOffset;
     u8 audioChannel;
+    u8 mouthSlot;
 
     /**
      * Inputs as defined in the config file for this creature

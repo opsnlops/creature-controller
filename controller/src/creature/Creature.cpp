@@ -216,20 +216,20 @@ namespace creatures::creature {
         Creature::channelOffset = _channelOffset;
     }
 
-    u16 Creature::getUniverse() const {
-        return universe;
-    }
-
-    void Creature::setUniverse(u16 _universe) {
-        Creature::universe = _universe;
-    }
-
     u8 Creature::getAudioChannel() const {
         return audioChannel;
     }
 
     void Creature::setAudioChannel(u8 _audioChannel) {
         Creature::audioChannel = _audioChannel;
+    }
+
+    u8 Creature::getMouthSlot() const {
+        return mouthSlot;
+    }
+
+    void Creature::setMouthSlot(u8 _mouthSlot) {
+        Creature::mouthSlot = _mouthSlot;
     }
 
     u16 Creature::getPositionMin() const {

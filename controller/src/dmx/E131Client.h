@@ -19,7 +19,8 @@ class E131Client : public StoppableThread {
     ~E131Client() override;
 
     void init(const std::shared_ptr<creature::Creature> &creature, const std::shared_ptr<Controller> &controller,
-              std::string networkInterfaceName, uint networkInterfaceIndex, std::string networkInterfaceAddress);
+              u16 universe, std::string networkInterfaceName, uint networkInterfaceIndex,
+              std::string networkInterfaceAddress);
     void start() override;
     void run() override;
 
@@ -36,6 +37,7 @@ class E131Client : public StoppableThread {
 
     void handlePacket(const e131_packet_t &packet);
 
+    u16 universe;
     std::string networkInterfaceName = DEFAULT_NETWORK_INTERFACE_NAME;
     std::string networkInterfaceAddress = DEFAULT_NETWORK_DEVICE_IP_ADDRESS;
     uint networkInterfaceIndex = 0;

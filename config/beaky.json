@@ -3,7 +3,7 @@
   "version": "2.0",
   "description": "The lead at April's Creature Workshop!",
   "channel_offset": 1,
-  "universe": 1,
+  "mouth_slot": 4,
   "position_min": 0,
   "position_max": 1023,
   "head_offset_max": 0.4,

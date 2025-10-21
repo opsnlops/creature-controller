@@ -45,7 +45,6 @@ CreatureBuilder::CreatureBuilder(std::shared_ptr<Logger> logger, std::string con
         "name",
         "version",
         "channel_offset",
-        "universe",
         "motors",
         "head_offset_max",
         "servo_frequency",
@@ -53,6 +52,7 @@ CreatureBuilder::CreatureBuilder(std::shared_ptr<Logger> logger, std::string con
         "position_max",
         "description",
         "audio_channel",
+        "mouth_slot",
     };
 
     requiredServoFields = {"type",          "id",
@@ -158,8 +158,8 @@ Result<std::shared_ptr<creatures::creature::Creature>> CreatureBuilder::build() 
     creature->setVersion(j["version"]);
     creature->setDescription(j["description"]);
     creature->setChannelOffset(j["channel_offset"]);
-    creature->setUniverse(j["universe"]);
     creature->setAudioChannel(j["audio_channel"]);
+    creature->setMouthSlot(j["mouth_slot"]);
     creature->setPositionMin(j["position_min"]);
     creature->setPositionMax(j["position_max"]);
     creature->setHeadOffsetMax(j["head_offset_max"]);

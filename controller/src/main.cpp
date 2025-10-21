@@ -13,6 +13,7 @@
 // Standard library includes
 #include <csignal>
 #include <cstdlib>
+#include <fstream>
 #include <thread>
 #include <unordered_map>
 #include <utility>
@@ -20,9 +21,14 @@
 
 #include <opus.h>
 
+// Third-party includes
+#include <ixwebsocket/IXHttpClient.h>
+#include <nlohmann/json.hpp>
+
 // Project includes
 #include "Version.h"
 #include "audio/AudioSubsystem.h"
+#include "config/BaseBuilder.h"
 #include "config/CommandLine.h"
 #include "config/CreatureBuilder.h"
 #include "controller-config.h"
@@ -84,6 +90,87 @@ std::shared_ptr<creatures::Logger> makeLogger(std::string name) {
  * @brief The audio subsystem for handling RTP audio reception
  */
 std::shared_ptr<creatures::audio::AudioSubsystem> audioSubsystem;
+
+/**
+ * @brief Register the creature configuration with the server
+ *
+ * This function attempts to register the creature's configuration with the server
+ * by sending the JSON config file content and universe assignment to the server's
+ * /api/v1/creature/register endpoint. This provides a backup of the creature's
+ * critical configuration.
+ *
+ * Errors are logged but non-fatal - the controller will continue running even if
+ * registration fails (e.g., if the server is down).
+ *
+ * @param logger Shared pointer to a logger instance
+ * @param serverAddress The server's address
+ * @param serverPort The server's port
+ * @param creatureConfigFile Path to the creature's JSON config file
+ * @param universe The universe this creature is assigned to
+ * @return true if registration succeeded, false otherwise
+ */
+bool registerCreatureWithServer(std::shared_ptr<creatures::Logger> logger,
+                                const std::string& serverAddress,
+                                u16 serverPort,
+                                const std::string& creatureConfigFile,
+                                u16 universe) {
+
+    logger->info("Registering creature with server at {}:{}...", serverAddress, serverPort);
+
+    // Load the creature config file content
+    auto configFileResult = creatures::config::BaseBuilder::loadFile(logger, creatureConfigFile);
+    if (!configFileResult.isSuccess()) {
+        logger->error("Failed to load creature config file for registration: {}",
+                     configFileResult.getError().value().getMessage());
+        return false;
+    }
+
+    std::string creatureConfigContent = configFileResult.getValue().value();
+
+    // Build the JSON request body matching RegisterCreatureRequestDto
+    nlohmann::json requestBody;
+    requestBody["creature_config"] = creatureConfigContent;  // String: raw JSON content
+    requestBody["universe"] = universe;                       // UInt32: universe number
+
+    std::string requestBodyStr = requestBody.dump();
+
+    // Build the registration URL
+    std::string url = fmt::format("http://{}:{}/api/v1/creature/register",
+                                 serverAddress, serverPort);
+
+    logger->debug("Registration URL: {}", url);
+    logger->debug("Universe: {}", universe);
+
+    // Create HTTP client and configure request
+    ix::HttpClient httpClient;
+    auto args = std::make_shared<ix::HttpRequestArgs>();
+    args->extraHeaders["Content-Type"] = "application/json";
+    args->connectTimeout = 10;  // 10 second connection timeout
+    args->transferTimeout = 30; // 30 second transfer timeout
+
+    // Make the POST request
+    auto response = httpClient.post(url, requestBodyStr, args);
+
+    // Handle HTTP errors
+    if (response->errorCode != ix::HttpErrorCode::Ok) {
+        logger->error("HTTP error during creature registration: {} - {}",
+                     static_cast<int>(response->errorCode),
+                     response->errorMsg);
+        return false;
+    }
+
+    // Check server response status
+    if (response->statusCode == 200) {
+        logger->info("Successfully registered creature with server");
+        logger->debug("Server response: {}", response->body);
+        return true;
+    } else {
+        logger->warn("Server registration returned status {}: {}",
+                    response->statusCode,
+                    response->body);
+        return false;
+    }
+}
 
 /**
  * @brief Main entry point for the creature controller application
@@ -196,6 +283,10 @@ int main(int argc, char **argv) {
     if (config->isUsingServer()) {
         serverConnection->start();
         workerThreads.push_back(serverConnection);
+
+        // Register the creature with the server (non-fatal if it fails)
+        registerCreatureWithServer(logger, config->getServerAddress(), config->getServerPort(),
+                                  config->getCreatureConfigFile(), config->getUniverse());
     }
 
     // Bring up the GPIO pins if enabled on the command line
@@ -245,8 +336,8 @@ int main(int argc, char **argv) {
     // Create and start the e1.31 client
     logger->debug("starting the e1.31 client");
     auto e131Client = std::make_unique<creatures::dmx::E131Client>(makeLogger("e131-client"));
-    e131Client->init(creature, controller, config->getNetworkDeviceName(), config->getNetworkDeviceIndex(),
-                     config->getNetworkDeviceIPAddress());
+    e131Client->init(creature, controller, config->getUniverse(), config->getNetworkDeviceName(),
+                     config->getNetworkDeviceIndex(), config->getNetworkDeviceIPAddress());
     e131Client->start();
     workerThreads.push_back(std::move(e131Client));
 
