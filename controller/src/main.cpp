@@ -127,6 +127,9 @@ bool registerCreatureWithServer(std::shared_ptr<creatures::Logger> logger,
 
     std::string creatureConfigContent = configFileResult.getValue().value();
 
+    logger->debug("Loaded creature config file, size: {} bytes", creatureConfigContent.length());
+    logger->debug("First 100 chars of config: {}", creatureConfigContent.substr(0, std::min(100UL, creatureConfigContent.length())));
+
     // Build the JSON request body matching RegisterCreatureRequestDto
     nlohmann::json requestBody;
     requestBody["creature_config"] = creatureConfigContent;  // String: raw JSON content
@@ -140,6 +143,7 @@ bool registerCreatureWithServer(std::shared_ptr<creatures::Logger> logger,
 
     logger->debug("Registration URL: {}", url);
     logger->debug("Universe: {}", universe);
+    logger->debug("Request body being sent: {}", requestBodyStr);
 
     // Create HTTP client and configure request
     ix::HttpClient httpClient;
