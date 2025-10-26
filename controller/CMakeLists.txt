@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.18)
 
 project(creature-controller
-        VERSION "2.8.4"
+        VERSION "2.8.5"
         DESCRIPTION "April's Creature Workshop Controller"
         HOMEPAGE_URL https://github.com/opsnlops/creature-controller
         LANGUAGES C CXX)
@@ -225,6 +225,8 @@ add_library(creature_lib
         src/util/thread_name.h
         src/util/string_utils.cpp
         src/util/string_utils.h
+        src/util/http_utils.cpp
+        src/util/http_utils.h
         src/util/StoppableThread.h
         src/io/SerialReader.h
         src/io/SerialReader.cpp

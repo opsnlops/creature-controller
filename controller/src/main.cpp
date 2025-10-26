@@ -22,7 +22,6 @@
 #include <opus.h>
 
 // Third-party includes
-#include <curl/curl.h>
 #include <nlohmann/json.hpp>
 
 // Project includes
@@ -45,6 +44,7 @@
 #include "server/ServerConnection.h"
 #include "server/ServerMessage.h"
 #include "util/StoppableThread.h"
+#include "util/http_utils.h"
 #include "util/thread_name.h"
 #include "watchdog/WatchdogThread.h"
 
@@ -109,12 +109,6 @@ std::shared_ptr<creatures::audio::AudioSubsystem> audioSubsystem;
  * @param universe The universe this creature is assigned to
  * @return true if registration succeeded, false otherwise
  */
-// Callback function for libcurl to write response data
-static size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* userp) {
-    ((std::string*)userp)->append((char*)contents, size * nmemb);
-    return size * nmemb;
-}
-
 bool registerCreatureWithServer(std::shared_ptr<creatures::Logger> logger,
                                 const std::string& serverAddress,
                                 u16 serverPort,
@@ -151,56 +145,18 @@ bool registerCreatureWithServer(std::shared_ptr<creatures::Logger> logger,
     logger->debug("Universe: {}", universe);
     logger->debug("Request body length: {} bytes", requestBodyStr.length());
 
-    // Initialize curl
-    CURL* curl = curl_easy_init();
-    if (!curl) {
-        logger->error("Failed to initialize curl");
-        return false;
-    }
-
+    // Make the HTTP POST request
     std::string responseBody;
-    CURLcode res;
+    std::string errorMsg;
+    long httpCode = 0;
 
-    // Set curl options
-    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-    curl_easy_setopt(curl, CURLOPT_POST, 1L);
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, requestBodyStr.c_str());
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, requestBodyStr.length());
-
-    // Set headers
-    struct curl_slist* headers = nullptr;
-    headers = curl_slist_append(headers, "Content-Type: application/json");
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-
-    // Set timeouts
-    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L);
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L);
-
-    // Set callback for response
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseBody);
-
-    // Perform the request
-    res = curl_easy_perform(curl);
-
-    // Check for errors
-    if (res != CURLE_OK) {
-        logger->error("curl_easy_perform() failed: {}", curl_easy_strerror(res));
-        curl_slist_free_all(headers);
-        curl_easy_cleanup(curl);
+    if (!creatures::util::makeHttpPostRequest(url, requestBodyStr, responseBody, httpCode, errorMsg)) {
+        logger->error("Failed to register creature with server: {}", errorMsg);
         return false;
     }
-
-    // Get HTTP response code
-    long httpCode = 0;
-    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
 
     logger->debug("HTTP Response Code: {}", httpCode);
     logger->debug("Response body: {}", responseBody);
-
-    // Cleanup
-    curl_slist_free_all(headers);
-    curl_easy_cleanup(curl);
 
     // Check server response status
     if (httpCode == 200) {
