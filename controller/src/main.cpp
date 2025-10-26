@@ -149,11 +149,27 @@ bool registerCreatureWithServer(std::shared_ptr<creatures::Logger> logger,
     ix::HttpClient httpClient;
     auto args = std::make_shared<ix::HttpRequestArgs>();
     args->extraHeaders["Content-Type"] = "application/json";
+    args->body = requestBodyStr;  // Set the body in args as well
     args->connectTimeout = 10;  // 10 second connection timeout
     args->transferTimeout = 30; // 30 second transfer timeout
 
+    logger->debug("Request body length: {}", requestBodyStr.length());
+    logger->debug("Content-Type header: {}", args->extraHeaders["Content-Type"]);
+
     // Make the POST request
     auto response = httpClient.post(url, requestBodyStr, args);
+
+    // DEBUG: Log detailed response information
+    logger->debug("HTTP Response Details:");
+    logger->debug("  - Error Code: {}", static_cast<int>(response->errorCode));
+    logger->debug("  - Error Message: {}", response->errorMsg);
+    logger->debug("  - Status Code: {}", response->statusCode);
+    logger->debug("  - Upload Size: {} bytes", response->uploadSize);
+    logger->debug("  - Download Size: {} bytes", response->downloadSize);
+    logger->debug("  - Response Headers:");
+    for (const auto& header : response->headers) {
+        logger->debug("      {}: {}", header.first, header.second);
+    }
 
     // Handle HTTP errors
     if (response->errorCode != ix::HttpErrorCode::Ok) {
