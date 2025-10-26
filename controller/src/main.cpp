@@ -22,7 +22,7 @@
 #include <opus.h>
 
 // Third-party includes
-#include <ixwebsocket/IXHttpClient.h>
+#include <curl/curl.h>
 #include <nlohmann/json.hpp>
 
 // Project includes
@@ -109,6 +109,12 @@ std::shared_ptr<creatures::audio::AudioSubsystem> audioSubsystem;
  * @param universe The universe this creature is assigned to
  * @return true if registration succeeded, false otherwise
  */
+// Callback function for libcurl to write response data
+static size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* userp) {
+    ((std::string*)userp)->append((char*)contents, size * nmemb);
+    return size * nmemb;
+}
+
 bool registerCreatureWithServer(std::shared_ptr<creatures::Logger> logger,
                                 const std::string& serverAddress,
                                 u16 serverPort,
@@ -143,51 +149,65 @@ bool registerCreatureWithServer(std::shared_ptr<creatures::Logger> logger,
 
     logger->debug("Registration URL: {}", url);
     logger->debug("Universe: {}", universe);
-    logger->debug("Request body being sent: {}", requestBodyStr);
+    logger->debug("Request body length: {} bytes", requestBodyStr.length());
 
-    // Create HTTP client and configure request
-    ix::HttpClient httpClient;
-    auto args = std::make_shared<ix::HttpRequestArgs>();
-    args->extraHeaders["Content-Type"] = "application/json";
-    args->body = requestBodyStr;  // Set the body in args as well
-    args->connectTimeout = 10;  // 10 second connection timeout
-    args->transferTimeout = 30; // 30 second transfer timeout
-
-    logger->debug("Request body length: {}", requestBodyStr.length());
-    logger->debug("Content-Type header: {}", args->extraHeaders["Content-Type"]);
-
-    // Make the POST request
-    auto response = httpClient.post(url, requestBodyStr, args);
-
-    // DEBUG: Log detailed response information
-    logger->debug("HTTP Response Details:");
-    logger->debug("  - Error Code: {}", static_cast<int>(response->errorCode));
-    logger->debug("  - Error Message: {}", response->errorMsg);
-    logger->debug("  - Status Code: {}", response->statusCode);
-    logger->debug("  - Upload Size: {} bytes", response->uploadSize);
-    logger->debug("  - Download Size: {} bytes", response->downloadSize);
-    logger->debug("  - Response Headers:");
-    for (const auto& header : response->headers) {
-        logger->debug("      {}: {}", header.first, header.second);
-    }
-
-    // Handle HTTP errors
-    if (response->errorCode != ix::HttpErrorCode::Ok) {
-        logger->error("HTTP error during creature registration: {} - {}",
-                     static_cast<int>(response->errorCode),
-                     response->errorMsg);
+    // Initialize curl
+    CURL* curl = curl_easy_init();
+    if (!curl) {
+        logger->error("Failed to initialize curl");
         return false;
     }
 
+    std::string responseBody;
+    CURLcode res;
+
+    // Set curl options
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_POST, 1L);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, requestBodyStr.c_str());
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, requestBodyStr.length());
+
+    // Set headers
+    struct curl_slist* headers = nullptr;
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+
+    // Set timeouts
+    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L);
+
+    // Set callback for response
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseBody);
+
+    // Perform the request
+    res = curl_easy_perform(curl);
+
+    // Check for errors
+    if (res != CURLE_OK) {
+        logger->error("curl_easy_perform() failed: {}", curl_easy_strerror(res));
+        curl_slist_free_all(headers);
+        curl_easy_cleanup(curl);
+        return false;
+    }
+
+    // Get HTTP response code
+    long httpCode = 0;
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
+
+    logger->debug("HTTP Response Code: {}", httpCode);
+    logger->debug("Response body: {}", responseBody);
+
+    // Cleanup
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
+
     // Check server response status
-    if (response->statusCode == 200) {
+    if (httpCode == 200) {
         logger->info("Successfully registered creature with server");
-        logger->debug("Server response: {}", response->body);
         return true;
     } else {
-        logger->warn("Server registration returned status {}: {}",
-                    response->statusCode,
-                    response->body);
+        logger->warn("Server registration returned status {}: {}", httpCode, responseBody);
         return false;
     }
 }

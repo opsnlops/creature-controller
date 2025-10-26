@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.18)
 
 project(creature-controller
-        VERSION "2.8.3"
+        VERSION "2.8.4"
         DESCRIPTION "April's Creature Workshop Controller"
         HOMEPAGE_URL https://github.com/opsnlops/creature-controller
         LANGUAGES C CXX)
@@ -121,6 +121,9 @@ FetchContent_MakeAvailable(ixwebsocket)
 # SDL
 find_package(SDL2 REQUIRED)
 find_package(SDL2_mixer REQUIRED)
+
+# libcurl for HTTP requests
+find_package(CURL REQUIRED)
 
 include_directories(
         src/
@@ -309,6 +312,7 @@ target_link_libraries(creature-controller
         nlohmann_json::nlohmann_json
         uvgrtp
         opus
+        CURL::libcurl
 )
 
 install(TARGETS creature-controller

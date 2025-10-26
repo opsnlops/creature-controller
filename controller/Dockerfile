@@ -4,7 +4,7 @@ FROM debian:trixie AS build
 RUN apt update -y && apt upgrade -y
 RUN apt install -y gcc g++ locales-all libssl-dev ninja-build cmake git \
                    pkgconf libbson-dev libpthreadpool-dev libutf8proc-dev \
-                   file zlib1g-dev libsdl2-mixer-dev libsdl2-dev
+                   file zlib1g-dev libsdl2-mixer-dev libsdl2-dev libcurl4-openssl-dev
 
 # Copy the source code into the build directory
 COPY src/ /build/creature-controller/src
