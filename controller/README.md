@@ -57,4 +57,36 @@ coding error. (Servos are strong and snapping PLA is easy!)
 # Uploading a Creature's Config
 
    curl -v -d @kenny.json https://server.prod.chirpchirp.dev/api/v1/creature
+
+## Audio Volume Helper
+
+If you need the ALSA mixer level pinned to 95% at boot (so SDL playback starts at a known loudness), use the helper script at `scripts/set-alsa-volume.sh`. It wraps `amixer` and defaults to card `0`, control `Master`, and `95%`, but you can override each value:
+
+```bash
+./scripts/set-alsa-volume.sh --card 1 --control PCM --percent 95%
+```
+
+To run it automatically at startup via systemd, copy it to a location on the root filesystem (or reference it directly inside the repo) and add a small service:
+
+```
+# /etc/systemd/system/alsa-volume.service
+[Unit]
+Description=Set ALSA mixer level for Creature Controller audio
+After=sound.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/set-alsa-volume.sh --card 0 --control Master --percent 95% --unmute
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Then enable it once with:
+
+```bash
+sudo systemctl enable --now alsa-volume.service
+```
+
+This guarantees the hardware mixer is set before the controller process starts. See `docs/audio-volume.md` for a deeper walkthrough.
   
