@@ -55,6 +55,8 @@ Result<std::shared_ptr<config::Configuration>> CommandLine::parseCommandLine(int
             ControllerError(ControllerError::InvalidConfiguration, err.what()));
     }
 
+    validateCreatureConfigOnly = program.get<bool>("--validate-creature-config");
+
     if (program.get<bool>("--list-network-devices")) {
         listNetworkDevices();
         std::exit(0);
@@ -108,10 +110,17 @@ void CommandLine::setupCommandLineArguments(argparse::ArgumentParser &program) {
         .default_value(false)
         .implicit_value(true);
 
+    program.add_argument("--validate-creature-config")
+        .help("Send the creature config to the server for validation, then exit")
+        .default_value(false)
+        .implicit_value(true);
+
     program.add_description("This application is the Linux version of the Creature Controller that's part\n"
                             "of April's Creature Workshop! 🐰");
     program.add_epilog("This is version " + getVersion() + "\n\n" + "🦜 Bawk!");
 }
+
+bool CommandLine::shouldValidateCreatureConfigOnly() const { return validateCreatureConfigOnly; }
 
 void CommandLine::listNetworkDevices() {
     struct ifaddrs *ifaddr = nullptr;

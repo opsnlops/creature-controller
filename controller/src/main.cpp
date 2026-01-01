@@ -109,11 +109,8 @@ std::shared_ptr<creatures::audio::AudioSubsystem> audioSubsystem;
  * @param universe The universe this creature is assigned to
  * @return true if registration succeeded, false otherwise
  */
-bool registerCreatureWithServer(std::shared_ptr<creatures::Logger> logger,
-                                const std::string& serverAddress,
-                                u16 serverPort,
-                                const std::string& creatureConfigFile,
-                                u16 universe) {
+bool registerCreatureWithServer(std::shared_ptr<creatures::Logger> logger, const std::string &serverAddress,
+                                u16 serverPort, const std::string &creatureConfigFile, u16 universe) {
 
     logger->info("Registering creature with server at {}:{}...", serverAddress, serverPort);
 
@@ -121,25 +118,25 @@ bool registerCreatureWithServer(std::shared_ptr<creatures::Logger> logger,
     auto configFileResult = creatures::config::BaseBuilder::loadFile(logger, creatureConfigFile);
     if (!configFileResult.isSuccess()) {
         logger->error("Failed to load creature config file for registration: {}",
-                     configFileResult.getError().value().getMessage());
+                      configFileResult.getError().value().getMessage());
         return false;
     }
 
     std::string creatureConfigContent = configFileResult.getValue().value();
 
     logger->debug("Loaded creature config file, size: {} bytes", creatureConfigContent.length());
-    logger->debug("First 100 chars of config: {}", creatureConfigContent.substr(0, std::min(100UL, creatureConfigContent.length())));
+    logger->debug("First 100 chars of config: {}",
+                  creatureConfigContent.substr(0, std::min(100UL, creatureConfigContent.length())));
 
     // Build the JSON request body matching RegisterCreatureRequestDto
     nlohmann::json requestBody;
-    requestBody["creature_config"] = creatureConfigContent;  // String: raw JSON content
-    requestBody["universe"] = universe;                       // UInt32: universe number
+    requestBody["creature_config"] = creatureConfigContent; // String: raw JSON content
+    requestBody["universe"] = universe;                     // UInt32: universe number
 
     std::string requestBodyStr = requestBody.dump();
 
     // Build the registration URL
-    std::string url = fmt::format("http://{}:{}/api/v1/creature/register",
-                                 serverAddress, serverPort);
+    std::string url = fmt::format("http://{}:{}/api/v1/creature/register", serverAddress, serverPort);
 
     logger->debug("Registration URL: {}", url);
     logger->debug("Universe: {}", universe);
@@ -166,6 +163,103 @@ bool registerCreatureWithServer(std::shared_ptr<creatures::Logger> logger,
         logger->warn("Server registration returned status {}: {}", httpCode, responseBody);
         return false;
     }
+}
+
+/**
+ * @brief Validate the creature configuration with the server
+ *
+ * Sends the raw creature JSON config to /api/v1/creature/validate and reports the result.
+ * This is intended for preflight validation before running the controller.
+ *
+ * @param logger Shared pointer to a logger instance
+ * @param serverAddress The server's address
+ * @param serverPort The server's port
+ * @param creatureConfigFile Path to the creature's JSON config file
+ * @param isValid Output flag set to true if the server reports the config is valid
+ * @return true if the request completed and was parsed, false otherwise
+ */
+bool validateCreatureConfigWithServer(std::shared_ptr<creatures::Logger> logger, const std::string &serverAddress,
+                                      u16 serverPort, const std::string &creatureConfigFile, bool &isValid) {
+    isValid = false;
+    logger->info("Validating creature config with server at {}:{}...", serverAddress, serverPort);
+
+    auto configFileResult = creatures::config::BaseBuilder::loadFile(logger, creatureConfigFile);
+    if (!configFileResult.isSuccess()) {
+        logger->error("Failed to load creature config file for validation: {}",
+                      configFileResult.getError().value().getMessage());
+        return false;
+    }
+
+    std::string creatureConfigContent = configFileResult.getValue().value();
+    logger->debug("Loaded creature config file, size: {} bytes", creatureConfigContent.length());
+
+    std::string url = fmt::format("http://{}:{}/api/v1/creature/validate", serverAddress, serverPort);
+    logger->debug("Validation URL: {}", url);
+
+    std::string responseBody;
+    std::string errorMsg;
+    long httpCode = 0;
+
+    if (!creatures::util::makeHttpPostRequest(url, creatureConfigContent, responseBody, httpCode, errorMsg)) {
+        logger->error("Failed to validate creature config with server: {}", errorMsg);
+        return false;
+    }
+
+    logger->debug("HTTP Response Code: {}", httpCode);
+    logger->debug("Response body: {}", responseBody);
+
+    if (httpCode != 200) {
+        logger->error("Server validation returned status {}: {}", httpCode, responseBody);
+        return false;
+    }
+
+    nlohmann::json payload;
+    try {
+        payload = nlohmann::json::parse(responseBody);
+    } catch (const std::exception &ex) {
+        logger->error("Unable to parse validation response: {}", ex.what());
+        return false;
+    }
+
+    if (!payload.is_object() || !payload.contains("valid")) {
+        logger->error("Validation response missing required fields");
+        return false;
+    }
+
+    isValid = payload.value("valid", false);
+    std::string creatureId = payload.value("creature_id", std::string("unknown"));
+
+    if (isValid) {
+        logger->info("Creature config is valid for creature {}", creatureId);
+    } else {
+        logger->warn("Creature config is invalid for creature {}", creatureId);
+    }
+
+    if (payload.contains("missing_animation_ids") && payload["missing_animation_ids"].is_array()) {
+        for (const auto &id : payload["missing_animation_ids"]) {
+            if (id.is_string()) {
+                logger->warn("Missing animation ID: {}", id.get<std::string>());
+            }
+        }
+    }
+
+    if (payload.contains("mismatched_animation_ids") && payload["mismatched_animation_ids"].is_array()) {
+        for (const auto &id : payload["mismatched_animation_ids"]) {
+            if (id.is_string()) {
+                logger->warn("Mismatched animation ID: {}", id.get<std::string>());
+            }
+        }
+    }
+
+    if (payload.contains("error_messages") && payload["error_messages"].is_array()) {
+        for (const auto &message : payload["error_messages"]) {
+            if (message.is_string()) {
+                logger->warn("Validation error: {}", message.get<std::string>());
+            }
+        }
+    }
+
+    return true;
 }
 
 /**
@@ -209,6 +303,21 @@ int main(int argc, char **argv) {
 
     // Yay, we have a valid config
     auto config = configResult.getValue().value();
+
+    if (commandLine->shouldValidateCreatureConfigOnly()) {
+        if (!config->isUsingServer()) {
+            logger->error("Server validation requested but server usage is disabled in config");
+            return EXIT_FAILURE;
+        }
+
+        bool isValid = false;
+        bool requestOk = validateCreatureConfigWithServer(logger, config->getServerAddress(), config->getServerPort(),
+                                                          config->getCreatureConfigFile(), isValid);
+        if (!requestOk) {
+            return EXIT_FAILURE;
+        }
+        return isValid ? EXIT_SUCCESS : EXIT_FAILURE;
+    }
 
     auto builder = creatures::config::CreatureBuilder(logger, config->getCreatureConfigFile());
     auto creatureResult = builder.build();
@@ -282,7 +391,7 @@ int main(int argc, char **argv) {
 
         // Register the creature with the server (non-fatal if it fails)
         registerCreatureWithServer(logger, config->getServerAddress(), config->getServerPort(),
-                                  config->getCreatureConfigFile(), config->getUniverse());
+                                   config->getCreatureConfigFile(), config->getUniverse());
     }
 
     // Bring up the GPIO pins if enabled on the command line

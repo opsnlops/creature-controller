@@ -57,9 +57,11 @@ class CommandLine {
      * @return Version in format "MAJOR.MINOR.PATCH"
      */
     [[nodiscard]] static std::string getVersion();
+    [[nodiscard]] bool shouldValidateCreatureConfigOnly() const;
 
   private:
     std::shared_ptr<Logger> logger;
+    bool validateCreatureConfigOnly = false;
 
     /**
      * @brief Set up command line arguments for argparse
