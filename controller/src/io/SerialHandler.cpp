@@ -139,6 +139,10 @@ Result<bool> SerialHandler::setupSerialPort() {
         return Result<bool>{false};
     }
 
+    if (tcflush(this->fileDescriptor, TCIOFLUSH) != 0) {
+        this->logger->warn("Unable to flush serial port {}: {}", this->deviceNode, strerror(errno));
+    }
+
     this->logger->debug("serial port {} is open and configured successfully", this->deviceNode);
     return Result<bool>{true};
 }

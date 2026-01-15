@@ -55,48 +55,20 @@ void SerialWriter::run() {
         // Append a newline character to the message
         outgoingMessage.payload += '\n';
 
-        ssize_t bytesWritten =
-            write(this->fileDescriptor, outgoingMessage.payload.c_str(), outgoingMessage.payload.length());
+        ssize_t bytesWritten = -1;
+        do {
+            bytesWritten =
+                write(this->fileDescriptor, outgoingMessage.payload.c_str(), outgoingMessage.payload.length());
+        } while (bytesWritten < 0 && errno == EINTR && !stop_requested.load());
 
         if (bytesWritten < 0) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                // This could happen with non-blocking writes - retry once
-                std::this_thread::sleep_for(std::chrono::milliseconds(1));
-                bytesWritten =
-                    write(this->fileDescriptor, outgoingMessage.payload.c_str(), outgoingMessage.payload.length());
-
-                if (bytesWritten < 0) {
-                    // Check if we're being shut down
-                    if (stop_requested.load()) {
-                        this->logger->info("SerialWriter for {} received shutdown during write retry",
-                                           this->deviceNode);
-                        break;
-                    }
-                    // Still failed - log and exit thread gracefully
-                    std::string errorMessage =
-                        fmt::format("Serial port {} write error: {}", this->deviceNode, strerror(errno));
-                    this->logger->error(errorMessage);
-                    break; // Exit thread gracefully instead of calling std::exit
-                }
-            } else {
-                // Check if we're being shut down
-                if (stop_requested.load()) {
-                    this->logger->info("SerialWriter for {} received shutdown during write error", this->deviceNode);
-                    break;
-                }
-                // Write error - log and exit thread gracefully
-                std::string errorMessage =
-                    fmt::format("Serial port {} write error: {}", this->deviceNode, strerror(errno));
-                this->logger->error(errorMessage);
-                break; // Exit thread gracefully instead of calling std::exit
-            }
-        } else if (bytesWritten != static_cast<ssize_t>(outgoingMessage.payload.length())) {
-            // Check if we're being shut down
             if (stop_requested.load()) {
-                this->logger->info("SerialWriter for {} received shutdown during partial write", this->deviceNode);
                 break;
             }
-            // Partial write - log and exit thread gracefully
+            std::string errorMessage = fmt::format("Serial port {} write error: {}", this->deviceNode, strerror(errno));
+            this->logger->error(errorMessage);
+            break; // Exit thread gracefully instead of calling std::exit
+        } else if (bytesWritten != static_cast<ssize_t>(outgoingMessage.payload.length())) {
             std::string errorMessage = fmt::format("Serial port {} partial write - expected {} bytes, wrote {} bytes",
                                                    this->deviceNode, outgoingMessage.payload.length(), bytesWritten);
             this->logger->warn(errorMessage);
