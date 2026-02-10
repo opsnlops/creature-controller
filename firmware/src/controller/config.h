@@ -183,10 +183,12 @@
 #define UART_SERIAL_OUTGOING_QUEUE_LENGTH 15
 #define UART_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH 255
 
+#ifdef CC_VER2
 #define UART_DEVICE_NAME uart1
 #define UART_RX_PIN 5
 #define UART_TX_PIN 4
 #define UART_BAUD_RATE 115200
+#endif
 
 // Used by the controller to signal that we need to reset
 #define CONTROLLER_RESET_PIN 22

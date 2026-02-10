@@ -57,7 +57,7 @@ endif()
 message("Building for platform ${PICO_PLATFORM}")
 
 project(creature-firmware
-        VERSION "3.4.11"
+        VERSION "3.9.0"
         DESCRIPTION "Pi Pico Firmwares for April's Creatures"
         HOMEPAGE_URL https://github.com/opsnlops/creature-controller/firmware
         LANGUAGES C CXX ASM)
@@ -232,6 +232,37 @@ set(PROGRAMMER_ADDITIONAL_INCLUDES
 )
 
 
+# Dynamixel Protocol 2.0 library (shared, reusable by controller later)
+set(DYNAMIXEL_SOURCES
+        src/dynamixel/dynamixel_protocol.h
+        src/dynamixel/dynamixel_protocol.c
+        src/dynamixel/dynamixel_registers.h
+        src/dynamixel/dynamixel_hal.h
+        src/dynamixel/dynamixel_hal.c
+        src/dynamixel/dynamixel_servo.h
+        src/dynamixel/dynamixel_servo.c
+)
+
+# Dynamixel Servo Tester
+set(DYNAMIXEL_TESTER_ADDITIONAL_SOURCES
+        ${DYNAMIXEL_SOURCES}
+        src/dynamixel_tester/main.c
+        src/dynamixel_tester/config.h
+        src/dynamixel_tester/shell.h
+        src/dynamixel_tester/shell.c
+        src/dynamixel_tester/usb.h
+        src/dynamixel_tester/usb.c
+        src/dynamixel_tester/usb_descriptors.c
+)
+
+set(DYNAMIXEL_TESTER_ADDITIONAL_LIBS
+        tinyusb_device
+        tinyusb_board
+)
+
+set(DYNAMIXEL_TESTER_ADDITIONAL_INCLUDES
+)
+
 
 # Function to create firmware targets
 function(create_firmware TARGET_NAME ADDITIONAL_SOURCES ADDITIONAL_LIBS ADDITIONAL_INCLUDES)
@@ -280,4 +311,10 @@ create_firmware("programmer-${PICO_PLATFORM}-hw${HARDWARE_VERSION}"
         "${PROGRAMMER_ADDITIONAL_SOURCES}"
         "${PROGRAMMER_ADDITIONAL_LIBS}"
         "${PROGRAMMER_ADDITIONAL_INCLUDES}"
+)
+
+create_firmware("dynamixel-tester-${PICO_PLATFORM}-hw${HARDWARE_VERSION}"
+        "${DYNAMIXEL_TESTER_ADDITIONAL_SOURCES}"
+        "${DYNAMIXEL_TESTER_ADDITIONAL_LIBS}"
+        "${DYNAMIXEL_TESTER_ADDITIONAL_INCLUDES}"
 )

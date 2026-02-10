@@ -144,7 +144,9 @@ static void initialize_binary_info(void) {
     bi_decl(bi_1pin_with_name(POWER_PIN, "Power Relay"))
     bi_decl(bi_1pin_with_name(STATUS_LIGHTS_LOGIC_BOARD_PIN, "Status Lights for Logic Board"))
     bi_decl(bi_1pin_with_name(STATUS_LIGHTS_SERVOS_PIN, "Status Lights for the Servos"))
+#ifdef CC_VER2
     bi_decl(bi_2pins_with_func(UART_TX_PIN, UART_RX_PIN, GPIO_FUNC_UART))
+#endif
     bi_decl(bi_1pin_with_name(SERVO_0_GPIO_PIN, "Servo 0"))
     bi_decl(bi_1pin_with_name(SERVO_1_GPIO_PIN, "Servo 1"))
     bi_decl(bi_1pin_with_name(SERVO_2_GPIO_PIN, "Servo 2"))

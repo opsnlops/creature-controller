@@ -56,12 +56,20 @@ add_executable(test_message_parsing
 )
 target_link_libraries(test_message_parsing unity mocks)
 
+# Create test executable for dynamixel protocol
+add_executable(test_dynamixel_protocol
+        tests/test_dynamixel_protocol.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/../src/dynamixel/dynamixel_protocol.c
+)
+target_link_libraries(test_dynamixel_protocol unity)
+
 # Add custom test target to run all tests
 add_custom_target(run_tests
         COMMAND test_string_utils
         COMMAND test_analog_filter
         COMMAND test_message_parsing
-        DEPENDS test_string_utils test_analog_filter test_message_parsing
+        COMMAND test_dynamixel_protocol
+        DEPENDS test_string_utils test_analog_filter test_message_parsing test_dynamixel_protocol
 )
 
 # Add exported symbols for mocked functions that are used by the firmware code
