@@ -1,6 +1,8 @@
 
 #include <string.h>
 
+#include <FreeRTOS.h>
+
 #include "logging/logging.h"
 
 #include "dynamixel_registers.h"
@@ -161,6 +163,146 @@ dxl_result_t dxl_set_profile_velocity(dxl_hal_context_t *ctx, u8 id, u32 velocit
     return dxl_write_register(ctx, id, DXL_REG_PROFILE_VELOCITY, 4, velocity);
 }
 
+dxl_result_t dxl_sync_write_position(dxl_hal_context_t *ctx, const dxl_sync_position_t *entries, u8 count) {
+    if (count == 0 || count > DXL_MAX_SYNC_SERVOS) {
+        return DXL_INVALID_PACKET;
+    }
+
+    // Use pre-allocated workspace from HAL context
+    dxl_packet_t *tx_pkt = dxl_hal_work_pkt(ctx);
+
+    // Build Sync Write packet: id=0xFE (broadcast), instruction=0x83
+    // Params: [start_addr_L, start_addr_H, data_len_L, data_len_H,
+    //          ID1, pos1_0, pos1_1, pos1_2, pos1_3,
+    //          ID2, pos2_0, pos2_1, pos2_2, pos2_3, ...]
+    memset(tx_pkt, 0, sizeof(dxl_packet_t));
+    tx_pkt->id = DXL_BROADCAST_ID;
+    tx_pkt->instruction = DXL_INST_SYNC_WRITE;
+
+    u16 data_len = 4; // Goal Position is 4 bytes
+    tx_pkt->params[0] = (u8)(DXL_REG_GOAL_POSITION & 0xFF);
+    tx_pkt->params[1] = (u8)((DXL_REG_GOAL_POSITION >> 8) & 0xFF);
+    tx_pkt->params[2] = (u8)(data_len & 0xFF);
+    tx_pkt->params[3] = (u8)((data_len >> 8) & 0xFF);
+
+    u16 offset = 4;
+    for (u8 i = 0; i < count; i++) {
+        tx_pkt->params[offset++] = entries[i].id;
+        tx_pkt->params[offset++] = (u8)(entries[i].position & 0xFF);
+        tx_pkt->params[offset++] = (u8)((entries[i].position >> 8) & 0xFF);
+        tx_pkt->params[offset++] = (u8)((entries[i].position >> 16) & 0xFF);
+        tx_pkt->params[offset++] = (u8)((entries[i].position >> 24) & 0xFF);
+    }
+    tx_pkt->param_count = offset;
+
+    // Sync Write is broadcast — no response expected
+    return dxl_hal_tx(ctx, tx_pkt);
+}
+
+// Sync Read register block: addresses 126-146 (21 bytes)
+// Offset 0:  Present Load (2 bytes)
+// Offset 2:  Present Velocity (4 bytes)
+// Offset 6:  Present Position (4 bytes)
+// Offset 10: Velocity Trajectory (4 bytes, not used)
+// Offset 14: Position Trajectory (4 bytes, not used)
+// Offset 18: Present Input Voltage (2 bytes)
+// Offset 20: Present Temperature (1 byte)
+#define SYNC_READ_START_ADDR 126
+#define SYNC_READ_DATA_LENGTH 21
+
+dxl_result_t dxl_sync_read_status(dxl_hal_context_t *ctx, const u8 *ids, u8 id_count, dxl_sync_status_result_t *results,
+                                  u8 *result_count) {
+    *result_count = 0;
+
+    if (id_count == 0 || id_count > DXL_MAX_SYNC_SERVOS) {
+        return DXL_INVALID_PACKET;
+    }
+
+    // Initialize all results
+    for (u8 i = 0; i < id_count; i++) {
+        results[i].id = ids[i];
+        memset(&results[i].status, 0, sizeof(dxl_servo_status_t));
+        results[i].valid = false;
+        results[i].servo_error = 0;
+    }
+
+    // Use pre-allocated workspace from HAL context (avoids per-frame heap allocation)
+    dxl_packet_t *tx_pkt = dxl_hal_work_pkt(ctx);
+    dxl_packet_t *rx_pkts = dxl_hal_multi_pkt_buf(ctx);
+
+    // Build Sync Read packet: id=0xFE, instruction=0x82
+    // Params: [start_addr_L, start_addr_H, data_len_L, data_len_H, id1, id2, ...]
+    memset(tx_pkt, 0, sizeof(dxl_packet_t));
+    tx_pkt->id = DXL_BROADCAST_ID;
+    tx_pkt->instruction = DXL_INST_SYNC_READ;
+    tx_pkt->param_count = 4 + id_count;
+    tx_pkt->params[0] = (u8)(SYNC_READ_START_ADDR & 0xFF);
+    tx_pkt->params[1] = (u8)((SYNC_READ_START_ADDR >> 8) & 0xFF);
+    tx_pkt->params[2] = (u8)(SYNC_READ_DATA_LENGTH & 0xFF);
+    tx_pkt->params[3] = (u8)((SYNC_READ_DATA_LENGTH >> 8) & 0xFF);
+    for (u8 i = 0; i < id_count; i++) {
+        tx_pkt->params[4 + i] = ids[i];
+    }
+
+    memset(rx_pkts, 0, sizeof(dxl_packet_t) * id_count);
+    u8 received = 0;
+
+    // Timeout scaled to baud rate: expected wire time * 2 + margin
+    u32 baud = dxl_hal_get_baud_rate(ctx);
+    u32 byte_time_us = 10000000 / baud;
+    u32 expected_us = (u32)id_count * ((SYNC_READ_DATA_LENGTH + 11) * byte_time_us + 500) + 15 * byte_time_us + 1000;
+    u32 timeout = expected_us / 500 + 5; // ~2x expected + 5ms margin
+
+    dxl_result_t res = dxl_hal_txrx_multi(ctx, tx_pkt, SYNC_READ_DATA_LENGTH, id_count, rx_pkts, &received, timeout);
+
+    if (res != DXL_OK) {
+        return res;
+    }
+
+    // Match response packets to our result array by servo ID
+    for (u8 r = 0; r < received; r++) {
+        u8 resp_id = rx_pkts[r].id;
+
+        for (u8 i = 0; i < id_count; i++) {
+            if (results[i].id == resp_id && !results[i].valid) {
+                results[i].servo_error = rx_pkts[r].error;
+
+                if (rx_pkts[r].param_count >= SYNC_READ_DATA_LENGTH) {
+                    const u8 *d = rx_pkts[r].params;
+
+                    // Offset 0: Present Load (2 bytes, little-endian, signed)
+                    results[i].status.present_load = (i16)((u16)d[0] | ((u16)d[1] << 8));
+
+                    // Offset 6: Present Position (4 bytes, little-endian, signed)
+                    results[i].status.present_position =
+                        (i32)((u32)d[6] | ((u32)d[7] << 8) | ((u32)d[8] << 16) | ((u32)d[9] << 24));
+
+                    // Offset 18: Present Input Voltage (2 bytes, little-endian)
+                    results[i].status.present_voltage = (u16)d[18] | ((u16)d[19] << 8);
+
+                    // Offset 20: Present Temperature (1 byte)
+                    results[i].status.present_temperature = d[20];
+
+                    // moving and hardware_error are outside this block, left as 0
+                    results[i].valid = true;
+                }
+                break;
+            }
+        }
+    }
+
+    // Count valid results
+    u8 valid_count = 0;
+    for (u8 i = 0; i < id_count; i++) {
+        if (results[i].valid) {
+            valid_count++;
+        }
+    }
+    *result_count = valid_count;
+
+    return DXL_OK;
+}
+
 dxl_result_t dxl_read_status(dxl_hal_context_t *ctx, u8 id, dxl_servo_status_t *status) {
     memset(status, 0, sizeof(dxl_servo_status_t));
 
@@ -170,7 +312,7 @@ dxl_result_t dxl_read_status(dxl_hal_context_t *ctx, u8 id, dxl_servo_status_t *
     res = dxl_read_register(ctx, id, DXL_REG_PRESENT_POSITION, 4, &val);
     if (res != DXL_OK)
         return res;
-    status->present_position = val;
+    status->present_position = (i32)val;
 
     res = dxl_read_register(ctx, id, DXL_REG_PRESENT_TEMPERATURE, 1, &val);
     if (res != DXL_OK)
@@ -185,7 +327,7 @@ dxl_result_t dxl_read_status(dxl_hal_context_t *ctx, u8 id, dxl_servo_status_t *
     res = dxl_read_register(ctx, id, DXL_REG_PRESENT_LOAD, 2, &val);
     if (res != DXL_OK)
         return res;
-    status->present_load = (u16)val;
+    status->present_load = (i16)val;
 
     res = dxl_read_register(ctx, id, DXL_REG_MOVING, 1, &val);
     if (res != DXL_OK)

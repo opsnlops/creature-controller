@@ -86,6 +86,20 @@ dxl_result_t dxl_parse_packet(const u8 *data, size_t length, dxl_packet_t *pkt);
 const char *dxl_result_to_string(dxl_result_t result);
 
 /**
- * @brief Convert a Dynamixel error byte to a human-readable string
+ * @brief Convert a Dynamixel protocol error byte to a human-readable string
  */
 const char *dxl_error_to_string(u8 error);
+
+/**
+ * @brief Decode hardware error status register bits into a human-readable string
+ *
+ * The Hardware Error Status register (addr 70) is a bitmask. This function
+ * writes a comma-separated list of active error flags into the provided buffer.
+ * If no bits are set, writes "none".
+ *
+ * @param hw_error Hardware error register value
+ * @param buf Output buffer
+ * @param buf_size Size of the output buffer
+ * @return Number of characters written (excluding null terminator)
+ */
+size_t dxl_hw_error_to_string(u8 hw_error, char *buf, size_t buf_size);

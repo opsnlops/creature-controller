@@ -13,7 +13,7 @@
 #define DXL_PIO_INSTANCE pio0
 
 // Default baud rate for Dynamixel communication
-#define DXL_DEFAULT_BAUD_RATE 57600
+#define DXL_DEFAULT_BAUD_RATE 1000000
 
 // Shell command buffers
 #define INCOMING_REQUEST_BUFFER_SIZE 128

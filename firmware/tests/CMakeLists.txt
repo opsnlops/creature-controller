@@ -63,13 +63,23 @@ add_executable(test_dynamixel_protocol
 )
 target_link_libraries(test_dynamixel_protocol unity)
 
+# Create test executable for dynamixel servo layer
+# HAL stubs are provided directly in the test file (no real hardware needed)
+add_executable(test_dynamixel_servo
+        tests/test_dynamixel_servo.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/../src/dynamixel/dynamixel_servo.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/../src/dynamixel/dynamixel_protocol.c
+)
+target_link_libraries(test_dynamixel_servo unity mocks)
+
 # Add custom test target to run all tests
 add_custom_target(run_tests
         COMMAND test_string_utils
         COMMAND test_analog_filter
         COMMAND test_message_parsing
         COMMAND test_dynamixel_protocol
-        DEPENDS test_string_utils test_analog_filter test_message_parsing test_dynamixel_protocol
+        COMMAND test_dynamixel_servo
+        DEPENDS test_string_utils test_analog_filter test_message_parsing test_dynamixel_protocol test_dynamixel_servo
 )
 
 # Add exported symbols for mocked functions that are used by the firmware code

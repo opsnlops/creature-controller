@@ -231,3 +231,45 @@ const char *dxl_error_to_string(u8 error) {
         return "Unknown error";
     }
 }
+
+size_t dxl_hw_error_to_string(u8 hw_error, char *buf, size_t buf_size) {
+    if (buf_size == 0)
+        return 0;
+
+    if (hw_error == 0) {
+        size_t len = buf_size < 5 ? buf_size - 1 : 4;
+        memcpy(buf, "none", len);
+        buf[len] = '\0';
+        return len;
+    }
+
+    static const struct {
+        u8 bit;
+        const char *name;
+    } flags[] = {
+        {DXL_HW_ERR_INPUT_VOLTAGE, "input voltage"}, {DXL_HW_ERR_OVERHEATING, "overheating"},
+        {DXL_HW_ERR_MOTOR_ENCODER, "motor encoder"}, {DXL_HW_ERR_ELEC_SHOCK, "electrical shock"},
+        {DXL_HW_ERR_OVERLOAD, "overload"},
+    };
+
+    size_t pos = 0;
+    bool first = true;
+
+    for (size_t i = 0; i < sizeof(flags) / sizeof(flags[0]); i++) {
+        if (hw_error & flags[i].bit) {
+            if (!first && pos + 2 < buf_size) {
+                buf[pos++] = ',';
+                buf[pos++] = ' ';
+            }
+            size_t name_len = strlen(flags[i].name);
+            size_t avail = buf_size - pos - 1;
+            size_t copy_len = name_len < avail ? name_len : avail;
+            memcpy(&buf[pos], flags[i].name, copy_len);
+            pos += copy_len;
+            first = false;
+        }
+    }
+
+    buf[pos] = '\0';
+    return pos;
+}

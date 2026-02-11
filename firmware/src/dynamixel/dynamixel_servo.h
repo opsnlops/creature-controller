@@ -19,10 +19,10 @@
  * @brief Servo status snapshot
  */
 typedef struct {
-    u32 present_position;
+    i32 present_position;
     u8 present_temperature;
     u16 present_voltage;
-    u16 present_load;
+    i16 present_load;
     u8 moving;
     u8 hardware_error;
 } dxl_servo_status_t;
@@ -43,6 +43,21 @@ typedef struct {
  * @param firmware_version The firmware version
  */
 typedef void (*dxl_scan_callback_t)(u8 id, u16 model_number, u8 firmware_version);
+
+/**
+ * @brief Maximum number of servos in a Sync Read operation
+ */
+#define DXL_MAX_SYNC_SERVOS DXL_MAX_MULTI_RESPONSES
+
+/**
+ * @brief Result for a single servo in a Sync Read operation
+ */
+typedef struct {
+    u8 id;
+    dxl_servo_status_t status;
+    bool valid;
+    u8 servo_error; // Protocol error byte from this servo's response (0 = no error)
+} dxl_sync_status_result_t;
 
 /**
  * @brief Default timeout for normal operations (ms)
@@ -143,6 +158,48 @@ dxl_result_t dxl_set_profile_velocity(dxl_hal_context_t *ctx, u8 id, u32 velocit
  * @brief Read comprehensive status from a servo
  */
 dxl_result_t dxl_read_status(dxl_hal_context_t *ctx, u8 id, dxl_servo_status_t *status);
+
+/**
+ * @brief Read status from multiple servos in a single bus transaction
+ *
+ * Uses Sync Read (instruction 0x82) to read a contiguous block of registers
+ * (addresses 126-146) from all specified servos. Much faster than individual
+ * status reads for multi-servo systems.
+ *
+ * Note: moving and hardware_error fields are left as 0 since they are
+ * outside the contiguous read range.
+ *
+ * @param ctx HAL context
+ * @param ids Array of servo IDs to read
+ * @param id_count Number of servo IDs
+ * @param results Array of results (must hold id_count entries)
+ * @param result_count Number of results populated (output)
+ * @return DXL_OK if at least one servo responded, DXL_TIMEOUT if none
+ */
+dxl_result_t dxl_sync_read_status(dxl_hal_context_t *ctx, const u8 *ids, u8 id_count, dxl_sync_status_result_t *results,
+                                  u8 *result_count);
+
+/**
+ * @brief Goal position entry for Sync Write
+ */
+typedef struct {
+    u8 id;
+    u32 position;
+} dxl_sync_position_t;
+
+/**
+ * @brief Write goal positions to multiple servos in a single bus transaction
+ *
+ * Uses Sync Write (instruction 0x83) to send goal positions to all specified
+ * servos atomically. No response is expected (broadcast). Much faster than
+ * individual position writes for multi-servo systems.
+ *
+ * @param ctx HAL context
+ * @param entries Array of (id, position) pairs
+ * @param count Number of entries (max DXL_MAX_SYNC_SERVOS)
+ * @return DXL_OK on successful transmission
+ */
+dxl_result_t dxl_sync_write_position(dxl_hal_context_t *ctx, const dxl_sync_position_t *entries, u8 count);
 
 /**
  * @brief Convert a Dynamixel baud rate index (0-7) to the actual baud rate value

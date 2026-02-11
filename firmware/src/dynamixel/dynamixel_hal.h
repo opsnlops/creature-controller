@@ -26,6 +26,16 @@ typedef struct {
 } dxl_hal_config_t;
 
 /**
+ * @brief Maximum number of responses from a single multi-response transaction
+ */
+#define DXL_MAX_MULTI_RESPONSES 16
+
+/**
+ * @brief Pre-allocated RX buffer size for multi-response DMA
+ */
+#define DXL_MULTI_RX_BUF_SIZE (DXL_MAX_PACKET_SIZE * DXL_MAX_MULTI_RESPONSES)
+
+/**
  * @brief Opaque HAL context (allocated by init)
  */
 typedef struct dxl_hal_context dxl_hal_context_t;
@@ -73,6 +83,24 @@ void dxl_hal_set_baud_rate(dxl_hal_context_t *ctx, u32 baud_rate);
 dxl_result_t dxl_hal_txrx(dxl_hal_context_t *ctx, const dxl_packet_t *tx_pkt, dxl_packet_t *rx_pkt, u32 timeout_ms);
 
 /**
+ * @brief Send a packet and receive multiple response packets
+ *
+ * Used for Sync Read where a single broadcast request produces
+ * individual response packets from each addressed servo.
+ *
+ * @param ctx HAL context
+ * @param tx_pkt Packet to transmit
+ * @param data_per_response Expected data bytes per response (excluding protocol overhead)
+ * @param expected_count Number of responses expected
+ * @param rx_pkts Array of parsed response packets (output, must hold expected_count entries)
+ * @param received_count Number of packets successfully parsed (output)
+ * @param timeout_ms Maximum time to wait for all responses
+ * @return DXL_OK if at least one packet received, DXL_TIMEOUT if zero
+ */
+dxl_result_t dxl_hal_txrx_multi(dxl_hal_context_t *ctx, const dxl_packet_t *tx_pkt, u16 data_per_response,
+                                u8 expected_count, dxl_packet_t *rx_pkts, u8 *received_count, u32 timeout_ms);
+
+/**
  * @brief Transmit a packet without waiting for a response
  *
  * Used for broadcast commands where no response is expected.
@@ -97,3 +125,38 @@ void dxl_hal_flush_rx(dxl_hal_context_t *ctx);
  * @return Current baud rate in bps
  */
 u32 dxl_hal_get_baud_rate(dxl_hal_context_t *ctx);
+
+/**
+ * @brief Get the pre-allocated workspace packet for building TX packets
+ *
+ * Avoids per-call heap allocation in hot paths. The returned pointer is
+ * valid for the lifetime of the HAL context. Not reentrant — only one
+ * caller should use this at a time.
+ *
+ * @param ctx HAL context
+ * @return Pointer to a reusable dxl_packet_t
+ */
+dxl_packet_t *dxl_hal_work_pkt(dxl_hal_context_t *ctx);
+
+/**
+ * @brief Get the pre-allocated packet array for multi-response parsing
+ *
+ * Returns an array of DXL_MAX_MULTI_RESPONSES packets. Avoids per-call
+ * heap allocation in hot paths. Not reentrant.
+ *
+ * @param ctx HAL context
+ * @return Pointer to a reusable array of dxl_packet_t
+ */
+dxl_packet_t *dxl_hal_multi_pkt_buf(dxl_hal_context_t *ctx);
+
+/**
+ * @brief Get the protocol error byte from the most recent servo response
+ *
+ * After any txrx operation returns DXL_SERVO_ERROR, this returns the
+ * specific error code from the servo's status packet (e.g. DXL_ERR_DATA_RANGE,
+ * DXL_ERR_ACCESS). Cleared at the start of each transaction.
+ *
+ * @param ctx HAL context
+ * @return Error byte from the last status packet, or 0 if no error
+ */
+u8 dxl_hal_last_servo_error(dxl_hal_context_t *ctx);

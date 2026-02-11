@@ -9,6 +9,7 @@
 
 #include <hardware/gpio.h>
 #include <hardware/watchdog.h>
+#include <pico/time.h>
 
 #include "tusb.h"
 
@@ -52,9 +53,27 @@ static void cmd_profile_accel(u8 *args);
 static void cmd_homing_offset(u8 *args);
 static void cmd_min_position(u8 *args);
 static void cmd_max_position(u8 *args);
+static void cmd_sync_status(u8 *args);
+static void cmd_sync_move(u8 *args);
 
 static void cmd_register_rw(u8 *args, const char *usage, const char *name, u16 addr, u16 len);
 static void scan_callback(u8 id, u16 model_number, u8 firmware_version);
+
+/**
+ * Format and send a detailed error response. When the result is DXL_SERVO_ERROR,
+ * appends the specific servo error name (e.g. "Data range error", "Access error").
+ */
+static void send_dxl_error(const char *operation, dxl_result_t res) {
+    char buf[OUTGOING_RESPONSE_BUFFER_SIZE];
+    if (res == DXL_SERVO_ERROR) {
+        u8 err = dxl_hal_last_servo_error(dxl_ctx);
+        snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "ERR %s: %s (%s)", operation, dxl_result_to_string(res),
+                 dxl_error_to_string(err));
+    } else {
+        snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "ERR %s: %s", operation, dxl_result_to_string(res));
+    }
+    send_response(buf);
+}
 
 void handle_shell_command(u8 *buffer) {
     debug("handling command: %s", buffer);
@@ -101,6 +120,10 @@ void handle_shell_command(u8 *buffer) {
         cmd_torque((u8 *)args);
     } else if (strcmp(cmd, "ST") == 0) {
         cmd_status((u8 *)args);
+    } else if (strcmp(cmd, "SS") == 0) {
+        cmd_sync_status((u8 *)args);
+    } else if (strcmp(cmd, "SM") == 0) {
+        cmd_sync_move((u8 *)args);
     } else if (strcmp(cmd, "L") == 0) {
         cmd_led((u8 *)args);
     } else if (strcmp(cmd, "V") == 0) {
@@ -150,6 +173,8 @@ static void cmd_help(void) {
     send_response("  M <id> <pos>   - Move to position (0-4095)");
     send_response("  T <id> <0|1>   - Torque enable/disable");
     send_response("  ST <id>        - Read full status");
+    send_response("  SS <id> [id...]- Sync read status from multiple servos");
+    send_response("  SM <id:pos>... - Sync write positions (e.g. SM 1:2048 2:1024)");
     send_response("  L <id> <0|1>   - LED on/off");
     send_response("  V <id> <vel>   - Set profile velocity");
     send_response("  CB <rate>      - Change PIO baud rate");
@@ -180,24 +205,25 @@ static void cmd_ping(u8 *args) {
     }
 
     u32 id = (u32)strtoul((char *)args, NULL, 10);
+    char buf[OUTGOING_RESPONSE_BUFFER_SIZE];
+    memset(buf, '\0', OUTGOING_RESPONSE_BUFFER_SIZE);
     if (id > DXL_MAX_ID) {
-        send_response("ERR ID out of range (0-252)");
+        snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "ERR ID out of range (0-%u)", DXL_MAX_ID);
+        send_response(buf);
         return;
     }
 
     dxl_ping_result_t result;
     dxl_result_t res = dxl_ping(dxl_ctx, (u8)id, &result);
 
-    char buf[OUTGOING_RESPONSE_BUFFER_SIZE];
-    memset(buf, '\0', OUTGOING_RESPONSE_BUFFER_SIZE);
-
     if (res == DXL_OK) {
+        memset(buf, '\0', OUTGOING_RESPONSE_BUFFER_SIZE);
         snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "OK ID=%lu model=%u fw=%u", id, result.model_number,
                  result.firmware_version);
+        send_response(buf);
     } else {
-        snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "ERR Ping ID %lu failed: %s", id, dxl_result_to_string(res));
+        send_dxl_error("Ping failed", res);
     }
-    send_response(buf);
 }
 
 static u32 scan_found_count;
@@ -273,10 +299,10 @@ static void cmd_read_register(u8 *args) {
 
     if (res == DXL_OK) {
         snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "OK [%lu]@%lu = %lu (0x%lX)", len, addr, value, value);
+        send_response(buf);
     } else {
-        snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "ERR Read failed: %s", dxl_result_to_string(res));
+        send_dxl_error("Read failed", res);
     }
-    send_response(buf);
 }
 
 static void cmd_write_register(u8 *args) {
@@ -303,10 +329,10 @@ static void cmd_write_register(u8 *args) {
 
     if (res == DXL_OK) {
         snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "OK Wrote %lu to [%lu]@%lu", val, len, addr);
+        send_response(buf);
     } else {
-        snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "ERR Write failed: %s", dxl_result_to_string(res));
+        send_dxl_error("Write failed", res);
     }
-    send_response(buf);
 }
 
 static void cmd_set_id(u8 *args) {
@@ -326,10 +352,10 @@ static void cmd_set_id(u8 *args) {
 
     if (res == DXL_OK) {
         snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "OK ID changed from %lu to %lu", old_id, new_id);
+        send_response(buf);
     } else {
-        snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "ERR Set ID failed: %s", dxl_result_to_string(res));
+        send_dxl_error("Set ID failed", res);
     }
-    send_response(buf);
 }
 
 static void cmd_set_baud_rate(u8 *args) {
@@ -344,7 +370,9 @@ static void cmd_set_baud_rate(u8 *args) {
 
     u32 actual_rate = dxl_baud_index_to_rate((u8)baud_idx);
     if (actual_rate == 0) {
-        send_response("ERR Invalid baud index (0-7)");
+        char buf[OUTGOING_RESPONSE_BUFFER_SIZE];
+        snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "ERR Invalid baud index (0-%u)", DXL_MAX_BAUD_INDEX);
+        send_response(buf);
         return;
     }
 
@@ -355,10 +383,10 @@ static void cmd_set_baud_rate(u8 *args) {
 
     if (res == DXL_OK) {
         snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "OK Baud rate set to index %lu (%lu bps)", baud_idx, actual_rate);
+        send_response(buf);
     } else {
-        snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "ERR Set baud rate failed: %s", dxl_result_to_string(res));
+        send_dxl_error("Set baud rate failed", res);
     }
-    send_response(buf);
 }
 
 static void cmd_factory_reset(u8 *args) {
@@ -383,10 +411,10 @@ static void cmd_factory_reset(u8 *args) {
 
     if (res == DXL_OK) {
         snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "OK Factory reset complete (option %lu)", option);
+        send_response(buf);
     } else {
-        snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "ERR Factory reset failed: %s", dxl_result_to_string(res));
+        send_dxl_error("Factory reset failed", res);
     }
-    send_response(buf);
 }
 
 static void cmd_reboot_servo(u8 *args) {
@@ -404,10 +432,10 @@ static void cmd_reboot_servo(u8 *args) {
 
     if (res == DXL_OK) {
         snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "OK Servo %lu rebooting", id);
+        send_response(buf);
     } else {
-        snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "ERR Reboot failed: %s", dxl_result_to_string(res));
+        send_dxl_error("Reboot failed", res);
     }
-    send_response(buf);
 }
 
 static void cmd_move(u8 *args) {
@@ -420,22 +448,23 @@ static void cmd_move(u8 *args) {
     u32 id = (u32)strtoul(p, &p, 10);
     u32 position = (u32)strtoul(p, &p, 10);
 
+    char buf[OUTGOING_RESPONSE_BUFFER_SIZE];
+    memset(buf, '\0', OUTGOING_RESPONSE_BUFFER_SIZE);
+
     if (position > DXL_POSITION_MAX) {
-        send_response("ERR Position must be 0-4095");
+        snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "ERR Position must be %u-%u", DXL_POSITION_MIN, DXL_POSITION_MAX);
+        send_response(buf);
         return;
     }
 
     dxl_result_t res = dxl_set_position(dxl_ctx, (u8)id, position);
 
-    char buf[OUTGOING_RESPONSE_BUFFER_SIZE];
-    memset(buf, '\0', OUTGOING_RESPONSE_BUFFER_SIZE);
-
     if (res == DXL_OK) {
         snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "OK Moving ID %lu to position %lu", id, position);
+        send_response(buf);
     } else {
-        snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "ERR Move failed: %s", dxl_result_to_string(res));
+        send_dxl_error("Move failed", res);
     }
-    send_response(buf);
 }
 
 static void cmd_torque(u8 *args) {
@@ -455,10 +484,10 @@ static void cmd_torque(u8 *args) {
 
     if (res == DXL_OK) {
         snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "OK Torque %s for ID %lu", enable ? "enabled" : "disabled", id);
+        send_response(buf);
     } else {
-        snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "ERR Torque command failed: %s", dxl_result_to_string(res));
+        send_dxl_error("Torque command failed", res);
     }
-    send_response(buf);
 }
 
 static void cmd_status(u8 *args) {
@@ -476,13 +505,147 @@ static void cmd_status(u8 *args) {
     memset(buf, '\0', OUTGOING_RESPONSE_BUFFER_SIZE);
 
     if (res == DXL_OK) {
-        snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "OK pos=%lu temp=%u voltage=%u load=%u moving=%u hw_err=0x%02X",
-                 status.present_position, status.present_temperature, status.present_voltage, status.present_load,
-                 status.moving, status.hardware_error);
+        if (status.hardware_error != 0) {
+            char hw_err_str[64];
+            dxl_hw_error_to_string(status.hardware_error, hw_err_str, sizeof(hw_err_str));
+            snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE,
+                     "OK pos=%ld temp=%u voltage=%u load=%d moving=%u hw_err=0x%02X (%s)",
+                     (long)status.present_position, status.present_temperature, status.present_voltage,
+                     status.present_load, status.moving, status.hardware_error, hw_err_str);
+        } else {
+            snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "OK pos=%ld temp=%u voltage=%u load=%d moving=%u hw_err=none",
+                     (long)status.present_position, status.present_temperature, status.present_voltage,
+                     status.present_load, status.moving);
+        }
+        send_response(buf);
     } else {
-        snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "ERR Status read failed: %s", dxl_result_to_string(res));
+        send_dxl_error("Status read failed", res);
     }
+}
+
+static void cmd_sync_status(u8 *args) {
+    if (args == NULL) {
+        send_response("ERR Usage: SS <id1> [id2] [id3] ...");
+        return;
+    }
+
+    u8 ids[DXL_MAX_SYNC_SERVOS];
+    u8 id_count = 0;
+    char *p = (char *)args;
+
+    while (*p != '\0' && id_count < DXL_MAX_SYNC_SERVOS) {
+        while (*p == ' ')
+            p++;
+        if (*p == '\0')
+            break;
+
+        u32 id = (u32)strtoul(p, &p, 10);
+        if (id > DXL_MAX_ID) {
+            char buf[OUTGOING_RESPONSE_BUFFER_SIZE];
+            snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "ERR ID out of range (0-%u)", DXL_MAX_ID);
+            send_response(buf);
+            return;
+        }
+        ids[id_count++] = (u8)id;
+    }
+
+    if (id_count == 0) {
+        send_response("ERR No servo IDs specified");
+        return;
+    }
+
+    dxl_sync_status_result_t results[DXL_MAX_SYNC_SERVOS];
+    u8 result_count = 0;
+
+    absolute_time_t t_start = get_absolute_time();
+    dxl_result_t res = dxl_sync_read_status(dxl_ctx, ids, id_count, results, &result_count);
+    i32 sync_read_us = (i32)absolute_time_diff_us(t_start, get_absolute_time());
+
+    char buf[OUTGOING_RESPONSE_BUFFER_SIZE];
+
+    if (res != DXL_OK) {
+        send_dxl_error("Sync read failed", res);
+        return;
+    }
+
+    for (u8 i = 0; i < id_count; i++) {
+        memset(buf, '\0', OUTGOING_RESPONSE_BUFFER_SIZE);
+        if (results[i].valid) {
+            snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "ID=%u pos=%ld temp=%u voltage=%u load=%d", results[i].id,
+                     (long)results[i].status.present_position, results[i].status.present_temperature,
+                     results[i].status.present_voltage, results[i].status.present_load);
+        } else if (results[i].servo_error != 0) {
+            snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "ID=%u error: %s", results[i].id,
+                     dxl_error_to_string(results[i].servo_error));
+        } else {
+            snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "ID=%u no response", results[i].id);
+        }
+        send_response(buf);
+    }
+
+    snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "sync_read: %ld us, %u/%u servos responded", (long)sync_read_us,
+             result_count, id_count);
     send_response(buf);
+}
+
+static void cmd_sync_move(u8 *args) {
+    if (args == NULL) {
+        send_response("ERR Usage: SM <id:pos> [id:pos] ... (e.g. SM 1:2048 2:1024)");
+        return;
+    }
+
+    dxl_sync_position_t entries[DXL_MAX_SYNC_SERVOS];
+    u8 count = 0;
+    char *p = (char *)args;
+
+    while (*p != '\0' && count < DXL_MAX_SYNC_SERVOS) {
+        while (*p == ' ')
+            p++;
+        if (*p == '\0')
+            break;
+
+        // Parse "id:position"
+        u32 id = (u32)strtoul(p, &p, 10);
+        if (*p != ':') {
+            send_response("ERR Expected id:position format");
+            return;
+        }
+        p++; // skip ':'
+        u32 pos = (u32)strtoul(p, &p, 10);
+
+        if (id > DXL_MAX_ID) {
+            char buf[OUTGOING_RESPONSE_BUFFER_SIZE];
+            snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "ERR ID out of range (0-%u)", DXL_MAX_ID);
+            send_response(buf);
+            return;
+        }
+        if (pos > DXL_POSITION_MAX) {
+            char buf[OUTGOING_RESPONSE_BUFFER_SIZE];
+            snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "ERR Position must be %u-%u", DXL_POSITION_MIN,
+                     DXL_POSITION_MAX);
+            send_response(buf);
+            return;
+        }
+
+        entries[count].id = (u8)id;
+        entries[count].position = pos;
+        count++;
+    }
+
+    if (count == 0) {
+        send_response("ERR No servo entries specified");
+        return;
+    }
+
+    dxl_result_t res = dxl_sync_write_position(dxl_ctx, entries, count);
+
+    if (res == DXL_OK) {
+        char buf[OUTGOING_RESPONSE_BUFFER_SIZE];
+        snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "OK Sync write %u servos", count);
+        send_response(buf);
+    } else {
+        send_dxl_error("Sync write failed", res);
+    }
 }
 
 static void cmd_led(u8 *args) {
@@ -502,10 +665,10 @@ static void cmd_led(u8 *args) {
 
     if (res == DXL_OK) {
         snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "OK LED %s for ID %lu", on ? "on" : "off", id);
+        send_response(buf);
     } else {
-        snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "ERR LED command failed: %s", dxl_result_to_string(res));
+        send_dxl_error("LED command failed", res);
     }
-    send_response(buf);
 }
 
 static void cmd_velocity(u8 *args) {
@@ -525,10 +688,10 @@ static void cmd_velocity(u8 *args) {
 
     if (res == DXL_OK) {
         snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "OK Profile velocity set to %lu for ID %lu", velocity, id);
+        send_response(buf);
     } else {
-        snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "ERR Velocity command failed: %s", dxl_result_to_string(res));
+        send_dxl_error("Velocity command failed", res);
     }
-    send_response(buf);
 }
 
 static void cmd_change_bus_baud(u8 *args) {
@@ -573,19 +736,20 @@ static void cmd_register_rw(u8 *args, const char *usage, const char *name, u16 a
         dxl_result_t res = dxl_read_register(dxl_ctx, (u8)id, addr, len, &value);
         if (res == DXL_OK) {
             snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "OK %s=%lu", name, value);
+            send_response(buf);
         } else {
-            snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "ERR Read failed: %s", dxl_result_to_string(res));
+            send_dxl_error("Read failed", res);
         }
     } else {
         u32 value = (u32)strtoul(p, NULL, 10);
         dxl_result_t res = dxl_write_register(dxl_ctx, (u8)id, addr, len, value);
         if (res == DXL_OK) {
             snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "OK %s set to %lu", name, value);
+            send_response(buf);
         } else {
-            snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "ERR Write failed: %s", dxl_result_to_string(res));
+            send_dxl_error("Write failed", res);
         }
     }
-    send_response(buf);
 }
 
 static void cmd_operating_mode(u8 *args) {
@@ -629,19 +793,20 @@ static void cmd_operating_mode(u8 *args) {
                 break;
             }
             snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "OK operating_mode=%lu (%s)", value, mode_name);
+            send_response(buf);
         } else {
-            snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "ERR Read failed: %s", dxl_result_to_string(res));
+            send_dxl_error("Read failed", res);
         }
     } else {
         u32 mode = (u32)strtoul(p, NULL, 10);
         dxl_result_t res = dxl_write_register(dxl_ctx, (u8)id, DXL_REG_OPERATING_MODE, 1, mode);
         if (res == DXL_OK) {
             snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "OK operating_mode set to %lu", mode);
+            send_response(buf);
         } else {
-            snprintf(buf, OUTGOING_RESPONSE_BUFFER_SIZE, "ERR Write failed: %s", dxl_result_to_string(res));
+            send_dxl_error("Write failed", res);
         }
     }
-    send_response(buf);
 }
 
 static void cmd_profile_accel(u8 *args) {
