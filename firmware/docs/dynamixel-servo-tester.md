@@ -7,7 +7,7 @@ A firmware target for testing and configuring Dynamixel XC430 servos using Proto
 The tester communicates with servos over a single GPIO pin using PIO-based half-duplex UART. The XC430 is 3.3V TTL (same as the RP2350), so no level shifter is needed.
 
 - **Data pin**: GPIO 15 (configurable in `src/dynamixel_tester/config.h`)
-- **Default baud rate**: 57,600 bps
+- **Default baud rate**: 1,000,000 bps
 - **PIO instance**: pio0 (uses 2 of 4 state machines)
 
 ### Wiring
@@ -79,6 +79,7 @@ These write to EEPROM registers. **Torque must be off** (`T <id> 0`) before chan
 |---------|-------------|
 | `T <id> <0\|1>` | Torque disable/enable (must enable before moving) |
 | `M <id> <position>` | Move to position (0-4095, center is 2048) |
+| `SM <id:pos> [id:pos] ...` | Sync Write goal positions to multiple servos atomically (e.g. `SM 1:2048 2:1024`) |
 | `V <id> <velocity>` | Set profile velocity (0 = max speed) |
 | `L <id> <0\|1>` | LED off/on |
 
@@ -87,6 +88,7 @@ These write to EEPROM registers. **Torque must be off** (`T <id> 0`) before chan
 | Command | Description |
 |---------|-------------|
 | `ST <id>` | Read full status: position, temperature, voltage, load, moving, hardware errors |
+| `SS <id1> [id2] ...` | Sync Read status from multiple servos in one bus transaction |
 | `RR <id> <addr> <len>` | Read any register (len: 1, 2, or 4 bytes) |
 | `RW <id> <addr> <len> <val>` | Write any register |
 
@@ -142,13 +144,16 @@ Use the mode value with the `OM` command.
 
 ### First-time servo setup
 
+Factory-default servos communicate at 57,600 bps. The tester boots at 1Mbps, so lower the bus rate first:
+
 ```
+CB 57600           # Lower bus rate to match factory default
 S                  # Scan to find the servo (factory default ID is 1)
 P 1                # Ping to verify communication
 T 1 0              # Torque off (required for EEPROM changes)
 ID 1 10            # Change ID from 1 to 10
 BR 10 3            # Set baud rate to 1Mbps
-CB 1000000         # Match the bus baud rate
+CB 1000000         # Raise bus back to 1Mbps
 P 10               # Verify communication at new settings
 ```
 
@@ -173,6 +178,15 @@ MX 1               # Check max position limit
 RR 1 144 2         # Read input voltage (register 144, 2 bytes)
 ```
 
+### Multi-servo sync operations
+
+```
+SS 1 2 3           # Read status from servos 1, 2, 3 in one bus transaction
+SM 1:2048 2:1024   # Move servo 1 to 2048 and servo 2 to 1024 atomically
+```
+
+Sync Read (`SS`) reports position, temperature, voltage, load, and timing for each servo. Servos that don't respond are listed as "no response".
+
 ### Broadcast to all servos
 
 ```
@@ -187,13 +201,14 @@ Note: read commands (`P`, `ST`, `RR`, `OM`, etc.) won't return useful data with 
 
 ### Changing baud rate
 
-The servo's baud rate persists in EEPROM. The bus baud rate resets to 57,600 on every firmware boot. To change baud rate:
+The servo's baud rate persists in EEPROM (factory default is 57,600). The bus baud rate resets to 1,000,000 on every firmware boot. To change a factory-default servo's baud rate to match:
 
-1. `T 1 0` - Torque off
-2. `BR 1 3` - Set servo to 1Mbps (index 3)
-3. `CB 1000000` - Change bus to match
+1. `CB 57600` - Temporarily lower bus rate to talk to the servo
+2. `T 1 0` - Torque off
+3. `BR 1 3` - Set servo to 1Mbps (index 3)
+4. `CB 1000000` - Change bus back to 1Mbps
 
-If you lose communication after step 2, the servo is at the new rate but the bus isn't. Just run `CB 1000000` to reconnect.
+If you lose communication after step 3, the servo is at the new rate but the bus isn't. Just run `CB 1000000` to reconnect.
 
 ## Architecture
 

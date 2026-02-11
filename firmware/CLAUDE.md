@@ -66,9 +66,10 @@ This is a CMake-based project for Raspberry Pi Pico (RP2350/RP2040) firmware dev
 - `cmake --build build --target <target-name>` - Build specific target
 
 ### Firmware Targets
-Three main firmware variants share common source files but serve different purposes:
+Four firmware variants share common source files but serve different purposes:
 
 - **`controller-<platform>-hw<version>`** - **Primary firmware** for animatronic servo control (most important)
+- `dynamixel-tester-<platform>-hw<version>` - Interactive shell for testing and configuring Dynamixel servos on the bus (ping, read/write registers, sync read/write, baud rate changes)
 - `programmer-<platform>-hw<version>` - I2C EEPROM programmer for creating "personality modules" containing creature name, serial number, USB ID, and configuration data
 - `usbc_pd-<platform>-hw<version>` - USB-C PD testing application for hardware validation
 
@@ -90,8 +91,10 @@ Unit tests use Unity framework and are located in the `tests/` directory.
 
 Individual tests can be run directly from `tests/build/`:
 - `./test_string_utils`
-- `./test_analog_filter` 
+- `./test_analog_filter`
 - `./test_message_parsing`
+- `./test_dynamixel_protocol`
+- `./test_dynamixel_servo`
 
 ## Architecture Overview
 
@@ -103,10 +106,22 @@ This is a **deterministic real-time embedded system** built on FreeRTOS for cont
 
 ### Core Subsystems
 - **Controller** (`src/controller/`): Main servo/motor control logic and system initialization
+- **Dynamixel** (`src/dynamixel/`): Dynamixel Protocol 2.0 servo communication (see below)
 - **Communication** (`src/io/`, `src/messaging/`): USB/UART serial, message processing with custom protocol
 - **Device Drivers** (`src/device/`): Hardware-specific drivers for sensors (MCP9808, PAC1954, MCP3304), EEPROM, status lights (WS2812)
 - **Sensor Management** (`src/sensor/`): I2C/SPI sensor coordination and data collection
 - **Logging** (`src/logging/`): Structured logging system with configurable levels
+
+### Dynamixel Servo Subsystem (`src/dynamixel/`)
+Three-layer architecture for communicating with Dynamixel XC430-series servos over a half-duplex UART bus:
+
+- **Protocol** (`dynamixel_protocol.c`): Packet construction/parsing, CRC16 calculation, and error code translation. Pure logic with no hardware dependencies — fully unit-testable on the host.
+- **HAL** (`dynamixel_hal.c`): Hardware abstraction using PIO-based half-duplex UART with DMA. Handles TX/RX timing, direction switching, and multi-response collection. The multi-response RX path (`dxl_hal_txrx_multi`) uses a hardware alarm + FreeRTOS binary semaphore to yield during the receive window instead of busy-waiting.
+- **Servo** (`dynamixel_servo.c`): High-level operations (ping, read/write registers, sync read status, sync write positions). Uses pre-allocated workspace packets from the HAL to avoid heap allocation in hot paths.
+
+Key bus operations for the controller's 50Hz loop:
+- **Sync Read** (`dxl_sync_read_status`): Reads position, load, temperature, voltage, and error state from all servos in a single bus transaction
+- **Sync Write** (`dxl_sync_write_position`): Sets goal positions for all servos atomically in a single broadcast packet
 
 ### Key Design Patterns
 - **RTOS Task Architecture**: Each major subsystem runs as FreeRTOS tasks with message queues for inter-task communication
@@ -115,7 +130,7 @@ This is a **deterministic real-time embedded system** built on FreeRTOS for cont
 - **Message-Based Communication**: Custom protocol for external communication with message processors for different command types
 
 ### Configuration System
-- Hardware-specific settings in `src/controller/config.h` and `src/programmer/config.h`
+- Hardware-specific settings in `src/controller/config.h`, `src/programmer/config.h`, and `src/dynamixel_tester/config.h`
 - Feature toggles: `USE_EEPROM`, `USE_SENSORS`, `USE_STEPPERS`
 - Build-time configuration via CMake definitions and conditional compilation
 
@@ -133,7 +148,7 @@ This is a **deterministic real-time embedded system** built on FreeRTOS for cont
 
 ### Code Organization
 - **Shared codebase**: Multiple firmware targets share common source files in `src/`
-- **Target-specific code**: Application-specific code is separated into subdirectories (`controller/`, `programmer/`, `usbc_pd/`)
+- **Target-specific code**: Application-specific code is separated into subdirectories (`controller/`, `dynamixel_tester/`, `programmer/`, `usbc_pd/`)
 - **Modular design**: Each subsystem is self-contained with clear interfaces
 
 ### Comments and Messages
