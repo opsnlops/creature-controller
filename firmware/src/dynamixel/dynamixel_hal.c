@@ -54,6 +54,8 @@ struct dxl_hal_context {
 
     u8 last_servo_error; // Protocol error byte from most recent servo response
 
+    dxl_metrics_t metrics; // Bus metrics counters
+
     // Pre-allocated workspace for multi-servo operations (avoids per-frame heap allocation)
     u8 multi_rx_buf[DXL_MULTI_RX_BUF_SIZE];
     dxl_packet_t work_pkt;
@@ -143,6 +145,39 @@ static int64_t dxl_rxmulti_alarm_callback(alarm_id_t id, void *user_data) {
     }
 
     return -(int64_t)state->alarm_period_us;
+}
+
+/**
+ * Scan a buffer for the next Dynamixel packet header (FF FF FD 00).
+ *
+ * Searches forward from start_pos. A header is only accepted if the
+ * packet length field implies a total size that fits within max_end bytes.
+ *
+ * @param buf        Buffer to scan
+ * @param buf_len    Number of valid bytes in the buffer
+ * @param start_pos  First byte to check
+ * @param max_end    Packet end must be <= this value (use buf size during
+ *                   polling when full data hasn't arrived, or buf_len for
+ *                   final post-DMA scan)
+ * @param out_offset Set to the header position on success
+ * @param out_pkt_end Set to the first byte past the packet on success
+ * @return true if a valid header was found
+ */
+static bool find_packet_header(const u8 *buf, size_t buf_len, size_t start_pos, size_t max_end, size_t *out_offset,
+                               size_t *out_pkt_end) {
+    for (size_t pos = start_pos; pos + 7 <= buf_len; pos++) {
+        if (buf[pos] == DXL_HEADER_0 && buf[pos + 1] == DXL_HEADER_1 && buf[pos + 2] == DXL_HEADER_2 &&
+            buf[pos + 3] == DXL_RESERVED) {
+            u16 wire_len = (u16)buf[pos + 5] | ((u16)buf[pos + 6] << 8);
+            size_t pkt_end = pos + 7 + (size_t)wire_len;
+            if (pkt_end <= max_end) {
+                *out_offset = pos;
+                *out_pkt_end = pkt_end;
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 dxl_hal_context_t *dxl_hal_init(const dxl_hal_config_t *config) {
@@ -266,6 +301,8 @@ dxl_packet_t *dxl_hal_multi_pkt_buf(dxl_hal_context_t *ctx) { return ctx->multi_
 
 u8 dxl_hal_last_servo_error(dxl_hal_context_t *ctx) { return ctx->last_servo_error; }
 
+const dxl_metrics_t *dxl_hal_metrics(dxl_hal_context_t *ctx) { return &ctx->metrics; }
+
 void dxl_hal_flush_rx(dxl_hal_context_t *ctx) {
     // Abort any in-progress DMA
     dma_channel_abort(ctx->dma_chan);
@@ -320,6 +357,7 @@ dxl_result_t dxl_hal_txrx(dxl_hal_context_t *ctx, const dxl_packet_t *tx_pkt, dx
     // Step 5: Disable TX SM and release pin direction so RX can use it
     pio_sm_set_enabled(ctx->pio, ctx->sm_tx, false);
     pio_sm_set_pindirs_with_mask(ctx->pio, ctx->sm_tx, 0, 1u << ctx->data_pin);
+    ctx->metrics.tx_packets = ctx->metrics.tx_packets + 1;
 
     // Step 6: Enable RX SM (pin is now input with pull-up)
     pio_sm_restart(ctx->pio, ctx->sm_rx);
@@ -344,33 +382,29 @@ dxl_result_t dxl_hal_txrx(dxl_hal_context_t *ctx, const dxl_packet_t *tx_pkt, dx
                           true                 // start immediately
     );
 
-    // Step 8-9: Poll for received data
+    // Step 8-9: Poll for received data, scanning for packet header.
+    // A stray byte (noise, early RX enable) could land before the real packet,
+    // so we scan for FF FF FD 00 rather than assuming byte 0 is the header.
     absolute_time_t deadline = make_timeout_time_ms(timeout_ms);
     size_t bytes_received = 0;
-    size_t expected_total = 0;
+    size_t hdr_offset = 0;
+    size_t pkt_end = 0;
+    bool hdr_found = false;
 
     while (!time_reached(deadline)) {
-        // How many bytes have we received so far?
         u32 remaining = dma_channel_hw_addr(ctx->dma_chan)->transfer_count;
         bytes_received = DXL_MAX_PACKET_SIZE - remaining;
 
-        // Once we have the length field (bytes 5-6, so need >= 7 bytes), calculate expected total
-        if (bytes_received >= 7 && expected_total == 0) {
-            u16 wire_length = (u16)ctx->rx_buffer[5] | ((u16)ctx->rx_buffer[6] << 8);
-            expected_total = 7 + (size_t)wire_length;
-
-            if (expected_total > DXL_MAX_PACKET_SIZE) {
-                // Something is wrong, bail out
-                break;
-            }
+        // During polling, accept headers whose length fits the buffer (full data may not be here yet)
+        if (!hdr_found) {
+            hdr_found =
+                find_packet_header(ctx->rx_buffer, bytes_received, 0, DXL_MAX_PACKET_SIZE, &hdr_offset, &pkt_end);
         }
 
-        // Check if we've received the full packet
-        if (expected_total > 0 && bytes_received >= expected_total) {
+        if (hdr_found && bytes_received >= pkt_end) {
             break;
         }
 
-        // Brief yield to avoid hammering the CPU
         busy_wait_us_32(10);
     }
 
@@ -378,20 +412,35 @@ dxl_result_t dxl_hal_txrx(dxl_hal_context_t *ctx, const dxl_packet_t *tx_pkt, dx
     dma_channel_abort(ctx->dma_chan);
     pio_sm_set_enabled(ctx->pio, ctx->sm_rx, false);
 
-    // Recheck final count
+    // Recheck final count and do a final header scan if needed
     u32 final_remaining = dma_channel_hw_addr(ctx->dma_chan)->transfer_count;
     bytes_received = DXL_MAX_PACKET_SIZE - final_remaining;
 
-    if (bytes_received < 10) {
-        // Minimum valid response is 10 bytes (for a status packet with no params)
-        // But we could have gotten nothing at all (timeout)
+    // Post-DMA scan: require full packet within received bytes
+    if (!hdr_found) {
+        hdr_found = find_packet_header(ctx->rx_buffer, bytes_received, 0, bytes_received, &hdr_offset, &pkt_end);
+    }
+
+    if (!hdr_found) {
+        ctx->metrics.timeouts = ctx->metrics.timeouts + 1;
+        dxl_hal_flush_rx(ctx);
         return DXL_TIMEOUT;
     }
 
-    // Step 11: Parse the response
-    dxl_result_t parse_res = dxl_parse_packet(ctx->rx_buffer, bytes_received, rx_pkt);
-    if (parse_res == DXL_SERVO_ERROR) {
+    if (hdr_offset > 0) {
+        ctx->metrics.rx_noise_bytes = ctx->metrics.rx_noise_bytes + hdr_offset;
+    }
+
+    // Step 11: Parse the response from the header offset
+    dxl_result_t parse_res = dxl_parse_packet(&ctx->rx_buffer[hdr_offset], pkt_end - hdr_offset, rx_pkt);
+    if (parse_res == DXL_OK) {
+        ctx->metrics.rx_packets = ctx->metrics.rx_packets + 1;
+    } else if (parse_res == DXL_SERVO_ERROR) {
+        ctx->metrics.rx_packets = ctx->metrics.rx_packets + 1;
+        ctx->metrics.servo_errors = ctx->metrics.servo_errors + 1;
         ctx->last_servo_error = rx_pkt->error;
+    } else if (parse_res == DXL_CRC_MISMATCH) {
+        ctx->metrics.crc_errors = ctx->metrics.crc_errors + 1;
     }
     return parse_res;
 }
@@ -447,6 +496,7 @@ dxl_result_t dxl_hal_txrx_multi(dxl_hal_context_t *ctx, const dxl_packet_t *tx_p
     // Step 5: Disable TX SM and release pin direction so RX can use it
     pio_sm_set_enabled(ctx->pio, ctx->sm_tx, false);
     pio_sm_set_pindirs_with_mask(ctx->pio, ctx->sm_tx, 0, 1u << ctx->data_pin);
+    ctx->metrics.tx_packets = ctx->metrics.tx_packets + 1;
 
     // Step 6: Enable RX SM
     pio_sm_restart(ctx->pio, ctx->sm_rx);
@@ -545,41 +595,38 @@ dxl_result_t dxl_hal_txrx_multi(dxl_hal_context_t *ctx, const dxl_packet_t *tx_p
     u8 count = 0;
 
     while (offset < bytes_received && count < expected_count) {
-        // Scan for packet header: FF FF FD 00
-        while (offset + 10 <= bytes_received) {
-            if (rx_buf[offset] == DXL_HEADER_0 && rx_buf[offset + 1] == DXL_HEADER_1 &&
-                rx_buf[offset + 2] == DXL_HEADER_2 && rx_buf[offset + 3] == DXL_RESERVED) {
-                break;
-            }
-            offset++;
-        }
-
-        if (offset + 10 > bytes_received) {
+        size_t hdr_pos, pkt_end;
+        if (!find_packet_header(rx_buf, bytes_received, offset, bytes_received, &hdr_pos, &pkt_end)) {
             break;
         }
 
-        // Read wire_length to determine packet size
-        if (offset + 7 > bytes_received) {
-            break;
-        }
-        u16 wire_length = (u16)rx_buf[offset + 5] | ((u16)rx_buf[offset + 6] << 8);
-        size_t pkt_total = 7 + (size_t)wire_length;
-
-        if (offset + pkt_total > bytes_received) {
-            break;
+        if (hdr_pos > offset) {
+            ctx->metrics.rx_noise_bytes = ctx->metrics.rx_noise_bytes + (hdr_pos - offset);
         }
 
-        dxl_result_t parse_res = dxl_parse_packet(&rx_buf[offset], pkt_total, &rx_pkts[count]);
-        if (parse_res == DXL_OK || parse_res == DXL_SERVO_ERROR) {
+        dxl_result_t parse_res = dxl_parse_packet(&rx_buf[hdr_pos], pkt_end - hdr_pos, &rx_pkts[count]);
+        if (parse_res == DXL_OK) {
+            ctx->metrics.rx_packets = ctx->metrics.rx_packets + 1;
             count++;
+        } else if (parse_res == DXL_SERVO_ERROR) {
+            ctx->metrics.rx_packets = ctx->metrics.rx_packets + 1;
+            ctx->metrics.servo_errors = ctx->metrics.servo_errors + 1;
+            count++;
+        } else if (parse_res == DXL_CRC_MISMATCH) {
+            ctx->metrics.crc_errors = ctx->metrics.crc_errors + 1;
         }
 
-        offset += pkt_total;
+        offset = pkt_end;
     }
 
     *received_count = count;
 
-    return (count > 0) ? DXL_OK : DXL_TIMEOUT;
+    if (count == 0) {
+        ctx->metrics.timeouts = ctx->metrics.timeouts + 1;
+        dxl_hal_flush_rx(ctx);
+        return DXL_TIMEOUT;
+    }
+    return DXL_OK;
 }
 
 dxl_result_t dxl_hal_tx(dxl_hal_context_t *ctx, const dxl_packet_t *tx_pkt) {
@@ -617,5 +664,6 @@ dxl_result_t dxl_hal_tx(dxl_hal_context_t *ctx, const dxl_packet_t *tx_pkt) {
     pio_sm_set_enabled(ctx->pio, ctx->sm_tx, false);
     pio_sm_set_pindirs_with_mask(ctx->pio, ctx->sm_tx, 0, 1u << ctx->data_pin);
 
+    ctx->metrics.tx_packets = ctx->metrics.tx_packets + 1;
     return DXL_OK;
 }

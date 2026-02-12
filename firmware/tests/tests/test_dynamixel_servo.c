@@ -23,6 +23,10 @@ static dxl_packet_t stub_multi_pkts[DXL_MAX_MULTI_RESPONSES];
 static dxl_packet_t last_tx_pkt;
 static bool tx_called;
 
+// Configurable stub behavior for dxl_hal_txrx
+static bool stub_torque_on;           // when true, torque read returns 1
+static bool stub_txrx_return_ok;      // when true, txrx returns DXL_OK with a response
+
 PIO pio0 = NULL;
 PIO pio1 = NULL;
 
@@ -50,6 +54,12 @@ u8 dxl_hal_last_servo_error(dxl_hal_context_t *ctx) {
     return 0;
 }
 
+static dxl_metrics_t stub_metrics;
+const dxl_metrics_t *dxl_hal_metrics(dxl_hal_context_t *ctx) {
+    (void)ctx;
+    return &stub_metrics;
+}
+
 void dxl_hal_flush_rx(dxl_hal_context_t *ctx) { (void)ctx; }
 
 dxl_result_t dxl_hal_tx(dxl_hal_context_t *ctx, const dxl_packet_t *tx_pkt) {
@@ -61,10 +71,32 @@ dxl_result_t dxl_hal_tx(dxl_hal_context_t *ctx, const dxl_packet_t *tx_pkt) {
 
 dxl_result_t dxl_hal_txrx(dxl_hal_context_t *ctx, const dxl_packet_t *tx_pkt, dxl_packet_t *rx_pkt, u32 timeout_ms) {
     (void)ctx;
-    (void)tx_pkt;
-    (void)rx_pkt;
     (void)timeout_ms;
-    return DXL_TIMEOUT;
+    memcpy(&last_tx_pkt, tx_pkt, sizeof(dxl_packet_t));
+
+    if (!stub_txrx_return_ok) {
+        return DXL_TIMEOUT;
+    }
+
+    // Simulate a read response: echo back data based on the register address
+    memset(rx_pkt, 0, sizeof(dxl_packet_t));
+    rx_pkt->id = tx_pkt->id;
+
+    if (tx_pkt->instruction == DXL_INST_READ && tx_pkt->param_count >= 4) {
+        u16 addr = (u16)tx_pkt->params[0] | ((u16)tx_pkt->params[1] << 8);
+        u16 len = (u16)tx_pkt->params[2] | ((u16)tx_pkt->params[3] << 8);
+
+        // Torque Enable register (64): return stub_torque_on value
+        if (addr == 64 && len == 1) {
+            rx_pkt->param_count = 1;
+            rx_pkt->params[0] = stub_torque_on ? 1 : 0;
+            return DXL_OK;
+        }
+    }
+
+    // Default: empty OK response (for write instructions)
+    rx_pkt->param_count = 0;
+    return DXL_OK;
 }
 
 dxl_result_t dxl_hal_txrx_multi(dxl_hal_context_t *ctx, const dxl_packet_t *tx_pkt, u16 data_per_response,
@@ -85,6 +117,8 @@ void setUp(void) {
     memset(&stub_work_pkt, 0, sizeof(stub_work_pkt));
     memset(&last_tx_pkt, 0, sizeof(last_tx_pkt));
     tx_called = false;
+    stub_torque_on = false;
+    stub_txrx_return_ok = true;
 }
 
 void tearDown(void) {}
@@ -269,6 +303,32 @@ void test_hw_error_zero_buffer(void) {
     TEST_ASSERT_EQUAL(0, len);
 }
 
+// ---- EEPROM safety tests ----
+
+void test_set_id_blocked_when_torque_on(void) {
+    stub_torque_on = true;
+    dxl_result_t res = dxl_set_id(fake_ctx, 1, 2);
+    TEST_ASSERT_EQUAL(DXL_TORQUE_ENABLED, res);
+}
+
+void test_set_id_allowed_when_torque_off(void) {
+    stub_torque_on = false;
+    dxl_result_t res = dxl_set_id(fake_ctx, 1, 2);
+    TEST_ASSERT_EQUAL(DXL_OK, res);
+}
+
+void test_set_baud_blocked_when_torque_on(void) {
+    stub_torque_on = true;
+    dxl_result_t res = dxl_set_baud_rate(fake_ctx, 1, 3);
+    TEST_ASSERT_EQUAL(DXL_TORQUE_ENABLED, res);
+}
+
+void test_set_baud_allowed_when_torque_off(void) {
+    stub_torque_on = false;
+    dxl_result_t res = dxl_set_baud_rate(fake_ctx, 1, 3);
+    TEST_ASSERT_EQUAL(DXL_OK, res);
+}
+
 // ---- Main ----
 
 int main(void) {
@@ -286,6 +346,12 @@ int main(void) {
     RUN_TEST(test_sync_write_produces_valid_wire_packet);
     RUN_TEST(test_sync_write_zero_count);
     RUN_TEST(test_sync_write_over_max);
+
+    // EEPROM safety
+    RUN_TEST(test_set_id_blocked_when_torque_on);
+    RUN_TEST(test_set_id_allowed_when_torque_off);
+    RUN_TEST(test_set_baud_blocked_when_torque_on);
+    RUN_TEST(test_set_baud_allowed_when_torque_off);
 
     // Hardware error strings
     RUN_TEST(test_hw_error_none);

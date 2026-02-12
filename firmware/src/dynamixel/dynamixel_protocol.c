@@ -204,6 +204,8 @@ const char *dxl_result_to_string(dxl_result_t result) {
         return "TX failure";
     case DXL_BUFFER_OVERFLOW:
         return "Buffer overflow";
+    case DXL_TORQUE_ENABLED:
+        return "Torque must be disabled for EEPROM writes";
     default:
         return "Unknown error";
     }

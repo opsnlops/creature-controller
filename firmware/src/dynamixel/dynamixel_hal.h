@@ -36,6 +36,21 @@ typedef struct {
 #define DXL_MULTI_RX_BUF_SIZE (DXL_MAX_PACKET_SIZE * DXL_MAX_MULTI_RESPONSES)
 
 /**
+ * @brief Dynamixel bus metrics
+ *
+ * Counters are incremented by the HAL during normal operation.
+ * Read via dxl_hal_metrics() for periodic reporting to the host.
+ */
+typedef struct {
+    volatile u64 tx_packets;     // Packets transmitted (including broadcast)
+    volatile u64 rx_packets;     // Packets successfully received and parsed
+    volatile u64 servo_errors;   // Responses with a protocol error byte set
+    volatile u64 crc_errors;     // CRC mismatches (bus data corruption)
+    volatile u64 timeouts;       // No response received before deadline
+    volatile u64 rx_noise_bytes; // Bytes skipped before packet header (bus noise indicator)
+} dxl_metrics_t;
+
+/**
  * @brief Opaque HAL context (allocated by init)
  */
 typedef struct dxl_hal_context dxl_hal_context_t;
@@ -160,3 +175,15 @@ dxl_packet_t *dxl_hal_multi_pkt_buf(dxl_hal_context_t *ctx);
  * @return Error byte from the last status packet, or 0 if no error
  */
 u8 dxl_hal_last_servo_error(dxl_hal_context_t *ctx);
+
+/**
+ * @brief Get a pointer to the bus metrics counters
+ *
+ * Returns a pointer into the HAL context that remains valid for the
+ * lifetime of the context. The stats reporter can read these fields
+ * periodically — each u64 read is atomic on ARM.
+ *
+ * @param ctx HAL context
+ * @return Pointer to the metrics struct (never NULL for a valid context)
+ */
+const dxl_metrics_t *dxl_hal_metrics(dxl_hal_context_t *ctx);

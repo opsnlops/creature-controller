@@ -29,6 +29,7 @@ typedef enum {
     DXL_SERVO_ERROR,
     DXL_TX_FAIL,
     DXL_BUFFER_OVERFLOW,
+    DXL_TORQUE_ENABLED,
 } dxl_result_t;
 
 /**

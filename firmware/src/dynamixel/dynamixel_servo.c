@@ -54,14 +54,21 @@ dxl_result_t dxl_ping(dxl_hal_context_t *ctx, u8 id, dxl_ping_result_t *result) 
 
 void dxl_scan(dxl_hal_context_t *ctx, u8 start_id, u8 end_id, dxl_scan_callback_t callback) {
     for (u16 id = start_id; id <= end_id; id++) {
-        dxl_ping_result_t result;
-        memset(&result, 0, sizeof(result));
+        // Inline ping with short scan timeout (DXL_SCAN_TIMEOUT_MS vs 100ms default)
+        // so empty IDs don't stall the scan
+        dxl_packet_t tx_pkt;
+        memset(&tx_pkt, 0, sizeof(tx_pkt));
+        tx_pkt.id = (u8)id;
+        tx_pkt.instruction = DXL_INST_PING;
 
-        dxl_result_t res = dxl_ping(ctx, (u8)id, &result);
-        if (res == DXL_OK) {
-            callback((u8)id, result.model_number, result.firmware_version);
+        dxl_packet_t rx_pkt;
+        memset(&rx_pkt, 0, sizeof(rx_pkt));
+
+        dxl_result_t res = dxl_hal_txrx(ctx, &tx_pkt, &rx_pkt, DXL_SCAN_TIMEOUT_MS);
+        if (res == DXL_OK && rx_pkt.param_count >= 3) {
+            u16 model = (u16)rx_pkt.params[0] | ((u16)rx_pkt.params[1] << 8);
+            callback((u8)id, model, rx_pkt.params[2]);
         }
-        // Timeouts and errors are expected for empty IDs, just skip
     }
 }
 
@@ -112,11 +119,36 @@ dxl_result_t dxl_write_register(dxl_hal_context_t *ctx, u8 id, u16 address, u16 
     return dxl_hal_txrx(ctx, &tx_pkt, &rx_pkt, DXL_DEFAULT_TIMEOUT_MS);
 }
 
+/**
+ * @brief Check that torque is off before writing EEPROM registers.
+ *
+ * Skipped for broadcast ID (can't read back from broadcast).
+ */
+static dxl_result_t check_torque_off(dxl_hal_context_t *ctx, u8 id) {
+    if (id == DXL_BROADCAST_ID) {
+        return DXL_OK;
+    }
+    u32 torque = 0;
+    dxl_result_t res = dxl_read_register(ctx, id, DXL_REG_TORQUE_ENABLE, 1, &torque);
+    if (res != DXL_OK) {
+        return res;
+    }
+    return torque ? DXL_TORQUE_ENABLED : DXL_OK;
+}
+
 dxl_result_t dxl_set_id(dxl_hal_context_t *ctx, u8 current_id, u8 new_id) {
+    dxl_result_t res = check_torque_off(ctx, current_id);
+    if (res != DXL_OK) {
+        return res;
+    }
     return dxl_write_register(ctx, current_id, DXL_REG_ID, 1, new_id);
 }
 
 dxl_result_t dxl_set_baud_rate(dxl_hal_context_t *ctx, u8 id, u8 baud_index) {
+    dxl_result_t res = check_torque_off(ctx, id);
+    if (res != DXL_OK) {
+        return res;
+    }
     return dxl_write_register(ctx, id, DXL_REG_BAUD_RATE, 1, baud_index);
 }
 
