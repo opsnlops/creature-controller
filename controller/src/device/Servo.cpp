@@ -193,6 +193,13 @@ u32 Servo::getCurrentMicroseconds() const { return current_microseconds; }
 float Servo::getSmoothingValue() const { return smoothingValue; }
 
 void Servo::calculateNextTick() {
+    // Dynamixel servos handle smoothing internally via Profile Velocity at 4kHz,
+    // so skip host-side EMA smoothing and pass through the raw target position
+    if (outputLocation.type == creatures::creature::dynamixel) {
+        current_microseconds = desired_microseconds;
+        return;
+    }
+
     u32 last_tick = current_microseconds;
 
     current_microseconds =
@@ -215,3 +222,5 @@ u16 Servo::getMaxPulseUs() const { return max_pulse_us; }
 u16 Servo::getServoUpdateFrequencyHz() const { return servo_update_frequency_hz; }
 
 u32 Servo::getFrameLengthMicroseconds() const { return frame_length_microseconds; }
+
+creatures::creature::motor_type Servo::getMotorType() const { return outputLocation.type; }

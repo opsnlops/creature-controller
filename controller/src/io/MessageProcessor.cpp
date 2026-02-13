@@ -9,6 +9,7 @@
 #include "config/UARTDevice.h"
 #include "controller/ServoModuleHandler.h"
 #include "io/Message.h"
+#include "io/handlers/DynamixelSensorHandler.h"
 #include "io/handlers/InitHandler.h"
 #include "io/handlers/LogHandler.h"
 #include "io/handlers/PongHandler.h"
@@ -53,6 +54,7 @@ MessageProcessor::MessageProcessor(
     registerHandler("READY", this->readyHandler);
     registerHandler("BSENSE", this->boardSensorHandler);
     registerHandler("MSENSE", this->motorSensorHandler);
+    registerHandler("DSENSE", this->dynamixelSensorHandler);
 }
 
 void MessageProcessor::createHandlers() {
@@ -65,6 +67,7 @@ void MessageProcessor::createHandlers() {
     this->readyHandler = std::make_shared<ReadyHandler>(this->logger, this->servoModuleHandler);
     this->boardSensorHandler = std::make_shared<BoardSensorHandler>(this->logger, this->websocketOutgoingQueue);
     this->motorSensorHandler = std::make_shared<MotorSensorHandler>(this->logger, this->websocketOutgoingQueue);
+    this->dynamixelSensorHandler = std::make_shared<DynamixelSensorHandler>(this->logger, this->websocketOutgoingQueue);
 }
 
 void MessageProcessor::registerHandler(std::string messageType, std::shared_ptr<IMessageHandler> handler) {

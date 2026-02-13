@@ -1,0 +1,126 @@
+{
+  "name": "Light 1",
+  "id": "3e0f9f24-9de3-43d2-8401-1c1d22a6f209",
+  "version": "1.0.0",
+  "description": "The world's smallest MangoDB fan!",
+  "channel_offset": 400,
+  "audio_channel": 17,
+  "mouth_slot": 0,
+  "position_min": 0,
+  "position_max": 255,
+  "head_offset_max": 0.4,
+  "servo_frequency": 50,
+  "type": "light",
+  "motors": [
+    {
+      "type": "light",
+      "id": "red",
+      "name": "Red",
+      "output_module": "A",
+      "output_header": 0,
+      "min_pulse_us": 1250,
+      "max_pulse_us": 2250,
+      "smoothing_value": 0.90,
+      "inverted": false,
+      "default_position": "center"
+    },
+    {
+      "type": "light",
+      "id": "green",
+      "name": "Green",
+      "output_module": "A",
+      "output_header": 1,
+      "min_pulse_us": 800,
+      "max_pulse_us": 1800,
+      "smoothing_value": 0.90,
+      "inverted": false,
+      "default_position": "center"
+    },
+    {
+      "type": "light",
+      "id": "blue",
+      "name": "Blue",
+      "output_module": "A",
+      "output_header": 2,
+      "min_pulse_us": 1450,
+      "max_pulse_us": 1970,
+      "smoothing_value": 0.90,
+      "inverted": false,
+      "default_position": "center"
+    },
+    {
+      "type": "light",
+      "id": "white",
+      "name": "White",
+      "output_module": "A",
+      "output_header": 3,
+      "min_pulse_us": 1475,
+      "max_pulse_us": 1950,
+      "smoothing_value": 0.96,
+      "inverted": false,
+      "default_position": "min"
+    },
+    {
+      "type": "light",
+      "id": "master_dim",
+      "name": "Master Dimmer",
+      "output_module": "A",
+      "output_header": 4,
+      "min_pulse_us": 1600,
+      "max_pulse_us": 2350,
+      "smoothing_value": 0.4,
+      "inverted": false,
+      "default_position": "min"
+    },
+    {
+      "type": "light",
+      "id": "strobe",
+      "name": "Strobe",
+      "output_module": "A",
+      "output_header": 5,
+      "min_pulse_us": 1600,
+      "max_pulse_us": 2350,
+      "smoothing_value": 0.4,
+      "inverted": false,
+      "default_position": "min"
+    }
+  ],
+  "inputs": [
+    {
+      "name": "red",
+      "slot": 0,
+      "width": 1,
+      "joystick_axis": 0
+    },
+    {
+      "name": "green",
+      "slot": 1,
+      "width": 1,
+      "joystick_axis": 1
+    },
+    {
+      "name": "blue",
+      "slot": 2,
+      "width": 1,
+      "joystick_axis": 2
+    },
+    {
+      "name": "white",
+      "slot": 3,
+      "width": 1,
+      "joystick_axis": 4
+    },
+    {
+      "name": "master_dim",
+      "slot": 4,
+      "width": 1,
+      "joystick_axis": 5
+    },
+    {
+      "name": "strobe",
+      "slot": 5,
+      "width": 1,
+      "joystick_axis": 5
+    }
+  ]
+}

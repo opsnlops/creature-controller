@@ -172,6 +172,11 @@ static void initialize_binary_info(void) {
     bi_decl(bi_1pin_with_name(SERVO_6_POWER_PIN, "Servo 6 Power Control"))
     bi_decl(bi_1pin_with_name(SERVO_7_POWER_PIN, "Servo 7 Power Control"))
 #endif
+#ifdef CC_VER4
+    bi_decl(bi_program_feature("Requires Hardware Version: 4"))
+    bi_decl(bi_program_feature("Dynamixel servo support enabled"))
+    bi_decl(bi_1pin_with_name(DXL_DATA_PIN, "Dynamixel Data Bus"))
+#endif
 }
 
 /**
@@ -310,6 +315,13 @@ static bool initialize_controller_systems(void) {
     controller_init();
     controller_start();
     debug("Controller initialized and started");
+
+#ifdef CC_VER4
+    // Create the Dynamixel controller task
+    xTaskCreate(dynamixel_controller_task, "dxl_ctrl", DXL_TASK_STACK_SIZE,
+                NULL, DXL_TASK_PRIORITY, NULL);
+    debug("Dynamixel controller task created");
+#endif
 
     // Initialize status lights
     status_lights_init();

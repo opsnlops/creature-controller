@@ -19,6 +19,13 @@
 #include "types.h"
 #include "version.h"
 
+#ifdef CC_VER4
+#include "dynamixel/dynamixel_hal.h"
+#include "dynamixel/dynamixel_servo.h"
+#include <stdio.h>
+#include <task.h>
+#endif
+
 // Stats
 extern volatile u64 number_of_pwm_wraps;
 
@@ -42,22 +49,27 @@ SemaphoreHandle_t motor_map_mutex;
  * All motors start unconfigured until the computer sends configuration data.
  */
 MotorMap motor_map[MOTOR_MAP_SIZE] = {
-    {"0", SERVO_0_GPIO_PIN, (SERVO_0_GPIO_PIN >> 1u) & 7u,
-     SERVO_0_GPIO_PIN & 1u, SERVO_0_POWER_PIN, 0, 0, 0, 0, false},
-    {"1", SERVO_1_GPIO_PIN, (SERVO_1_GPIO_PIN >> 1u) & 7u,
-     SERVO_1_GPIO_PIN & 1u, SERVO_1_POWER_PIN, 0, 0, 0, 0, false},
-    {"2", SERVO_2_GPIO_PIN, (SERVO_2_GPIO_PIN >> 1u) & 7u,
-     SERVO_2_GPIO_PIN & 1u, SERVO_2_POWER_PIN, 0, 0, 0, 0, false},
-    {"3", SERVO_3_GPIO_PIN, (SERVO_3_GPIO_PIN >> 1u) & 7u,
-     SERVO_3_GPIO_PIN & 1u, SERVO_3_POWER_PIN, 0, 0, 0, 0, false},
-    {"4", SERVO_4_GPIO_PIN, (SERVO_4_GPIO_PIN >> 1u) & 7u,
-     SERVO_4_GPIO_PIN & 1u, SERVO_4_POWER_PIN, 0, 0, 0, 0, false},
-    {"5", SERVO_5_GPIO_PIN, (SERVO_5_GPIO_PIN >> 1u) & 7u,
-     SERVO_5_GPIO_PIN & 1u, SERVO_5_POWER_PIN, 0, 0, 0, 0, false},
-    {"6", SERVO_6_GPIO_PIN, (SERVO_6_GPIO_PIN >> 1u) & 7u,
-     SERVO_6_GPIO_PIN & 1u, SERVO_6_POWER_PIN, 0, 0, 0, 0, false},
-    {"7", SERVO_7_GPIO_PIN, (SERVO_7_GPIO_PIN >> 1u) & 7u,
-     SERVO_7_GPIO_PIN & 1u, SERVO_7_POWER_PIN, 0, 0, 0, 0, false}};
+    {"0", SERVO_0_GPIO_PIN, (SERVO_0_GPIO_PIN >> 1u) & 7u, SERVO_0_GPIO_PIN & 1u, SERVO_0_POWER_PIN, 0, 0, 0, 0, false},
+    {"1", SERVO_1_GPIO_PIN, (SERVO_1_GPIO_PIN >> 1u) & 7u, SERVO_1_GPIO_PIN & 1u, SERVO_1_POWER_PIN, 0, 0, 0, 0, false},
+    {"2", SERVO_2_GPIO_PIN, (SERVO_2_GPIO_PIN >> 1u) & 7u, SERVO_2_GPIO_PIN & 1u, SERVO_2_POWER_PIN, 0, 0, 0, 0, false},
+    {"3", SERVO_3_GPIO_PIN, (SERVO_3_GPIO_PIN >> 1u) & 7u, SERVO_3_GPIO_PIN & 1u, SERVO_3_POWER_PIN, 0, 0, 0, 0, false},
+    {"4", SERVO_4_GPIO_PIN, (SERVO_4_GPIO_PIN >> 1u) & 7u, SERVO_4_GPIO_PIN & 1u, SERVO_4_POWER_PIN, 0, 0, 0, 0, false},
+    {"5", SERVO_5_GPIO_PIN, (SERVO_5_GPIO_PIN >> 1u) & 7u, SERVO_5_GPIO_PIN & 1u, SERVO_5_POWER_PIN, 0, 0, 0, 0, false},
+    {"6", SERVO_6_GPIO_PIN, (SERVO_6_GPIO_PIN >> 1u) & 7u, SERVO_6_GPIO_PIN & 1u, SERVO_6_POWER_PIN, 0, 0, 0, 0, false},
+    {"7", SERVO_7_GPIO_PIN, (SERVO_7_GPIO_PIN >> 1u) & 7u, SERVO_7_GPIO_PIN & 1u, SERVO_7_POWER_PIN, 0, 0, 0, 0,
+     false}};
+
+#ifdef CC_VER4
+// Dynamixel motor map
+DynamixelMotorEntry dxl_motors[MAX_DYNAMIXEL_SERVOS] = {0};
+u8 dxl_motor_count = 0;
+
+// HAL context for the Dynamixel bus
+static dxl_hal_context_t *dxl_ctx = NULL;
+
+// Mutex for thread-safe access to dxl_motors
+static SemaphoreHandle_t dxl_motors_mutex = NULL;
+#endif
 
 /**
  * The values we've read from the ADC for the position of our motors.
@@ -138,21 +150,19 @@ void controller_init() {
 
     // Create the analog filters for the sensed motor positions
     for (size_t i = 0; i < CONTROLLER_MOTORS_PER_MODULE; i++) {
-        sensed_motor_position[i] = create_analog_filter(
-            true, (float)ANALOG_READ_FILTER_SNAP_VALUE,
-            (float)ANALOG_READ_FILTER_ACTIVITY_THRESHOLD,
-            ANALOG_READ_FILTER_EDGE_SNAP_ENABLE == 1 ? true : false);
+        sensed_motor_position[i] = create_analog_filter(true, (float)ANALOG_READ_FILTER_SNAP_VALUE,
+                                                        (float)ANALOG_READ_FILTER_ACTIVITY_THRESHOLD,
+                                                        ANALOG_READ_FILTER_EDGE_SNAP_ENABLE == 1 ? true : false);
     }
     debug("created the analog filters for the sensed motor positions");
 
     // Create, but don't actually start the timer (it will be started when the
     // CDC is connected)
-    controller_init_request_timer = xTimerCreate(
-        "Init Request Sender",               // Timer name
-        pdMS_TO_TICKS(INIT_REQUEST_TIME_MS), // Fire every INIT_REQUEST_TIME_MS
-        pdTRUE,                              // Auto-reload
-        (void *)0,                           // Timer ID (not used here)
-        send_init_request                    // Callback function
+    controller_init_request_timer = xTimerCreate("Init Request Sender",               // Timer name
+                                                 pdMS_TO_TICKS(INIT_REQUEST_TIME_MS), // Fire every INIT_REQUEST_TIME_MS
+                                                 pdTRUE,                              // Auto-reload
+                                                 (void *)0,                           // Timer ID (not used here)
+                                                 send_init_request                    // Callback function
     );
 
     // If this fails, something is super broke. Bail out now.
@@ -161,20 +171,41 @@ void controller_init() {
         return;
     }
 
+#ifdef CC_VER4
+    // Initialize the Dynamixel motor map mutex
+    dxl_motors_mutex = xSemaphoreCreateMutex();
+    if (dxl_motors_mutex == NULL) {
+        fatal("failed to create dxl_motors_mutex");
+        return;
+    }
+
+    // Initialize the Dynamixel HAL
+    dxl_hal_config_t dxl_config = {
+        .data_pin = DXL_DATA_PIN,
+        .baud_rate = DXL_BAUD_RATE,
+        .pio = DXL_PIO,
+    };
+    dxl_ctx = dxl_hal_init(&dxl_config);
+    if (dxl_ctx == NULL) {
+        fatal("failed to initialize Dynamixel HAL");
+        return;
+    }
+    info("Dynamixel HAL initialized on pin %u at %lu baud", DXL_DATA_PIN, (unsigned long)DXL_BAUD_RATE);
+#endif
+
     // Set up the GPIO pin for monitoring for a reset signal
     gpio_set_function(CONTROLLER_RESET_PIN, GPIO_FUNC_SIO);
     gpio_set_dir(CONTROLLER_RESET_PIN, GPIO_IN);
 
     // Create the timer that checks for a reset request
-    controller_reset_request_check_timer = xTimerCreate(
-        "Reset Request Checker", // Timer name
-        pdMS_TO_TICKS(
-            CONTROLLER_RESET_SIGNAL_PERIOD_MS), // Fire every
-                                                // CONTROLLER_RESET_SIGNAL_PERIOD_MS
-        pdTRUE,    // Auto-reload
-        (void *)0, // Timer ID (not used here)
-        controller_reset_request_check_timer_callback // Callback function
-    );
+    controller_reset_request_check_timer =
+        xTimerCreate("Reset Request Checker",                          // Timer name
+                     pdMS_TO_TICKS(CONTROLLER_RESET_SIGNAL_PERIOD_MS), // Fire every
+                                                                       // CONTROLLER_RESET_SIGNAL_PERIOD_MS
+                     pdTRUE,                                           // Auto-reload
+                     (void *)0,                                        // Timer ID (not used here)
+                     controller_reset_request_check_timer_callback     // Callback function
+        );
 
     // Same deal, this shouldn't happen.
     if (controller_reset_request_check_timer == NULL) {
@@ -190,8 +221,7 @@ void controller_start() {
     u32 wrap = 0UL;
     for (size_t i = 0; i < sizeof(motor_map) / sizeof(motor_map[0]); ++i) {
         gpio_set_function(motor_map[i].gpio_pin, GPIO_FUNC_PWM);
-        wrap = pwm_set_freq_duty(motor_map[i].slice, motor_map[i].channel,
-                                 SERVO_FREQUENCY, 0);
+        wrap = pwm_set_freq_duty(motor_map[i].slice, motor_map[i].channel, SERVO_FREQUENCY, 0);
         pwm_set_enabled(motor_map[i].slice, true);
     }
 
@@ -219,8 +249,7 @@ u8 getMotorMapIndex(const char *motor_id) {
         return INVALID_MOTOR_ID;
     }
 
-    const u8 motor_number =
-        motor_id[0] - '0'; // Convert '0', '1', ..., '7' to 0, 1, ..., 7
+    const u8 motor_number = motor_id[0] - '0'; // Convert '0', '1', ..., '7' to 0, 1, ..., 7
 
     // Make sure the controller requested a valid motor
     if (motor_number < 0 || motor_number >= CONTROLLER_MOTORS_PER_MODULE) {
@@ -249,14 +278,10 @@ bool requestServoPosition(const char *motor_id, const u16 requestedMicroseconds)
     // Take the mutex to ensure thread-safe access
     if (xSemaphoreTake(motor_map_mutex, portMAX_DELAY) == pdTRUE) {
         // Make sure the motor is allowed to move to this position
-        if (requestedMicroseconds <
-                motor_map[motor_id_index].min_microseconds ||
-            requestedMicroseconds >
-                motor_map[motor_id_index].max_microseconds) {
-            error("Invalid position requested for %s: %u (valid is: %u - %u)",
-                  motor_id, requestedMicroseconds,
-                  motor_map[motor_id_index].min_microseconds,
-                  motor_map[motor_id_index].max_microseconds);
+        if (requestedMicroseconds < motor_map[motor_id_index].min_microseconds ||
+            requestedMicroseconds > motor_map[motor_id_index].max_microseconds) {
+            error("Invalid position requested for %s: %u (valid is: %u - %u)", motor_id, requestedMicroseconds,
+                  motor_map[motor_id_index].min_microseconds, motor_map[motor_id_index].max_microseconds);
             xSemaphoreGive(motor_map_mutex);
             return false;
         }
@@ -266,14 +291,13 @@ bool requestServoPosition(const char *motor_id, const u16 requestedMicroseconds)
         motor_map[motor_id_index].current_microseconds = requestedMicroseconds;
 
         // What percentage of the frame is going to be set to on?
-        const double frame_active =
-            (float)requestedMicroseconds / (float)frame_length_microseconds;
+        const double frame_active = (float)requestedMicroseconds / (float)frame_length_microseconds;
 
         // ...and what counter value is that?
         const u32 desired_ticks = (u32)((float)pwm_resolution * frame_active);
 
-        verbose("Requested position for %s: %u ticks -> %u microseconds",
-                motor_id, desired_ticks, requestedMicroseconds);
+        verbose("Requested position for %s: %u ticks -> %u microseconds", motor_id, desired_ticks,
+                requestedMicroseconds);
         motor_map[motor_id_index].requested_position = desired_ticks;
 
         result = true;
@@ -285,8 +309,7 @@ bool requestServoPosition(const char *motor_id, const u16 requestedMicroseconds)
     return result;
 }
 
-bool configureServoMinMax(const char *motor_id, const u16 minMicroseconds,
-                          const u16 maxMicroseconds) {
+bool configureServoMinMax(const char *motor_id, const u16 minMicroseconds, const u16 maxMicroseconds) {
     if (motor_id == NULL || motor_id[0] == '\0') {
         debug("motor_id is null while setting configureServoMinMax");
         return false;
@@ -331,8 +354,7 @@ void __isr on_pwm_wrap_handler() {
     // Don't actually wiggle the motors if we haven't been told it's safe
     if (is_safe) {
         for (size_t i = 0; i < sizeof(motor_map) / sizeof(motor_map[0]); ++i) {
-            pwm_set_chan_level(motor_map[i].slice, motor_map[i].channel,
-                               motor_map[i].requested_position);
+            pwm_set_chan_level(motor_map[i].slice, motor_map[i].channel, motor_map[i].requested_position);
         }
     }
 
@@ -351,12 +373,11 @@ void __isr on_pwm_wrap_handler() {
 void send_init_request(TimerHandle_t xTimer) {
 
     // Avoid unused parameter warning
-    (void) xTimer;
+    (void)xTimer;
 
     char message[USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH] = {0};
 
-    snprintf(message, USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH, "INIT\t%u",
-             PROTOCOL_VERSION);
+    snprintf(message, USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH, "INIT\t%u", PROTOCOL_VERSION);
 
     send_to_controller(message);
     debug("sent init request");
@@ -364,12 +385,10 @@ void send_init_request(TimerHandle_t xTimer) {
 
 u32 pwm_set_freq_duty(const u32 slice_num, const u32 chan, const u32 frequency, const int d) {
     const u32 clock = 125000000;
-    u32 divider16 =
-        clock / frequency / 4096 + (clock % (frequency * 4096) != 0);
+    u32 divider16 = clock / frequency / 4096 + (clock % (frequency * 4096) != 0);
     if (divider16 / 16 == 0)
         divider16 = 16;
-    const u32 wrap = (clock << 4) / divider16 / frequency -
-               1; // Using bit shift for efficiency
+    const u32 wrap = (clock << 4) / divider16 / frequency - 1; // Using bit shift for efficiency
     pwm_set_clkdiv_int_frac(slice_num, divider16 / 16, divider16 & 0xF);
     pwm_set_wrap(slice_num, wrap);
     pwm_set_chan_level(slice_num, chan, wrap * d / 100);
@@ -398,6 +417,10 @@ void controller_connected() {
 void controller_disconnected() {
     info("controller disconnected, stopping");
     controller_safe_to_run = false;
+
+#ifdef CC_VER4
+    dynamixel_set_torque_all(false);
+#endif
 
     // Back to idle we go!
     controller_firmware_state = idle;
@@ -429,10 +452,16 @@ void first_frame_received(const bool yesOrNo) {
 #ifdef CC_VER3
         enable_all_motors();
 #endif
+#ifdef CC_VER4
+        dynamixel_set_torque_all(true);
+#endif
     } else {
         info("We haven't received our first frame from the controller yet");
 #ifdef CC_VER3
         disable_all_motors();
+#endif
+#ifdef CC_VER4
+        dynamixel_set_torque_all(false);
 #endif
     }
 }
@@ -516,3 +545,205 @@ bool are_all_motors_configured(void) {
 
     return all_configured;
 }
+
+#ifdef CC_VER4
+
+bool configureDynamixelServo(u8 dxl_id, u32 min_pos, u32 max_pos, u32 profile_velocity) {
+    if (dxl_ctx == NULL) {
+        error("Dynamixel HAL not initialized");
+        return false;
+    }
+
+    if (dxl_id == 0 || dxl_id > DXL_MAX_ID) {
+        error("invalid Dynamixel ID: %u", dxl_id);
+        return false;
+    }
+
+    bool result = false;
+
+    if (xSemaphoreTake(dxl_motors_mutex, portMAX_DELAY) == pdTRUE) {
+        if (dxl_motor_count >= MAX_DYNAMIXEL_SERVOS) {
+            error("Dynamixel motor map full (%u max)", MAX_DYNAMIXEL_SERVOS);
+            xSemaphoreGive(dxl_motors_mutex);
+            return false;
+        }
+
+        // Check for duplicate ID
+        for (u8 i = 0; i < dxl_motor_count; i++) {
+            if (dxl_motors[i].dxl_id == dxl_id) {
+                error("Dynamixel ID %u already configured", dxl_id);
+                xSemaphoreGive(dxl_motors_mutex);
+                return false;
+            }
+        }
+
+        // Add entry
+        DynamixelMotorEntry *entry = &dxl_motors[dxl_motor_count];
+        entry->dxl_id = dxl_id;
+        entry->min_position = min_pos;
+        entry->max_position = max_pos;
+        entry->requested_position = (min_pos + max_pos) / 2; // Center
+        entry->is_configured = true;
+        dxl_motor_count++;
+
+        result = true;
+        xSemaphoreGive(dxl_motors_mutex);
+    } else {
+        warning("failed to take dxl_motors_mutex in configureDynamixelServo");
+        return false;
+    }
+
+    // Set Profile Velocity (outside mutex — HAL has its own synchronization)
+    dxl_result_t dxl_res = dxl_set_profile_velocity(dxl_ctx, dxl_id, profile_velocity);
+    if (dxl_res != DXL_OK) {
+        warning("failed to set Profile Velocity for Dynamixel %u (result=%d)", dxl_id, dxl_res);
+        // Non-fatal — the servo will still work, just with default velocity
+    }
+
+    info("configured Dynamixel servo %u: pos range [%lu-%lu], profile "
+         "velocity %lu",
+         dxl_id, (unsigned long)min_pos, (unsigned long)max_pos, (unsigned long)profile_velocity);
+
+    return result;
+}
+
+bool requestDynamixelPosition(u8 dxl_id, u32 position) {
+    bool result = false;
+
+    if (xSemaphoreTake(dxl_motors_mutex, portMAX_DELAY) == pdTRUE) {
+        for (u8 i = 0; i < dxl_motor_count; i++) {
+            if (dxl_motors[i].dxl_id == dxl_id) {
+                // Bounds check
+                if (position < dxl_motors[i].min_position || position > dxl_motors[i].max_position) {
+                    error("Dynamixel %u position %lu out of range [%lu-%lu]", dxl_id, (unsigned long)position,
+                          (unsigned long)dxl_motors[i].min_position, (unsigned long)dxl_motors[i].max_position);
+                    xSemaphoreGive(dxl_motors_mutex);
+                    return false;
+                }
+
+                dxl_motors[i].requested_position = position;
+                result = true;
+                break;
+            }
+        }
+
+        if (!result) {
+            warning("Dynamixel ID %u not found in motor map", dxl_id);
+        }
+
+        xSemaphoreGive(dxl_motors_mutex);
+    } else {
+        warning("failed to take dxl_motors_mutex in requestDynamixelPosition");
+    }
+
+    return result;
+}
+
+void dynamixel_set_torque_all(bool enable) {
+    if (dxl_ctx == NULL || dxl_motor_count == 0) {
+        return;
+    }
+
+    info("%s torque on %u Dynamixel servos", enable ? "enabling" : "disabling", dxl_motor_count);
+
+    // Read motor count/IDs under mutex, then release before bus operations
+    u8 ids[MAX_DYNAMIXEL_SERVOS];
+    u8 count = 0;
+
+    if (xSemaphoreTake(dxl_motors_mutex, portMAX_DELAY) == pdTRUE) {
+        count = dxl_motor_count;
+        for (u8 i = 0; i < count; i++) {
+            ids[i] = dxl_motors[i].dxl_id;
+        }
+        xSemaphoreGive(dxl_motors_mutex);
+    }
+
+    for (u8 i = 0; i < count; i++) {
+        dxl_result_t res = dxl_set_torque(dxl_ctx, ids[i], enable);
+        if (res != DXL_OK) {
+            warning("failed to %s torque on Dynamixel %u (result=%d)", enable ? "enable" : "disable", ids[i], res);
+        }
+    }
+}
+
+portTASK_FUNCTION(dynamixel_controller_task, pvParameters) {
+    (void)pvParameters;
+
+    info("Dynamixel controller task started");
+
+    const TickType_t frame_period = pdMS_TO_TICKS(20); // 50Hz
+    u32 frame_counter = 0;
+
+    // Buffers for Sync Write and Sync Read
+    dxl_sync_position_t sync_positions[MAX_DYNAMIXEL_SERVOS];
+    dxl_sync_status_result_t sync_results[MAX_DYNAMIXEL_SERVOS];
+    u8 sync_ids[MAX_DYNAMIXEL_SERVOS];
+
+    for (EVER) {
+        TickType_t wake_time = xTaskGetTickCount();
+
+        if (controller_safe_to_run && dxl_motor_count > 0) {
+            u8 count = 0;
+
+            // Build position array under mutex
+            if (xSemaphoreTake(dxl_motors_mutex, pdMS_TO_TICKS(5)) == pdTRUE) {
+                count = dxl_motor_count;
+                for (u8 i = 0; i < count; i++) {
+                    sync_positions[i].id = dxl_motors[i].dxl_id;
+                    sync_positions[i].position = dxl_motors[i].requested_position;
+                    sync_ids[i] = dxl_motors[i].dxl_id;
+                }
+                xSemaphoreGive(dxl_motors_mutex);
+            }
+
+            // Sync Write positions — broadcast, no response expected (~0.5ms)
+            if (count > 0) {
+                dxl_sync_write_position(dxl_ctx, sync_positions, count);
+            }
+
+            // Periodic telemetry read
+            if (count > 0 && frame_counter % DXL_SENSOR_REPORT_INTERVAL_FRAMES == 0) {
+                u8 result_count = 0;
+                dxl_result_t res = dxl_sync_read_status(dxl_ctx, sync_ids, count, sync_results, &result_count);
+
+                if (res == DXL_OK && result_count > 0) {
+                    // Build and send DSENSE message
+                    char dsense_msg[OUTGOING_MESSAGE_MAX_LENGTH];
+                    int offset = snprintf(dsense_msg, sizeof(dsense_msg), "DSENSE");
+
+                    for (u8 i = 0; i < result_count && offset < (int)sizeof(dsense_msg) - 30; i++) {
+                        if (sync_results[i].valid) {
+                            // Convert voltage from Dynamixel units (0.1V) to mV
+                            u32 voltage_mv = (u32)sync_results[i].status.present_voltage * 100;
+
+                            offset += snprintf(dsense_msg + offset, sizeof(dsense_msg) - offset, "\tD%u %u %d %lu",
+                                               sync_results[i].id, sync_results[i].status.present_temperature,
+                                               sync_results[i].status.present_load, (unsigned long)voltage_mv);
+
+                            // Check for hardware errors
+                            if (sync_results[i].servo_error != 0) {
+                                warning("Dynamixel %u reports hardware error: 0x%02X", sync_results[i].id,
+                                        sync_results[i].servo_error);
+                            }
+                        }
+                    }
+
+                    send_to_controller(dsense_msg);
+                }
+            }
+
+            frame_counter++;
+        }
+
+        vTaskDelayUntil(&wake_time, frame_period);
+    }
+}
+
+const dxl_metrics_t *controller_get_dxl_metrics(void) {
+    if (dxl_ctx == NULL) {
+        return NULL;
+    }
+    return dxl_hal_metrics(dxl_ctx);
+}
+
+#endif

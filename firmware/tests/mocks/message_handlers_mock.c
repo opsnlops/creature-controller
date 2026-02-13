@@ -50,4 +50,15 @@ bool handleConfigMessage(const GenericMessage *msg) {
     return true;
 }
 
-// REMOVED duplicate calculateChecksum function
+bool handleEmergencyStopMessage(const GenericMessage *msg) {
+    if (msg == NULL) {
+        printf("WARNING: handleEmergencyStopMessage called with NULL message\n");
+        return false;
+    }
+
+    if (msg->messageType[0] == '\0') {
+        printf("INFO: handleEmergencyStopMessage called with empty message type\n");
+    }
+
+    return true;
+}

@@ -60,12 +60,11 @@ extern SemaphoreHandle_t motor_map_mutex;
  * and power control.
  */
 typedef struct {
-    const char
-        *motor_id; /**< String identifier for this motor (e.g., "0", "1") */
-    u32 gpio_pin;  /**< GPIO pin number on the Pi Pico */
-    u32 slice;     /**< PWM slice used by this motor */
-    u32 channel;   /**< PWM channel within the slice */
-    u32 power_pin; /**< GPIO pin controlling power to this motor */
+    const char *motor_id;     /**< String identifier for this motor (e.g., "0", "1") */
+    u32 gpio_pin;             /**< GPIO pin number on the Pi Pico */
+    u32 slice;                /**< PWM slice used by this motor */
+    u32 channel;              /**< PWM channel within the slice */
+    u32 power_pin;            /**< GPIO pin controlling power to this motor */
     u16 requested_position;   /**< Position in PWM counter ticks (not
                                  microseconds) */
     u16 min_microseconds;     /**< Minimum pulse width in microseconds */
@@ -148,8 +147,7 @@ bool requestServoPosition(const char *motor_id, u16 requestedMicroseconds);
  * @param maxMicroseconds The maximum allowed pulse width in microseconds
  * @return true if configuration was successful, false if there was an error
  */
-bool configureServoMinMax(const char *motor_id, u16 minMicroseconds,
-                          u16 maxMicroseconds);
+bool configureServoMinMax(const char *motor_id, u16 minMicroseconds, u16 maxMicroseconds);
 
 /**
  * @brief Configure PWM frequency and duty cycle for a channel
@@ -241,3 +239,79 @@ bool is_motor_configured(const char *motor_id);
  * @return true if all motors have been configured by the computer
  */
 bool are_all_motors_configured(void);
+
+#ifdef CC_VER4
+
+#include "dynamixel/dynamixel_hal.h"
+#include "dynamixel/dynamixel_servo.h"
+
+/**
+ * @brief Structure mapping a Dynamixel motor to its configuration
+ */
+typedef struct {
+    u8 dxl_id;              /**< Dynamixel bus address (1-253) */
+    u32 min_position;       /**< Minimum allowed position (0-4095) */
+    u32 max_position;       /**< Maximum allowed position (0-4095) */
+    u32 requested_position; /**< Next position to write via Sync Write */
+    bool is_configured;     /**< True if this motor has been configured */
+} DynamixelMotorEntry;
+
+/**
+ * @brief Array of Dynamixel motor entries
+ */
+extern DynamixelMotorEntry dxl_motors[MAX_DYNAMIXEL_SERVOS];
+
+/**
+ * @brief Number of configured Dynamixel motors
+ */
+extern u8 dxl_motor_count;
+
+/**
+ * @brief Configure a Dynamixel servo
+ *
+ * Adds the servo to the motor map and sets its Profile Velocity.
+ * Does NOT enable torque (torque tracks power relay state).
+ *
+ * @param dxl_id Bus address (1-253)
+ * @param min_pos Minimum position in Dynamixel units (0-4095)
+ * @param max_pos Maximum position in Dynamixel units (0-4095)
+ * @param profile_velocity Profile velocity for motion smoothing
+ * @return true if configuration was successful
+ */
+bool configureDynamixelServo(u8 dxl_id, u32 min_pos, u32 max_pos, u32 profile_velocity);
+
+/**
+ * @brief Request a Dynamixel servo move to a position
+ *
+ * @param dxl_id Bus address (1-253)
+ * @param position Position in Dynamixel units (0-4095)
+ * @return true if the position was accepted
+ */
+bool requestDynamixelPosition(u8 dxl_id, u32 position);
+
+/**
+ * @brief Enable or disable torque on all configured Dynamixel servos
+ *
+ * Called from first_frame_received(true) to enable, and from
+ * controller_disconnected() / emergency stop to disable.
+ *
+ * @param enable true to enable torque, false to disable
+ */
+void dynamixel_set_torque_all(bool enable);
+
+/**
+ * @brief FreeRTOS task for Dynamixel servo control
+ *
+ * Runs at 50Hz: Sync Write positions every frame, Sync Read
+ * telemetry every DXL_SENSOR_REPORT_INTERVAL_FRAMES frames.
+ */
+portTASK_FUNCTION_PROTO(dynamixel_controller_task, pvParameters);
+
+/**
+ * @brief Get the Dynamixel bus metrics for stats reporting
+ *
+ * @return Pointer to the metrics struct, or NULL if HAL not initialized
+ */
+const dxl_metrics_t *controller_get_dxl_metrics(void);
+
+#endif

@@ -11,6 +11,10 @@
 #include "debug/stats_reporter.h"
 #include "io/message_processor.h"
 
+#ifdef CC_VER4
+#include "dynamixel/dynamixel_hal.h"
+#endif
+
 #include "types.h"
 
 extern TaskHandle_t stats_reporter_task_handle;
@@ -23,17 +27,14 @@ extern volatile u64 checksum_errors;
 extern volatile u64 position_messages_processed;
 extern volatile u64 number_of_pwm_wraps;
 
-
 // From the message processor
 extern volatile u64 message_processor_messages_received;
 extern volatile u64 message_processor_messages_sent;
-
 
 // From the UART
 extern volatile u64 uart_characters_received;
 extern volatile u64 uart_messages_received;
 extern volatile u64 uart_messages_sent;
-
 
 // From the USB pipeline
 extern volatile u64 usb_serial_characters_received;
@@ -47,12 +48,11 @@ extern double board_temperature;
 
 void start_stats_reporter() {
 
-    TimerHandle_t statsReportTimer = xTimerCreate(
-            "StatsReportTimer",              // Timer name
-            pdMS_TO_TICKS(20 * 1000),            // Timer period (20 seconds)
-            pdTRUE,                          // Auto-reload
-            (void *) 0,                        // Timer ID (not used here)
-            statsReportTimerCallback         // Callback function
+    TimerHandle_t statsReportTimer = xTimerCreate("StatsReportTimer",       // Timer name
+                                                  pdMS_TO_TICKS(20 * 1000), // Timer period (20 seconds)
+                                                  pdTRUE,                   // Auto-reload
+                                                  (void *)0,                // Timer ID (not used here)
+                                                  statsReportTimerCallback  // Callback function
     );
 
     if (statsReportTimer != NULL) {
@@ -65,24 +65,29 @@ void statsReportTimerCallback(TimerHandle_t xTimer) {
     char message[USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH];
     memset(&message, '\0', USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH);
 
-    snprintf(message, USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH,
-             "STATS\tHEAP_FREE %lu\tUSB_CRECV %lu\tUSB_MRECV %lu\tUSB_SENT %lu\tUART_CRECV %lu\tUART_MRECV %lu\tUART_SENT %lu\tMP_RECV %lu\tMP_SENT %lu\tS_PARSE %lu\tF_PARSE %lu\tCHKFAIL %lu\tPOS_PROC %lu\tPWM_WRAPS %lu\tTEMP %.2f",
-             (unsigned long) xFreeHeapSpace,
-             (unsigned long) usb_serial_characters_received,
-             (unsigned long) usb_serial_messages_received,
-             (unsigned long) usb_serial_messages_sent,
-             (unsigned long) uart_characters_received,
-             (unsigned long) uart_messages_received,
-             (unsigned long) uart_messages_sent,
-             (unsigned long) message_processor_messages_received,
-             (unsigned long) message_processor_messages_sent,
-             (unsigned long) successful_messages_parsed,
-             (unsigned long) failed_messages_parsed,
-             (unsigned long) checksum_errors,
-             (unsigned long) position_messages_processed,
-             (unsigned long) number_of_pwm_wraps,
-             board_temperature);
+    snprintf(
+        message, USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH,
+        "STATS\tHEAP_FREE %lu\tUSB_CRECV %lu\tUSB_MRECV %lu\tUSB_SENT %lu\tUART_CRECV %lu\tUART_MRECV %lu\tUART_SENT "
+        "%lu\tMP_RECV %lu\tMP_SENT %lu\tS_PARSE %lu\tF_PARSE %lu\tCHKFAIL %lu\tPOS_PROC %lu\tPWM_WRAPS %lu\tTEMP %.2f",
+        (unsigned long)xFreeHeapSpace, (unsigned long)usb_serial_characters_received,
+        (unsigned long)usb_serial_messages_received, (unsigned long)usb_serial_messages_sent,
+        (unsigned long)uart_characters_received, (unsigned long)uart_messages_received,
+        (unsigned long)uart_messages_sent, (unsigned long)message_processor_messages_received,
+        (unsigned long)message_processor_messages_sent, (unsigned long)successful_messages_parsed,
+        (unsigned long)failed_messages_parsed, (unsigned long)checksum_errors,
+        (unsigned long)position_messages_processed, (unsigned long)number_of_pwm_wraps, board_temperature);
+
+#ifdef CC_VER4
+    // Append Dynamixel bus metrics if available
+    const dxl_metrics_t *dxl_m = controller_get_dxl_metrics();
+    if (dxl_m != NULL) {
+        size_t len = strlen(message);
+        snprintf(message + len, USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH - len,
+                 "\tDXL_TX %lu\tDXL_RX %lu\tDXL_ERR %lu\tDXL_CRC %lu\tDXL_TO %lu", (unsigned long)dxl_m->tx_packets,
+                 (unsigned long)dxl_m->rx_packets, (unsigned long)dxl_m->servo_errors, (unsigned long)dxl_m->crc_errors,
+                 (unsigned long)dxl_m->timeouts);
+    }
+#endif
 
     send_to_controller(message);
-
 }

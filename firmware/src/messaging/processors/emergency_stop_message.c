@@ -13,6 +13,7 @@
 #include <task.h>
 
 #include "controller/config.h"
+#include "controller/controller.h"
 #include "device/power_control.h"
 #include "logging/logging.h"
 #include "messaging/messaging.h"
@@ -25,6 +26,11 @@ bool handleEmergencyStopMessage(const GenericMessage *msg) {
 
     // Set an emergency stop flag
     emergency_stop_active = true;
+
+#ifdef CC_VER4
+    // Disable Dynamixel torque before powering off
+    dynamixel_set_torque_all(false);
+#endif
 
 #ifdef CC_VER3
     // Immediately power off all motors

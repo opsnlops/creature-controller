@@ -14,7 +14,6 @@
 
 #include "types.h"
 
-
 extern volatile bool controller_safe_to_run;
 extern TimerHandle_t controller_init_request_timer;
 extern enum FirmwareState controller_firmware_state;
@@ -47,62 +46,101 @@ bool handleConfigMessage(const GenericMessage *msg) {
             debug("motor type: %s", motor_type);
         }
 
-        // We only know how to handle servos at this point
-        if (strcmp(motor_type, "SERVO") != 0) {
+        if (strcmp(motor_type, "SERVO") == 0) {
+            // PWM servo path
+            char *output_position = strtok_r(NULL, " ", &temp_token);
+            if (output_position == NULL) {
+                error("no output position specified for SERVO");
+                xTimerStart(controller_init_request_timer, 0);
+                return false;
+            }
+            verbose("output_position: %s", output_position);
+
+            char *min_us_str = strtok_r(NULL, " ", &temp_token);
+            if (min_us_str == NULL) {
+                error("no min_us specified for SERVO %s", output_position);
+                xTimerStart(controller_init_request_timer, 0);
+                return false;
+            }
+            const u16 min_us = stringToU16(min_us_str);
+            if (min_us == 0) {
+                error("min_us can't be parsed to u16: %s", min_us_str);
+                xTimerStart(controller_init_request_timer, 0);
+                return false;
+            }
+            verbose("min_us: %u", min_us);
+
+            const char *max_us_str = strtok_r(NULL, " ", &temp_token);
+            if (max_us_str == NULL) {
+                error("no max_us specified for SERVO %s", output_position);
+                xTimerStart(controller_init_request_timer, 0);
+                return false;
+            }
+            const u16 max_us = stringToU16(max_us_str);
+            if (max_us == 0) {
+                error("max_us can't be parsed to u16: %s", max_us_str);
+                xTimerStart(controller_init_request_timer, 0);
+                return false;
+            }
+            verbose("max_us: %u", max_us);
+
+            if (!configureServoMinMax(output_position, min_us, max_us)) {
+                error("unable to configure servo: %s", output_position);
+                xTimerStart(controller_init_request_timer, 0);
+                return false;
+            }
+        }
+#ifdef CC_VER4
+        else if (strcmp(motor_type, "DYNAMIXEL") == 0) {
+            // Dynamixel servo path: DYNAMIXEL <dxl_id> <min_pos> <max_pos> <profile_velocity>
+            char *dxl_id_str = strtok_r(NULL, " ", &temp_token);
+            if (dxl_id_str == NULL) {
+                error("no dxl_id specified for DYNAMIXEL");
+                xTimerStart(controller_init_request_timer, 0);
+                return false;
+            }
+            const u8 dxl_id = (u8)stringToU16(dxl_id_str);
+
+            char *min_pos_str = strtok_r(NULL, " ", &temp_token);
+            if (min_pos_str == NULL) {
+                error("no min_position specified for DYNAMIXEL %u", dxl_id);
+                xTimerStart(controller_init_request_timer, 0);
+                return false;
+            }
+            const u32 min_pos = (u32)stringToU16(min_pos_str);
+
+            char *max_pos_str = strtok_r(NULL, " ", &temp_token);
+            if (max_pos_str == NULL) {
+                error("no max_position specified for DYNAMIXEL %u", dxl_id);
+                xTimerStart(controller_init_request_timer, 0);
+                return false;
+            }
+            const u32 max_pos = (u32)stringToU16(max_pos_str);
+
+            char *velocity_str = strtok_r(NULL, " ", &temp_token);
+            if (velocity_str == NULL) {
+                error("no profile_velocity specified for DYNAMIXEL %u", dxl_id);
+                xTimerStart(controller_init_request_timer, 0);
+                return false;
+            }
+            const u32 profile_velocity = (u32)stringToU16(velocity_str);
+
+            if (!configureDynamixelServo(dxl_id, min_pos, max_pos, profile_velocity)) {
+                error("unable to configure Dynamixel servo: %u", dxl_id);
+                xTimerStart(controller_init_request_timer, 0);
+                return false;
+            }
+        }
+#endif
+        else {
             error("unknown motor type: %s", motor_type);
             xTimerStart(controller_init_request_timer, 0);
             return false;
         }
-
-        char *output_position = strtok_r(NULL, " ", &temp_token);
-        if (output_position == NULL) {
-            error("no output position specified: %s", output_position);
-            xTimerStart(controller_init_request_timer, 0);
-            return false;
-        }
-        verbose("output_position: %s", output_position);
-
-        char *min_us_str = strtok_r(NULL, " ", &temp_token);
-        if (min_us_str == NULL) {
-            error("no min_us_str specified: %s", output_position);
-            xTimerStart(controller_init_request_timer, 0);
-            return false;
-        }
-        const u16 min_us = stringToU16(min_us_str);
-        if (min_us == 0) {
-            error("min_us_str can't be parsed to u16: %s", min_us_str);
-            xTimerStart(controller_init_request_timer, 0);
-            return false;
-        }
-        verbose("min_us: %u", min_us);
-
-        const char *max_us_str = strtok_r(NULL, " ", &temp_token);
-        if (max_us_str == NULL) {
-            error("no max_us_str specified: %s", output_position);
-            xTimerStart(controller_init_request_timer, 0);
-            return false;
-        }
-        const u16 max_us = stringToU16(max_us_str);
-        if (max_us == 0) {
-            error("max_us_str can't be parsed to u16: %s", min_us_str);
-            xTimerStart(controller_init_request_timer, 0);
-            return false;
-        }
-        verbose("max_us: %u", max_us);
-
-
-        // Ask the controller to configure the servo
-        if(!configureServoMinMax(output_position, min_us, max_us)) {
-            error("Unable to configure servo: %s", output_position);
-            xTimerStart(controller_init_request_timer, 0);
-            return false;
-        }
-
     }
 
     // Let the controller know we're good to go! 🎉
     firmware_configuration_received();
 
     return true;
-
 }

@@ -176,6 +176,7 @@ add_library(creature_lib
         src/controller/CommandSendException.h
 
         # Creature Sources
+        src/creature/MotorType.h
         src/creature/Creature.cpp
         src/creature/Parrot.cpp
         src/creature/CreatureException.h
@@ -256,6 +257,8 @@ add_library(creature_lib
         src/io/handlers/BoardSensorHandler.cpp
         src/io/handlers/MotorSensorHandler.h
         src/io/handlers/MotorSensorHandler.cpp
+        src/io/handlers/DynamixelSensorHandler.h
+        src/io/handlers/DynamixelSensorHandler.cpp
 
 
         src/server/ServerConnection.h
@@ -266,6 +269,7 @@ add_library(creature_lib
         src/server/ServerMessage.cpp
         src/server/BoardSensorReportMessage.h
         src/server/MotorSensorReportMessage.h
+        src/server/DynamixelSensorReportMessage.h
         src/server/WatchdogWarningMessage.h
         src/server/EstopMessage.h
         src/server/WebsocketWriter.h

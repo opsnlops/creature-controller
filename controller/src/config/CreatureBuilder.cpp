@@ -205,6 +205,73 @@ Result<std::shared_ptr<creatures::creature::Creature>> CreatureBuilder::build() 
             creature->addServo(servo->getId(), servo);
             break;
         }
+        case creatures::creature::Creature::dynamixel: {
+            // Dynamixel motors use different JSON fields
+            std::vector<std::string> requiredDynamixelFields = {"type",         "id",
+                                                                "name",         "output_module",
+                                                                "dxl_id",       "min_position",
+                                                                "max_position", "smoothing_value",
+                                                                "inverted",     "default_position"};
+            for (const auto &fieldName : requiredDynamixelFields) {
+                if (auto fieldResult = checkJsonField(motor, fieldName); !fieldResult.isSuccess()) {
+                    auto errorMessage = fieldResult.getError().value().getMessage();
+                    logger->error(errorMessage);
+                    return Result<std::shared_ptr<creatures::creature::Creature>>{
+                        ControllerError(ControllerError::InvalidData, errorMessage)};
+                }
+            }
+
+            std::string dxl_id = motor["id"];
+            std::string dxl_name = motor["name"];
+            std::string output_module_str = motor["output_module"];
+            u16 dxl_bus_id = motor["dxl_id"];
+            u16 min_position = motor["min_position"];
+            u16 max_position = motor["max_position"];
+            float smoothing_value = motor["smoothing_value"];
+            bool dxl_inverted = motor["inverted"];
+            std::string dxl_default_str = motor["default_position"];
+
+            UARTDevice::module_name output_location = UARTDevice::stringToModuleName(output_module_str);
+            if (output_location == UARTDevice::invalid_module) {
+                auto errorMessage = fmt::format("Invalid Dynamixel module: {}", output_module_str);
+                logger->error(errorMessage);
+                return Result<std::shared_ptr<creatures::creature::Creature>>{
+                    ControllerError(ControllerError::InvalidConfiguration, errorMessage)};
+            }
+
+            // Use ServoSpecifier with dynamixel type — pin field stores the bus ID
+            ServoSpecifier output = {output_location, dxl_bus_id, creatures::creature::Creature::dynamixel};
+
+            // Calculate default position
+            u16 default_position = 0;
+            auto requestedDefault = creatures::creature::Creature::stringToDefaultPositionType(dxl_default_str);
+            switch (requestedDefault) {
+            case creatures::creature::Creature::center:
+                default_position = min_position + ((max_position - min_position) / 2);
+                break;
+            case creatures::creature::Creature::min:
+                default_position = min_position;
+                break;
+            case creatures::creature::Creature::max:
+                default_position = max_position;
+                break;
+            case creatures::creature::Creature::invalid_position: {
+                auto errorMessage = fmt::format("Invalid default position for Dynamixel: {}", dxl_default_str);
+                logger->error(errorMessage);
+                return Result<std::shared_ptr<creatures::creature::Creature>>{
+                    ControllerError(ControllerError::InvalidConfiguration, errorMessage)};
+            }
+            }
+
+            // Create Servo with Dynamixel type — min/max pulse fields store position range
+            auto servo = std::make_shared<Servo>(logger, dxl_id, dxl_name, output, min_position, max_position,
+                                                 smoothing_value, dxl_inverted, servo_frequency, default_position);
+
+            logger->debug("Adding Dynamixel servo - ID: {}, Name: {}, Bus ID: {}", servo->getId(), servo->getName(),
+                          dxl_bus_id);
+            creature->addServo(servo->getId(), servo);
+            break;
+        }
         default:
             auto errorMessage = fmt::format("Invalid motor type: {}", type_string);
             logger->error(errorMessage);

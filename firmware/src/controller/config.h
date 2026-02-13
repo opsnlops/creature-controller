@@ -68,6 +68,36 @@
 
 #endif
 
+#ifdef CC_VER4
+
+// Dynamixel bus configuration
+#define DXL_DATA_PIN 22
+#define DXL_PIO pio1
+#define DXL_BAUD_RATE 1000000
+#define MAX_DYNAMIXEL_SERVOS 16
+
+// Maximum profile velocity for XL-330 (~267 units, each unit = 0.229 RPM)
+#define DXL_MAX_PROFILE_VELOCITY 267
+
+// Move status lights to pio0 (pio1 now used by Dynamixel)
+#undef STATUS_LIGHTS_PIO
+#define STATUS_LIGHTS_PIO pio0
+
+// GPIO 22 was CONTROLLER_RESET_PIN in VER3 — move it
+#undef CONTROLLER_RESET_PIN
+#define CONTROLLER_RESET_PIN 23
+
+// Dynamixel sensor reporting interval (every 10 frames = 200ms at 50Hz)
+#define DXL_SENSOR_REPORT_INTERVAL_FRAMES 10
+
+// Dynamixel controller task priority (same as control task)
+#define DXL_TASK_PRIORITY 2
+
+// Dynamixel controller task stack size
+#define DXL_TASK_STACK_SIZE 1024
+
+#endif
+
 #ifdef CC_VER2
 
 #define USE_EEPROM 0
@@ -153,8 +183,7 @@
 #define DEFAULT_LOGGING_LEVEL LOG_LEVEL_DEBUG
 #define LOGGING_QUEUE_LENGTH 100
 #define LOGGING_MESSAGE_MAX_LENGTH 256
-#define LOGGING_LOG_VIA_PRINTF                                                 \
-    1 // Add a printf() in the logger. Useful when a debugger is attached
+#define LOGGING_LOG_VIA_PRINTF 1 // Add a printf() in the logger. Useful when a debugger is attached
 
 /*
  * Message Processor Config
@@ -242,12 +271,10 @@
 #define SENSORS_I2C_SCL_PIN 5
 
 #define I2C_DEVICE_MCP9808 0x18
-#define I2C_DEVICE_MCP9808_PRODUCT_ID                                          \
-    0x400 // This is used to make sure we're talking to the right device
+#define I2C_DEVICE_MCP9808_PRODUCT_ID 0x400 // This is used to make sure we're talking to the right device
 
 #define I2C_PAC1954_SENSOR_COUNT 3
-#define I2C_PAC1954_PRODUCT_ID                                                 \
-    0x7B // This is used to make sure we're talking to the right device
+#define I2C_PAC1954_PRODUCT_ID 0x7B // This is used to make sure we're talking to the right device
 
 #define I2C_BOARD_PAC1954 0x10
 #define I2C_BOARD_PAC1954_SENSOR_COUNT 3
@@ -262,12 +289,10 @@
 
 // Various I2C devices
 #define I2C_DEVICE_MCP9808 0x18
-#define I2C_DEVICE_MCP9808_PRODUCT_ID                                          \
-    0x400 // This is used to make sure we're talking to the right device
+#define I2C_DEVICE_MCP9808_PRODUCT_ID 0x400 // This is used to make sure we're talking to the right device
 
 #define I2C_PAC1954_SENSOR_COUNT 12
-#define I2C_PAC1954_PRODUCT_ID                                                 \
-    0x7B // This is used to make sure we're talking to the right device
+#define I2C_PAC1954_PRODUCT_ID 0x7B // This is used to make sure we're talking to the right device
 
 #define I2C_MOTOR0_PAC1954 0x10
 #define I2C_MOTOR0_PAC1954_SENSOR_COUNT 4

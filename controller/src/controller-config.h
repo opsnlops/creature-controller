@@ -116,6 +116,9 @@ using u64 = std::uint64_t;
 #define SERVO_6_GPIO_PIN 12 // Pin 16, PWM  6A
 #define SERVO_7_GPIO_PIN 13 // Pin 17, PWM  6B
 
+// Maximum profile velocity for Dynamixel XL-330 (~267 units, each unit = 0.229 RPM)
+#define DXL_MAX_PROFILE_VELOCITY 267
+
 #define DEBUG_CREATURE_POSITIONING 0
 #define DEBUG_MESSAGE_PROCESSING 0
 #define DEBUG_CREATURE_WORKER_LOOP 0

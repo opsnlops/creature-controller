@@ -14,6 +14,9 @@ endif()
 if (HARDWARE_VERSION STREQUAL "2")
     message("HARDWARE_VERSION is set to ${HARDWARE_VERSION}, setting CC_VER2=1")
     add_compile_definitions(CC_VER2=1)
+elseif (HARDWARE_VERSION STREQUAL "4")
+    message("HARDWARE_VERSION is set to 4, setting CC_VER4=1 and CC_VER3=1")
+    add_compile_definitions(CC_VER4=1 CC_VER3=1)
 else()
     message("HARDWARE_VERSION not set or is set to 3, defaulting to 3")
     set(HARDWARE_VERSION 3)
@@ -189,6 +192,11 @@ set(CONTROLLER_ADDITIONAL_LIBS
         tinyusb_device
         tinyusb_board
 )
+
+# Include Dynamixel sources for VER4 controller builds
+if (HARDWARE_VERSION STREQUAL "4")
+    list(APPEND CONTROLLER_ADDITIONAL_SOURCES ${DYNAMIXEL_SOURCES})
+endif()
 
 set(CONTROLLER_ADDITIONAL_INCLUDES
 )

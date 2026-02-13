@@ -22,6 +22,7 @@
 bool handlePingMessage(const void *msg);
 bool handlePositionMessage(const void *msg);
 bool handleConfigMessage(const void *msg);
+bool handleEmergencyStopMessage(const void *msg);
 
 // Define values for config.h that might be needed for tests
 #ifndef LOGGING_MESSAGE_MAX_LENGTH

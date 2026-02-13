@@ -17,6 +17,7 @@
 #include "controller/commands/tokens/ServoConfig.h"
 #include "controller/commands/tokens/ServoPosition.h"
 #include "creature/Creature.h"
+#include "creature/MotorType.h"
 #include "device/Servo.h"
 #include "device/ServoSpecifier.h"
 #include "device/Stepper.h"
@@ -42,7 +43,12 @@ class Creature {
         invalid_creature // Invalid creature type
     };
 
-    enum motor_type { servo, stepper, invalid_motor };
+    // Motor type is defined in creature/MotorType.h to avoid circular includes
+    using motor_type = creatures::creature::motor_type;
+    static constexpr motor_type servo = creatures::creature::servo;
+    static constexpr motor_type dynamixel = creatures::creature::dynamixel;
+    static constexpr motor_type stepper = creatures::creature::stepper;
+    static constexpr motor_type invalid_motor = creatures::creature::invalid_motor;
 
     enum default_position_type { min, max, center, invalid_position };
 

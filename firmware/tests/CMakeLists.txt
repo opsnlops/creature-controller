@@ -25,7 +25,8 @@ add_library(mocks
         mocks/freertos_mocks.c
         mocks/hardware_mocks.c
         mocks/logging_mocks.c
-        mocks/message_handlers_mock.c  # Add this to include our message handler mocks
+        mocks/logging_stubs.c
+        mocks/message_handlers_mock.c
 )
 
 # Define which source files to include in tests

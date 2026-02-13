@@ -5,6 +5,7 @@
 #include "controller-config.h"
 
 #include "config/UARTDevice.h"
+#include "creature/MotorType.h"
 #include "device/ServoSpecifier.h"
 #include "logging/Logger.h"
 #include "util/Result.h"
@@ -168,6 +169,12 @@ class Servo {
      * @return Frame length in microseconds
      */
     [[nodiscard]] u32 getFrameLengthMicroseconds() const;
+
+    /**
+     * @brief Gets the motor type for this servo
+     * @return Motor type (servo or dynamixel)
+     */
+    [[nodiscard]] creatures::creature::motor_type getMotorType() const;
 
   private:
     std::string id;                            ///< Unique identifier for this servo

@@ -8,11 +8,13 @@
 #include <stdio.h>
 #include <string.h>
 
-// Simple test function that doesn't depend on mocks
+void setUp(void) {}
+void tearDown(void) {}
+
 void test_to_binary_string(void) {
     printf("Running simple test_to_binary_string\n");
 
-    const char* result = to_binary_string(0x55);
+    const char *result = to_binary_string(0x55);
     printf("to_binary_string(0x55) returned: %s\n", result);
 
     // Test that result matches expected
