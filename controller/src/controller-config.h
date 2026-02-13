@@ -36,7 +36,7 @@ using u64 = std::uint64_t;
 #define RP2040_LOG_LEVEL "spdlog::level::trace"
 
 // The version of the firmware we are expecting
-#define FIRMWARE_VERSION 3
+#define FIRMWARE_VERSION 4
 
 // GPIO
 #define GPIO_DEVICE "/dev/gpiomem"

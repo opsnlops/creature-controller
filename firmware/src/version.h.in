@@ -11,7 +11,7 @@
  * This is the version that's sent to the controller. The controller is expected to know what
  * do to with this version.
  */
-#define PROTOCOL_VERSION 3
+#define PROTOCOL_VERSION 4
 
 
 #define STRINGIFY(x) #x
