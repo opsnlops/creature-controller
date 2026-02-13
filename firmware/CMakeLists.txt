@@ -17,10 +17,13 @@ if (HARDWARE_VERSION STREQUAL "2")
 elseif (HARDWARE_VERSION STREQUAL "4")
     message("HARDWARE_VERSION is set to 4, setting CC_VER4=1 and CC_VER3=1")
     add_compile_definitions(CC_VER4=1 CC_VER3=1)
-else()
-    message("HARDWARE_VERSION not set or is set to 3, defaulting to 3")
-    set(HARDWARE_VERSION 3)
+elseif (HARDWARE_VERSION STREQUAL "3")
+    message("HARDWARE_VERSION is set to 3, setting CC_VER3=1")
     add_compile_definitions(CC_VER3=1)
+else()
+    message("HARDWARE_VERSION not set, defaulting to 4")
+    set(HARDWARE_VERSION 4)
+    add_compile_definitions(CC_VER4=1 CC_VER3=1)
 endif()
 
 
@@ -193,11 +196,6 @@ set(CONTROLLER_ADDITIONAL_LIBS
         tinyusb_board
 )
 
-# Include Dynamixel sources for VER4 controller builds
-if (HARDWARE_VERSION STREQUAL "4")
-    list(APPEND CONTROLLER_ADDITIONAL_SOURCES ${DYNAMIXEL_SOURCES})
-endif()
-
 set(CONTROLLER_ADDITIONAL_INCLUDES
 )
 
@@ -250,6 +248,11 @@ set(DYNAMIXEL_SOURCES
         src/dynamixel/dynamixel_servo.h
         src/dynamixel/dynamixel_servo.c
 )
+
+# Include Dynamixel sources for VER4 controller builds
+if (HARDWARE_VERSION STREQUAL "4")
+    list(APPEND CONTROLLER_ADDITIONAL_SOURCES ${DYNAMIXEL_SOURCES})
+endif()
 
 # Dynamixel Servo Tester
 set(DYNAMIXEL_TESTER_ADDITIONAL_SOURCES

@@ -1,7 +1,7 @@
 .idea/
 build/
 cmake-*/
-firmware/build/
+firmware/build*/
 controller/build/
 controller/package/
 .DS_Store
