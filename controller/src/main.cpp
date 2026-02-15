@@ -457,11 +457,15 @@ int main(int argc, char **argv) {
     workerThreads.push_back(messageRouter);
 
     // Start the watchdog thread
-    logger->debug("starting the watchdog thread");
-    auto watchdogThread = std::make_shared<creatures::watchdog::WatchdogThread>(makeLogger("watchdog"), config,
-                                                                                websocketOutgoingQueue, messageRouter);
-    watchdogThread->start();
-    workerThreads.push_back(watchdogThread);
+    if (!config->getWatchdogDisabled()) {
+        logger->debug("starting the watchdog thread");
+        auto watchdogThread = std::make_shared<creatures::watchdog::WatchdogThread>(
+            makeLogger("watchdog"), config, websocketOutgoingQueue, messageRouter);
+        watchdogThread->start();
+        workerThreads.push_back(watchdogThread);
+    } else {
+        logger->warn("Hardware watchdog is DISABLED via command line flag");
+    }
 
     // Before we start sending pings, ask the controller to flush its buffer
     controller->sendFlushBufferRequest();

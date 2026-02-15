@@ -43,6 +43,7 @@ class Configuration {
     u16 getServerPort() const;
 
     // Watchdog configuration getters
+    [[nodiscard]] bool getWatchdogDisabled() const;
     [[nodiscard]] double getPowerDrawLimitWatts() const;
     [[nodiscard]] double getPowerDrawWarningWatts() const;
     [[nodiscard]] double getPowerDrawResponseSeconds() const;
@@ -63,6 +64,7 @@ class Configuration {
     void setServerPort(u16 _serverPort);
 
     // Watchdog configuration setters
+    void setWatchdogDisabled(bool _watchdogDisabled);
     void setPowerDrawLimitWatts(double _powerDrawLimitWatts);
     void setPowerDrawWarningWatts(double _powerDrawWarningWatts);
     void setPowerDrawResponseSeconds(double _powerDrawResponseSeconds);
@@ -109,6 +111,7 @@ class Configuration {
     u16 serverPort;
 
     // Watchdog configuration
+    bool watchdogDisabled = false;
     double powerDrawLimitWatts = 0.0;
     double powerDrawWarningWatts = 0.0;
     double powerDrawResponseSeconds = 0.0;

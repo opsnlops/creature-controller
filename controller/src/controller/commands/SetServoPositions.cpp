@@ -6,6 +6,7 @@
 #include <fmt/format.h>
 
 #include "controller/commands/tokens/ServoPosition.h"
+#include "creature/MotorType.h"
 
 #include "CommandException.h"
 #include "SetServoPositions.h"
@@ -23,9 +24,11 @@ void SetServoPositions::addServoPosition(const creatures::ServoPosition &servoPo
     for (const auto &existingServoPosition : servoPositions) {
         if (existingServoPosition.getServoId() == servoPosition.getServoId()) {
             const auto errorMessage =
-                fmt::format("Unable to insert the same output position twice: module {}, pin {}",
+                fmt::format("Unable to insert the same output position twice: module {}, pin {}, type {}",
                             creatures::config::UARTDevice::moduleNameToString(servoPosition.getServoId().module),
-                            servoPosition.getServoId().pin);
+                            servoPosition.getServoId().pin,
+                            servoPosition.getServoId().type == creatures::creature::motor_type::dynamixel
+                                ? "dynamixel" : "servo");
             logger->error(errorMessage);
             throw CommandException(errorMessage);
         }

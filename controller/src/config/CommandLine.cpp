@@ -92,6 +92,10 @@ Result<std::shared_ptr<config::Configuration>> CommandLine::parseCommandLine(int
     // Set the creature config file in the configuration object
     configResult.getValue().value()->setCreatureConfigFile(creatureConfigFile);
 
+    if (program.get<bool>("--disable-watchdog")) {
+        configResult.getValue().value()->setWatchdogDisabled(true);
+    }
+
     return configResult;
 }
 
@@ -112,6 +116,11 @@ void CommandLine::setupCommandLineArguments(argparse::ArgumentParser &program) {
 
     program.add_argument("--validate-creature-config")
         .help("Send the creature config to the server for validation, then exit")
+        .default_value(false)
+        .implicit_value(true);
+
+    program.add_argument("--disable-watchdog")
+        .help("Disable the hardware watchdog (temperature and power monitoring)")
         .default_value(false)
         .implicit_value(true);
 

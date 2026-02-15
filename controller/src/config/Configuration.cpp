@@ -102,6 +102,8 @@ std::string Configuration::getServerAddress() const { return serverAddress; }
  */
 u16 Configuration::getServerPort() const { return serverPort; }
 
+bool Configuration::getWatchdogDisabled() const { return watchdogDisabled; }
+
 /**
  * @brief Get the power draw limit in watts
  * @return The power draw limit in watts
@@ -231,6 +233,11 @@ void Configuration::setServerAddress(std::string _serverAddress) {
 void Configuration::setServerPort(u16 _serverPort) {
     this->serverPort = _serverPort;
     logger->debug("Set server port to {}", this->serverPort);
+}
+
+void Configuration::setWatchdogDisabled(bool _watchdogDisabled) {
+    this->watchdogDisabled = _watchdogDisabled;
+    logger->debug("Set watchdogDisabled to {}", this->watchdogDisabled);
 }
 
 /**

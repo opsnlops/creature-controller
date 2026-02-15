@@ -3,6 +3,7 @@
 #include <string>
 
 #include "device/Servo.h"
+#include "device/ServoSpecifier.h"
 #include "logging/Logger.h"
 
 #include "controller-config.h"
@@ -39,6 +40,13 @@ class ServoConfig {
      * @return The GPIO pin number used for this servo
      */
     [[nodiscard]] u16 getOutputHeader() const;
+
+    /**
+     * @brief Gets the full output location specifier for this servo
+     *
+     * @return The ServoSpecifier (module, pin, and motor type)
+     */
+    [[nodiscard]] ServoSpecifier getOutputLocation() const;
 
     /**
      * @brief Converts the configuration to a string for transmission

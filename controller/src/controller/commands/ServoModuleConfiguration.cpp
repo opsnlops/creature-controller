@@ -5,6 +5,7 @@
 #include "config/UARTDevice.h"
 #include "controller/Controller.h"
 #include "controller/commands/tokens/ServoConfig.h"
+#include "creature/MotorType.h"
 #include "logging/Logger.h"
 #include "util/Result.h"
 
@@ -54,12 +55,15 @@ Result<bool> ServoModuleConfiguration::getServoConfigurations(const std::shared_
 
 Result<bool> ServoModuleConfiguration::addServoConfig(const ServoConfig &servoConfig) {
 
-    // Check for duplicate output positions
+    // Check for duplicate output positions (compared by module, pin, AND motor type)
     for (const auto &existingConfig : servoConfigurations) {
-        if (existingConfig.getOutputHeader() == servoConfig.getOutputHeader()) {
-            const auto errorMessage = fmt::format("Duplicate output position {}: servo "
+        if (existingConfig.getOutputLocation() == servoConfig.getOutputLocation()) {
+            const auto errorMessage = fmt::format("Duplicate output position (pin {}, type {}): servo "
                                                   "configurations must be unique",
-                                                  servoConfig.getOutputHeader());
+                                                  servoConfig.getOutputHeader(),
+                                                  servoConfig.getOutputLocation().type ==
+                                                      creatures::creature::motor_type::dynamixel
+                                                      ? "dynamixel" : "servo");
             logger->error(errorMessage);
             return Result<bool>{ControllerError(ControllerError::InvalidConfiguration, errorMessage)};
         }
