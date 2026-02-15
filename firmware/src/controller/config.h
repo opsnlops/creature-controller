@@ -83,10 +83,6 @@
 #undef STATUS_LIGHTS_PIO
 #define STATUS_LIGHTS_PIO pio0
 
-// GPIO 22 was CONTROLLER_RESET_PIN in VER3 — move it
-#undef CONTROLLER_RESET_PIN
-#define CONTROLLER_RESET_PIN 23
-
 // Dynamixel sensor reporting interval (every 10 frames = 200ms at 50Hz)
 #define DXL_SENSOR_REPORT_INTERVAL_FRAMES 10
 
@@ -220,7 +216,7 @@
 #endif
 
 // Used by the controller to signal that we need to reset
-#define CONTROLLER_RESET_PIN 22
+#define CONTROLLER_RESET_PIN 23
 #define CONTROLLER_RESET_SIGNAL_PERIOD_MS 250
 
 //

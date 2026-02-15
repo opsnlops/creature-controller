@@ -50,6 +50,14 @@ static void log_system_info(void);
 // Startup task prototype
 portTASK_FUNCTION_PROTO(startup_task, pvParameters);
 
+#ifdef CC_VER4
+extern dxl_hal_context_t *dxl_ctx;
+
+static void dxl_scan_debug_callback(u8 id, u16 model_number, u8 firmware_version) {
+    info("Dynamixel found: ID %u, model %u, firmware %u", id, model_number, firmware_version);
+}
+#endif
+
 // Heap space tracking
 volatile size_t xFreeHeapSpace;
 
@@ -438,6 +446,13 @@ portTASK_FUNCTION(startup_task, pvParameters) {
     usb_init();
     usb_start();
     debug("USB initialized and started");
+
+#ifdef CC_VER4
+    // Debug scan at startup
+    info("scanning Dynamixel bus (IDs 0-10) for debugging...");
+    dxl_scan(dxl_ctx, 0, 10, dxl_scan_debug_callback);
+    info("Dynamixel bus scan complete");
+#endif
 
     // Task complete - delete self
     vTaskDelete(NULL);

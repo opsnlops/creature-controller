@@ -31,6 +31,12 @@ bool handleConfigMessage(const GenericMessage *msg) {
     // Stop the init timer
     xTimerStop(controller_init_request_timer, 0);
 
+    // Reset both motor maps so re-sent CONFIG messages start fresh
+    resetServoMotorMap();
+#ifdef CC_VER4
+    resetDynamixelMotorMap();
+#endif
+
     debug("handling config message");
 
     for (int i = 0; i < msg->tokenCount; ++i) {

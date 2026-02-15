@@ -1,22 +1,15 @@
 {
-  "name": "Dev Board",
-  "id": "048a9bb8-0a02-11f1-a43e-779ad60ae42d",
-  "version": "0.2.0",
-  "description": "So much to do, so little time",
-  "channel_offset": 40,
+  "name": "Crow",
+  "id": "46d718d0-0a24-11f1-8625-375e1693d79d",
+  "version": "0.1.0",
+  "description": "Caw caw!",
+  "channel_offset": 100,
   "audio_channel": 4,
   "mouth_slot": 4,
   "position_min": 0,
   "position_max": 1023,
-  "head_offset_max": 0.4,
+  "head_offset_max": 0.35,
   "servo_frequency": 50,
-  "type": "parrot",
-  "voice": {
-    "voice_id": "rEgA5sGDoUB0qgm6yQdR",
-    "model_id": "eleven_multilingual_v2",
-    "stability": 0.3,
-    "similarity_boost": 0.46
-  },
   "type": "crow",
   "motors": [
     {
@@ -27,7 +20,7 @@
       "dxl_id": 1,
       "min_position": 1024,
       "max_position": 3072,
-      "smoothing_value": 0.90,
+      "smoothing_value": 0.30,
       "inverted": false,
       "default_position": "center"
     },
@@ -39,7 +32,7 @@
       "dxl_id": 2,
       "min_position": 1024,
       "max_position": 3072,
-      "smoothing_value": 0.90,
+      "smoothing_value": 0.30,
       "inverted": true,
       "default_position": "center"
     },
@@ -84,37 +77,44 @@
     {
       "name": "head_tilt",
       "slot": 0,
-      "width": 1
+      "width": 1,
+      "joystick_axis": 0
     },
     {
       "name": "head_height",
       "slot": 1,
-      "width": 1
+      "width": 1,
+      "joystick_axis": 1
     },
     {
       "name": "neck_rotate",
       "slot": 2,
-      "width": 1
+      "width": 1,
+      "joystick_axis": 2
     },
     {
       "name": "stand_rotate",
       "slot": 3,
-      "width": 1
+      "width": 1,
+      "joystick_axis": 3
     },
     {
       "name": "body_lean",
       "slot": 4,
-      "width": 1
+      "width": 1,
+      "joystick_axis": 4
     },
     {
       "name": "beak",
       "slot": 5,
-      "width": 1
+      "width": 1,
+      "joystick_axis": 5
     },
     {
       "name": "chest",
       "slot": 6,
-      "width": 1
+      "width": 1,
+      "joystick_axis": 6
     }
   ]
 }

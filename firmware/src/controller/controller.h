@@ -267,6 +267,23 @@ extern DynamixelMotorEntry dxl_motors[MAX_DYNAMIXEL_SERVOS];
 extern u8 dxl_motor_count;
 
 /**
+ * @brief Reset the servo motor map
+ *
+ * Clears configuration fields (min/max pulse, position, is_configured)
+ * for all PWM servo entries so the map can be repopulated from a new
+ * CONFIG message. Hardware pin assignments are preserved.
+ */
+void resetServoMotorMap(void);
+
+/**
+ * @brief Reset the Dynamixel motor map
+ *
+ * Clears all configured Dynamixel motors so the map can be
+ * repopulated from a new CONFIG message.
+ */
+void resetDynamixelMotorMap(void);
+
+/**
  * @brief Configure a Dynamixel servo
  *
  * Adds the servo to the motor map and sets its Profile Velocity.

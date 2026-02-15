@@ -65,7 +65,7 @@ DynamixelMotorEntry dxl_motors[MAX_DYNAMIXEL_SERVOS] = {0};
 u8 dxl_motor_count = 0;
 
 // HAL context for the Dynamixel bus
-static dxl_hal_context_t *dxl_ctx = NULL;
+dxl_hal_context_t *dxl_ctx = NULL;
 
 // Mutex for thread-safe access to dxl_motors
 static SemaphoreHandle_t dxl_motors_mutex = NULL;
@@ -191,6 +191,7 @@ void controller_init() {
         return;
     }
     info("Dynamixel HAL initialized on pin %u at %lu baud", DXL_DATA_PIN, (unsigned long)DXL_BAUD_RATE);
+
 #endif
 
     // Set up the GPIO pin for monitoring for a reset signal
@@ -548,6 +549,33 @@ bool are_all_motors_configured(void) {
 
 #ifdef CC_VER4
 
+void resetServoMotorMap(void) {
+    if (xSemaphoreTake(motor_map_mutex, portMAX_DELAY) == pdTRUE) {
+        for (size_t i = 0; i < MOTOR_MAP_SIZE; i++) {
+            motor_map[i].min_microseconds = 0;
+            motor_map[i].max_microseconds = 0;
+            motor_map[i].current_microseconds = 0;
+            motor_map[i].requested_position = 0;
+            motor_map[i].is_configured = false;
+        }
+        xSemaphoreGive(motor_map_mutex);
+        debug("servo motor map reset");
+    } else {
+        warning("failed to take motor_map_mutex in resetServoMotorMap");
+    }
+}
+
+void resetDynamixelMotorMap(void) {
+    if (xSemaphoreTake(dxl_motors_mutex, portMAX_DELAY) == pdTRUE) {
+        memset(dxl_motors, 0, sizeof(dxl_motors));
+        dxl_motor_count = 0;
+        xSemaphoreGive(dxl_motors_mutex);
+        debug("Dynamixel motor map reset");
+    } else {
+        warning("failed to take dxl_motors_mutex in resetDynamixelMotorMap");
+    }
+}
+
 bool configureDynamixelServo(u8 dxl_id, u32 min_pos, u32 max_pos, u32 profile_velocity) {
     if (dxl_ctx == NULL) {
         error("Dynamixel HAL not initialized");
@@ -663,6 +691,12 @@ void dynamixel_set_torque_all(bool enable) {
         if (res != DXL_OK) {
             warning("failed to %s torque on Dynamixel %u (result=%d)", enable ? "enable" : "disable", ids[i], res);
         }
+
+        // LED follows torque state
+        dxl_result_t led_res = dxl_set_led(dxl_ctx, ids[i], enable);
+        if (led_res != DXL_OK) {
+            warning("failed to set LED on Dynamixel %u (result=%d)", ids[i], led_res);
+        }
     }
 }
 
@@ -708,7 +742,7 @@ portTASK_FUNCTION(dynamixel_controller_task, pvParameters) {
 
                 if (res == DXL_OK && result_count > 0) {
                     // Build and send DSENSE message
-                    char dsense_msg[OUTGOING_MESSAGE_MAX_LENGTH];
+                    char dsense_msg[OUTGOING_MESSAGE_MAX_LENGTH] = {0};
                     int offset = snprintf(dsense_msg, sizeof(dsense_msg), "DSENSE");
 
                     for (u8 i = 0; i < result_count && offset < (int)sizeof(dsense_msg) - 30; i++) {

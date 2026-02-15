@@ -26,14 +26,13 @@ class ICommand {
     /*
      * Get the checksum of this message as a u16
      */
-    u16 getChecksum() {
-        u16 checksum = 0;
+    u16 getChecksum() { return getChecksum(toMessage()); }
 
-        // Calculate checksum
-        for (const char c : toMessage()) {
+    u16 getChecksum(const std::string &msg) {
+        u16 checksum = 0;
+        for (const char c : msg) {
             checksum += c;
         }
-
         return checksum;
     }
 
@@ -43,7 +42,10 @@ class ICommand {
      *
      * @return the complete message with a checksum
      */
-    std::string toMessageWithChecksum() { return fmt::format("{}\tCS {}", toMessage(), getChecksum()); }
+    std::string toMessageWithChecksum() {
+        std::string msg = toMessage();
+        return fmt::format("{}\tCS {}", msg, getChecksum(msg));
+    }
 };
 
 } // namespace creatures
