@@ -15,7 +15,7 @@ struct ServoSpecifier {
     creatures::creature::motor_type type;
 
     ServoSpecifier(creatures::config::UARTDevice::module_name module, u16 pin,
-                   creatures::creature::motor_type type = creatures::creature::servo)
+                   creatures::creature::motor_type type = creatures::creature::motor_type::servo)
         : module(module), pin(pin), type(type) {}
 
     // Allow for direct comparision

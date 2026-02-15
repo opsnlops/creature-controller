@@ -23,6 +23,9 @@ RUN cmake -DCMAKE_BUILD_TYPE=Release -B build -G Ninja
 # and over again
 RUN cd /build/creature-controller/build && ninja
 
+# Run tests (exclude device-dependent serial tests that need real hardware)
+RUN cd /build/creature-controller/build && ctest --output-on-failure -E SerialOutput
+
 
 FROM debian:trixie-slim AS runtime
 

@@ -195,7 +195,7 @@ float Servo::getSmoothingValue() const { return smoothingValue; }
 void Servo::calculateNextTick() {
     // Dynamixel servos handle smoothing internally via Profile Velocity at 4kHz,
     // so skip host-side EMA smoothing and pass through the raw target position
-    if (outputLocation.type == creatures::creature::dynamixel) {
+    if (outputLocation.type == creatures::creature::motor_type::dynamixel) {
         current_microseconds = desired_microseconds;
         return;
     }

@@ -17,10 +17,7 @@ namespace creatures {
 class CountingThread : public StoppableThread {
   protected:
     void run() override {
-        int count = 0;
         while (!stop_requested.load()) {
-            // Do some work, like counting up
-            count++;
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
     }

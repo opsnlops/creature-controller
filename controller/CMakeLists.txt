@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.18)
 
 project(creature-controller
-        VERSION "2.9.0"
+        VERSION "4.0.0"
         DESCRIPTION "April's Creature Workshop Controller"
         HOMEPAGE_URL https://github.com/opsnlops/creature-controller
         LANGUAGES C CXX)
@@ -36,18 +36,16 @@ find_package(PkgConfig REQUIRED)
 FetchContent_Declare(
         fmt
         GIT_REPOSITORY https://github.com/fmtlib/fmt
-        GIT_TAG 9.1.0
+        GIT_TAG 12.1.0
 )
 FetchContent_MakeAvailable(fmt)
-set(FMT_HEADER_ONLY ON)
-set(FMT_LOCALE ON)
-
 
 # spdlog
+set(SPDLOG_FMT_EXTERNAL ON CACHE BOOL "" FORCE)
 FetchContent_Declare(
         spdlog
         GIT_REPOSITORY https://github.com/gabime/spdlog
-        GIT_TAG v1.11.0
+        GIT_TAG v1.17.0
 )
 FetchContent_MakeAvailable(spdlog)
 
@@ -55,13 +53,13 @@ FetchContent_MakeAvailable(spdlog)
 FetchContent_Declare(
         argparse
         GIT_REPOSITORY https://github.com/p-ranav/argparse.git
+        GIT_TAG v3.2
 )
 FetchContent_MakeAvailable(argparse)
 
-
 FetchContent_Declare(
         googletest
-        URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip
+        URL https://github.com/google/googletest/archive/refs/tags/v1.17.0.zip
 )
 FetchContent_MakeAvailable(googletest)
 
@@ -107,14 +105,14 @@ target_include_directories(libe131
 
 FetchContent_Declare(
         json
-        URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz)
+        URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz)
 FetchContent_MakeAvailable(json)
 
 
 FetchContent_Declare(
         ixwebsocket
         GIT_REPOSITORY https://github.com/machinezone/IXWebSocket.git
-        GIT_TAG        v11.4.5
+        GIT_TAG        v11.4.6
 )
 FetchContent_MakeAvailable(ixwebsocket)
 
@@ -178,7 +176,9 @@ add_library(creature_lib
         # Creature Sources
         src/creature/MotorType.h
         src/creature/Creature.cpp
+        src/creature/DifferentialHead.cpp
         src/creature/Parrot.cpp
+        src/creature/Crow.cpp
         src/creature/CreatureException.h
 
         # Device Sources
@@ -333,60 +333,61 @@ install(TARGETS creature-controller
 # Set up testing
 #
 
-#enable_testing()
+enable_testing()
 
-#add_executable(creature-controller-test
-#        tests/config/CreatureBuilder_test.cpp
-#        tests/creature_test.cpp
-#        tests/servo_test.cpp
-#        tests/MessageQueue_test.cpp
-#        tests/SerialHandler_test.cpp
-#        tests/MessageProcessor_test.cpp
-#        tests/LogHandler_test.cpp
-#        tests/mocks/logging/MockLogger.h
-#        tests/mocks/io/handlers/MockMessageHandler.cpp
-#        tests/mocks/io/handlers/MockMessageHandler.h
-#        tests/controller/commands/tokens/ServoPosition_test.cpp
-#        tests/controller/Controller_test.cpp
-#        tests/mocks/controller/commands/MockCommand.h
-#        tests/controller/commands/ICommand_test.cpp
-#        tests/controller/commands/SetServoPositions_test.cpp
-#        tests/io/handlers/StatsMessage_test.cpp
-#        tests/string_utils_test.cpp
-#        tests/io/handlers/StatsHandler_test.cpp
-#        tests/dmx/E131Server_test.cpp
-#        tests/mocks/creature/MockCreature.h
-#        tests/creature/Input_test.cpp
-#        tests/util/StoppableThread_test.cpp
-#        tests/config/UARTDevice_test.cpp
-#        tests/config/Configuation_test.cpp
-#        tests/io/Message_test.cpp
-#)
+add_executable(creature-controller-test
+        tests/config/CreatureBuilder_test.cpp
+        tests/creature_test.cpp
+        tests/creature/DifferentialHead_test.cpp
+        tests/servo_test.cpp
+        tests/MessageQueue_test.cpp
+        tests/SerialHandler_test.cpp
+        tests/MessageProcessor_test.cpp
+        tests/LogHandler_test.cpp
+        tests/mocks/logging/MockLogger.h
+        tests/mocks/io/handlers/MockMessageHandler.cpp
+        tests/mocks/io/handlers/MockMessageHandler.h
+        tests/controller/commands/tokens/ServoPosition_test.cpp
+        tests/controller/Controller_test.cpp
+        tests/mocks/controller/commands/MockCommand.h
+        tests/controller/commands/ICommand_test.cpp
+        tests/controller/commands/SetServoPositions_test.cpp
+        tests/io/handlers/StatsMessage_test.cpp
+        tests/string_utils_test.cpp
+        tests/io/handlers/StatsHandler_test.cpp
+        tests/dmx/E131Server_test.cpp
+        tests/mocks/creature/MockCreature.h
+        tests/creature/Input_test.cpp
+        tests/util/StoppableThread_test.cpp
+        tests/config/UARTDevice_test.cpp
+        tests/config/Configuation_test.cpp
+        tests/io/Message_test.cpp
+)
 
-#target_link_libraries(creature-controller-test
-#        creature_lib
-#        gtest_main
-#        gmock_main
-#        libe131
-#        nlohmann_json::nlohmann_json
-#        fmt::fmt
-#        argparse
-#        spdlog::spdlog $<$<BOOL:${MINGW}>:ws2_32>
-#)
+target_link_libraries(creature-controller-test
+        creature_lib
+        gtest_main
+        gmock_main
+        libe131
+        nlohmann_json::nlohmann_json
+        fmt::fmt
+        argparse
+        spdlog::spdlog $<$<BOOL:${MINGW}>:ws2_32>
+)
 
 # This is to include Google Test and Google Mock headers
-#target_include_directories(creature-controller-test PRIVATE
-#        ${googletest_SOURCE_DIR}/include
-#        ${googlemock_SOURCE_DIR}/include
-#        ${CMAKE_CURRENT_SOURCE_DIR}/tests/
-#)
+target_include_directories(creature-controller-test PRIVATE
+        ${googletest_SOURCE_DIR}/include
+        ${googlemock_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/
+)
 
 # Tell CMake where our tests are
-#set_property(TARGET creature-controller-test PROPERTY FOLDER "tests")
+set_property(TARGET creature-controller-test PROPERTY FOLDER "tests")
 
 # Register the test with CTest
-#include(GoogleTest)
-#gtest_discover_tests(creature-controller-test)
+include(GoogleTest)
+gtest_discover_tests(creature-controller-test)
 
 # where to find our CMake modules
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")

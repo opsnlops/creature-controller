@@ -13,11 +13,11 @@
 #include "logging/Logger.h"
 #include "util/Result.h"
 
-class Parrot : public creatures::creature::Creature {
+class Crow : public creatures::creature::Creature {
 
   public:
-    explicit Parrot(const std::shared_ptr<creatures::Logger> &logger);
-    ~Parrot() = default;
+    explicit Crow(const std::shared_ptr<creatures::Logger> &logger);
+    ~Crow() = default;
 
     creatures::Result<std::string> performPreFlightCheck() override;
 

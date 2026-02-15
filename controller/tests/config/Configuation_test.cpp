@@ -14,7 +14,7 @@ public:
     using Configuration::Configuration; // Inherit constructors
     // Expose protected methods for testing
     using Configuration::setUseGPIO;
-    using Configuration::setNetworkDeviceIPAddress;
+    using Configuration::setNetworkDeviceName;
     using Configuration::addUARTDevice;
 };
 
@@ -46,10 +46,10 @@ TEST_F(ConfigurationTest, SetAndGetUseGPIO) {
     ASSERT_FALSE(config->getUseGPIO());
 }
 
-TEST_F(ConfigurationTest, SetAndGetNetworkDeviceIPAddress) {
-    std::string ipAddress = "192.168.1.100";
-    config->setNetworkDeviceIPAddress(ipAddress);
-    ASSERT_EQ(config->getNetworkDeviceIPAddress(), ipAddress);
+TEST_F(ConfigurationTest, SetAndGetNetworkDeviceName) {
+    std::string deviceName = "eth1";
+    config->setNetworkDeviceName(deviceName);
+    ASSERT_EQ(config->getNetworkDeviceName(), deviceName);
 }
 
 TEST_F(ConfigurationTest, AddAndGetUARTDevices) {

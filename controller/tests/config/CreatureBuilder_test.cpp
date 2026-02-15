@@ -109,8 +109,6 @@ TEST_F(CreatureBuilderTest, BuildsCorrectlyWithValidData) {
 
     auto creature = creatureResult.getValue().value();
 
-    // 😡 floating point!
-    float expectedHeadOffsetMax = 0.4f;
     float expectedSmoothingValue = 0.9f;
     float tolerance = 0.0001f;
 
@@ -124,7 +122,6 @@ TEST_F(CreatureBuilderTest, BuildsCorrectlyWithValidData) {
     EXPECT_EQ(4, creature->getMouthSlot());
     EXPECT_EQ(0, creature->getPositionMin());
     EXPECT_EQ(1023, creature->getPositionMax());
-    EXPECT_NEAR(expectedHeadOffsetMax, creature->getHeadOffsetMax(), tolerance);
     EXPECT_EQ(50, creature->getServoUpdateFrequencyHz());
     EXPECT_EQ(1, creature->getNumberOfServos());
     EXPECT_EQ("neck_left", creature->getServo("neck_left")->getId());
@@ -137,6 +134,214 @@ TEST_F(CreatureBuilderTest, BuildsCorrectlyWithValidData) {
     EXPECT_EQ(1250 + ((2250 - 1250) / 2), creature->getServo("neck_left")->getDefaultMicroseconds());
 
 }
+
+
+TEST_F(CreatureBuilderTest, BuildsCorrectlyWithDynamixelServos) {
+
+    const std::string jsonData = R"({
+      "name": "Dynamixel Crow",
+      "id": "b1234567-0000-0000-0000-000000000001",
+      "version": "0.1.0",
+      "description": "A crow with only Dynamixel servos",
+      "channel_offset": 1,
+      "audio_channel": 1,
+      "mouth_slot": 4,
+      "position_min": 0,
+      "position_max": 1023,
+      "head_offset_max": 0.35,
+      "servo_frequency": 50,
+      "type": "crow",
+      "motors": [
+        {
+          "type": "dynamixel",
+          "id": "neck_left",
+          "name": "Neck Left",
+          "output_module": "A",
+          "dxl_id": 1,
+          "min_position": 1024,
+          "max_position": 3072,
+          "smoothing_value": 0.90,
+          "inverted": false,
+          "default_position": "center"
+        },
+        {
+          "type": "dynamixel",
+          "id": "neck_right",
+          "name": "Neck Right",
+          "output_module": "A",
+          "dxl_id": 2,
+          "min_position": 1024,
+          "max_position": 3072,
+          "smoothing_value": 0.90,
+          "inverted": true,
+          "default_position": "center"
+        }
+      ],
+      "inputs": [
+        { "name": "head_tilt",   "slot": 0, "width": 1 },
+        { "name": "head_height", "slot": 1, "width": 1 }
+      ]
+    })";
+
+    CreateTempFileWithJson(jsonData);
+
+    creatures::config::CreatureBuilder builder(logger, tempValidFileName);
+    auto creatureResult = builder.build();
+    ASSERT_TRUE(creatureResult.isSuccess());
+
+    auto creature = creatureResult.getValue().value();
+    float tolerance = 0.0001f;
+
+    EXPECT_EQ("Dynamixel Crow", creature->getName());
+    EXPECT_EQ(2, creature->getNumberOfServos());
+
+    // Verify neck_left Dynamixel
+    auto neckLeft = creature->getServo("neck_left");
+    ASSERT_NE(nullptr, neckLeft);
+    EXPECT_EQ("Neck Left", neckLeft->getName());
+    EXPECT_EQ(creatures::creature::motor_type::dynamixel, neckLeft->getMotorType());
+
+    auto expectedLeftLocation = ServoSpecifier(creatures::config::UARTDevice::A, 1, creatures::creature::motor_type::dynamixel);
+    EXPECT_EQ(expectedLeftLocation, neckLeft->getOutputLocation());
+    EXPECT_EQ(1024, neckLeft->getMinPulseUs());  // min_position stored in min_pulse_us
+    EXPECT_EQ(3072, neckLeft->getMaxPulseUs());  // max_position stored in max_pulse_us
+    EXPECT_NEAR(0.9f, neckLeft->getSmoothingValue(), tolerance);
+    EXPECT_FALSE(neckLeft->isInverted());
+    EXPECT_EQ(1024 + ((3072 - 1024) / 2), neckLeft->getDefaultMicroseconds());
+
+    // Verify neck_right Dynamixel
+    auto neckRight = creature->getServo("neck_right");
+    ASSERT_NE(nullptr, neckRight);
+    EXPECT_EQ("Neck Right", neckRight->getName());
+    EXPECT_EQ(creatures::creature::motor_type::dynamixel, neckRight->getMotorType());
+
+    auto expectedRightLocation = ServoSpecifier(creatures::config::UARTDevice::A, 2, creatures::creature::motor_type::dynamixel);
+    EXPECT_EQ(expectedRightLocation, neckRight->getOutputLocation());
+    EXPECT_EQ(1024, neckRight->getMinPulseUs());
+    EXPECT_EQ(3072, neckRight->getMaxPulseUs());
+    EXPECT_TRUE(neckRight->isInverted());
+}
+
+
+TEST_F(CreatureBuilderTest, BuildsCorrectlyWithMixedMotorTypes) {
+
+    const std::string jsonData = R"({
+      "name": "Mixed Crow",
+      "id": "b1234567-0000-0000-0000-000000000002",
+      "version": "0.1.0",
+      "description": "A crow with Dynamixel head and PWM body servos",
+      "channel_offset": 1,
+      "audio_channel": 1,
+      "mouth_slot": 4,
+      "position_min": 0,
+      "position_max": 1023,
+      "head_offset_max": 0.35,
+      "servo_frequency": 50,
+      "type": "crow",
+      "motors": [
+        {
+          "type": "dynamixel",
+          "id": "neck_left",
+          "name": "Neck Left",
+          "output_module": "A",
+          "dxl_id": 1,
+          "min_position": 1024,
+          "max_position": 3072,
+          "smoothing_value": 0.90,
+          "inverted": false,
+          "default_position": "center"
+        },
+        {
+          "type": "dynamixel",
+          "id": "neck_right",
+          "name": "Neck Right",
+          "output_module": "A",
+          "dxl_id": 2,
+          "min_position": 1024,
+          "max_position": 3072,
+          "smoothing_value": 0.90,
+          "inverted": true,
+          "default_position": "center"
+        },
+        {
+          "type": "servo",
+          "id": "neck_rotate",
+          "name": "Neck Rotate",
+          "output_module": "A",
+          "output_header": 0,
+          "min_pulse_us": 1400,
+          "max_pulse_us": 1900,
+          "smoothing_value": 0.95,
+          "inverted": false,
+          "default_position": "center"
+        },
+        {
+          "type": "servo",
+          "id": "beak",
+          "name": "Beak",
+          "output_module": "A",
+          "output_header": 2,
+          "min_pulse_us": 1600,
+          "max_pulse_us": 2350,
+          "smoothing_value": 0.4,
+          "inverted": true,
+          "default_position": "min"
+        }
+      ],
+      "inputs": [
+        { "name": "head_tilt",    "slot": 0, "width": 1 },
+        { "name": "head_height",  "slot": 1, "width": 1 },
+        { "name": "neck_rotate",  "slot": 2, "width": 1 },
+        { "name": "beak",         "slot": 3, "width": 1 }
+      ]
+    })";
+
+    CreateTempFileWithJson(jsonData);
+
+    creatures::config::CreatureBuilder builder(logger, tempValidFileName);
+    auto creatureResult = builder.build();
+    ASSERT_TRUE(creatureResult.isSuccess());
+
+    auto creature = creatureResult.getValue().value();
+    float tolerance = 0.0001f;
+
+    EXPECT_EQ("Mixed Crow", creature->getName());
+    EXPECT_EQ(4, creature->getNumberOfServos());
+
+    // Dynamixel servos
+    auto neckLeft = creature->getServo("neck_left");
+    ASSERT_NE(nullptr, neckLeft);
+    EXPECT_EQ(creatures::creature::motor_type::dynamixel, neckLeft->getMotorType());
+    EXPECT_EQ(1024, neckLeft->getMinPulseUs());
+    EXPECT_EQ(3072, neckLeft->getMaxPulseUs());
+
+    auto neckRight = creature->getServo("neck_right");
+    ASSERT_NE(nullptr, neckRight);
+    EXPECT_EQ(creatures::creature::motor_type::dynamixel, neckRight->getMotorType());
+    EXPECT_TRUE(neckRight->isInverted());
+
+    // PWM servos
+    auto neckRotate = creature->getServo("neck_rotate");
+    ASSERT_NE(nullptr, neckRotate);
+    EXPECT_EQ(creatures::creature::motor_type::servo, neckRotate->getMotorType());
+    auto expectedRotateLocation = ServoSpecifier(creatures::config::UARTDevice::A, 0);
+    EXPECT_EQ(expectedRotateLocation, neckRotate->getOutputLocation());
+    EXPECT_EQ(1400, neckRotate->getMinPulseUs());
+    EXPECT_EQ(1900, neckRotate->getMaxPulseUs());
+    EXPECT_NEAR(0.95f, neckRotate->getSmoothingValue(), tolerance);
+    EXPECT_FALSE(neckRotate->isInverted());
+    EXPECT_EQ(1400 + ((1900 - 1400) / 2), neckRotate->getDefaultMicroseconds());
+
+    auto beak = creature->getServo("beak");
+    ASSERT_NE(nullptr, beak);
+    EXPECT_EQ(creatures::creature::motor_type::servo, beak->getMotorType());
+    EXPECT_EQ(1600, beak->getMinPulseUs());
+    EXPECT_EQ(2350, beak->getMaxPulseUs());
+    EXPECT_NEAR(0.4f, beak->getSmoothingValue(), tolerance);
+    EXPECT_TRUE(beak->isInverted());
+    EXPECT_EQ(1600, beak->getDefaultMicroseconds());  // default_position: "min"
+}
+
 
 //TEST(CreatureBuilder, BuildFails_EmptyJson) {
 //

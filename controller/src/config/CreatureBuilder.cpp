@@ -20,6 +20,7 @@
 #include "config/UARTDevice.h"
 #include "controller/Input.h"
 #include "creature/Creature.h"
+#include "creature/Crow.h"
 #include "creature/Parrot.h"
 #include "device/Servo.h"
 #include "device/ServoSpecifier.h"
@@ -46,7 +47,6 @@ CreatureBuilder::CreatureBuilder(std::shared_ptr<Logger> logger, std::string con
         "version",
         "channel_offset",
         "motors",
-        "head_offset_max",
         "servo_frequency",
         "position_min",
         "position_max",
@@ -129,7 +129,7 @@ Result<std::shared_ptr<creatures::creature::Creature>> CreatureBuilder::build() 
     creatures::creature::Creature::creature_type type = creatures::creature::Creature::stringToCreatureType(j["type"]);
     std::string string_type = j["type"];
 
-    if (type == creatures::creature::Creature::invalid_creature) {
+    if (type == creatures::creature::Creature::creature_type::invalid_creature) {
         auto errorMessage = fmt::format("Invalid creature type: {}", string_type);
         logger->critical(errorMessage);
         return Result<std::shared_ptr<creatures::creature::Creature>>{
@@ -139,8 +139,11 @@ Result<std::shared_ptr<creatures::creature::Creature>> CreatureBuilder::build() 
     // Create a creature instance based on type
     std::shared_ptr<creatures::creature::Creature> creature;
     switch (type) {
-    case creatures::creature::Creature::parrot:
+    case creatures::creature::Creature::creature_type::parrot:
         creature = std::make_shared<Parrot>(logger);
+        break;
+    case creatures::creature::Creature::creature_type::crow:
+        creature = std::make_shared<Crow>(logger);
         break;
     default:
         auto errorMessage = fmt::format("Unimplemented creature type: {}", string_type);
@@ -162,9 +165,11 @@ Result<std::shared_ptr<creatures::creature::Creature>> CreatureBuilder::build() 
     creature->setMouthSlot(j["mouth_slot"]);
     creature->setPositionMin(j["position_min"]);
     creature->setPositionMax(j["position_max"]);
-    creature->setHeadOffsetMax(j["head_offset_max"]);
     creature->setServoUpdateFrequencyHz(servo_frequency);
     creature->setType(type);
+
+    // Let the creature subclass extract its own config parameters
+    creature->applyConfig(j);
 
     logger->info("Configuring creature: {} (version {}), at channel offset {}", creature->getName(),
                  creature->getVersion(), creature->getChannelOffset());
@@ -174,16 +179,6 @@ Result<std::shared_ptr<creatures::creature::Creature>> CreatureBuilder::build() 
         std::string id_string = motor["id"];
         std::string type_string = motor["type"];
 
-        // Validate motor fields
-        for (const auto &fieldName : requiredServoFields) {
-            if (auto fieldResult = checkJsonField(motor, fieldName); !fieldResult.isSuccess()) {
-                auto errorMessage = fieldResult.getError().value().getMessage();
-                logger->error(errorMessage);
-                return Result<std::shared_ptr<creatures::creature::Creature>>{
-                    ControllerError(ControllerError::InvalidData, errorMessage)};
-            }
-        }
-
         logger->debug("Processing motor: {}", id_string);
 
         // Validate motor type
@@ -191,7 +186,17 @@ Result<std::shared_ptr<creatures::creature::Creature>> CreatureBuilder::build() 
             creatures::creature::Creature::stringToMotorType(motor["type"]);
 
         switch (motorType) {
-        case creatures::creature::Creature::servo: {
+        case creatures::creature::Creature::motor_type::servo: {
+            // Validate PWM servo fields
+            for (const auto &fieldName : requiredServoFields) {
+                if (auto fieldResult = checkJsonField(motor, fieldName); !fieldResult.isSuccess()) {
+                    auto errorMessage = fieldResult.getError().value().getMessage();
+                    logger->error(errorMessage);
+                    return Result<std::shared_ptr<creatures::creature::Creature>>{
+                        ControllerError(ControllerError::InvalidData, errorMessage)};
+                }
+            }
+
             auto servoResult = createServo(motor, servo_frequency);
             if (!servoResult.isSuccess()) {
                 auto errorMessage = servoResult.getError().value().getMessage();
@@ -205,7 +210,7 @@ Result<std::shared_ptr<creatures::creature::Creature>> CreatureBuilder::build() 
             creature->addServo(servo->getId(), servo);
             break;
         }
-        case creatures::creature::Creature::dynamixel: {
+        case creatures::creature::Creature::motor_type::dynamixel: {
             // Dynamixel motors use different JSON fields
             std::vector<std::string> requiredDynamixelFields = {"type",         "id",
                                                                 "name",         "output_module",
@@ -240,7 +245,7 @@ Result<std::shared_ptr<creatures::creature::Creature>> CreatureBuilder::build() 
             }
 
             // Use ServoSpecifier with dynamixel type — pin field stores the bus ID
-            ServoSpecifier output = {output_location, dxl_bus_id, creatures::creature::Creature::dynamixel};
+            ServoSpecifier output = {output_location, dxl_bus_id, creatures::creature::Creature::motor_type::dynamixel};
 
             // Calculate default position
             u16 default_position = 0;
@@ -327,7 +332,7 @@ Result<std::shared_ptr<Servo>> CreatureBuilder::createServo(const json &j, u16 s
     // Validate motor type
     creatures::creature::Creature::motor_type type = creatures::creature::Creature::stringToMotorType(j["type"]);
 
-    if (type == creatures::creature::Creature::invalid_motor) {
+    if (type == creatures::creature::Creature::motor_type::invalid_motor) {
         auto errorMessage = fmt::format("Invalid motor type: {}", j["type"].get<std::string>());
         logger->error(errorMessage);
         return Result<std::shared_ptr<Servo>>{ControllerError(ControllerError::InvalidConfiguration, errorMessage)};

@@ -6,33 +6,30 @@
 #include "util/Result.h"
 
 #include "Creature.h"
-#include "Parrot.h"
+#include "Crow.h"
 
-Parrot::Parrot(const std::shared_ptr<creatures::Logger> &logger) : Creature(logger) {
+Crow::Crow(const std::shared_ptr<creatures::Logger> &logger) : Creature(logger) {
 
-    // Set up our expectations for configuration for clean error checking
+    // Start with Parrot's inputs/servos as a baseline -- adjust when real hardware is wired
     requiredInputs = {"head_height", "head_tilt", "neck_rotate", "body_lean", "beak", "chest", "stand_rotate"};
     requiredServos = {"neck_left", "neck_right", "neck_rotate", "body_lean", "beak"};
 
-    logger->info("Bawk!");
+    logger->info("Caw!");
 }
 
-void Parrot::applyConfig(const nlohmann::json &config) {
+void Crow::applyConfig(const nlohmann::json &config) {
     float headOffsetMaxPercent = config.at("head_offset_max");
     head.emplace(logger, headOffsetMaxPercent, positionMin, positionMax);
-    logger->debug("Parrot: configured DifferentialHead with head_offset_max = {}", headOffsetMaxPercent);
+    logger->debug("Crow: configured DifferentialHead with head_offset_max = {}", headOffsetMaxPercent);
 }
 
-// Required for all Creature subclasses
-creatures::Result<std::string> Parrot::performPreFlightCheck() {
+creatures::Result<std::string> Crow::performPreFlightCheck() {
 
-    // List out the servos we found
     logger->debug("servos found:");
     for (const auto &[id, servo] : servos) {
         logger->debug("servo: {}", id);
     }
 
-    // Do some error checking to make sure we have our servos
     for (const auto &requiredServo : requiredServos) {
         if (servos.find(requiredServo) == servos.end()) {
             auto errorMessage = fmt::format("missing required servo: {}", requiredServo);
@@ -50,35 +47,22 @@ creatures::Result<std::string> Parrot::performPreFlightCheck() {
     }
 
     logger->debug("pre-flight check passed");
-    return creatures::Result<std::string>{"Parrot is ready to fly!"};
+    return creatures::Result<std::string>{"Crow is ready to fly!"};
 }
 
-void Parrot::mapInputsToServos(const std::unordered_map<std::string, creatures::Input> &inputs) {
+void Crow::mapInputsToServos(const std::unordered_map<std::string, creatures::Input> &inputs) {
 
     u8 height = inputs.at("head_height").getIncomingRequest();
     u8 tilt = inputs.at("head_tilt").getIncomingRequest();
 
-#if DEBUG_CREATURE_WORKER_LOOP
-    logger->debug("head height: {}, head tilt: {}", height, tilt);
-#endif
-
     u16 headHeight = head->convertToHeadHeight(convertInputValueToServoValue(height));
     int32_t headTilt = head->convertToHeadTilt(convertInputValueToServoValue(tilt));
 
-#if DEBUG_CREATURE_WORKER_LOOP
-    logger->debug("head height: {}, head tilt: {}", headHeight, headTilt);
-#endif
-
     auto headPosition = head->calculateHeadPosition(headHeight, headTilt);
 
-    // Update our servos so that they'll get picked up on the next frame
     servos["neck_left"]->move(headPosition.left);
     servos["neck_right"]->move(headPosition.right);
     servos["neck_rotate"]->move(convertInputValueToServoValue(inputs.at("neck_rotate").getIncomingRequest()));
     servos["body_lean"]->move(convertInputValueToServoValue(inputs.at("body_lean").getIncomingRequest()));
     servos["beak"]->move(convertInputValueToServoValue(inputs.at("beak").getIncomingRequest()));
-
-#if DEBUG_CREATURE_WORKER_LOOP
-    logger->debug("servos updated");
-#endif
 }

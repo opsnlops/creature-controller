@@ -7,6 +7,7 @@
 #include "creature/Creature.h"
 #include "creature/CreatureException.h"
 #include "logging/Logger.h"
+#include "util/thread_name.h"
 
 namespace creatures::creature {
 
@@ -115,22 +116,20 @@ u8 Creature::getNumberOfSteppers() const { return steppers.size(); }
 
 Creature::creature_type Creature::stringToCreatureType(const std::string &typeStr) {
     if (typeStr == "parrot")
-        return parrot;
-    if (typeStr == "wled_light")
-        return wled_light;
-    if (typeStr == "skunk")
-        return skunk;
-    return invalid_creature;
+        return creature_type::parrot;
+    if (typeStr == "crow")
+        return creature_type::crow;
+    return creature_type::invalid_creature;
 }
 
 Creature::motor_type Creature::stringToMotorType(const std::string &typeStr) {
     if (typeStr == "servo")
-        return servo;
+        return motor_type::servo;
     if (typeStr == "dynamixel")
-        return dynamixel;
+        return motor_type::dynamixel;
     if (typeStr == "stepper")
-        return stepper;
-    return invalid_motor;
+        return motor_type::stepper;
+    return motor_type::invalid_motor;
 }
 
 Creature::default_position_type Creature::stringToDefaultPositionType(const std::string &typeStr) {
@@ -207,12 +206,45 @@ u16 Creature::getPositionDefault() const { return positionDefault; }
 
 void Creature::setPositionDefault(u16 _positionDefault) { Creature::positionDefault = _positionDefault; }
 
-float Creature::getHeadOffsetMax() const { return headOffsetMax; }
-
-void Creature::setHeadOffsetMax(float _headOffsetMax) { Creature::headOffsetMax = _headOffsetMax; }
-
 void Creature::addInput(const creatures::Input &input) { inputs.push_back(input); }
 
 std::vector<creatures::Input> Creature::getInputs() const { return inputs; }
+
+void Creature::worker() {
+
+    setThreadName("creature_worker");
+    logger->info("Creature worker initialized and ready for operation");
+
+    while (!stop_requested.load()) {
+
+        auto incoming = inputQueue->pop();
+
+        logger->trace("creature got {} inputs", incoming.size());
+
+        // Make sure we got the inputs we're expecting
+        for (const auto &requiredInput : requiredInputs) {
+            if (incoming.find(requiredInput) == incoming.end()) {
+                logger->warn("missing required input: {}", requiredInput);
+                continue;
+            }
+        }
+
+#if DEBUG_CREATURE_WORKER_LOOP
+        for (auto &input : incoming) {
+            logger->debug("got input: {}", input.second.toString());
+        }
+
+        // Debug: Dump all of the servos
+        logger->debug("server dump follows");
+        for (const auto &[id, servo] : servos) {
+            logger->trace("servo: {} -> {}", id, servo->getPosition());
+        }
+#endif
+
+        mapInputsToServos(incoming);
+    }
+
+    logger->info("Creature worker thread stopped");
+}
 
 } // namespace creatures::creature

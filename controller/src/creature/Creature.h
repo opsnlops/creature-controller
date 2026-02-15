@@ -9,6 +9,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include <nlohmann/json.hpp>
+
 #include "controller-config.h"
 
 #include "config/UARTDevice.h"
@@ -35,20 +37,14 @@ class Creature {
     // friend class CreatureBuilder;
 
     // Valid creature types
-    enum creature_type {
+    enum class creature_type {
         parrot,
-        wled_light,
-        skunk,
-        test,
-        invalid_creature // Invalid creature type
+        crow,
+        invalid_creature
     };
 
     // Motor type is defined in creature/MotorType.h to avoid circular includes
     using motor_type = creatures::creature::motor_type;
-    static constexpr motor_type servo = creatures::creature::servo;
-    static constexpr motor_type dynamixel = creatures::creature::dynamixel;
-    static constexpr motor_type stepper = creatures::creature::stepper;
-    static constexpr motor_type invalid_motor = creatures::creature::invalid_motor;
 
     enum default_position_type { min, max, center, invalid_position };
 
@@ -152,8 +148,6 @@ class Creature {
 
     u16 getPositionDefault() const;
 
-    float getHeadOffsetMax() const;
-
     u16 getServoUpdateFrequencyHz() const;
 
     std::vector<creatures::Input> getInputs() const;
@@ -185,14 +179,18 @@ class Creature {
 
     void setPositionDefault(u16 positionDefault);
 
-    void setHeadOffsetMax(float headOffsetMax);
-
     void setServoUpdateFrequencyHz(u16 hertz);
 
     void addInput(const creatures::Input &input);
 
     // Perform a pre-flight check to make sure everything is set up correctly
     virtual Result<std::string> performPreFlightCheck() = 0;
+
+    /**
+     * Called after all common properties are set by CreatureBuilder.
+     * Subclasses can override to extract creature-specific JSON parameters.
+     */
+    virtual void applyConfig(const nlohmann::json &config) { (void)config; }
 
   protected:
     std::atomic<bool> stop_requested = false;
@@ -205,7 +203,6 @@ class Creature {
     u16 positionMin;
     u16 positionMax;
     u16 positionDefault;
-    float headOffsetMax;
     u16 servoUpdateFrequencyHz;
 
     u16 channelOffset;
@@ -239,7 +236,13 @@ class Creature {
     std::unordered_map<std::string, std::shared_ptr<Stepper>> steppers;
 
     std::thread workerThread;
-    virtual void worker() = 0;
+    void worker();
+
+    /**
+     * Map incoming inputs to servo positions. Called by the worker loop
+     * each time a new set of inputs arrives from the input queue.
+     */
+    virtual void mapInputsToServos(const std::unordered_map<std::string, creatures::Input> &inputs) = 0;
 
     u8 numberOfJoints;
 

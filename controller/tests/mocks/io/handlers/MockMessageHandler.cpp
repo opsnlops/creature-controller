@@ -8,7 +8,7 @@
 
 namespace creatures {
 
-    void MockMessageHandler::handle(std::shared_ptr<Logger> logger, const std::vector<std::string> &tokens) {
+    void MockMessageHandler::handle(std::shared_ptr<Logger> /*logger*/, const std::vector<std::string> &/*tokens*/) {
        // Do nothing
     }
 

@@ -4,7 +4,7 @@
     [
       {
         "enabled": true,
-        "deviceNode": "/dev/cu.usbmodem02511991",
+        "deviceNode": "/dev/cu.usbmodemUnknown_S_N1",
         "module": "A"
       }
     ],
@@ -20,7 +20,7 @@
   "powerDrawLimitWatts": 30.0,
   "powerDrawWarningWatts": 25.0,
   "powerDrawResponseSeconds": 5.0,
-  "temperatureLimitDegrees": 165.0,
-  "temperatureWarningDegrees": 150.0,
+  "temperatureLimitDegrees": 200.0,
+  "temperatureWarningDegrees": 180.0,
   "temperatureLimitSeconds": 10.0
 }

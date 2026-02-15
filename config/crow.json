@@ -1,0 +1,113 @@
+{
+  "name": "Crow",
+  "id": "a7c3e1d0-cb8f-11ef-b3a2-5f8e2b1a4c09",
+  "version": "0.1.0",
+  "description": "Caw caw!",
+  "channel_offset": 1,
+  "audio_channel": 1,
+  "mouth_slot": 4,
+  "position_min": 0,
+  "position_max": 1023,
+  "head_offset_max": 0.35,
+  "servo_frequency": 50,
+  "type": "crow",
+  "motors": [
+    {
+      "type": "dynamixel",
+      "id": "neck_left",
+      "name": "Neck Left",
+      "output_module": "A",
+      "dxl_id": 1,
+      "min_position": 1024,
+      "max_position": 3072,
+      "smoothing_value": 0.90,
+      "inverted": false,
+      "default_position": "center"
+    },
+    {
+      "type": "dynamixel",
+      "id": "neck_right",
+      "name": "Neck Right",
+      "output_module": "A",
+      "dxl_id": 2,
+      "min_position": 1024,
+      "max_position": 3072,
+      "smoothing_value": 0.90,
+      "inverted": true,
+      "default_position": "center"
+    },
+    {
+      "type": "servo",
+      "id": "neck_rotate",
+      "name": "Neck Rotate",
+      "output_module": "A",
+      "output_header": 0,
+      "min_pulse_us": 1400,
+      "max_pulse_us": 1900,
+      "smoothing_value": 0.95,
+      "inverted": false,
+      "default_position": "center"
+    },
+    {
+      "type": "servo",
+      "id": "body_lean",
+      "name": "Body Lean",
+      "output_module": "A",
+      "output_header": 1,
+      "min_pulse_us": 1475,
+      "max_pulse_us": 1950,
+      "smoothing_value": 0.96,
+      "inverted": true,
+      "default_position": "min"
+    },
+    {
+      "type": "servo",
+      "id": "beak",
+      "name": "Beak",
+      "output_module": "A",
+      "output_header": 2,
+      "min_pulse_us": 1600,
+      "max_pulse_us": 2350,
+      "smoothing_value": 0.4,
+      "inverted": true,
+      "default_position": "min"
+    }
+  ],
+  "inputs": [
+    {
+      "name": "head_tilt",
+      "slot": 0,
+      "width": 1
+    },
+    {
+      "name": "head_height",
+      "slot": 1,
+      "width": 1
+    },
+    {
+      "name": "neck_rotate",
+      "slot": 2,
+      "width": 1
+    },
+    {
+      "name": "stand_rotate",
+      "slot": 3,
+      "width": 1
+    },
+    {
+      "name": "body_lean",
+      "slot": 4,
+      "width": 1
+    },
+    {
+      "name": "beak",
+      "slot": 5,
+      "width": 1
+    },
+    {
+      "name": "chest",
+      "slot": 6,
+      "width": 1
+    }
+  ]
+}
