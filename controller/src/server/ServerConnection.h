@@ -28,22 +28,16 @@ namespace creatures ::server {
 class ServerConnection : public StoppableThread {
 
   public:
-    ServerConnection(
-        std::shared_ptr<Logger> logger,
-        std::shared_ptr<creatures::creature::Creature> creature, bool enabled,
-        std::string address, u16 port,
-        std::shared_ptr<
-            creatures::MessageQueue<creatures::server::ServerMessage>>
-            outgoingMessagesQueue)
-        : logger(logger), enabled(enabled), address(std::move(address)),
-          port(port), outgoingMessagesQueue(outgoingMessagesQueue),
-          creature(creature) {
+    ServerConnection(std::shared_ptr<Logger> _logger, std::shared_ptr<creatures::creature::Creature> _creature,
+                     bool _enabled, std::string _address, u16 _port,
+                     std::shared_ptr<creatures::MessageQueue<creatures::server::ServerMessage>> _outgoingMessagesQueue)
+        : logger(std::move(_logger)), enabled(_enabled), address(std::move(_address)), port(_port),
+          outgoingMessagesQueue(std::move(_outgoingMessagesQueue)), creature(std::move(_creature)) {
 
         webSocket = std::make_shared<ix::WebSocket>();
 
-        websocketWriter = std::make_unique<WebsocketWriter>(
-            logger, webSocket, outgoingMessagesQueue, creature->getId(),
-            enabled);
+        websocketWriter =
+            std::make_unique<WebsocketWriter>(logger, webSocket, outgoingMessagesQueue, creature->getId(), enabled);
     }
     ~ServerConnection();
 
@@ -61,8 +55,7 @@ class ServerConnection : public StoppableThread {
 
     std::string serverUrl;
 
-    std::shared_ptr<creatures::MessageQueue<creatures::server::ServerMessage>>
-        outgoingMessagesQueue;
+    std::shared_ptr<creatures::MessageQueue<creatures::server::ServerMessage>> outgoingMessagesQueue;
 
     std::unique_ptr<WebsocketWriter> websocketWriter;
 
@@ -72,9 +65,7 @@ class ServerConnection : public StoppableThread {
     // The creature we're working on
     std::shared_ptr<creatures::creature::Creature> creature;
 
-    std::string makeUrl() {
-        return fmt::format("ws://{}:{}/api/v1/websocket", address, port);
-    }
+    std::string makeUrl() { return fmt::format("ws://{}:{}/api/v1/websocket", address, port); }
 
     /**
      * Callback called when the websocket receives a message

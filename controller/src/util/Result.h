@@ -53,25 +53,19 @@ template <typename T> class Result {
 };
 
 // Implement ControllerError methods
-inline ControllerError::ControllerError(ErrorType errorType,
-                                        const std::string &message)
-    : errorType(errorType), message(message) {}
+inline ControllerError::ControllerError(ErrorType _errorType, const std::string &_message)
+    : errorType(_errorType), message(_message) {}
 
-inline ControllerError::ErrorType ControllerError::getErrorType() const {
-    return errorType;
-}
+inline ControllerError::ErrorType ControllerError::getErrorType() const { return errorType; }
 
 inline std::string ControllerError::getMessage() const { return message; }
 
 // Implement Result methods
 template <typename T> Result<T>::Result(const T &value) : m_result(value) {}
 
-template <typename T>
-Result<T>::Result(const ControllerError &error) : m_result(error) {}
+template <typename T> Result<T>::Result(const ControllerError &error) : m_result(error) {}
 
-template <typename T> bool Result<T>::isSuccess() const {
-    return std::holds_alternative<T>(m_result);
-}
+template <typename T> bool Result<T>::isSuccess() const { return std::holds_alternative<T>(m_result); }
 
 template <typename T> std::optional<T> Result<T>::getValue() const {
     if (isSuccess()) {
@@ -80,8 +74,7 @@ template <typename T> std::optional<T> Result<T>::getValue() const {
     return std::nullopt;
 }
 
-template <typename T>
-std::optional<ControllerError> Result<T>::getError() const {
+template <typename T> std::optional<ControllerError> Result<T>::getError() const {
     if (!isSuccess()) {
         return std::get<ControllerError>(m_result);
     }

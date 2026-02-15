@@ -14,9 +14,9 @@ struct ServoSpecifier {
     u16 pin; // GPIO pin for PWM, Dynamixel bus ID for dynamixel
     creatures::creature::motor_type type;
 
-    ServoSpecifier(creatures::config::UARTDevice::module_name module, u16 pin,
-                   creatures::creature::motor_type type = creatures::creature::motor_type::servo)
-        : module(module), pin(pin), type(type) {}
+    ServoSpecifier(creatures::config::UARTDevice::module_name _module, u16 _pin,
+                   creatures::creature::motor_type _type = creatures::creature::motor_type::servo)
+        : module(_module), pin(_pin), type(_type) {}
 
     // Allow for direct comparision
     friend bool operator==(const ServoSpecifier &lhs, const ServoSpecifier &rhs) {

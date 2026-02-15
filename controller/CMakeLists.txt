@@ -116,6 +116,11 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(ixwebsocket)
 
+# Suppress warnings from third-party ixwebsocket code
+if(TARGET ixwebsocket)
+    target_compile_options(ixwebsocket PRIVATE -w)
+endif()
+
 # SDL
 find_package(SDL2 REQUIRED)
 find_package(SDL2_mixer REQUIRED)
