@@ -21,7 +21,7 @@ RUN cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPIL
 
 # Run the build in a different layer so we avoid grabbing the code over
 # and over again
-RUN cd /build/creature-controller/build && ninja
+RUN cd /build/creature-controller/build && ninja -j$(nproc)
 
 # Run tests (exclude device-dependent serial tests that need real hardware)
 RUN cd /build/creature-controller/build && ctest --output-on-failure -E SerialOutput
