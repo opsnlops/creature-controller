@@ -240,6 +240,15 @@ bool is_motor_configured(const char *motor_id);
  */
 bool are_all_motors_configured(void);
 
+/**
+ * @brief Reset the servo motor map
+ *
+ * Clears configuration fields (min/max pulse, position, is_configured)
+ * for all PWM servo entries so the map can be repopulated from a new
+ * CONFIG message. Hardware pin assignments are preserved.
+ */
+void resetServoMotorMap(void);
+
 #ifdef CC_VER4
 
 #include "dynamixel/dynamixel_hal.h"
@@ -265,15 +274,6 @@ extern DynamixelMotorEntry dxl_motors[MAX_DYNAMIXEL_SERVOS];
  * @brief Number of configured Dynamixel motors
  */
 extern u8 dxl_motor_count;
-
-/**
- * @brief Reset the servo motor map
- *
- * Clears configuration fields (min/max pulse, position, is_configured)
- * for all PWM servo entries so the map can be repopulated from a new
- * CONFIG message. Hardware pin assignments are preserved.
- */
-void resetServoMotorMap(void);
 
 /**
  * @brief Reset the Dynamixel motor map

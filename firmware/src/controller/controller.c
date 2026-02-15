@@ -547,8 +547,6 @@ bool are_all_motors_configured(void) {
     return all_configured;
 }
 
-#ifdef CC_VER4
-
 void resetServoMotorMap(void) {
     if (xSemaphoreTake(motor_map_mutex, portMAX_DELAY) == pdTRUE) {
         for (size_t i = 0; i < MOTOR_MAP_SIZE; i++) {
@@ -564,6 +562,8 @@ void resetServoMotorMap(void) {
         warning("failed to take motor_map_mutex in resetServoMotorMap");
     }
 }
+
+#ifdef CC_VER4
 
 void resetDynamixelMotorMap(void) {
     if (xSemaphoreTake(dxl_motors_mutex, portMAX_DELAY) == pdTRUE) {
