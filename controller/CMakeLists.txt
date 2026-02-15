@@ -16,7 +16,7 @@ add_compile_options(-Wall)
 add_compile_options(-Wextra)
 add_compile_options(-Wpedantic)
 
-if(APPLE)
+if(APPLE AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     add_compile_options(-fexperimental-library)
 endif()
 
