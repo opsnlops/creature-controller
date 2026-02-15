@@ -32,7 +32,7 @@ GoogleTest support is wired in but currently disabled. To enable tests, uncommen
 clang-format -i <file>                # Format a single file
 clang-format -i src/**/*.cpp src/**/*.h  # Format the codebase
 ```
-The repository ships with `.clang-format` (LLVM style, 4-space indent, 120-column width). Run `clang-format` on all touched files before committing.
+The repository ships with `.clang-format` (LLVM style, 4-space indent, 120-column width). **Always run `clang-format -i` on every changed `.cpp` and `.h` file before committing.** Do not skip this step.
 
 ### Code Standards
 - Keep comments and logs professional; avoid casual tone or emoji.
