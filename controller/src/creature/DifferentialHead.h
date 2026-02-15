@@ -16,9 +16,7 @@ struct head_position_t {
 
 class DifferentialHead {
   public:
-    DifferentialHead(std::shared_ptr<creatures::Logger> logger,
-                     float headOffsetMaxPercent,
-                     u16 positionMin,
+    DifferentialHead(std::shared_ptr<creatures::Logger> logger, float headOffsetMaxPercent, u16 positionMin,
                      u16 positionMax);
 
     [[nodiscard]] u16 convertToHeadHeight(u16 y) const;

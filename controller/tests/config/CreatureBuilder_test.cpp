@@ -1,12 +1,11 @@
 
 
-#include <gtest/gtest.h>
-#include <gmock/gmock.h>
-#include <fstream>
 #include <filesystem>
+#include <fstream>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 #include <random>
 #include <sstream>
-
 
 #include "config/BuilderException.h"
 #include "config/CreatureBuilder.h"
@@ -14,23 +13,23 @@
 #include "mocks/logging/MockLogger.h"
 
 namespace {
-    std::string CreateSecureTempFileWithContent(const std::string& content) {
-        std::random_device rd;
-        std::default_random_engine generator(rd());
-        std::uniform_int_distribution<int> distribution(0, 999999);
-        auto randomSuffix = distribution(generator);
+std::string CreateSecureTempFileWithContent(const std::string &content) {
+    std::random_device rd;
+    std::default_random_engine generator(rd());
+    std::uniform_int_distribution<int> distribution(0, 999999);
+    auto randomSuffix = distribution(generator);
 
-        auto tempPath = std::filesystem::temp_directory_path() / ("creature_temp_" + std::to_string(randomSuffix) + ".json");
-        std::ofstream outFile(tempPath);
-        outFile << content;
-        outFile.close();
-        return tempPath.string();
-    }
+    auto tempPath =
+        std::filesystem::temp_directory_path() / ("creature_temp_" + std::to_string(randomSuffix) + ".json");
+    std::ofstream outFile(tempPath);
+    outFile << content;
+    outFile.close();
+    return tempPath.string();
 }
-
+} // namespace
 
 class CreatureBuilderTest : public ::testing::Test {
-protected:
+  protected:
     std::shared_ptr<creatures::Logger> logger;
     std::string tempValidFileName;
 
@@ -91,17 +90,15 @@ protected:
         }
     }
 
-    void CreateTempFileWithJson(const std::string& jsonData) {
+    void CreateTempFileWithJson(const std::string &jsonData) {
         tempValidFileName = CreateSecureTempFileWithContent(jsonData);
     }
 };
-
 
 TEST_F(CreatureBuilderTest, BuildsCorrectlyWithValidData) {
 
     std::shared_ptr<creatures::Logger> logger = std::make_shared<creatures::NiceMockLogger>();
     logger->debug("Starting test");
-
 
     creatures::config::CreatureBuilder builder(logger, tempValidFileName);
     auto creatureResult = builder.build();
@@ -111,7 +108,6 @@ TEST_F(CreatureBuilderTest, BuildsCorrectlyWithValidData) {
 
     float expectedSmoothingValue = 0.9f;
     float tolerance = 0.0001f;
-
 
     auto properLocation = ServoSpecifier(creatures::config::UARTDevice::A, 0);
 
@@ -132,9 +128,7 @@ TEST_F(CreatureBuilderTest, BuildsCorrectlyWithValidData) {
     EXPECT_NEAR(expectedSmoothingValue, creature->getServo("neck_left")->getSmoothingValue(), tolerance);
     EXPECT_FALSE(creature->getServo("neck_left")->isInverted());
     EXPECT_EQ(1250 + ((2250 - 1250) / 2), creature->getServo("neck_left")->getDefaultMicroseconds());
-
 }
-
 
 TEST_F(CreatureBuilderTest, BuildsCorrectlyWithDynamixelServos) {
 
@@ -201,10 +195,11 @@ TEST_F(CreatureBuilderTest, BuildsCorrectlyWithDynamixelServos) {
     EXPECT_EQ("Neck Left", neckLeft->getName());
     EXPECT_EQ(creatures::creature::motor_type::dynamixel, neckLeft->getMotorType());
 
-    auto expectedLeftLocation = ServoSpecifier(creatures::config::UARTDevice::A, 1, creatures::creature::motor_type::dynamixel);
+    auto expectedLeftLocation =
+        ServoSpecifier(creatures::config::UARTDevice::A, 1, creatures::creature::motor_type::dynamixel);
     EXPECT_EQ(expectedLeftLocation, neckLeft->getOutputLocation());
-    EXPECT_EQ(1024, neckLeft->getMinPulseUs());  // min_position stored in min_pulse_us
-    EXPECT_EQ(3072, neckLeft->getMaxPulseUs());  // max_position stored in max_pulse_us
+    EXPECT_EQ(1024, neckLeft->getMinPulseUs()); // min_position stored in min_pulse_us
+    EXPECT_EQ(3072, neckLeft->getMaxPulseUs()); // max_position stored in max_pulse_us
     EXPECT_NEAR(0.9f, neckLeft->getSmoothingValue(), tolerance);
     EXPECT_FALSE(neckLeft->isInverted());
     EXPECT_EQ(1024 + ((3072 - 1024) / 2), neckLeft->getDefaultMicroseconds());
@@ -215,13 +210,13 @@ TEST_F(CreatureBuilderTest, BuildsCorrectlyWithDynamixelServos) {
     EXPECT_EQ("Neck Right", neckRight->getName());
     EXPECT_EQ(creatures::creature::motor_type::dynamixel, neckRight->getMotorType());
 
-    auto expectedRightLocation = ServoSpecifier(creatures::config::UARTDevice::A, 2, creatures::creature::motor_type::dynamixel);
+    auto expectedRightLocation =
+        ServoSpecifier(creatures::config::UARTDevice::A, 2, creatures::creature::motor_type::dynamixel);
     EXPECT_EQ(expectedRightLocation, neckRight->getOutputLocation());
     EXPECT_EQ(1024, neckRight->getMinPulseUs());
     EXPECT_EQ(3072, neckRight->getMaxPulseUs());
     EXPECT_TRUE(neckRight->isInverted());
 }
-
 
 TEST_F(CreatureBuilderTest, BuildsCorrectlyWithMixedMotorTypes) {
 
@@ -339,186 +334,185 @@ TEST_F(CreatureBuilderTest, BuildsCorrectlyWithMixedMotorTypes) {
     EXPECT_EQ(2350, beak->getMaxPulseUs());
     EXPECT_NEAR(0.4f, beak->getSmoothingValue(), tolerance);
     EXPECT_TRUE(beak->isInverted());
-    EXPECT_EQ(1600, beak->getDefaultMicroseconds());  // default_position: "min"
+    EXPECT_EQ(1600, beak->getDefaultMicroseconds()); // default_position: "min"
 }
 
-
-//TEST(CreatureBuilder, BuildFails_EmptyJson) {
-//
-//   auto logger = std::make_shared<creatures::NiceMockLogger>();
-//
-//    const std::string badJsonData = R"({})";
-//    auto jsonStream = std::make_unique<std::istringstream>(badJsonData);
-//
-//
-//    EXPECT_THROW({
-//                     creatures::config::CreatureBuilder builder(logger, std::move(jsonStream));
-//                     builder.build();
-//                 }, creatures::BuilderException);
-//
-//}
-//
-//TEST(CreatureBuilder, BuildFails_BrokenJson) {
+// TEST(CreatureBuilder, BuildFails_EmptyJson) {
 //
 //    auto logger = std::make_shared<creatures::NiceMockLogger>();
 //
-//    const std::string badJsonData = R"({"type: "parrot"})";
-//    auto jsonStream = std::make_unique<std::istringstream>(badJsonData);
+//     const std::string badJsonData = R"({})";
+//     auto jsonStream = std::make_unique<std::istringstream>(badJsonData);
 //
 //
-//    EXPECT_THROW({
-//                     creatures::config::CreatureBuilder builder(logger, std::move(jsonStream));
-//                     builder.build();
-//                 }, creatures::CreatureBuilderException);
+//     EXPECT_THROW({
+//                      creatures::config::CreatureBuilder builder(logger, std::move(jsonStream));
+//                      builder.build();
+//                  }, creatures::BuilderException);
 //
-//}
+// }
 //
-//TEST(CreatureBuilder, BuildFails_MeaningLessJson) {
+// TEST(CreatureBuilder, BuildFails_BrokenJson) {
 //
-//    auto logger = std::make_shared<creatures::NiceMockLogger>();
+//     auto logger = std::make_shared<creatures::NiceMockLogger>();
 //
-//    const std::string badJsonData = R"({"type": "parrot", "name": 42})";
-//    auto jsonStream = std::make_unique<std::istringstream>(badJsonData);
-//
-//
-//    EXPECT_THROW({
-//                     creatures::config::CreatureBuilder builder(logger, std::move(jsonStream));
-//                     builder.build();
-//                 }, creatures::BuilderException);
-//
-//}
-//
-//TEST(CreatureBuilder, BuildFails_InvalidType) {
-//
-//    auto logger = std::make_shared<creatures::NiceMockLogger>();
-//
-//    const std::string badJsonData = R"({"type": "poop", "name": "Beaky"})";
-//    auto jsonStream = std::make_unique<std::istringstream>(badJsonData);
-//
-//    EXPECT_THROW({
-//                     creatures::config::CreatureBuilder builder(logger, std::move(jsonStream));
-//                     builder.build();
-//                 }, creatures::BuilderException);
-//
-//}
-//
-//TEST(CreatureBuilder, BuildFails_MissingMotors) {
-//
-//    auto logger = std::make_shared<creatures::NiceMockLogger>();
-//
-//    const std::string badJsonData = R"({  "name": "Test Creature",
-//    "version": "0.1.0",
-//    "description": "This is a fake creature for testing",
-//    "starting_dmx_channel": 1,
-//    "dmx_universe": 234,
-//    "position_min": 0,
-//    "position_max": 666,
-//    "head_offset_max": 0.4,
-//    "servo_frequency": 50,
-//    "type": "parrot",
-//    "inputs": [
-//        {
-//            "name": "left",
-//            "slot": 1,
-//            "width": 2
-//        }
-//    ]
-//    }
-//    )";
-//
-//    auto jsonStream = std::make_unique<std::istringstream>(badJsonData);
-//
-//    EXPECT_THROW({
-//                     creatures::config::CreatureBuilder builder(logger, std::move(jsonStream));
-//                     builder.build();
-//                 }, creatures::BuilderException);
-//
-//}
-//
-//TEST(CreatureBuilder, BuildFails_MissingInputs) {
-//
-//    auto logger = std::make_shared<creatures::NiceMockLogger>();
-//
-//    const std::string badJsonData = R"({  "name": "Test Creature",
-//        "version": "0.1.0",
-//        "description": "This is a fake creature for testing",
-//        "channel_offset": 1,
-//        "universe": 234,
-//        "position_min": 0,
-//        "position_max": 666,
-//        "head_offset_max": 0.4,
-//        "servo_frequency": 50,
-//        "type": "parrot",
-//        "motors": [
-//                {
-//                  "type": "servo",
-//                  "id": "neck_left",
-//                  "name": "Neck Left",
-//                  "output_location": "A0",
-//                  "min_pulse_us": 1250,
-//                  "max_pulse_us": 2250,
-//                  "smoothing_value": 0.90,
-//                  "inverted": false,
-//                  "default_position": "center"
-//                }
-//              ],
-//      }
-//    )";
-//
-//    auto jsonStream = std::make_unique<std::istringstream>(badJsonData);
-//
-//    EXPECT_THROW({
-//                     creatures::config::CreatureBuilder builder(logger, std::move(jsonStream));
-//                     builder.build();
-//                 }, creatures::CreatureBuilderException);
-//
-//}
+//     const std::string badJsonData = R"({"type: "parrot"})";
+//     auto jsonStream = std::make_unique<std::istringstream>(badJsonData);
 //
 //
-//TEST(CreatureBuilder, BuildFails_InputSlotOutOfRange) {
+//     EXPECT_THROW({
+//                      creatures::config::CreatureBuilder builder(logger, std::move(jsonStream));
+//                      builder.build();
+//                  }, creatures::CreatureBuilderException);
 //
-//    auto logger = std::make_shared<creatures::NiceMockLogger>();
+// }
 //
-//    const std::string badJsonData = R"({  "name": "Test Creature",
-//        "version": "0.1.0",
-//        "description": "This is a fake creature for testing",
-//        "channel_offset": 1,
-//        "universe": 234,
-//        "position_min": 0,
-//        "position_max": 666,
-//        "head_offset_max": 0.4,
-//        "servo_frequency": 50,
-//        "type": "parrot",
-//        "motors": [
-//                {
-//                  "type": "servo",
-//                  "id": "neck_left",
-//                  "name": "Neck Left",
-//                  "output_location": "A0",
-//                  "min_pulse_us": 1250,
-//                  "max_pulse_us": 2250,
-//                  "smoothing_value": 0.90,
-//                  "inverted": false,
-//                  "default_position": "center"
-//                }
-//              ],
-//        "inputs": [
-//        {
-//            "name": "up",
-//            "slot": 513,
-//            "width": 1
-//        }
-//    ]
-//      }
-//    )";
+// TEST(CreatureBuilder, BuildFails_MeaningLessJson) {
 //
-//    auto jsonStream = std::make_unique<std::istringstream>(badJsonData);
+//     auto logger = std::make_shared<creatures::NiceMockLogger>();
 //
-//    EXPECT_THROW({
-//                     creatures::config::CreatureBuilder builder(logger, std::move(jsonStream));
-//                     builder.build();
-//                 }, creatures::CreatureBuilderException);
+//     const std::string badJsonData = R"({"type": "parrot", "name": 42})";
+//     auto jsonStream = std::make_unique<std::istringstream>(badJsonData);
 //
-//}
+//
+//     EXPECT_THROW({
+//                      creatures::config::CreatureBuilder builder(logger, std::move(jsonStream));
+//                      builder.build();
+//                  }, creatures::BuilderException);
+//
+// }
+//
+// TEST(CreatureBuilder, BuildFails_InvalidType) {
+//
+//     auto logger = std::make_shared<creatures::NiceMockLogger>();
+//
+//     const std::string badJsonData = R"({"type": "poop", "name": "Beaky"})";
+//     auto jsonStream = std::make_unique<std::istringstream>(badJsonData);
+//
+//     EXPECT_THROW({
+//                      creatures::config::CreatureBuilder builder(logger, std::move(jsonStream));
+//                      builder.build();
+//                  }, creatures::BuilderException);
+//
+// }
+//
+// TEST(CreatureBuilder, BuildFails_MissingMotors) {
+//
+//     auto logger = std::make_shared<creatures::NiceMockLogger>();
+//
+//     const std::string badJsonData = R"({  "name": "Test Creature",
+//     "version": "0.1.0",
+//     "description": "This is a fake creature for testing",
+//     "starting_dmx_channel": 1,
+//     "dmx_universe": 234,
+//     "position_min": 0,
+//     "position_max": 666,
+//     "head_offset_max": 0.4,
+//     "servo_frequency": 50,
+//     "type": "parrot",
+//     "inputs": [
+//         {
+//             "name": "left",
+//             "slot": 1,
+//             "width": 2
+//         }
+//     ]
+//     }
+//     )";
+//
+//     auto jsonStream = std::make_unique<std::istringstream>(badJsonData);
+//
+//     EXPECT_THROW({
+//                      creatures::config::CreatureBuilder builder(logger, std::move(jsonStream));
+//                      builder.build();
+//                  }, creatures::BuilderException);
+//
+// }
+//
+// TEST(CreatureBuilder, BuildFails_MissingInputs) {
+//
+//     auto logger = std::make_shared<creatures::NiceMockLogger>();
+//
+//     const std::string badJsonData = R"({  "name": "Test Creature",
+//         "version": "0.1.0",
+//         "description": "This is a fake creature for testing",
+//         "channel_offset": 1,
+//         "universe": 234,
+//         "position_min": 0,
+//         "position_max": 666,
+//         "head_offset_max": 0.4,
+//         "servo_frequency": 50,
+//         "type": "parrot",
+//         "motors": [
+//                 {
+//                   "type": "servo",
+//                   "id": "neck_left",
+//                   "name": "Neck Left",
+//                   "output_location": "A0",
+//                   "min_pulse_us": 1250,
+//                   "max_pulse_us": 2250,
+//                   "smoothing_value": 0.90,
+//                   "inverted": false,
+//                   "default_position": "center"
+//                 }
+//               ],
+//       }
+//     )";
+//
+//     auto jsonStream = std::make_unique<std::istringstream>(badJsonData);
+//
+//     EXPECT_THROW({
+//                      creatures::config::CreatureBuilder builder(logger, std::move(jsonStream));
+//                      builder.build();
+//                  }, creatures::CreatureBuilderException);
+//
+// }
+//
+//
+// TEST(CreatureBuilder, BuildFails_InputSlotOutOfRange) {
+//
+//     auto logger = std::make_shared<creatures::NiceMockLogger>();
+//
+//     const std::string badJsonData = R"({  "name": "Test Creature",
+//         "version": "0.1.0",
+//         "description": "This is a fake creature for testing",
+//         "channel_offset": 1,
+//         "universe": 234,
+//         "position_min": 0,
+//         "position_max": 666,
+//         "head_offset_max": 0.4,
+//         "servo_frequency": 50,
+//         "type": "parrot",
+//         "motors": [
+//                 {
+//                   "type": "servo",
+//                   "id": "neck_left",
+//                   "name": "Neck Left",
+//                   "output_location": "A0",
+//                   "min_pulse_us": 1250,
+//                   "max_pulse_us": 2250,
+//                   "smoothing_value": 0.90,
+//                   "inverted": false,
+//                   "default_position": "center"
+//                 }
+//               ],
+//         "inputs": [
+//         {
+//             "name": "up",
+//             "slot": 513,
+//             "width": 1
+//         }
+//     ]
+//       }
+//     )";
+//
+//     auto jsonStream = std::make_unique<std::istringstream>(badJsonData);
+//
+//     EXPECT_THROW({
+//                      creatures::config::CreatureBuilder builder(logger, std::move(jsonStream));
+//                      builder.build();
+//                  }, creatures::CreatureBuilderException);
+//
+// }
 //
 //

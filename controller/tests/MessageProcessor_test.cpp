@@ -1,8 +1,8 @@
 
 #include <memory>
 
-#include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 #include "config/UARTDevice.h"
 #include "controller/Controller.h"
@@ -10,11 +10,11 @@
 #include "io/Message.h"
 #include "io/MessageProcessor.h"
 #include "io/MessageRouter.h"
-#include "server/ServerMessage.h"
-#include "util/MessageQueue.h"
-#include "mocks/logging/MockLogger.h"
 #include "mocks/creature/MockCreature.h"
 #include "mocks/io/handlers/MockMessageHandler.h"
+#include "mocks/logging/MockLogger.h"
+#include "server/ServerMessage.h"
+#include "util/MessageQueue.h"
 
 using creatures::config::UARTDevice;
 using creatures::io::Message;
@@ -30,11 +30,11 @@ class MessageProcessorTest : public ::testing::Test {
         websocketQueue = std::make_shared<creatures::MessageQueue<creatures::server::ServerMessage>>();
         moduleId = UARTDevice::module_name::A;
 
-        servoModuleHandler = std::make_shared<creatures::ServoModuleHandler>(
-            logger, controller, moduleId, "/dev/null", messageRouter, websocketQueue);
+        servoModuleHandler = std::make_shared<creatures::ServoModuleHandler>(logger, controller, moduleId, "/dev/null",
+                                                                             messageRouter, websocketQueue);
 
-        messageProcessor = std::make_shared<creatures::MessageProcessor>(
-            logger, moduleId, servoModuleHandler, websocketQueue);
+        messageProcessor =
+            std::make_shared<creatures::MessageProcessor>(logger, moduleId, servoModuleHandler, websocketQueue);
     }
 
     std::shared_ptr<creatures::NiceMockLogger> logger;
@@ -47,9 +47,7 @@ class MessageProcessorTest : public ::testing::Test {
     std::shared_ptr<creatures::MessageProcessor> messageProcessor;
 };
 
-TEST_F(MessageProcessorTest, Create) {
-    EXPECT_NE(messageProcessor, nullptr);
-}
+TEST_F(MessageProcessorTest, Create) { EXPECT_NE(messageProcessor, nullptr); }
 
 TEST_F(MessageProcessorTest, ProcessMessage_BuiltinLogHandler) {
     Message msg(moduleId, "LOG\tThis is a test log message");
@@ -135,16 +133,15 @@ TEST_F(MessageProcessorTest, ProcessMessage_BoardSensor) {
 
 TEST_F(MessageProcessorTest, ProcessMessage_MotorSensor) {
     // Format from firmware: MSENSE\tM0 <pos> <v> <c> <p>\t... for 8 motors
-    Message msg(moduleId,
-                "MSENSE\t"
-                "M0 512 12.50 0.50 6.25\t"
-                "M1 600 12.45 0.55 6.85\t"
-                "M2 500 12.40 0.45 5.58\t"
-                "M3 511 12.50 0.48 6.00\t"
-                "M4 520 12.50 0.52 6.50\t"
-                "M5 490 12.48 0.47 5.87\t"
-                "M6 515 12.50 0.49 6.13\t"
-                "M7 505 12.49 0.51 6.37");
+    Message msg(moduleId, "MSENSE\t"
+                          "M0 512 12.50 0.50 6.25\t"
+                          "M1 600 12.45 0.55 6.85\t"
+                          "M2 500 12.40 0.45 5.58\t"
+                          "M3 511 12.50 0.48 6.00\t"
+                          "M4 520 12.50 0.52 6.50\t"
+                          "M5 490 12.48 0.47 5.87\t"
+                          "M6 515 12.50 0.49 6.13\t"
+                          "M7 505 12.49 0.51 6.37");
     auto result = messageProcessor->processMessage(msg);
     EXPECT_TRUE(result.isSuccess());
     EXPECT_EQ(websocketQueue->size(), 1u);

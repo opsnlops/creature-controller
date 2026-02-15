@@ -23,12 +23,11 @@ void SetServoPositions::addServoPosition(const creatures::ServoPosition &servoPo
     // Make sure we're not putting the same outputPosition in twice
     for (const auto &existingServoPosition : servoPositions) {
         if (existingServoPosition.getServoId() == servoPosition.getServoId()) {
-            const auto errorMessage =
-                fmt::format("Unable to insert the same output position twice: module {}, pin {}, type {}",
-                            creatures::config::UARTDevice::moduleNameToString(servoPosition.getServoId().module),
-                            servoPosition.getServoId().pin,
-                            servoPosition.getServoId().type == creatures::creature::motor_type::dynamixel
-                                ? "dynamixel" : "servo");
+            const auto errorMessage = fmt::format(
+                "Unable to insert the same output position twice: module {}, pin {}, type {}",
+                creatures::config::UARTDevice::moduleNameToString(servoPosition.getServoId().module),
+                servoPosition.getServoId().pin,
+                servoPosition.getServoId().type == creatures::creature::motor_type::dynamixel ? "dynamixel" : "servo");
             logger->error(errorMessage);
             throw CommandException(errorMessage);
         }

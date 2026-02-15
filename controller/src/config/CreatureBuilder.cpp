@@ -41,18 +41,8 @@ CreatureBuilder::CreatureBuilder(std::shared_ptr<Logger> logger, std::string con
     : BaseBuilder(std::move(logger), std::move(configFile)) {
     // Define the required config file fields
     requiredTopLevelFields = {
-        "id",
-        "type",
-        "name",
-        "version",
-        "channel_offset",
-        "motors",
-        "servo_frequency",
-        "position_min",
-        "position_max",
-        "description",
-        "audio_channel",
-        "mouth_slot",
+        "id",           "type",         "name",        "version",       "channel_offset", "motors", "servo_frequency",
+        "position_min", "position_max", "description", "audio_channel", "mouth_slot",
     };
 
     requiredServoFields = {"type",          "id",

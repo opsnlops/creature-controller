@@ -1,8 +1,8 @@
-#include "gtest/gtest.h"
-#include "gmock/gmock.h"
 #include "config/Configuration.h"
 #include "config/UARTDevice.h"
 #include "mocks/logging/MockLogger.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 
 using ::testing::_;
 using ::testing::NiceMock;
@@ -10,24 +10,22 @@ using namespace creatures;
 using namespace creatures::config;
 
 class TestableConfiguration : public Configuration {
-public:
+  public:
     using Configuration::Configuration; // Inherit constructors
     // Expose protected methods for testing
-    using Configuration::setUseGPIO;
-    using Configuration::setNetworkDeviceName;
     using Configuration::addUARTDevice;
+    using Configuration::setNetworkDeviceName;
+    using Configuration::setUseGPIO;
 };
 
 class ConfigurationTest : public ::testing::Test {
-protected:
+  protected:
     std::shared_ptr<NiceMockLogger> mockLogger;
     std::unique_ptr<TestableConfiguration> config;
 
     ConfigurationTest() : mockLogger(std::make_shared<NiceMockLogger>()) {}
 
-    void SetUp() override {
-        config = std::make_unique<TestableConfiguration>(mockLogger);
-    }
+    void SetUp() override { config = std::make_unique<TestableConfiguration>(mockLogger); }
 };
 
 TEST_F(ConfigurationTest, SetAndGetCreatureConfigFile) {

@@ -23,9 +23,7 @@ class DifferentialHeadTest : public ::testing::Test {
 
     DifferentialHeadTest() : logger(std::make_shared<creatures::NiceMockLogger>()) {}
 
-    DifferentialHead makeHead() {
-        return DifferentialHead(logger, HEAD_OFFSET_MAX_PERCENT, POS_MIN, POS_MAX);
-    }
+    DifferentialHead makeHead() { return DifferentialHead(logger, HEAD_OFFSET_MAX_PERCENT, POS_MIN, POS_MAX); }
 
     // Mirrors Creature::convertInputValueToServoValue for full-pipeline tests
     static u16 convertInputValueToServoValue(u8 inputValue) {
@@ -125,11 +123,11 @@ TEST_F(DifferentialHeadTest, CalculateHeadPosition_NegativeOffset) {
 TEST_F(DifferentialHeadTest, FullPipeline_BothZero) {
     auto head = makeHead();
 
-    u16 servoHeight = convertInputValueToServoValue(0);   // 0
-    u16 servoTilt = convertInputValueToServoValue(0);     // 0
+    u16 servoHeight = convertInputValueToServoValue(0); // 0
+    u16 servoTilt = convertInputValueToServoValue(0);   // 0
 
-    u16 headHeight = head.convertToHeadHeight(servoHeight);   // 204
-    int32_t headTilt = head.convertToHeadTilt(servoTilt);     // -203
+    u16 headHeight = head.convertToHeadHeight(servoHeight); // 204
+    int32_t headTilt = head.convertToHeadTilt(servoTilt);   // -203
 
     auto pos = head.calculateHeadPosition(headHeight, headTilt);
     // left = 204 - (-203) = 407
@@ -141,11 +139,11 @@ TEST_F(DifferentialHeadTest, FullPipeline_BothZero) {
 TEST_F(DifferentialHeadTest, FullPipeline_BothMax) {
     auto head = makeHead();
 
-    u16 servoHeight = convertInputValueToServoValue(255);  // 1023
-    u16 servoTilt = convertInputValueToServoValue(255);    // 1023
+    u16 servoHeight = convertInputValueToServoValue(255); // 1023
+    u16 servoTilt = convertInputValueToServoValue(255);   // 1023
 
-    u16 headHeight = head.convertToHeadHeight(servoHeight);    // 819
-    int32_t headTilt = head.convertToHeadTilt(servoTilt);      // 204
+    u16 headHeight = head.convertToHeadHeight(servoHeight); // 819
+    int32_t headTilt = head.convertToHeadTilt(servoTilt);   // 204
 
     auto pos = head.calculateHeadPosition(headHeight, headTilt);
     // left = 819 - 204 = 615
@@ -157,11 +155,11 @@ TEST_F(DifferentialHeadTest, FullPipeline_BothMax) {
 TEST_F(DifferentialHeadTest, FullPipeline_MidHeight_NoTilt) {
     auto head = makeHead();
 
-    u16 servoHeight = convertInputValueToServoValue(128);  // 514
-    u16 servoTilt = convertInputValueToServoValue(0);      // 0
+    u16 servoHeight = convertInputValueToServoValue(128); // 514
+    u16 servoTilt = convertInputValueToServoValue(0);     // 0
 
     u16 headHeight = head.convertToHeadHeight(servoHeight);
-    int32_t headTilt = head.convertToHeadTilt(servoTilt);  // -203
+    int32_t headTilt = head.convertToHeadTilt(servoTilt); // -203
 
     auto pos = head.calculateHeadPosition(headHeight, headTilt);
     // headHeight = convertRange(514, 0, 1023, 204, 819) = (514*615)/1023 + 204 = 309 + 204 = 513

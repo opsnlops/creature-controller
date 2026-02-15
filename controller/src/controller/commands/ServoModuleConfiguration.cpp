@@ -58,12 +58,12 @@ Result<bool> ServoModuleConfiguration::addServoConfig(const ServoConfig &servoCo
     // Check for duplicate output positions (compared by module, pin, AND motor type)
     for (const auto &existingConfig : servoConfigurations) {
         if (existingConfig.getOutputLocation() == servoConfig.getOutputLocation()) {
-            const auto errorMessage = fmt::format("Duplicate output position (pin {}, type {}): servo "
-                                                  "configurations must be unique",
-                                                  servoConfig.getOutputHeader(),
-                                                  servoConfig.getOutputLocation().type ==
-                                                      creatures::creature::motor_type::dynamixel
-                                                      ? "dynamixel" : "servo");
+            const auto errorMessage = fmt::format(
+                "Duplicate output position (pin {}, type {}): servo "
+                "configurations must be unique",
+                servoConfig.getOutputHeader(),
+                servoConfig.getOutputLocation().type == creatures::creature::motor_type::dynamixel ? "dynamixel"
+                                                                                                   : "servo");
             logger->error(errorMessage);
             return Result<bool>{ControllerError(ControllerError::InvalidConfiguration, errorMessage)};
         }

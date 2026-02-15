@@ -37,11 +37,7 @@ class Creature {
     // friend class CreatureBuilder;
 
     // Valid creature types
-    enum class creature_type {
-        parrot,
-        crow,
-        invalid_creature
-    };
+    enum class creature_type { parrot, crow, invalid_creature };
 
     // Motor type is defined in creature/MotorType.h to avoid circular includes
     using motor_type = creatures::creature::motor_type;
