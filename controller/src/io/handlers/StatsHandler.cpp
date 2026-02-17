@@ -94,6 +94,19 @@ void StatsHandler::handle(std::shared_ptr<Logger> logger, const std::vector<std:
             statsMessage.boardTemperature = stringToDouble(value);
         }
 
+        // Dynamixel bus metrics
+        else if (name == STATS_DXL_TX) {
+            statsMessage.dxlTxPackets = stringToU64(value);
+        } else if (name == STATS_DXL_RX) {
+            statsMessage.dxlRxPackets = stringToU64(value);
+        } else if (name == STATS_DXL_ERR) {
+            statsMessage.dxlErrors = stringToU64(value);
+        } else if (name == STATS_DXL_CRC) {
+            statsMessage.dxlCrcErrors = stringToU64(value);
+        } else if (name == STATS_DXL_TO) {
+            statsMessage.dxlTimeouts = stringToU64(value);
+        }
+
         else {
             logger->warn("unknown token in {} message: {}", STATS_MESSAGE, token);
         }

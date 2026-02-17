@@ -16,7 +16,7 @@
  * DSENSE message format from firmware:
  *   DSENSE\tD1 45 128 7400\tD2 43 -50 7350
  *
- * Each token after DSENSE: D<id> <temperature_C> <present_load> <voltage_mV>
+ * Each token after DSENSE: D<id> <temperature_F> <present_load> <voltage_mV>
  */
 
 namespace creatures {
@@ -57,7 +57,7 @@ void DynamixelSensorHandler::handle(std::shared_ptr<Logger> handleLogger, const 
         }
 
         u32 motorId = stringToU32(idStr.substr(1));
-        u32 temperature = stringToU32(split[1]);
+        double temperatureF = stringToDouble(split[1]);
         // present_load can be negative, parse as signed via stringToU32 and cast
         int32_t presentLoad = static_cast<int32_t>(stringToU32(split[2]));
         u32 voltageMv = stringToU32(split[3]);
@@ -65,13 +65,13 @@ void DynamixelSensorHandler::handle(std::shared_ptr<Logger> handleLogger, const 
         double voltageV = static_cast<double>(voltageMv) / 1000.0;
 
         json motorInfo = {
-            {"dxl_id", motorId},       {"temperature_c", temperature}, {"present_load", presentLoad},
+            {"dxl_id", motorId},       {"temperature_f", temperatureF}, {"present_load", presentLoad},
             {"voltage_mv", voltageMv}, {"voltage_v", voltageV},
         };
 
         payloadJson["dynamixel_motors"].push_back(motorInfo);
 
-        handleLogger->info("Dynamixel {} temp: {}C, load: {}, voltage: {:.2f}V", motorId, temperature, presentLoad,
+        handleLogger->info("Dynamixel {} temp: {:.1f}F, load: {}, voltage: {:.2f}V", motorId, temperatureF, presentLoad,
                            voltageV);
     }
 

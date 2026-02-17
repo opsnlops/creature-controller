@@ -25,15 +25,23 @@ StatsMessage::StatsMessage() {
     pwmWraps = 0UL;
 
     boardTemperature = 0.0;
+
+    dxlTxPackets = 0UL;
+    dxlRxPackets = 0UL;
+    dxlErrors = 0UL;
+    dxlCrcErrors = 0UL;
+    dxlTimeouts = 0UL;
 }
 
 std::string StatsMessage::toString() const {
     return fmt::format("heap: {}, usb_chars: {}, usb_mesg_rec: {}, usb_mesg_sent: {}, "
                        "uart_chars: {}, uart_mesg_rec: {}, uart_mesg_sent: {}, mp_recv: {}, mp_sent: {}, "
-                       "parse_suc: {}, parse_fail: {}, cksum_fail: {}, pos_proc: {}, pwm_wraps: {}, temp: {:.2f}",
+                       "parse_suc: {}, parse_fail: {}, cksum_fail: {}, pos_proc: {}, pwm_wraps: {}, temp: {:.2f}, "
+                       "dxl_tx: {}, dxl_rx: {}, dxl_err: {}, dxl_crc: {}, dxl_to: {}",
                        freeHeap, uSBCharactersReceived, uSBMessagesReceived, uSBMessagesSent, uARTCharactersReceived,
                        uARTMessagesReceived, uARTMessagesSent, mPMessagesReceived, mPMessagesSent, parseSuccesses,
-                       parseFailures, checksumFailures, positionMessagesProcessed, pwmWraps, boardTemperature);
+                       parseFailures, checksumFailures, positionMessagesProcessed, pwmWraps, boardTemperature,
+                       dxlTxPackets, dxlRxPackets, dxlErrors, dxlCrcErrors, dxlTimeouts);
 }
 
 } // namespace creatures

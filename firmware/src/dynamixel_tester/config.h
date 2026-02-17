@@ -7,7 +7,7 @@
  */
 
 // Dynamixel data line - any GPIO works with PIO
-#define DXL_DATA_PIN 15
+#define DXL_DATA_PIN 22
 
 // Which PIO instance to use (pio0 has all 4 SMs free)
 #define DXL_PIO_INSTANCE pio0

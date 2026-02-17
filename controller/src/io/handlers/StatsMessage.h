@@ -39,6 +39,13 @@
 // Board sensors
 #define STATS_BOARD_TEMPERATURE "TEMP"
 
+// Dynamixel bus metrics
+#define STATS_DXL_TX "DXL_TX"
+#define STATS_DXL_RX "DXL_RX"
+#define STATS_DXL_ERR "DXL_ERR"
+#define STATS_DXL_CRC "DXL_CRC"
+#define STATS_DXL_TO "DXL_TO"
+
 namespace creatures {
 
 class StatsMessage {
@@ -68,6 +75,13 @@ class StatsMessage {
     u64 pwmWraps;
 
     double boardTemperature;
+
+    // Dynamixel bus metrics
+    u64 dxlTxPackets;
+    u64 dxlRxPackets;
+    u64 dxlErrors;
+    u64 dxlCrcErrors;
+    u64 dxlTimeouts;
 };
 
 } // namespace creatures

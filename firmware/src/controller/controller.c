@@ -750,8 +750,11 @@ portTASK_FUNCTION(dynamixel_controller_task, pvParameters) {
                             // Convert voltage from Dynamixel units (0.1V) to mV
                             u32 voltage_mv = (u32)sync_results[i].status.present_voltage * 100;
 
-                            offset += snprintf(dsense_msg + offset, sizeof(dsense_msg) - offset, "\tD%u %u %d %lu",
-                                               sync_results[i].id, sync_results[i].status.present_temperature,
+                            // Convert temperature from Celsius to Fahrenheit
+                            double temp_f = (double)sync_results[i].status.present_temperature * 9.0 / 5.0 + 32.0;
+
+                            offset += snprintf(dsense_msg + offset, sizeof(dsense_msg) - offset, "\tD%u %.1f %d %lu",
+                                               sync_results[i].id, temp_f,
                                                sync_results[i].status.present_load, (unsigned long)voltage_mv);
 
                             // Check for hardware errors

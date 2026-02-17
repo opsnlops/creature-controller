@@ -1,6 +1,4 @@
 
-#include <cmath>
-
 #include "controller-config.h"
 
 #include "config/UARTDevice.h"
@@ -46,12 +44,7 @@ void Creature::shutdown() {
 
 u16 Creature::convertInputValueToServoValue(u8 inputValue) {
 
-    // TODO: Play with the results if we do bit shifts instead (8 -> 10)
-
-    u16 servoRange = MAX_POSITION - MIN_POSITION;
-
-    double movementPercentage = (double)inputValue / (double)UCHAR_MAX;
-    auto servoValue = (u16)(round((double)servoRange * movementPercentage) + MIN_POSITION);
+    u16 servoValue = (u16)((u32)inputValue * (MAX_POSITION - MIN_POSITION) / UCHAR_MAX) + MIN_POSITION;
 
     logger->trace("mapped {} -> {}", inputValue, servoValue);
 
