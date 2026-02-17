@@ -71,8 +71,11 @@ void message_processor_start() {
 bool send_to_controller(const char *message) {
 
     if (strlen(message) > OUTGOING_MESSAGE_MAX_LENGTH) {
-        error("not sending messaging %s because it's %u long and the max length is %u", message, strlen(message),
-              OUTGOING_MESSAGE_MAX_LENGTH);
+        // Log directly to stdio to avoid re-entering send_to_controller() via the
+        // logging hook, which would create an infinite error cascade since the
+        // LOG-wrapped error message would also exceed the max length.
+        printf("[E] not sending message (%u bytes, max %u)\n",
+               (unsigned)strlen(message), (unsigned)OUTGOING_MESSAGE_MAX_LENGTH);
         return false;
     }
 

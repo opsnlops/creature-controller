@@ -38,7 +38,7 @@ bool handleEmergencyStopMessage(const void *msg);
 #endif
 
 #ifndef OUTGOING_MESSAGE_MAX_LENGTH
-#define OUTGOING_MESSAGE_MAX_LENGTH 255
+#define OUTGOING_MESSAGE_MAX_LENGTH 384
 #endif
 
 #ifndef INCOMING_MESSAGE_MAX_LENGTH
