@@ -22,5 +22,11 @@
   "powerDrawResponseSeconds": 5.0,
   "temperatureLimitDegrees": 200.0,
   "temperatureWarningDegrees": 180.0,
-  "temperatureLimitSeconds": 10.0
+  "temperatureLimitSeconds": 10.0,
+  "dynamixelTemperatureLimitDegrees": 150.0,
+  "dynamixelTemperatureWarningDegrees": 140.0,
+  "dynamixelTemperatureLimitSeconds": 10.0,
+  "dynamixelLoadLimitPercent": 95.0,
+  "dynamixelLoadWarningPercent": 80.0,
+  "dynamixelLoadLimitSeconds": 5.0
 }

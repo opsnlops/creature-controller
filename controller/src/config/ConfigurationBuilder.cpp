@@ -32,6 +32,12 @@ ConfigurationBuilder::ConfigurationBuilder(std::shared_ptr<Logger> logger, std::
         "temperatureLimitDegrees",
         "temperatureWarningDegrees",
         "temperatureLimitSeconds",
+        "dynamixelTemperatureLimitDegrees",
+        "dynamixelTemperatureWarningDegrees",
+        "dynamixelTemperatureLimitSeconds",
+        "dynamixelLoadLimitPercent",
+        "dynamixelLoadWarningPercent",
+        "dynamixelLoadLimitSeconds",
     };
 
     requiredUARTFields = {
@@ -122,6 +128,12 @@ Result<std::shared_ptr<creatures::config::Configuration>> ConfigurationBuilder::
     config->setTemperatureLimitDegrees(j["temperatureLimitDegrees"]);
     config->setTemperatureWarningDegrees(j["temperatureWarningDegrees"]);
     config->setTemperatureLimitSeconds(j["temperatureLimitSeconds"]);
+    config->setDynamixelTemperatureLimitDegrees(j["dynamixelTemperatureLimitDegrees"]);
+    config->setDynamixelTemperatureWarningDegrees(j["dynamixelTemperatureWarningDegrees"]);
+    config->setDynamixelTemperatureLimitSeconds(j["dynamixelTemperatureLimitSeconds"]);
+    config->setDynamixelLoadLimitPercent(j["dynamixelLoadLimitPercent"]);
+    config->setDynamixelLoadWarningPercent(j["dynamixelLoadWarningPercent"]);
+    config->setDynamixelLoadLimitSeconds(j["dynamixelLoadLimitSeconds"]);
 
     // Log that we've gotten this far
     logger->info("successfully parsed the main config file! useGPIO: {}, "

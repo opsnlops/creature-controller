@@ -36,13 +36,21 @@ class WatchdogThread : public StoppableThread {
     // State tracking for exceeded thresholds
     std::chrono::steady_clock::time_point powerLimitExceededTime;
     std::chrono::steady_clock::time_point temperatureLimitExceededTime;
+    std::chrono::steady_clock::time_point dynamixelTemperatureLimitExceededTime;
+    std::chrono::steady_clock::time_point dynamixelLoadLimitExceededTime;
     bool powerLimitCurrentlyExceeded = false;
     bool temperatureLimitCurrentlyExceeded = false;
+    bool dynamixelTemperatureLimitCurrentlyExceeded = false;
+    bool dynamixelLoadLimitCurrentlyExceeded = false;
     bool powerWarningLogged = false;
     bool temperatureWarningLogged = false;
+    bool dynamixelTemperatureWarningLogged = false;
+    bool dynamixelLoadWarningLogged = false;
 
     void checkPowerDraw();
     void checkTemperature();
+    void checkDynamixelTemperature();
+    void checkDynamixelLoad();
     void sendWarningToServer(const std::string &warningType, double currentValue, double threshold);
     void triggerEmergencyStop(const std::string &reason);
 };

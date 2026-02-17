@@ -140,6 +140,18 @@ double Configuration::getTemperatureWarningDegrees() const { return temperatureW
  */
 double Configuration::getTemperatureLimitSeconds() const { return temperatureLimitSeconds; }
 
+double Configuration::getDynamixelTemperatureLimitDegrees() const { return dynamixelTemperatureLimitDegrees; }
+
+double Configuration::getDynamixelTemperatureWarningDegrees() const { return dynamixelTemperatureWarningDegrees; }
+
+double Configuration::getDynamixelTemperatureLimitSeconds() const { return dynamixelTemperatureLimitSeconds; }
+
+double Configuration::getDynamixelLoadLimitPercent() const { return dynamixelLoadLimitPercent; }
+
+double Configuration::getDynamixelLoadWarningPercent() const { return dynamixelLoadWarningPercent; }
+
+double Configuration::getDynamixelLoadLimitSeconds() const { return dynamixelLoadLimitSeconds; }
+
 //----------------------------------------------------------------------------
 // Setter Methods
 //----------------------------------------------------------------------------
@@ -292,6 +304,36 @@ void Configuration::setTemperatureWarningDegrees(double _temperatureWarningDegre
 void Configuration::setTemperatureLimitSeconds(double _temperatureLimitSeconds) {
     this->temperatureLimitSeconds = _temperatureLimitSeconds;
     logger->debug("Set temperature limit response time to {} seconds", this->temperatureLimitSeconds);
+}
+
+void Configuration::setDynamixelTemperatureLimitDegrees(double _dynamixelTemperatureLimitDegrees) {
+    this->dynamixelTemperatureLimitDegrees = _dynamixelTemperatureLimitDegrees;
+    logger->debug("Set Dynamixel temperature limit to {} degrees", this->dynamixelTemperatureLimitDegrees);
+}
+
+void Configuration::setDynamixelTemperatureWarningDegrees(double _dynamixelTemperatureWarningDegrees) {
+    this->dynamixelTemperatureWarningDegrees = _dynamixelTemperatureWarningDegrees;
+    logger->debug("Set Dynamixel temperature warning to {} degrees", this->dynamixelTemperatureWarningDegrees);
+}
+
+void Configuration::setDynamixelTemperatureLimitSeconds(double _dynamixelTemperatureLimitSeconds) {
+    this->dynamixelTemperatureLimitSeconds = _dynamixelTemperatureLimitSeconds;
+    logger->debug("Set Dynamixel temperature limit response time to {} seconds", this->dynamixelTemperatureLimitSeconds);
+}
+
+void Configuration::setDynamixelLoadLimitPercent(double _dynamixelLoadLimitPercent) {
+    this->dynamixelLoadLimitPercent = _dynamixelLoadLimitPercent;
+    logger->debug("Set Dynamixel load limit to {}%", this->dynamixelLoadLimitPercent);
+}
+
+void Configuration::setDynamixelLoadWarningPercent(double _dynamixelLoadWarningPercent) {
+    this->dynamixelLoadWarningPercent = _dynamixelLoadWarningPercent;
+    logger->debug("Set Dynamixel load warning to {}%", this->dynamixelLoadWarningPercent);
+}
+
+void Configuration::setDynamixelLoadLimitSeconds(double _dynamixelLoadLimitSeconds) {
+    this->dynamixelLoadLimitSeconds = _dynamixelLoadLimitSeconds;
+    logger->debug("Set Dynamixel load limit response time to {} seconds", this->dynamixelLoadLimitSeconds);
 }
 
 void Configuration::resolveNetworkInterfaceDetails() {

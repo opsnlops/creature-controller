@@ -28,10 +28,18 @@ void WatchdogThread::run() {
     logger->info("Configuration: TempLimit={:.2f}F, TempWarning={:.2f}F, TempResponse={:.2f}s",
                  config->getTemperatureLimitDegrees(), config->getTemperatureWarningDegrees(),
                  config->getTemperatureLimitSeconds());
+    logger->info("Configuration: DxlTempLimit={:.2f}F, DxlTempWarning={:.2f}F, DxlTempResponse={:.2f}s",
+                 config->getDynamixelTemperatureLimitDegrees(), config->getDynamixelTemperatureWarningDegrees(),
+                 config->getDynamixelTemperatureLimitSeconds());
+    logger->info("Configuration: DxlLoadLimit={:.2f}%, DxlLoadWarning={:.2f}%, DxlLoadResponse={:.2f}s",
+                 config->getDynamixelLoadLimitPercent(), config->getDynamixelLoadWarningPercent(),
+                 config->getDynamixelLoadLimitSeconds());
 
     while (!stop_requested.load()) {
         checkPowerDraw();
         checkTemperature();
+        checkDynamixelTemperature();
+        checkDynamixelLoad();
 
         // Sleep for 100ms before next check
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -124,6 +132,92 @@ void WatchdogThread::checkTemperature() {
         temperatureWarningLogged = true;
     } else if (currentTemp < tempWarning && temperatureWarningLogged) {
         temperatureWarningLogged = false;
+    }
+}
+
+void WatchdogThread::checkDynamixelTemperature() {
+    double currentTemp = WatchdogGlobals::getDynamixelTemperature();
+    double tempLimit = config->getDynamixelTemperatureLimitDegrees();
+    double tempWarning = config->getDynamixelTemperatureWarningDegrees();
+    double responseTimeSeconds = config->getDynamixelTemperatureLimitSeconds();
+
+    auto now = std::chrono::steady_clock::now();
+
+    if (currentTemp >= tempLimit) {
+        if (!dynamixelTemperatureLimitCurrentlyExceeded) {
+            dynamixelTemperatureLimitCurrentlyExceeded = true;
+            dynamixelTemperatureLimitExceededTime = now;
+            logger->warn("Dynamixel temperature limit exceeded: {:.2f}F >= {:.2f}F limit", currentTemp, tempLimit);
+            logger->warn("Emergency stop will trigger in {:.2f} seconds if Dynamixel temperature remains high",
+                         responseTimeSeconds);
+        } else {
+            auto timeOverLimit =
+                std::chrono::duration_cast<std::chrono::seconds>(now - dynamixelTemperatureLimitExceededTime).count();
+            logger->warn("Dynamixel temperature still over limit: {:.2f}F, time over limit: {}s/{:.2f}s", currentTemp,
+                         timeOverLimit, responseTimeSeconds);
+            if (timeOverLimit >= responseTimeSeconds) {
+                triggerEmergencyStop("Dynamixel temperature limit exceeded for too long");
+                return;
+            }
+        }
+    } else {
+        if (dynamixelTemperatureLimitCurrentlyExceeded) {
+            logger->info("Dynamixel temperature returned to safe levels: {:.2f}F", currentTemp);
+            dynamixelTemperatureLimitCurrentlyExceeded = false;
+            dynamixelTemperatureWarningLogged = false;
+        }
+    }
+
+    if (currentTemp >= tempWarning && !dynamixelTemperatureWarningLogged) {
+        logger->warn("Dynamixel temperature warning: {:.2f}F >= {:.2f}F warning threshold", currentTemp, tempWarning);
+        sendWarningToServer("dynamixel_temperature_warning", currentTemp, tempWarning);
+        dynamixelTemperatureWarningLogged = true;
+    } else if (currentTemp < tempWarning && dynamixelTemperatureWarningLogged) {
+        dynamixelTemperatureWarningLogged = false;
+    }
+}
+
+void WatchdogThread::checkDynamixelLoad() {
+    double currentLoad = WatchdogGlobals::getDynamixelLoad();
+    // Convert from 0.1% units to percent (1000 = 100%)
+    double currentLoadPercent = currentLoad / 10.0;
+    double loadLimit = config->getDynamixelLoadLimitPercent();
+    double loadWarning = config->getDynamixelLoadWarningPercent();
+    double responseTimeSeconds = config->getDynamixelLoadLimitSeconds();
+
+    auto now = std::chrono::steady_clock::now();
+
+    if (currentLoadPercent >= loadLimit) {
+        if (!dynamixelLoadLimitCurrentlyExceeded) {
+            dynamixelLoadLimitCurrentlyExceeded = true;
+            dynamixelLoadLimitExceededTime = now;
+            logger->warn("Dynamixel load limit exceeded: {:.1f}% >= {:.1f}% limit", currentLoadPercent, loadLimit);
+            logger->warn("Emergency stop will trigger in {:.2f} seconds if Dynamixel load remains high",
+                         responseTimeSeconds);
+        } else {
+            auto timeOverLimit =
+                std::chrono::duration_cast<std::chrono::seconds>(now - dynamixelLoadLimitExceededTime).count();
+            logger->warn("Dynamixel load still over limit: {:.1f}%, time over limit: {}s/{:.2f}s", currentLoadPercent,
+                         timeOverLimit, responseTimeSeconds);
+            if (timeOverLimit >= responseTimeSeconds) {
+                triggerEmergencyStop("Dynamixel load limit exceeded for too long");
+                return;
+            }
+        }
+    } else {
+        if (dynamixelLoadLimitCurrentlyExceeded) {
+            logger->info("Dynamixel load returned to safe levels: {:.1f}%", currentLoadPercent);
+            dynamixelLoadLimitCurrentlyExceeded = false;
+            dynamixelLoadWarningLogged = false;
+        }
+    }
+
+    if (currentLoadPercent >= loadWarning && !dynamixelLoadWarningLogged) {
+        logger->warn("Dynamixel load warning: {:.1f}% >= {:.1f}% warning threshold", currentLoadPercent, loadWarning);
+        sendWarningToServer("dynamixel_load_warning", currentLoadPercent, loadWarning);
+        dynamixelLoadWarningLogged = true;
+    } else if (currentLoadPercent < loadWarning && dynamixelLoadWarningLogged) {
+        dynamixelLoadWarningLogged = false;
     }
 }
 

@@ -60,3 +60,33 @@ TEST_F(ConfigurationTest, AddAndGetUARTDevices) {
     auto devices = config->getUARTDevices();
     ASSERT_EQ(devices.size(), 2);
 }
+
+TEST_F(ConfigurationTest, SetAndGetDynamixelTemperatureLimitDegrees) {
+    config->setDynamixelTemperatureLimitDegrees(150.0);
+    ASSERT_DOUBLE_EQ(config->getDynamixelTemperatureLimitDegrees(), 150.0);
+}
+
+TEST_F(ConfigurationTest, SetAndGetDynamixelTemperatureWarningDegrees) {
+    config->setDynamixelTemperatureWarningDegrees(140.0);
+    ASSERT_DOUBLE_EQ(config->getDynamixelTemperatureWarningDegrees(), 140.0);
+}
+
+TEST_F(ConfigurationTest, SetAndGetDynamixelTemperatureLimitSeconds) {
+    config->setDynamixelTemperatureLimitSeconds(10.0);
+    ASSERT_DOUBLE_EQ(config->getDynamixelTemperatureLimitSeconds(), 10.0);
+}
+
+TEST_F(ConfigurationTest, SetAndGetDynamixelLoadLimitPercent) {
+    config->setDynamixelLoadLimitPercent(95.0);
+    ASSERT_DOUBLE_EQ(config->getDynamixelLoadLimitPercent(), 95.0);
+}
+
+TEST_F(ConfigurationTest, SetAndGetDynamixelLoadWarningPercent) {
+    config->setDynamixelLoadWarningPercent(80.0);
+    ASSERT_DOUBLE_EQ(config->getDynamixelLoadWarningPercent(), 80.0);
+}
+
+TEST_F(ConfigurationTest, SetAndGetDynamixelLoadLimitSeconds) {
+    config->setDynamixelLoadLimitSeconds(5.0);
+    ASSERT_DOUBLE_EQ(config->getDynamixelLoadLimitSeconds(), 5.0);
+}

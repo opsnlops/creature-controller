@@ -50,6 +50,12 @@ class Configuration {
     [[nodiscard]] double getTemperatureLimitDegrees() const;
     [[nodiscard]] double getTemperatureWarningDegrees() const;
     [[nodiscard]] double getTemperatureLimitSeconds() const;
+    [[nodiscard]] double getDynamixelTemperatureLimitDegrees() const;
+    [[nodiscard]] double getDynamixelTemperatureWarningDegrees() const;
+    [[nodiscard]] double getDynamixelTemperatureLimitSeconds() const;
+    [[nodiscard]] double getDynamixelLoadLimitPercent() const;
+    [[nodiscard]] double getDynamixelLoadWarningPercent() const;
+    [[nodiscard]] double getDynamixelLoadLimitSeconds() const;
 
     void setUseGPIO(bool _useGPIO);
     void setUseAudioSubsystem(bool _useAudioSubsystem);
@@ -71,6 +77,12 @@ class Configuration {
     void setTemperatureLimitDegrees(double _temperatureLimitDegrees);
     void setTemperatureWarningDegrees(double _temperatureWarningDegrees);
     void setTemperatureLimitSeconds(double _temperatureLimitSeconds);
+    void setDynamixelTemperatureLimitDegrees(double _dynamixelTemperatureLimitDegrees);
+    void setDynamixelTemperatureWarningDegrees(double _dynamixelTemperatureWarningDegrees);
+    void setDynamixelTemperatureLimitSeconds(double _dynamixelTemperatureLimitSeconds);
+    void setDynamixelLoadLimitPercent(double _dynamixelLoadLimitPercent);
+    void setDynamixelLoadWarningPercent(double _dynamixelLoadWarningPercent);
+    void setDynamixelLoadLimitSeconds(double _dynamixelLoadLimitSeconds);
 
   private:
     /**
@@ -118,6 +130,14 @@ class Configuration {
     double temperatureLimitDegrees = 0.0;
     double temperatureWarningDegrees = 0.0;
     double temperatureLimitSeconds = 0.0;
+
+    // Dynamixel watchdog configuration
+    double dynamixelTemperatureLimitDegrees = 0.0;
+    double dynamixelTemperatureWarningDegrees = 0.0;
+    double dynamixelTemperatureLimitSeconds = 0.0;
+    double dynamixelLoadLimitPercent = 0.0;
+    double dynamixelLoadWarningPercent = 0.0;
+    double dynamixelLoadLimitSeconds = 0.0;
 };
 
 } // namespace creatures::config

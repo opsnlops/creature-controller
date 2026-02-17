@@ -1,5 +1,6 @@
 
 
+#include <cmath>
 #include <string>
 #include <vector>
 
@@ -11,6 +12,7 @@
 #include "server/ServerMessage.h"
 #include "util/MessageQueue.h"
 #include "util/string_utils.h"
+#include "watchdog/WatchdogGlobals.h"
 
 /*
  * DSENSE message format from firmware:
@@ -38,6 +40,8 @@ void DynamixelSensorHandler::handle(std::shared_ptr<Logger> handleLogger, const 
     }
 
     json payloadJson;
+    double maxTemp = 0.0;
+    double maxAbsLoad = 0.0;
 
     // Process each motor token (skip token[0] which is "DSENSE")
     for (size_t i = 1; i < tokens.size(); i++) {
@@ -64,6 +68,15 @@ void DynamixelSensorHandler::handle(std::shared_ptr<Logger> handleLogger, const 
 
         double voltageV = static_cast<double>(voltageMv) / 1000.0;
 
+        // Track max values for watchdog monitoring
+        if (temperatureF > maxTemp) {
+            maxTemp = temperatureF;
+        }
+        double absLoad = std::abs(static_cast<double>(presentLoad));
+        if (absLoad > maxAbsLoad) {
+            maxAbsLoad = absLoad;
+        }
+
         json motorInfo = {
             {"dxl_id", motorId},       {"temperature_f", temperatureF}, {"present_load", presentLoad},
             {"voltage_mv", voltageMv}, {"voltage_v", voltageV},
@@ -74,6 +87,10 @@ void DynamixelSensorHandler::handle(std::shared_ptr<Logger> handleLogger, const 
         handleLogger->info("Dynamixel {} temp: {:.1f}F, load: {}, voltage: {:.2f}V", motorId, temperatureF, presentLoad,
                            voltageV);
     }
+
+    // Update watchdog globals with max values across all Dynamixel servos
+    creatures::watchdog::WatchdogGlobals::updateDynamixelTemperature(maxTemp);
+    creatures::watchdog::WatchdogGlobals::updateDynamixelLoad(maxAbsLoad);
 
     // Send to websocket
     auto message = creatures::server::DynamixelSensorReportMessage(logger, payloadJson);
