@@ -192,7 +192,7 @@ void i2c_sensor_read_timer_callback(TimerHandle_t xTimer) {
 
     pac1954_refresh(I2C_BOARD_PAC1954);
 
-#if USE_EEPROM && defined(CC_VER3)
+#if USE_POWER_HOURS && defined(CC_VER3)
     // Feed the freshly-read motor-power-rail voltage to the odometer so it can
     // tally motor-powered time. This is pure arithmetic - no bus access - so
     // it is safe to do here in the sensor callback.

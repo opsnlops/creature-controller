@@ -86,7 +86,7 @@ void statsReportTimerCallback(TimerHandle_t xTimer) {
         (unsigned long)incoming_messages_dropped, (unsigned long)position_messages_processed,
         (unsigned long)number_of_pwm_wraps, board_temperature);
 
-#if USE_EEPROM
+#if USE_POWER_HOURS
     // Append the lifetime power-on hours odometer (uptime and motor-powered)
     {
         size_t hours_len = strlen(message);

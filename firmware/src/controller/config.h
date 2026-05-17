@@ -45,6 +45,17 @@
  * These values are hardware-version independent, so they live here outside the
  * CC_VERx guards. That also lets the host unit tests pull them in directly.
  */
+
+// Master enable for the power-on hours odometer. OFF by default: on current
+// CC_VER3 boards the 24FC256 WP pin is tied to 3V3 (active-high write-protect),
+// so the EEPROM array is read-only at runtime - the 15-minute persist writes
+// are silently inhibited and UP_HRS/MTR_HRS reset to 0 on every boot. Enable
+// this only on a board revision where WP is GPIO-controlled (or tied low).
+// The pure record logic still builds and is unit-tested regardless of this
+// switch; this only gates the runtime feature (boot restore, persist timer,
+// motor sampling, and the UP_HRS/MTR_HRS STATS fields).
+#define USE_POWER_HOURS 0
+
 #define EEPROM_TOTAL_SIZE 32768      // 24C256-class part: 32 KB
 #define EEPROM_HOURS_REGION_SIZE 256 // Bytes reserved at the top
 #define EEPROM_HOURS_REGION_ADDR (EEPROM_TOTAL_SIZE - EEPROM_HOURS_REGION_SIZE)
