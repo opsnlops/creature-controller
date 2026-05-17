@@ -199,6 +199,7 @@ void initialize_eeprom(void) {
     bi_decl(bi_2pins_with_func(EEPROM_SDA_PIN, EEPROM_SCL_PIN, GPIO_FUNC_I2C))
     eeprom_setup_i2c();
     read_eeprom_and_configure();
+    eeprom_hours_init();
     usb_descriptors_init();
 #else
     // Mark the build as not having EEPROM enabled
@@ -354,6 +355,12 @@ static bool initialize_status_and_monitoring(void) {
     // Fire up the stats reporter
     start_stats_reporter();
     debug("Stats reporter started");
+
+#if USE_EEPROM
+    // Start the power-on hours odometer's periodic persist timer
+    eeprom_hours_start();
+    debug("Power-on hours odometer started");
+#endif
 
 #if USE_SENSORS
     bi_decl(bi_2pins_with_func(SENSORS_I2C_SDA_PIN, SENSORS_I2C_SCL_PIN, GPIO_FUNC_I2C))

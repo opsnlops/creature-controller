@@ -6,25 +6,33 @@ set(FREERTOS_PORT "TEMPLATE" CACHE STRING "" FORCE)
 # New in SDK 2.1.1, use the fastest supported clock
 set(PICO_USE_FASTEST_SUPPORTED_CLOCK 1)
 
-# Which version our code is written for
+# Which hardware version(s) our code is built for.
+#
+# By default we build every supported version (2, 3, 4) in a single
+# configuration. Set HARDWARE_VERSION (as a CMake -D or an environment
+# variable) to narrow the build to a single version - this keeps every
+# existing workflow and CLion profile working unchanged.
+#
+# The CC_VERx defines are intentionally NOT set globally here. They are applied
+# per-target in create_firmware() so that multiple versions can coexist in one
+# CMake configuration.
 if (NOT DEFINED HARDWARE_VERSION AND DEFINED ENV{HARDWARE_VERSION})
     set(HARDWARE_VERSION $ENV{HARDWARE_VERSION})
 endif()
 
-if (HARDWARE_VERSION STREQUAL "2")
-    message("HARDWARE_VERSION is set to ${HARDWARE_VERSION}, setting CC_VER2=1")
-    add_compile_definitions(CC_VER2=1)
-elseif (HARDWARE_VERSION STREQUAL "4")
-    message("HARDWARE_VERSION is set to 4, setting CC_VER4=1 and CC_VER3=1")
-    add_compile_definitions(CC_VER4=1 CC_VER3=1)
-elseif (HARDWARE_VERSION STREQUAL "3")
-    message("HARDWARE_VERSION is set to 3, setting CC_VER3=1")
-    add_compile_definitions(CC_VER3=1)
+if (DEFINED HARDWARE_VERSION)
+    set(HARDWARE_VERSIONS ${HARDWARE_VERSION})
+    message("HARDWARE_VERSION is set to ${HARDWARE_VERSION}; building only that version")
 else()
-    message("HARDWARE_VERSION not set, defaulting to 4")
-    set(HARDWARE_VERSION 4)
-    add_compile_definitions(CC_VER4=1 CC_VER3=1)
+    set(HARDWARE_VERSIONS 2 3 4)
+    message("HARDWARE_VERSION not set; building all supported versions: ${HARDWARE_VERSIONS}")
 endif()
+
+foreach(_hw_version IN LISTS HARDWARE_VERSIONS)
+    if (NOT _hw_version MATCHES "^[234]$")
+        message(FATAL_ERROR "Unsupported HARDWARE_VERSION '${_hw_version}' (expected 2, 3, or 4)")
+    endif()
+endforeach()
 
 
 
@@ -63,7 +71,7 @@ endif()
 message("Building for platform ${PICO_PLATFORM}")
 
 project(creature-firmware
-        VERSION "4.0.0"
+        VERSION "4.1.0"
         DESCRIPTION "Pi Pico Firmwares for April's Creatures"
         HOMEPAGE_URL https://github.com/opsnlops/creature-controller/firmware
         LANGUAGES C CXX ASM)
@@ -123,6 +131,8 @@ set(COMMON_SOURCES
         src/device/colors.c
         src/device/eeprom.h
         src/device/eeprom.c
+        src/device/eeprom_hours.h
+        src/device/eeprom_hours.c
         src/device/mcp3304.h
         src/device/mcp3304.c
         src/device/mcp9808.h
@@ -249,10 +259,9 @@ set(DYNAMIXEL_SOURCES
         src/dynamixel/dynamixel_servo.c
 )
 
-# Include Dynamixel sources for VER4 controller builds
-if (HARDWARE_VERSION STREQUAL "4")
-    list(APPEND CONTROLLER_ADDITIONAL_SOURCES ${DYNAMIXEL_SOURCES})
-endif()
+# The controller pulls in the Dynamixel stack only on v4 hardware. This is
+# applied per-version inside the firmware-creation loop below, so it cannot be
+# appended to the shared source list here.
 
 # Dynamixel Servo Tester
 set(DYNAMIXEL_TESTER_ADDITIONAL_SOURCES
@@ -276,12 +285,26 @@ set(DYNAMIXEL_TESTER_ADDITIONAL_INCLUDES
 
 
 # Function to create firmware targets
-function(create_firmware TARGET_NAME ADDITIONAL_SOURCES ADDITIONAL_LIBS ADDITIONAL_INCLUDES)
+function(create_firmware TARGET_NAME HW_VERSION ADDITIONAL_SOURCES ADDITIONAL_LIBS ADDITIONAL_INCLUDES)
     add_executable(${TARGET_NAME}
             ${COMMON_SOURCES}
             ${ADDITIONAL_SOURCES}
             FreeRTOSConfig.h
     )
+
+    # Per-target hardware-version selection. These were previously global
+    # add_compile_definitions(); making them per-target is what lets all
+    # versions coexist in a single CMake configuration. The semantics are
+    # identical to before: v4 hardware is a superset of v3.
+    if (HW_VERSION STREQUAL "2")
+        target_compile_definitions(${TARGET_NAME} PRIVATE CC_VER2=1)
+    elseif (HW_VERSION STREQUAL "3")
+        target_compile_definitions(${TARGET_NAME} PRIVATE CC_VER3=1)
+    elseif (HW_VERSION STREQUAL "4")
+        target_compile_definitions(${TARGET_NAME} PRIVATE CC_VER4=1 CC_VER3=1)
+    else()
+        message(FATAL_ERROR "create_firmware: unsupported HW_VERSION '${HW_VERSION}'")
+    endif()
 
     pico_generate_pio_header(${TARGET_NAME} ${CMAKE_CURRENT_LIST_DIR}/src/io/uart_rx.pio OUTPUT_DIR ${CMAKE_CURRENT_LIST_DIR}/generated)
     pico_generate_pio_header(${TARGET_NAME} ${CMAKE_CURRENT_LIST_DIR}/src/io/uart_tx.pio OUTPUT_DIR ${CMAKE_CURRENT_LIST_DIR}/generated)
@@ -305,27 +328,37 @@ endfunction()
 
 
 
-# Create firmware targets
-create_firmware("controller-${PICO_PLATFORM}-hw${HARDWARE_VERSION}"
-        "${CONTROLLER_ADDITIONAL_SOURCES}"
-        "${CONTROLLER_ADDITIONAL_LIBS}"
-        "${CONTROLLER_ADDITIONAL_INCLUDES}"
-)
+# Create the full set of firmware targets for every requested hardware version.
+foreach(V IN LISTS HARDWARE_VERSIONS)
 
-create_firmware("usbc_pd-${PICO_PLATFORM}-hw${HARDWARE_VERSION}"
-        "${USBC_PD_ADDITIONAL_SOURCES}"
-        "${USBC_PD_ADDITIONAL_LIBS}"
-        "${USBC_PD_ADDITIONAL_INCLUDES}"
-)
+    # The controller pulls in the Dynamixel stack only on v4 hardware.
+    set(CONTROLLER_SOURCES_FOR_VERSION ${CONTROLLER_ADDITIONAL_SOURCES})
+    if (V STREQUAL "4")
+        list(APPEND CONTROLLER_SOURCES_FOR_VERSION ${DYNAMIXEL_SOURCES})
+    endif()
 
-create_firmware("programmer-${PICO_PLATFORM}-hw${HARDWARE_VERSION}"
-        "${PROGRAMMER_ADDITIONAL_SOURCES}"
-        "${PROGRAMMER_ADDITIONAL_LIBS}"
-        "${PROGRAMMER_ADDITIONAL_INCLUDES}"
-)
+    create_firmware("controller-${PICO_PLATFORM}-hw${V}" "${V}"
+            "${CONTROLLER_SOURCES_FOR_VERSION}"
+            "${CONTROLLER_ADDITIONAL_LIBS}"
+            "${CONTROLLER_ADDITIONAL_INCLUDES}"
+    )
 
-create_firmware("dynamixel-tester-${PICO_PLATFORM}-hw${HARDWARE_VERSION}"
-        "${DYNAMIXEL_TESTER_ADDITIONAL_SOURCES}"
-        "${DYNAMIXEL_TESTER_ADDITIONAL_LIBS}"
-        "${DYNAMIXEL_TESTER_ADDITIONAL_INCLUDES}"
-)
+    create_firmware("usbc_pd-${PICO_PLATFORM}-hw${V}" "${V}"
+            "${USBC_PD_ADDITIONAL_SOURCES}"
+            "${USBC_PD_ADDITIONAL_LIBS}"
+            "${USBC_PD_ADDITIONAL_INCLUDES}"
+    )
+
+    create_firmware("programmer-${PICO_PLATFORM}-hw${V}" "${V}"
+            "${PROGRAMMER_ADDITIONAL_SOURCES}"
+            "${PROGRAMMER_ADDITIONAL_LIBS}"
+            "${PROGRAMMER_ADDITIONAL_INCLUDES}"
+    )
+
+    create_firmware("dynamixel-tester-${PICO_PLATFORM}-hw${V}" "${V}"
+            "${DYNAMIXEL_TESTER_ADDITIONAL_SOURCES}"
+            "${DYNAMIXEL_TESTER_ADDITIONAL_LIBS}"
+            "${DYNAMIXEL_TESTER_ADDITIONAL_INCLUDES}"
+    )
+
+endforeach()

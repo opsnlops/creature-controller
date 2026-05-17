@@ -34,6 +34,31 @@
 #define POWER_PIN 28
 
 /*
+ * Power-on hours odometer
+ *
+ * Two lifetime counters persisted to the I2C EEPROM: total controller uptime,
+ * and the time the motor power rail has been energized. They live in a
+ * wear-leveled ring at the very top of the EEPROM, well clear of the
+ * personality block (which is written from address 0 and is only a few dozen
+ * bytes long).
+ *
+ * These values are hardware-version independent, so they live here outside the
+ * CC_VERx guards. That also lets the host unit tests pull them in directly.
+ */
+#define EEPROM_TOTAL_SIZE 32768      // 24C256-class part: 32 KB
+#define EEPROM_HOURS_REGION_SIZE 256 // Bytes reserved at the top
+#define EEPROM_HOURS_REGION_ADDR (EEPROM_TOTAL_SIZE - EEPROM_HOURS_REGION_SIZE)
+#define EEPROM_HOURS_SLOT_SIZE 16 // One record; fits within a page
+#define EEPROM_HOURS_SLOT_COUNT (EEPROM_HOURS_REGION_SIZE / EEPROM_HOURS_SLOT_SIZE)
+#define EEPROM_HOURS_MAGIC 0x4852                         // 'H','R' - an hours record
+#define EEPROM_HOURS_PERSIST_INTERVAL_MS (15 * 60 * 1000) // Persist every 15 minutes
+#define EEPROM_WRITE_CYCLE_MS 10                          // EEPROM internal write-cycle wait
+
+// The motor power rail is considered "on" once the incoming-motor-power
+// PAC1954 channel reads above this many volts.
+#define MOTOR_POWER_ON_VOLTAGE_THRESHOLD 3.0f
+
+/*
  * EEPROM Config
  */
 
@@ -196,8 +221,48 @@
 #define USB_SERIAL_INCOMING_QUEUE_LENGTH 5
 #define USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH 128
 
+// Max bytes drained from the CDC RX FIFO per chunk. Bounds the inbound
+// callback's stack usage (it runs in the timer daemon) - never use a
+// FIFO-sized VLA there.
+#define USB_SERIAL_RX_CHUNK 64
+
 #define USB_SERIAL_OUTGOING_QUEUE_LENGTH 15
 #define USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH 384
+
+// TinyUSB is built CFG_TUSB_OS=OPT_OS_NONE, which is only safe when a SINGLE
+// context drives the device stack and all CDC writes. usb_device_task owns
+// every tud_* call: it pumps tud_task() and drains the outgoing queue itself.
+// No mutex, no timers, no second context - so no FIFO/endpoint race.
+#define USB_DEVICE_TASK_STACK_SIZE 2048 // Words; covers tud_task() + a tx slot
+#define USB_DEVICE_TASK_PRIORITY 4      // Above workers(1)/control(2); it yields every loop
+#define USB_DEVICE_TASK_POLL_MS 1       // tud_task() cadence (matches the old 1 ms timer)
+#define USB_CDC_CONNECTION_CHECK_MS 100 // CDC connect/disconnect poll cadence
+#define USB_TX_BURST_MAX 8              // Max queued messages drained per task tick
+#define USB_TX_STALL_LIMIT 200          // Ticks one message may make zero progress before it's dropped
+
+/*
+ * FreeRTOS task priority map (configMAX_PRIORITIES = 32)
+ *
+ *   31  timer daemon (configTIMER_TASK_PRIORITY) - sensors, stats, odometer
+ *    5  INCOMING_RX_TASK_PRIORITY - the inbound parse chain (see below)
+ *    4  USB_DEVICE_TASK_PRIORITY  - tud_task() + CDC TX
+ *    2  DXL_TASK_PRIORITY         - Dynamixel 50 Hz sync (CC_VER4)
+ *    1  everything else           - logging, outbound telemetry, status LEDs
+ *
+ * The standard-servo real-time path has NO control task: the PWM-wrap ISR
+ * consumes motor_map[].requested_position directly, and that field is written
+ * by processMessage() running in the inbound chain
+ * (incoming_usb_serial_reader_task -> incoming_message_processor_task).
+ * Receiving and parsing host position commands every 20 ms is the most
+ * latency-critical thing this firmware does, so that chain runs just above the
+ * USB task - a freshly received line is parsed immediately rather than behind
+ * the USB task's telemetry-TX tail or the dxl task. It is safe: the chain
+ * blocks on its queues when idle (cannot starve lower tasks), and the only
+ * shared lock (motor_map_mutex) is a priority-inheriting FreeRTOS mutex with
+ * short critical sections. Servo output timing is a hardware ISR and is
+ * unaffected by task priority regardless.
+ */
+#define INCOMING_RX_TASK_PRIORITY 5
 
 /*
  * UART Serial Config

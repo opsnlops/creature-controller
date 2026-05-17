@@ -64,6 +64,13 @@ add_executable(test_dynamixel_protocol
 )
 target_link_libraries(test_dynamixel_protocol unity)
 
+# Create test executable for the power-on hours odometer (pure logic, no hardware)
+add_executable(test_eeprom_hours
+        tests/test_eeprom_hours.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/../src/device/eeprom_hours.c
+)
+target_link_libraries(test_eeprom_hours unity)
+
 # Create test executable for dynamixel servo layer
 # HAL stubs are provided directly in the test file (no real hardware needed)
 add_executable(test_dynamixel_servo
@@ -80,7 +87,8 @@ add_custom_target(run_tests
         COMMAND test_message_parsing
         COMMAND test_dynamixel_protocol
         COMMAND test_dynamixel_servo
-        DEPENDS test_string_utils test_analog_filter test_message_parsing test_dynamixel_protocol test_dynamixel_servo
+        COMMAND test_eeprom_hours
+        DEPENDS test_string_utils test_analog_filter test_message_parsing test_dynamixel_protocol test_dynamixel_servo test_eeprom_hours
 )
 
 # Add exported symbols for mocked functions that are used by the firmware code

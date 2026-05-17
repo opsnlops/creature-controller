@@ -1,11 +1,11 @@
+#include <stdarg.h>
 #include <stddef.h>
 #include <stdio.h>
-#include <stdarg.h>
 #include <string.h>
 
+#include "pico/time.h"
 #include <FreeRTOS.h>
 #include <queue.h>
-#include "pico/time.h"
 
 #include "logging.h"
 #include "logging_api.h"
@@ -13,14 +13,12 @@
 #include "controller/config.h"
 #include "types.h"
 
-
 TaskHandle_t log_queue_reader_task_handle;
 QueueHandle_t creature_log_message_queue_handle;
 bool volatile logging_queue_exists = false;
 
 // What level of logging we want (this is overridden from the EEPROM if it exists)
 u8 configured_logging_level = DEFAULT_LOGGING_LEVEL;
-
 
 void logger_init() {
     creature_log_message_queue_handle = xQueueCreate(LOGGING_QUEUE_LENGTH, sizeof(struct LogMessage));
@@ -30,7 +28,18 @@ void logger_init() {
 }
 
 bool inline is_safe_to_log() {
-    return (logging_queue_exists && !xQueueIsQueueFullFromISR(creature_log_message_queue_handle));
+    if (!logging_queue_exists)
+        return false;
+
+    // Logging is reached from both task context and real ISRs (e.g. the
+    // CC_VER2 UART RX ISR), so the "is there room?" probe must use the API
+    // that matches the current context - the FromISR variant is only valid
+    // inside an ISR. This preserves the "don't bother formatting if the queue
+    // is full" early-out without misusing a FromISR call from a task.
+    if (portCHECK_IF_IN_ISR())
+        return !xQueueIsQueueFullFromISR(creature_log_message_queue_handle);
+
+    return uxQueueSpacesAvailable(creature_log_message_queue_handle) > 0;
 }
 
 /**
@@ -46,7 +55,18 @@ static void log_internal(uint8_t level, const char *message, va_list args) {
         return;
 
     struct LogMessage lm = createMessageObject(level, message, args);
-    xQueueSendToBackFromISR(creature_log_message_queue_handle, &lm, NULL);
+
+    // Dispatch on the actual calling context. Logging must work from real
+    // ISRs (the CC_VER2 UART RX ISR logs) and from tasks, and must never
+    // block either - so the queue is always sent to without waiting, and a
+    // full queue simply drops the line.
+    if (portCHECK_IF_IN_ISR()) {
+        BaseType_t higher_priority_task_woken = pdFALSE;
+        (void)xQueueSendToBackFromISR(creature_log_message_queue_handle, &lm, &higher_priority_task_woken);
+        portYIELD_FROM_ISR(higher_priority_task_woken);
+    } else {
+        (void)xQueueSendToBack(creature_log_message_queue_handle, &lm, 0);
+    }
 }
 
 void __unused verbose(const char *message, ...) {
@@ -104,30 +124,25 @@ struct LogMessage createMessageObject(uint8_t level, const char *message, va_lis
 }
 
 void start_log_reader() {
-    xTaskCreate(log_queue_reader_task,
-                "log_queue_reader_task",
-                1512,
-                NULL,
-                1,
-                &log_queue_reader_task_handle);
+    xTaskCreate(log_queue_reader_task, "log_queue_reader_task", 1512, NULL, 1, &log_queue_reader_task_handle);
 }
 
-char* log_level_to_string(u8 level) {
+char *log_level_to_string(u8 level) {
     switch (level) {
-        case LOG_LEVEL_VERBOSE:
-            return "Verbose";
-        case LOG_LEVEL_DEBUG:
-            return "Debug";
-        case LOG_LEVEL_INFO:
-            return "Info";
-        case LOG_LEVEL_WARNING:
-            return "Warning";
-        case LOG_LEVEL_ERROR:
-            return "Error";
-        case LOG_LEVEL_FATAL:
-            return "Fatal";
-        default:
-            return "Unknown";
+    case LOG_LEVEL_VERBOSE:
+        return "Verbose";
+    case LOG_LEVEL_DEBUG:
+        return "Debug";
+    case LOG_LEVEL_INFO:
+        return "Info";
+    case LOG_LEVEL_WARNING:
+        return "Warning";
+    case LOG_LEVEL_ERROR:
+        return "Error";
+    case LOG_LEVEL_FATAL:
+        return "Fatal";
+    default:
+        return "Unknown";
     }
 }
 
@@ -147,35 +162,35 @@ portTASK_FUNCTION(log_queue_reader_task, pvParameters) {
     memset(&levelBuffer, '\0', 4);
 
     for (EVER) {
-        if (xQueueReceive(creature_log_message_queue_handle, &lm, (TickType_t) portMAX_DELAY) == pdPASS) {
+        if (xQueueReceive(creature_log_message_queue_handle, &lm, (TickType_t)portMAX_DELAY) == pdPASS) {
             switch (lm.level) {
-                case LOG_LEVEL_VERBOSE:
-                    strncpy(levelBuffer, "[V] ", 3);
-                    break;
-                case LOG_LEVEL_DEBUG:
-                    strncpy(levelBuffer, "[D] ", 3);
-                    break;
-                case LOG_LEVEL_INFO:
-                    strncpy(levelBuffer, "[I] ", 3);
-                    break;
-                case LOG_LEVEL_WARNING:
-                    strncpy(levelBuffer, "[W] ", 3);
-                    break;
-                case LOG_LEVEL_ERROR:
-                    strncpy(levelBuffer, "[E] ", 3);
-                    break;
-                case LOG_LEVEL_FATAL:
-                    strncpy(levelBuffer, "[F] ", 3);
-                    break;
-                default:
-                    strncpy(levelBuffer, "[?] ", 3);
+            case LOG_LEVEL_VERBOSE:
+                strncpy(levelBuffer, "[V] ", 3);
+                break;
+            case LOG_LEVEL_DEBUG:
+                strncpy(levelBuffer, "[D] ", 3);
+                break;
+            case LOG_LEVEL_INFO:
+                strncpy(levelBuffer, "[I] ", 3);
+                break;
+            case LOG_LEVEL_WARNING:
+                strncpy(levelBuffer, "[W] ", 3);
+                break;
+            case LOG_LEVEL_ERROR:
+                strncpy(levelBuffer, "[E] ", 3);
+                break;
+            case LOG_LEVEL_FATAL:
+                strncpy(levelBuffer, "[F] ", 3);
+                break;
+            default:
+                strncpy(levelBuffer, "[?] ", 3);
             }
 
             // Format our messaging
             u32 time = to_ms_since_boot(get_absolute_time());
 
             // Create space on the heap for the message
-            char *message = (char *) pvPortMalloc(strlen(lm.message) + 33);
+            char *message = (char *)pvPortMalloc(strlen(lm.message) + 33);
             memset(message, '\0', strlen(lm.message) + 33);
             snprintf(message, strlen(lm.message) + 32, "LOG\t%lu\t%s\t%s", time, levelBuffer, lm.message);
 
