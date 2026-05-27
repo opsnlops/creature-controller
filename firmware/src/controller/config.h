@@ -360,15 +360,28 @@
 #define I2C_DEVICE_MCP9808 0x18
 #define I2C_DEVICE_MCP9808_PRODUCT_ID 0x400 // This is used to make sure we're talking to the right device
 
-#define I2C_PAC1954_SENSOR_COUNT 3
 #define I2C_PAC1954_PRODUCT_ID 0x7B // This is used to make sure we're talking to the right device
 
 #define I2C_BOARD_PAC1954 0x10
+
+#ifdef CC_VER4
+// HW4 moved VBUS sensing from SENSE1 (channel 0) to SENSE4 (channel 3) on the
+// board PAC1954. SENSE1 is left unconnected; its slot is read each cycle but
+// the data is meaningless.
+#define I2C_PAC1954_SENSOR_COUNT 4
+#define I2C_BOARD_PAC1954_SENSOR_COUNT 4
+
+#define INCOMING_MOTOR_POWER_SENSOR_SLOT 1
+#define V3v3_SENSOR_SLOT 2
+#define VBUS_SENSOR_SLOT 3
+#else
+#define I2C_PAC1954_SENSOR_COUNT 3
 #define I2C_BOARD_PAC1954_SENSOR_COUNT 3
 
 #define VBUS_SENSOR_SLOT 0
 #define INCOMING_MOTOR_POWER_SENSOR_SLOT 1
 #define V3v3_SENSOR_SLOT 2
+#endif
 
 #endif
 
