@@ -7,8 +7,10 @@
 #include <task.h>
 #include <timers.h>
 
+#include "controller/config.h"
 #include "controller/controller.h"
 #include "debug/stats_reporter.h"
+#include "device/eeprom_hours.h"
 #include "io/message_processor.h"
 
 #ifdef CC_VER4
@@ -30,6 +32,11 @@ extern volatile u64 number_of_pwm_wraps;
 // From the message processor
 extern volatile u64 message_processor_messages_received;
 extern volatile u64 message_processor_messages_sent;
+
+// Pipeline drop counters - non-zero means the host isn't draining fast enough,
+// not that the pipeline stalled (it never blocks).
+extern volatile u64 outgoing_messages_dropped;
+extern volatile u64 incoming_messages_dropped;
 
 // From the UART
 extern volatile u64 uart_characters_received;
@@ -68,14 +75,25 @@ void statsReportTimerCallback(TimerHandle_t xTimer) {
     snprintf(
         message, USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH,
         "STATS\tHEAP_FREE %lu\tUSB_CRECV %lu\tUSB_MRECV %lu\tUSB_SENT %lu\tUART_CRECV %lu\tUART_MRECV %lu\tUART_SENT "
-        "%lu\tMP_RECV %lu\tMP_SENT %lu\tS_PARSE %lu\tF_PARSE %lu\tCHKFAIL %lu\tPOS_PROC %lu\tPWM_WRAPS %lu\tTEMP %.2f",
+        "%lu\tMP_RECV %lu\tMP_SENT %lu\tS_PARSE %lu\tF_PARSE %lu\tCHKFAIL %lu\tOUT_DROP %lu\tIN_DROP "
+        "%lu\tPOS_PROC %lu\tPWM_WRAPS %lu\tTEMP %.2f",
         (unsigned long)xFreeHeapSpace, (unsigned long)usb_serial_characters_received,
         (unsigned long)usb_serial_messages_received, (unsigned long)usb_serial_messages_sent,
         (unsigned long)uart_characters_received, (unsigned long)uart_messages_received,
         (unsigned long)uart_messages_sent, (unsigned long)message_processor_messages_received,
         (unsigned long)message_processor_messages_sent, (unsigned long)successful_messages_parsed,
-        (unsigned long)failed_messages_parsed, (unsigned long)checksum_errors,
-        (unsigned long)position_messages_processed, (unsigned long)number_of_pwm_wraps, board_temperature);
+        (unsigned long)failed_messages_parsed, (unsigned long)checksum_errors, (unsigned long)outgoing_messages_dropped,
+        (unsigned long)incoming_messages_dropped, (unsigned long)position_messages_processed,
+        (unsigned long)number_of_pwm_wraps, board_temperature);
+
+#if USE_POWER_HOURS
+    // Append the lifetime power-on hours odometer (uptime and motor-powered)
+    {
+        size_t hours_len = strlen(message);
+        snprintf(message + hours_len, USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH - hours_len, "\tUP_HRS %lu\tMTR_HRS %lu",
+                 (unsigned long)eeprom_hours_get_uptime_hours(), (unsigned long)eeprom_hours_get_motor_hours());
+    }
+#endif
 
 #ifdef CC_VER4
     // Append Dynamixel bus metrics if available

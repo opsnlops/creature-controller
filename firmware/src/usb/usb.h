@@ -5,7 +5,7 @@
 #include <sys/select.h>
 
 #include <FreeRTOS.h>
-#include <timers.h>
+#include <task.h>
 
 #include "tusb.h"
 
@@ -15,13 +15,15 @@
  * @file usb.h
  * @brief USB subsystem interface for creature controller
  *
- * This module provides functions to initialize, start, and interact with the USB
- * subsystem. It handles USB device enumeration, CDC connection monitoring, and
- * message transmission over CDC.
+ * This module provides functions to initialize and start the USB subsystem.
+ * A single task (usb_device_task, in usb.c) owns the entire TinyUSB device
+ * stack: enumeration, CDC transmit, and connection monitoring. There is no
+ * public "send" entry point - producers enqueue onto usb_serial_outgoing_messages
+ * and the USB task drains it (TinyUSB OPT_OS_NONE requires a single context).
  */
 
 // USB configuration
-#define BOARD_TUD_ROOT_HUB_PORT      0    // Root hub port for device mode
+#define BOARD_TUD_ROOT_HUB_PORT 0 // Root hub port for device mode
 
 /**
  * @brief Initialize the USB subsystem
@@ -33,44 +35,9 @@
 void usb_init(void);
 
 /**
- * @brief Start USB service timers
+ * @brief Start the single USB device task
  *
- * Creates and starts the FreeRTOS timers needed for USB operation:
- * - A 1ms timer for USB device tasks processing
- * - A 100ms timer for CDC connection monitoring
- *
- * This function should be called after usb_init().
+ * Creates usb_device_task, the sole owner of every tud_* call (device
+ * servicing, CDC transmit, and connection monitoring). Call after usb_init().
  */
 void usb_start(void);
-
-/**
- * @brief Timer callback for USB device processing
- *
- * Called every 1ms to process TinyUSB tasks, ensuring the USB stack gets
- * regular processing time without blocking other operations.
- *
- * @param xTimer Timer handle that triggered this callback
- */
-void usbDeviceTimerCallback(TimerHandle_t xTimer);
-
-/**
- * @brief Timer callback for CDC connection monitoring
- *
- * Called every 100ms to check if the CDC connection state has changed.
- * Updates the LED indicator and notifies the controller module of
- * connection/disconnection events.
- *
- * @param xTimer Timer handle that triggered this callback
- */
-void is_cdc_connected_timer(TimerHandle_t xTimer);
-
-/**
- * @brief Send a message over CDC interface
- *
- * Transmits a null-terminated string over the CDC interface if connected.
- * If the device is not connected, the message is silently dropped and a
- * verbose log entry is generated.
- *
- * @param message Null-terminated string to transmit
- */
-void cdc_send(const char *message);

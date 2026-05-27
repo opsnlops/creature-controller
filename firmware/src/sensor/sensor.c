@@ -10,6 +10,7 @@
 #include "pico/stdlib.h"
 
 #include "controller/controller.h"
+#include "device/eeprom_hours.h"
 #include "device/mcp3304.h"
 #include "device/mcp9808.h"
 #include "device/pac1954.h"
@@ -19,7 +20,6 @@
 #include "controller/config.h"
 #include "sensor.h"
 #include "types.h"
-
 
 // From i2c.c
 extern volatile bool i2c_setup_completed;
@@ -34,7 +34,6 @@ extern analog_filter sensed_motor_position[CONTROLLER_MOTORS_PER_MODULE];
 u64 i2c_timer_count = 0;
 u64 spi_timer_count = 0;
 sensor_power_data_t sensor_power_data[I2C_PAC1954_SENSOR_COUNT];
-
 
 /**
  * The current temperature of the board, in freedom degrees 🦅
@@ -59,8 +58,6 @@ TimerHandle_t i2c_sensor_read_timer = NULL;
 TimerHandle_t spi_sensor_read_timer = NULL;
 #endif
 
-
-
 /**
  * Set up the sensors
  *
@@ -80,7 +77,7 @@ void sensor_init() {
     board_temperature = 66.6;
 
     // Initialize the motor power data metrics
-    for(int i = 0; i < I2C_PAC1954_SENSOR_COUNT; i++) {
+    for (int i = 0; i < I2C_PAC1954_SENSOR_COUNT; i++) {
         sensor_power_data[i].voltage = 0.0f;
         sensor_power_data[i].current = 0.0f;
         sensor_power_data[i].power = 0.0f;
@@ -92,12 +89,11 @@ void sensor_start() {
     debug("starting sensors");
 
     // Create the timer that reads the i2c sensors
-    i2c_sensor_read_timer = xTimerCreate(
-            "I2C Sensor Read Timer",                    // Timer name
-            pdMS_TO_TICKS(SENSOR_I2C_TIMER_TIME_MS),    // Fire every SENSOR_TIMER_TIME_MS
-            pdTRUE,                                     // Auto-reload
-            (void *) 0,                                 // Timer ID (not used here)
-            i2c_sensor_read_timer_callback              // Callback function
+    i2c_sensor_read_timer = xTimerCreate("I2C Sensor Read Timer",                 // Timer name
+                                         pdMS_TO_TICKS(SENSOR_I2C_TIMER_TIME_MS), // Fire every SENSOR_TIMER_TIME_MS
+                                         pdTRUE,                                  // Auto-reload
+                                         (void *)0,                               // Timer ID (not used here)
+                                         i2c_sensor_read_timer_callback           // Callback function
     );
 
     // Make sure this gets created
@@ -108,15 +104,13 @@ void sensor_start() {
 
     info("started i2c sensor read timer");
 
-
 #ifdef CC_VER2
     // Create the timer that reads the spi sensors
-    spi_sensor_read_timer = xTimerCreate(
-            "SPI Sensor Read Timer",                    // Timer name
-            pdMS_TO_TICKS(SENSOR_SPI_TIMER_TIME_MS),    // Fire every SENSOR_SPI_TIMER_TIME_MS
-            pdTRUE,                                     // Auto-reload
-            (void *) 0,                                 // Timer ID (not used here)
-            spi_sensor_read_timer_callback              // Callback function
+    spi_sensor_read_timer = xTimerCreate("SPI Sensor Read Timer",                 // Timer name
+                                         pdMS_TO_TICKS(SENSOR_SPI_TIMER_TIME_MS), // Fire every SENSOR_SPI_TIMER_TIME_MS
+                                         pdTRUE,                                  // Auto-reload
+                                         (void *)0,                               // Timer ID (not used here)
+                                         spi_sensor_read_timer_callback           // Callback function
     );
 
     // Make sure this gets created
@@ -132,40 +126,44 @@ void sensor_start() {
 /*
  * Note to future me! 😅
  *
- * Remember that's there's only one I2C bus in use, and we can't have
- * several things trying to use it at once.
+ * There is only one I2C bus, and it has no mutex. Everything that touches it
+ * must run in the FreeRTOS timer-daemon task so the callbacks are serialized
+ * by the daemon itself - that single-owner rule is what keeps the bus safe.
  *
- * As tempting as it might seem, do not break the timer callback functions
- * up into separate timers. It will not end well.
+ * Two things rely on this: this sensor read callback, and the power-on hours
+ * odometer's persist timer (see eeprom.c). Both are software timers, so they
+ * can never run at the same time. The real hazard - the thing that *will* end
+ * badly - is moving any I2C access into its own task without first adding a
+ * bus mutex. So: keep the sensor reads in this one callback, and never let
+ * I2C escape the timer daemon.
  */
-
 
 void i2c_sensor_read_timer_callback(TimerHandle_t xTimer) {
 
     // We don't use this on this timer
-    (void) xTimer;
+    (void)xTimer;
 
     board_temperature = mcp9808_read_temperature_f(SENSORS_I2C_BUS, I2C_DEVICE_MCP9808);
-//    verbose("board temperature: %.2fF", board_temperature);
+    //    verbose("board temperature: %.2fF", board_temperature);
 
     int i = 0;
     // Read the power data for all of our sensors
 
 #ifdef CC_VER2
-    for(; i < I2C_MOTOR0_PAC1954_SENSOR_COUNT; i++) {
+    for (; i < I2C_MOTOR0_PAC1954_SENSOR_COUNT; i++) {
         sensor_power_data[i].voltage = pac1954_read_voltage(I2C_MOTOR0_PAC1954, i);
-        sensor_power_data[i].current = pac1954_read_current(I2C_MOTOR0_PAC1954,i);
+        sensor_power_data[i].current = pac1954_read_current(I2C_MOTOR0_PAC1954, i);
         sensor_power_data[i].power = pac1954_read_power(I2C_MOTOR0_PAC1954, i);
     }
-//    verbose("motor0 power data: %f %f %f %f",
-//            sensor_power_data[0].power,
-//            sensor_power_data[1].power,
-//            sensor_power_data[2].power,
-//            sensor_power_data[3].power);
+    //    verbose("motor0 power data: %f %f %f %f",
+    //            sensor_power_data[0].power,
+    //            sensor_power_data[1].power,
+    //            sensor_power_data[2].power,
+    //            sensor_power_data[3].power);
 
-    for(; i < I2C_MOTOR1_PAC1954_SENSOR_COUNT; i++) {
+    for (; i < I2C_MOTOR1_PAC1954_SENSOR_COUNT; i++) {
         sensor_power_data[i].voltage = pac1954_read_voltage(I2C_MOTOR1_PAC1954, i);
-        sensor_power_data[i].current = pac1954_read_current(I2C_MOTOR1_PAC1954,i);
+        sensor_power_data[i].current = pac1954_read_current(I2C_MOTOR1_PAC1954, i);
         sensor_power_data[i].power = pac1954_read_power(I2C_MOTOR1_PAC1954, i);
     }
 //    verbose("motor1 power data: %f %f %f %f",
@@ -175,17 +173,16 @@ void i2c_sensor_read_timer_callback(TimerHandle_t xTimer) {
 //            sensor_power_data[7].power);
 #endif
 
-
-    for(; i < I2C_BOARD_PAC1954_SENSOR_COUNT; i++) {
+    for (; i < I2C_BOARD_PAC1954_SENSOR_COUNT; i++) {
         sensor_power_data[i].voltage = pac1954_read_voltage(I2C_BOARD_PAC1954, i);
-        sensor_power_data[i].current = pac1954_read_current(I2C_BOARD_PAC1954,i);
+        sensor_power_data[i].current = pac1954_read_current(I2C_BOARD_PAC1954, i);
         sensor_power_data[i].power = pac1954_read_power(I2C_BOARD_PAC1954, i);
     }
-//    verbose("board power data: %f %f %f %f",
-//            sensor_power_data[8].power,
-//            sensor_power_data[9].power,
-//            sensor_power_data[10].power,
-//            sensor_power_data[11].power);
+    //    verbose("board power data: %f %f %f %f",
+    //            sensor_power_data[8].power,
+    //            sensor_power_data[9].power,
+    //            sensor_power_data[10].power,
+    //            sensor_power_data[11].power);
 
     // Send refresh command to get fresh data for next pass
 #ifdef CC_VER2
@@ -194,43 +191,41 @@ void i2c_sensor_read_timer_callback(TimerHandle_t xTimer) {
 #endif
 
     pac1954_refresh(I2C_BOARD_PAC1954);
+
+#if USE_POWER_HOURS && defined(CC_VER3)
+    // Feed the freshly-read motor-power-rail voltage to the odometer so it can
+    // tally motor-powered time. This is pure arithmetic - no bus access - so
+    // it is safe to do here in the sensor callback.
+    eeprom_hours_motor_sample(sensor_power_data[INCOMING_MOTOR_POWER_SENSOR_SLOT].voltage);
+#endif
+
     i2c_timer_count += 1;
-
 }
-
 
 #ifdef CC_VER2
 void spi_sensor_read_timer_callback(TimerHandle_t xTimer) {
 
     // We don't use this on this timer
-    (void) xTimer;
+    (void)xTimer;
 
     // Read all the pins and update the filter map
-    for(int i = 0; i < CONTROLLER_MOTORS_PER_MODULE; i++) {
+    for (int i = 0; i < CONTROLLER_MOTORS_PER_MODULE; i++) {
 
         // Read the ADC value
         u16 adc_value = adc_read(i, SENSORS_SPI_CS_PIN);
 
         // Update the filter
         analog_filter_update(&sensed_motor_position[i], adc_value);
-
     }
 
     spi_timer_count += 1;
 
-    if(spi_timer_count % SENSORS_SPI_LOG_CYCLES == 0) {
-        debug("sensed motor positions: %u %u %u %u %u %u %u %u",
-              analog_filter_get_value(&sensed_motor_position[0]),
-              analog_filter_get_value(&sensed_motor_position[1]),
-              analog_filter_get_value(&sensed_motor_position[2]),
-              analog_filter_get_value(&sensed_motor_position[3]),
-              analog_filter_get_value(&sensed_motor_position[4]),
-              analog_filter_get_value(&sensed_motor_position[5]),
-              analog_filter_get_value(&sensed_motor_position[6]),
+    if (spi_timer_count % SENSORS_SPI_LOG_CYCLES == 0) {
+        debug("sensed motor positions: %u %u %u %u %u %u %u %u", analog_filter_get_value(&sensed_motor_position[0]),
+              analog_filter_get_value(&sensed_motor_position[1]), analog_filter_get_value(&sensed_motor_position[2]),
+              analog_filter_get_value(&sensed_motor_position[3]), analog_filter_get_value(&sensed_motor_position[4]),
+              analog_filter_get_value(&sensed_motor_position[5]), analog_filter_get_value(&sensed_motor_position[6]),
               analog_filter_get_value(&sensed_motor_position[7]));
     }
-
-
 }
 #endif
-

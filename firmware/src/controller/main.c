@@ -124,6 +124,9 @@ int main() {
         debug("Watchdog init'ed successfully");
     }
 
+    // Start the watchdog health-gate heartbeat (no-op unless USE_WATCHDOG_HEALTH_GATE)
+    watchdog_health_start();
+
     info("All systems initialized, starting scheduler");
 
     // Start the FreeRTOS scheduler - this should never return
@@ -199,6 +202,9 @@ void initialize_eeprom(void) {
     bi_decl(bi_2pins_with_func(EEPROM_SDA_PIN, EEPROM_SCL_PIN, GPIO_FUNC_I2C))
     eeprom_setup_i2c();
     read_eeprom_and_configure();
+#if USE_POWER_HOURS
+    eeprom_hours_init();
+#endif
     usb_descriptors_init();
 #else
     // Mark the build as not having EEPROM enabled
@@ -354,6 +360,12 @@ static bool initialize_status_and_monitoring(void) {
     // Fire up the stats reporter
     start_stats_reporter();
     debug("Stats reporter started");
+
+#if USE_POWER_HOURS
+    // Start the power-on hours odometer's periodic persist timer
+    eeprom_hours_start();
+    debug("Power-on hours odometer started");
+#endif
 
 #if USE_SENSORS
     bi_decl(bi_2pins_with_func(SENSORS_I2C_SDA_PIN, SENSORS_I2C_SCL_PIN, GPIO_FUNC_I2C))

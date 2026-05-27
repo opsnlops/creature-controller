@@ -4,10 +4,9 @@
 #include <FreeRTOS.h>
 #include <task.h>
 
-#include "pico/stdlib.h"
-#include "pico/stdio.h"
 #include "hardware/i2c.h"
-
+#include "pico/stdio.h"
+#include "pico/stdlib.h"
 
 #include "logging/logging.h"
 
@@ -21,13 +20,12 @@ TaskHandle_t programming_task_handle;
 // Define the EEPROM page size (check the EEPROM's datasheet)
 #define EEPROM_PAGE_SIZE 64
 
-extern u8* incoming_data_buffer;
+extern u8 *incoming_data_buffer;
 extern u32 incomingBufferIndex;
 
 // What state are we in?
 extern enum ProgrammerState programmer_state;
 extern u32 program_size;
-
 
 void programmer_setup_i2c() {
 
@@ -36,26 +34,35 @@ void programmer_setup_i2c() {
     gpio_set_function(PROGRAMMER_SDA_PIN, GPIO_FUNC_I2C);
     gpio_set_function(PROGRAMMER_SCL_PIN, GPIO_FUNC_I2C);
 
-    i2c_init(PROGRAMMER_I2C_BUS, 100 * 1000);   // Nice and slow at 100kHz
+    i2c_init(PROGRAMMER_I2C_BUS, 100 * 1000); // Nice and slow at 100kHz
 
     gpio_pull_up(PROGRAMMER_SDA_PIN);
     gpio_pull_up(PROGRAMMER_SCL_PIN);
 
     debug("I2C configured at %uHz", 100000);
-
 }
 
-void write_incoming_buffer_to_eeprom() {
+bool write_incoming_buffer_to_eeprom() {
 
     info("Programming I2C EEPROM");
     debug("There are %u bytes to program", program_size);
+
+    // The top of the EEPROM is reserved for the controller's power-on hours
+    // odometer. A personality image is only a few dozen bytes, so this should
+    // never trip - but refuse rather than silently clobber the odometer.
+    if (program_size > EEPROM_HOURS_REGION_ADDR) {
+        error("Refusing to burn: image (%u bytes) would overwrite the reserved "
+              "power-on hours region at 0x%04X",
+              program_size, EEPROM_HOURS_REGION_ADDR);
+        return false;
+    }
 
     // Write the full flash array to the EEPROM
     i2c_eeprom_write(PROGRAMMER_I2C_BUS, PROGRAMMER_I2C_ADDR, 0, incoming_data_buffer, program_size);
     info("I2C EEPROM programmed");
 
+    return true;
 }
-
 
 void i2c_eeprom_write(i2c_inst_t *i2c, uint8_t eeprom_addr, uint16_t mem_addr, const u8 *data, size_t len) {
 
@@ -69,8 +76,8 @@ void i2c_eeprom_write(i2c_inst_t *i2c, uint8_t eeprom_addr, uint16_t mem_addr, c
         total_bytes_written += write_len;
 
         uint8_t buffer[EEPROM_PAGE_SIZE + 2]; // 2 bytes for memory address
-        buffer[0] = (mem_addr >> 8) & 0xFF;  // High byte of memory address
-        buffer[1] = mem_addr & 0xFF;         // Low byte of memory address
+        buffer[0] = (mem_addr >> 8) & 0xFF;   // High byte of memory address
+        buffer[1] = mem_addr & 0xFF;          // Low byte of memory address
 
         // Copy data to buffer
         for (size_t i = 0; i < write_len; ++i) {
@@ -87,21 +94,19 @@ void i2c_eeprom_write(i2c_inst_t *i2c, uint8_t eeprom_addr, uint16_t mem_addr, c
         mem_addr += write_len;
         len -= write_len;
 
-        if(total_bytes_written % 2048 == 0) {
+        if (total_bytes_written % 2048 == 0) {
             debug("Wrote %u bytes to EEPROM", total_bytes_written);
         }
-
 
         // Wait for the EEPROM to complete the write cycle (typically ~5ms, but let's go slow)
         vTaskDelay(pdMS_TO_TICKS(15));
     }
 }
 
-
 void print_eeprom_contents(const u8 *data, size_t len) {
 
     // Make sure we're not trying to print nothing
-    if(data == NULL || len == 0) {
+    if (data == NULL || len == 0) {
         warning("No data to print");
         return;
     }
@@ -121,7 +126,6 @@ void print_eeprom_contents(const u8 *data, size_t len) {
         // Append the next byte to the current line, checking buffer space
         snprintf(line_buffer + strlen(line_buffer), sizeof(line_buffer) - strlen(line_buffer), "%02X ", data[i]);
 
-
         // If 32 bytes have been added, or it's the end of the data, print the line
         if (i % 32 == 31 || i == len - 1) {
             verbose(line_buffer);
@@ -134,7 +138,6 @@ void print_eeprom_contents(const u8 *data, size_t len) {
     verbose("--- End of EEPROM data ---");
 }
 
-
 void i2c_eeprom_read(i2c_inst_t *i2c, uint8_t eeprom_addr, uint16_t mem_addr, uint8_t *data, size_t len) {
     while (len > 0) {
         size_t read_len = len > EEPROM_PAGE_SIZE ? EEPROM_PAGE_SIZE : len;
@@ -143,10 +146,10 @@ void i2c_eeprom_read(i2c_inst_t *i2c, uint8_t eeprom_addr, uint16_t mem_addr, ui
 
         // Write the memory address we want to start reading from
         uint8_t addr_buffer[2] = {(uint8_t)((mem_addr >> 8) & 0xFF), (uint8_t)(mem_addr & 0xFF)};
-        i2c_write_blocking(i2c, eeprom_addr, addr_buffer, 2, true);  // true means keep the bus active
+        i2c_write_blocking(i2c, eeprom_addr, addr_buffer, 2, true); // true means keep the bus active
 
         // Read the data back
-        i2c_read_blocking(i2c, eeprom_addr, data, read_len, false);  // false means release the bus after read
+        i2c_read_blocking(i2c, eeprom_addr, data, read_len, false); // false means release the bus after read
 
         // Move to the next page
         data += read_len;
@@ -155,7 +158,8 @@ void i2c_eeprom_read(i2c_inst_t *i2c, uint8_t eeprom_addr, uint16_t mem_addr, ui
     }
 }
 
-bool verify_eeprom_data(i2c_inst_t *i2c, uint8_t eeprom_addr, const u8 *expected_data, size_t len, char* result, size_t result_len) {
+bool verify_eeprom_data(i2c_inst_t *i2c, uint8_t eeprom_addr, const u8 *expected_data, size_t len, char *result,
+                        size_t result_len) {
 
     debug("Verifying EEPROM data, length: %u", len);
 
@@ -165,10 +169,9 @@ bool verify_eeprom_data(i2c_inst_t *i2c, uint8_t eeprom_addr, const u8 *expected
     // Allocate a buffer to read the data back
     debug("Allocating memory for read buffer");
     vTaskDelay(pdMS_TO_TICKS(10));
-    u8* read_data = (u8*)pvPortMalloc(len);    // An assert will be thrown if this fails
+    u8 *read_data = (u8 *)pvPortMalloc(len); // An assert will be thrown if this fails
 
-
-    if(read_data == NULL) {
+    if (read_data == NULL) {
         error("Failed to allocate memory for read buffer");
         snprintf(result, result_len, "ERR Failed to allocate memory for read buffer");
         goto end;
@@ -193,7 +196,8 @@ bool verify_eeprom_data(i2c_inst_t *i2c, uint8_t eeprom_addr, const u8 *expected
 
         if (read_data[i] != (uint8_t)expected_data[i]) {
 
-            snprintf(result, result_len, "ERR Mismatch at byte %zu: expected 0x%02X, got 0x%02X", i, (uint8_t)expected_data[i], read_data[i]);
+            snprintf(result, result_len, "ERR Mismatch at byte %zu: expected 0x%02X, got 0x%02X", i,
+                     (uint8_t)expected_data[i], read_data[i]);
             warning("Mismatch at byte %zu: expected 0x%02X, got 0x%02X", i, (uint8_t)expected_data[i], read_data[i]);
             returnVal = false;
             goto end;
@@ -206,11 +210,10 @@ bool verify_eeprom_data(i2c_inst_t *i2c, uint8_t eeprom_addr, const u8 *expected
     returnVal = true;
     goto end;
 
-
-    end:
+end:
 
     // Release the buffer
-    if(read_data != NULL) {
+    if (read_data != NULL) {
         vPortFree(read_data);
     }
     return returnVal;
