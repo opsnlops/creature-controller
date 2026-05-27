@@ -143,6 +143,12 @@
 // Dynamixel controller task stack size
 #define DXL_TASK_STACK_SIZE 1024
 
+// Dynamixel status LED chain (one WS2812 per smart servo slot, ordered by ID)
+#define STATUS_LIGHTS_DYNAMIXEL_PIN 34
+#define STATUS_LIGHTS_DYNAMIXEL_COUNT 8
+#define STATUS_LIGHTS_DYNAMIXEL_IS_RGBW false
+#define STATUS_LIGHTS_DYNAMIXEL_BRIGHTNESS 64
+
 #endif
 
 #ifdef CC_VER2

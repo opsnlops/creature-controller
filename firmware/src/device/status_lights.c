@@ -43,6 +43,9 @@ volatile u64 number_of_pwm_wraps = 0UL;
 
 u8 logic_board_state_machine;
 u8 servo_lights_state_machine;
+#ifdef CC_VER4
+u8 dynamixel_lights_state_machine;
+#endif
 
 TaskHandle_t status_lights_task_handle;
 extern enum FirmwareState controller_firmware_state;
@@ -50,12 +53,26 @@ extern enum FirmwareState controller_firmware_state;
 // Get access to the motor map from the controller
 extern MotorMap motor_map[MOTOR_MAP_SIZE];
 
+#ifdef CC_VER4
+extern DynamixelMotorEntry dxl_motors[MAX_DYNAMIXEL_SERVOS];
+extern u8 dxl_motor_count;
+#endif
+
 void put_pixel(u32 pixel_grb, u8 state_machine) {
     pio_sm_put_blocking(STATUS_LIGHTS_PIO, state_machine, pixel_grb << 8u);
 }
 
 
 void status_lights_init() {
+
+#ifdef CC_VER4
+    /* The Dynamixel status LED chain lives on GPIO 34, which is outside the
+       default 0-31 PIO window. Switch this PIO instance to the 16-47 window
+       before loading any program (the SDK requires this be set first). The
+       logic-board (pin 30) and servo (pin 31) chains still fall inside the
+       window so they keep working. */
+    pio_set_gpio_base(STATUS_LIGHTS_PIO, 16);
+#endif
 
     uint offset = pio_add_program(STATUS_LIGHTS_PIO, &ws2812_program);
 
@@ -66,6 +83,13 @@ void status_lights_init() {
     servo_lights_state_machine = pio_claim_unused_sm(STATUS_LIGHTS_PIO, true);
     debug("servo status lights state machine: %u", servo_lights_state_machine);
     ws2812_program_init(STATUS_LIGHTS_PIO, servo_lights_state_machine, offset, STATUS_LIGHTS_SERVOS_PIN, 800000, STATUS_LIGHTS_SERVOS_IS_RGBW);
+
+#ifdef CC_VER4
+    dynamixel_lights_state_machine = pio_claim_unused_sm(STATUS_LIGHTS_PIO, true);
+    debug("dynamixel status lights state machine: %u", dynamixel_lights_state_machine);
+    ws2812_program_init(STATUS_LIGHTS_PIO, dynamixel_lights_state_machine, offset, STATUS_LIGHTS_DYNAMIXEL_PIN, 800000,
+                        STATUS_LIGHTS_DYNAMIXEL_IS_RGBW);
+#endif
 
 }
 
@@ -127,6 +151,16 @@ portTASK_FUNCTION(status_lights_task, pvParameters) {
     u32 motorLightColor[MOTOR_MAP_SIZE] = {0};
     u64 lastServoFrame[MOTOR_MAP_SIZE] = {0};
     u16 currentLightState[MOTOR_MAP_SIZE] = {0};
+
+#ifdef CC_VER4
+    /* Dynamixel chain state. Index N corresponds to the Nth-lowest configured
+       Dynamixel ID — the ID-to-slot mapping is recomputed each frame from a
+       snapshot of dxl_motors[], so re-configuring the servo set just shifts
+       which physical servo each LED tracks. */
+    u32 dxlLightColor[STATUS_LIGHTS_DYNAMIXEL_COUNT] = {0};
+    u64 lastDxlFrame[STATUS_LIGHTS_DYNAMIXEL_COUNT] = {0};
+    u32 currentDxlPosition[STATUS_LIGHTS_DYNAMIXEL_COUNT] = {0};
+#endif
 
     double uartLightHue = 0.0;
     double usbLightHue = 0.0;
@@ -236,6 +270,85 @@ portTASK_FUNCTION(status_lights_task, pvParameters) {
         }
         lastUARTCharacter = uart_characters_received;
 
+#ifdef CC_VER4
+        /*
+         * Dynamixel chain: lowest configured ID → LED 0, next → LED 1, ...
+         * Take an unlocked snapshot of the dxl_motors[] entries, matching the
+         * pattern used above for motor_map[] — status display tolerates the
+         * occasional torn read on aligned u8/u32 fields.
+         */
+        struct {
+            u8 dxl_id;
+            u32 requested_position;
+            u32 min_position;
+            u32 max_position;
+        } dxlSnapshot[MAX_DYNAMIXEL_SERVOS];
+        u8 dxlSnapshotCount = 0;
+
+        const u8 currentDxlMotorCount = dxl_motor_count;
+        for (u8 i = 0; i < currentDxlMotorCount && dxlSnapshotCount < MAX_DYNAMIXEL_SERVOS; i++) {
+            if (!dxl_motors[i].is_configured) {
+                continue;
+            }
+            dxlSnapshot[dxlSnapshotCount].dxl_id = dxl_motors[i].dxl_id;
+            dxlSnapshot[dxlSnapshotCount].requested_position = dxl_motors[i].requested_position;
+            dxlSnapshot[dxlSnapshotCount].min_position = dxl_motors[i].min_position;
+            dxlSnapshot[dxlSnapshotCount].max_position = dxl_motors[i].max_position;
+            dxlSnapshotCount++;
+        }
+
+        /* Insertion sort by dxl_id ascending. N is at most 16. */
+        for (u8 i = 1; i < dxlSnapshotCount; i++) {
+            for (u8 j = i; j > 0 && dxlSnapshot[j].dxl_id < dxlSnapshot[j - 1].dxl_id; j--) {
+                __typeof__(dxlSnapshot[0]) tmp = dxlSnapshot[j];
+                dxlSnapshot[j] = dxlSnapshot[j - 1];
+                dxlSnapshot[j - 1] = tmp;
+            }
+        }
+
+        for (u8 slot = 0; slot < STATUS_LIGHTS_DYNAMIXEL_COUNT; slot++) {
+            if (slot >= dxlSnapshotCount) {
+                /* No servo configured for this slot. Power-on flash: each LED
+                   takes a different hue spaced evenly around the wheel so the
+                   chain comes up as a brief 8-LED rainbow, fading from full
+                   brightness to off over STATUS_LIGHTS_MOTOR_OFF_FRAMES. Then
+                   the slot stays dark unless a servo gets configured here. */
+                if (frame < STATUS_LIGHTS_MOTOR_OFF_FRAMES) {
+                    u8 brightness =
+                            STATUS_LIGHTS_DYNAMIXEL_BRIGHTNESS -
+                            (u8)convertRange(frame, 0, STATUS_LIGHTS_MOTOR_OFF_FRAMES, 0,
+                                             STATUS_LIGHTS_DYNAMIXEL_BRIGHTNESS);
+                    double hue = (360.0 / STATUS_LIGHTS_DYNAMIXEL_COUNT) * slot;
+                    dxlLightColor[slot] =
+                            hsv_to_urgb((hsv_t){hue, 1.0, (double)brightness / UCHAR_MAX});
+                } else {
+                    dxlLightColor[slot] = 0;
+                }
+                continue;
+            }
+
+            const u32 position = dxlSnapshot[slot].requested_position;
+            const u32 minPos = dxlSnapshot[slot].min_position;
+            const u32 maxPos = dxlSnapshot[slot].max_position;
+
+            if (currentDxlPosition[slot] != position) {
+                currentDxlPosition[slot] = position;
+                lastDxlFrame[slot] = frame;
+            }
+
+            if (lastDxlFrame[slot] + STATUS_LIGHTS_MOTOR_OFF_FRAMES > frame) {
+                u16 hue = convertRange(position, minPos, maxPos, 0, 23300);
+                u8 brightness = convertRange(frame - lastDxlFrame[slot], 0, STATUS_LIGHTS_MOTOR_OFF_FRAMES, 0,
+                                             STATUS_LIGHTS_DYNAMIXEL_BRIGHTNESS);
+                brightness = STATUS_LIGHTS_DYNAMIXEL_BRIGHTNESS - brightness;
+                dxlLightColor[slot] = hsv_to_urgb(
+                        (hsv_t){(double)hue / 100.0, 1.0, (double)brightness / UCHAR_MAX});
+            } else {
+                dxlLightColor[slot] = 0;
+            }
+        }
+#endif
+
         /*
          * The rest of the lights are the status of the motors
          */
@@ -297,6 +410,12 @@ portTASK_FUNCTION(status_lights_task, pvParameters) {
                 warning("attempting to write to servo light %d, but only %d are available", i, CONTROLLER_MOTORS_PER_MODULE);
             }
         }
+
+#ifdef CC_VER4
+        for (u8 i = 0; i < STATUS_LIGHTS_DYNAMIXEL_COUNT; i++) {
+            put_pixel(dxlLightColor[i], dynamixel_lights_state_machine);
+        }
+#endif
 
         // Wait till it's time go again
         vTaskDelayUntil(&lastDrawTime, pdMS_TO_TICKS(STATUS_LIGHTS_TIME_MS));
