@@ -80,15 +80,38 @@ add_executable(test_dynamixel_servo
 )
 target_link_libraries(test_dynamixel_servo unity mocks)
 
+# Create test executable for message handlers. Links the real handler sources
+# and substitutes the controller layer via controller_stubs.c. We can't link
+# the `mocks` library here because it provides stub handlers that would
+# collide with the real ones, so the needed mock sources are listed directly.
+add_executable(test_message_handlers
+        tests/test_message_handlers.c
+        mocks/controller_stubs.c
+        mocks/freertos_mocks.c
+        mocks/hardware_mocks.c
+        mocks/logging_mocks.c
+        mocks/logging_stubs.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/../src/util/string_utils.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/../src/messaging/processors/position_message.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/../src/messaging/processors/config_message.c
+)
+target_link_libraries(test_message_handlers unity)
+target_compile_definitions(test_message_handlers PRIVATE
+        CC_VER3=1
+        CC_VER4=1
+        NO_AUTOSTUB_MESSAGING_HANDLERS=1
+)
+
 # Add custom test target to run all tests
 add_custom_target(run_tests
         COMMAND test_string_utils
         COMMAND test_analog_filter
         COMMAND test_message_parsing
+        COMMAND test_message_handlers
         COMMAND test_dynamixel_protocol
         COMMAND test_dynamixel_servo
         COMMAND test_eeprom_hours
-        DEPENDS test_string_utils test_analog_filter test_message_parsing test_dynamixel_protocol test_dynamixel_servo test_eeprom_hours
+        DEPENDS test_string_utils test_analog_filter test_message_parsing test_message_handlers test_dynamixel_protocol test_dynamixel_servo test_eeprom_hours
 )
 
 # Add exported symbols for mocked functions that are used by the firmware code

@@ -12,6 +12,10 @@
 #include "messaging/messaging.h"
 #include "util/string_utils.h"
 
+#ifdef CC_VER4
+#include "dynamixel/dynamixel_registers.h"
+#endif
+
 #include "types.h"
 
 extern volatile bool controller_safe_to_run;
@@ -105,7 +109,13 @@ bool handleConfigMessage(const GenericMessage *msg) {
                 xTimerStart(controller_init_request_timer, 0);
                 return false;
             }
-            const u8 dxl_id = (u8)stringToU16(dxl_id_str);
+            const u16 dxl_id_raw = stringToU16(dxl_id_str);
+            if (dxl_id_raw == 0 || dxl_id_raw > DXL_MAX_ID) {
+                error("DYNAMIXEL id %u out of range [1-%u]", dxl_id_raw, DXL_MAX_ID);
+                xTimerStart(controller_init_request_timer, 0);
+                return false;
+            }
+            const u8 dxl_id = (u8)dxl_id_raw;
 
             char *min_pos_str = strtok_r(NULL, " ", &temp_token);
             if (min_pos_str == NULL) {
@@ -114,6 +124,12 @@ bool handleConfigMessage(const GenericMessage *msg) {
                 return false;
             }
             const u32 min_pos = (u32)stringToU16(min_pos_str);
+            if (min_pos > DXL_POSITION_MAX) {
+                error("DYNAMIXEL %u min_position %lu out of range [0-%u]", dxl_id, (unsigned long)min_pos,
+                      DXL_POSITION_MAX);
+                xTimerStart(controller_init_request_timer, 0);
+                return false;
+            }
 
             char *max_pos_str = strtok_r(NULL, " ", &temp_token);
             if (max_pos_str == NULL) {
@@ -122,6 +138,18 @@ bool handleConfigMessage(const GenericMessage *msg) {
                 return false;
             }
             const u32 max_pos = (u32)stringToU16(max_pos_str);
+            if (max_pos > DXL_POSITION_MAX) {
+                error("DYNAMIXEL %u max_position %lu out of range [0-%u]", dxl_id, (unsigned long)max_pos,
+                      DXL_POSITION_MAX);
+                xTimerStart(controller_init_request_timer, 0);
+                return false;
+            }
+            if (min_pos > max_pos) {
+                error("DYNAMIXEL %u min_position %lu greater than max_position %lu", dxl_id, (unsigned long)min_pos,
+                      (unsigned long)max_pos);
+                xTimerStart(controller_init_request_timer, 0);
+                return false;
+            }
 
             char *velocity_str = strtok_r(NULL, " ", &temp_token);
             if (velocity_str == NULL) {
