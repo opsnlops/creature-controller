@@ -44,6 +44,14 @@ if (NOT PICO_PLATFORM AND NOT DEFINED ENV{PICO_PLATFORM})
 endif()
 add_compile_definitions(PICO_PLATFORM=${PICO_PLATFORM})
 
+# This firmware targets a custom RP2350B-based board. Tell the SDK that by
+# pointing PICO_BOARD at our local board header (boards/creature_controller.h),
+# which sets PICO_RP2350A=0. That gives us NUM_BANK0_GPIOS=48 and the right
+# default for PICO_PIO_USE_GPIO_BASE so PIO state machines can actually drive
+# pins above 31 (e.g. the HW4 Dynamixel status LED chain on GPIO 34).
+list(APPEND PICO_BOARD_HEADER_DIRS ${CMAKE_CURRENT_LIST_DIR}/boards)
+set(PICO_BOARD creature_controller)
+
 # Pull in the Pico SDK
 include($ENV{PICO_SDK_PATH}/external/pico_sdk_import.cmake)
 
