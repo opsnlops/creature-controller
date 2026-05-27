@@ -21,6 +21,21 @@
 #define WATCHDOG_TIMEOUT_MS 5000
 #define PWM_WRAPS_PER_WATCHDOG_UPDATE 100
 
+// Watchdog health gate. The PWM-wrap ISR refreshes the hardware watchdog, but
+// that ISR runs off the PWM hardware IRQ independent of the FreeRTOS scheduler
+// - so a fully deadlocked/starved firmware still gets petted and never resets.
+// When this is enabled, the ISR refreshes the watchdog ONLY if a lowest-
+// priority heartbeat task has run since the last refresh, so a hung scheduler
+// actually resets the board. It gates purely on scheduler liveness, never on
+// host/comms activity, so a legitimately idle creature (no host, no commands)
+// is NOT reset. OFF by default until soaked on hardware (including a host-
+// disconnect soak and a deliberate-hang test); when 0, the refresh is
+// unconditional - byte-for-byte the original behavior.
+#define USE_WATCHDOG_HEALTH_GATE 0
+#define WATCHDOG_HEARTBEAT_PERIOD_MS 500   // Lowest-prio liveness beat (<< pet interval)
+#define WATCHDOG_HEARTBEAT_TASK_STACK 256  // Words; the task only sets a flag
+#define WATCHDOG_HEARTBEAT_TASK_PRIORITY 1 // tskIDLE_PRIORITY+1: proves the scheduler isn't starved
+
 // Light to flash when commands are being received
 // #define CDC_ACTIVE_PIN                      17
 

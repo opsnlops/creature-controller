@@ -13,6 +13,7 @@
 #include "io/message_processor.h"
 #include "io/responsive_analog_read_filter.h"
 #include "logging/logging.h"
+#include "watchdog/watchdog.h"
 
 #include "config.h"
 #include "controller.h"
@@ -363,11 +364,14 @@ void __isr on_pwm_wrap_handler() {
     pwm_clear_irq(motor_map[0].slice);
     number_of_pwm_wraps = number_of_pwm_wraps + 1;
 
-    // Update the watchdog every PWM_WRAPS_PER_WATCHDOG_UPDATE wraps
+    // Refresh the watchdog every PWM_WRAPS_PER_WATCHDOG_UPDATE wraps.
+    // watchdog_feed() applies the health gate (see USE_WATCHDOG_HEALTH_GATE):
+    // it refreshes only if the scheduler proved liveness, so a hung scheduler
+    // resets the board instead of this ISR petting it forever.
     watchdog_wrap_count++;
     if (watchdog_wrap_count >= PWM_WRAPS_PER_WATCHDOG_UPDATE) {
         watchdog_wrap_count = 0;
-        watchdog_update();
+        watchdog_feed();
     }
 }
 

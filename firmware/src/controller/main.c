@@ -124,6 +124,9 @@ int main() {
         debug("Watchdog init'ed successfully");
     }
 
+    // Start the watchdog health-gate heartbeat (no-op unless USE_WATCHDOG_HEALTH_GATE)
+    watchdog_health_start();
+
     info("All systems initialized, starting scheduler");
 
     // Start the FreeRTOS scheduler - this should never return
