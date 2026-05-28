@@ -202,6 +202,9 @@ void OpusRtpAudioClient::run() {
     setThreadName("opus-rtp-main");
 
     /* Initialize SDL Audio */
+    // Prevent SDL from installing SIGINT/SIGTERM handlers that swallow signals
+    // before our own handler can request shutdown (matters under systemd).
+    SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, "1");
     SDL_InitSubSystem(SDL_INIT_AUDIO);
     SDL_AudioSpec want{}, have{};
     want.freq = SAMPLE_RATE;
@@ -209,8 +212,8 @@ void OpusRtpAudioClient::run() {
     want.format = AUDIO_S16SYS;
     want.samples = SDL_BUFFER_FRAMES;
     // Get the device name for the specified device index
-    const char* deviceName = nullptr;
-    
+    const char *deviceName = nullptr;
+
     // Check if we have a valid device index (from --list-sound-devices output)
     int numDevices = SDL_GetNumAudioDevices(0);
     if (audioDeviceIndex_ < numDevices) {
@@ -221,8 +224,8 @@ void OpusRtpAudioClient::run() {
             log_->warn("Audio device {} name not available, trying by index", audioDeviceIndex_);
         }
     } else if (audioDeviceIndex_ > 0) {
-        log_->warn("Audio device {} not found (only {} devices available), using default", 
-                   audioDeviceIndex_, numDevices);
+        log_->warn("Audio device {} not found (only {} devices available), using default", audioDeviceIndex_,
+                   numDevices);
     } else {
         log_->info("Using default audio device");
     }
