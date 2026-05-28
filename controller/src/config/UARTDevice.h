@@ -45,9 +45,9 @@ class UARTDevice {
     void setEnabled(bool _enabled);
 
   private:
-    bool enabled;
+    bool enabled = false;
     std::string deviceNode;
-    module_name module;
+    module_name module = invalid_module;
 
     std::shared_ptr<Logger> logger;
 };
