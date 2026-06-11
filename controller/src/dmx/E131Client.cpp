@@ -136,12 +136,38 @@ void E131Client::run() {
 
     logger->debug("E1.31 socket created (fd: {})", sockfd);
 
-    if (e131_bind(sockfd, E131_DEFAULT_PORT) < 0) {
-        const std::string errorMessage = fmt::format("Unable to bind E1.31 socket to port {}: {} (errno {})",
-                                                     E131_DEFAULT_PORT, getDetailedSocketError("e131_bind"), errno);
-        logger->critical(errorMessage);
-        close(sockfd);
-        throw E131Exception(errorMessage);
+    // Let several controllers on the same host (travel mode) share the port. Like the
+    // audio client, deliberately NOT SO_REUSEPORT — it can cause packet duplication
+    // with multicast.
+    int reuse = 1;
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) < 0) {
+        logger->warn("Unable to set SO_REUSEADDR on E1.31 socket: {}",
+                     getDetailedSocketError("setsockopt SO_REUSEADDR"));
+    }
+
+    // Bind to our universe's multicast group address rather than INADDR_ANY, the same
+    // way the audio client binds to its group. The kernel then only delivers OUR
+    // group's packets to this socket, so controllers sharing a host never see each
+    // other's universes (an INADDR_ANY socket receives every group joined on the
+    // host). Each universe maps to a different group address, so the binds don't
+    // collide either.
+    struct sockaddr_in groupAddr;
+    memset(&groupAddr, 0, sizeof(groupAddr));
+    groupAddr.sin_family = AF_INET;
+    groupAddr.sin_port = htons(E131_DEFAULT_PORT);
+    groupAddr.sin_addr.s_addr = htonl(0xEFFF0000 | universe); // 239.255.x.x format
+
+    if (bind(sockfd, reinterpret_cast<struct sockaddr *>(&groupAddr), sizeof(groupAddr)) < 0) {
+        logger->warn("Unable to bind E1.31 socket to multicast group address: {}; falling back to INADDR_ANY",
+                     getDetailedSocketError("bind"));
+
+        if (e131_bind(sockfd, E131_DEFAULT_PORT) < 0) {
+            const std::string errorMessage = fmt::format("Unable to bind E1.31 socket to port {}: {} (errno {})",
+                                                         E131_DEFAULT_PORT, getDetailedSocketError("e131_bind"), errno);
+            logger->critical(errorMessage);
+            close(sockfd);
+            throw E131Exception(errorMessage);
+        }
     }
 
     logger->debug("E1.31 socket bound to port {}", E131_DEFAULT_PORT);
@@ -160,7 +186,6 @@ void E131Client::run() {
     //     throw E131Exception(errorMessage);
     // }
 
-
     // The above code isn't binding to the specific multicast group correctly, so let's do it manually.
     /// Start of manual multicast join
     struct ip_mreqn mreq;
@@ -171,14 +196,13 @@ void E131Client::run() {
 
     if (setsockopt(sockfd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) < 0) {
         const std::string errorMessage =
-            fmt::format("Failed to join multicast group for universe {} on interface '{}': {} (errno {})",
-                       universe, networkInterfaceName, getDetailedSocketError("setsockopt IP_ADD_MEMBERSHIP"), errno);
+            fmt::format("Failed to join multicast group for universe {} on interface '{}': {} (errno {})", universe,
+                        networkInterfaceName, getDetailedSocketError("setsockopt IP_ADD_MEMBERSHIP"), errno);
         logger->critical(errorMessage);
         close(sockfd);
         throw E131Exception(errorMessage);
     }
     /// End of manual multicast join
-
 
     logger->info("Successfully joined multicast group 239.255.0.{} on {}", universe, networkInterfaceAddress);
     logger->info("Waiting for E1.31 packets on interface '{}'", networkInterfaceName);
@@ -196,6 +220,14 @@ void E131Client::run() {
 
         if ((error = e131_pkt_validate(&packet)) != E131_ERR_NONE) {
             logger->warn("Invalid E1.31 packet: {}", e131_strerror(error));
+            continue;
+        }
+
+        // Only process frames for our universe. On a shared host (travel mode) the
+        // socket can still see other universes' traffic, and their sequence numbers
+        // must not pollute our tracking, so this check stays ahead of the discard.
+        if (ntohs(packet.frame.universe) != this->universe) {
+            logger->trace("ignoring packet for universe {}", ntohs(packet.frame.universe));
             continue;
         }
 
