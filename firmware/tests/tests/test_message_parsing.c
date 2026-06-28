@@ -122,8 +122,11 @@ void test_parseMessage_invalid_checksum(void) {
 }
 
 void test_parseMessage_too_few_tokens(void) {
-    // Create a message with no data tokens
-    strcpy(test_message_buffer, "PING\tCHK 0");
+    // A message type with no checksum token at all is only a single token.
+    // parseMessage requires at least two (messageType + checksum), so this
+    // must be rejected. (Note: "PING\tCHK 0" would be *accepted* — that is a
+    // valid type + checksum with zero data tokens.)
+    strcpy(test_message_buffer, "PING");
     GenericMessage msg;
     memset(&msg, 0, sizeof(GenericMessage)); // Initialize to zeros
 
