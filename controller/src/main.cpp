@@ -392,12 +392,22 @@ int main(int argc, char **argv) {
 
     // Start up if we should
     if (config->isUsingServer()) {
+
+        // Re-register with the server every time the websocket (re)connects -
+        // the initial connect and after any server restart. The server forgets
+        // its registrations across a restart, so without this the controller
+        // would go dark until manually restarted. Registration is non-fatal if
+        // it fails; the next reconnect will try again. Set before start() so the
+        // first Open isn't missed. Capture by value - the lambda outlives this
+        // scope (it lives on serverConnection).
+        serverConnection->setConnectionEstablishedCallback(
+            [logger, serverAddress = config->getServerAddress(), serverPort = config->getServerPort(),
+             creatureConfigFile = config->getCreatureConfigFile(), universe = config->getUniverse()]() {
+                registerCreatureWithServer(logger, serverAddress, serverPort, creatureConfigFile, universe);
+            });
+
         serverConnection->start();
         workerThreads.push_back(serverConnection);
-
-        // Register the creature with the server (non-fatal if it fails)
-        registerCreatureWithServer(logger, config->getServerAddress(), config->getServerPort(),
-                                   config->getCreatureConfigFile(), config->getUniverse());
     }
 
     // Bring up the GPIO pins if enabled on the command line

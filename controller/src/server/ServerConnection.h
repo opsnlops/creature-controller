@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include <atomic>
+#include <functional>
 #include <string>
 
 #include <ixwebsocket/IXWebSocket.h>
@@ -43,6 +45,24 @@ class ServerConnection : public StoppableThread {
 
     void start() override;
 
+    /**
+     * Register a callback to run whenever the websocket connection to the server
+     * is (re)established - on the initial connect AND after every reconnect
+     * (e.g. the server restarting).
+     *
+     * This is how the controller re-registers itself with the server
+     * automatically: the server forgets its registrations across a restart, so
+     * a controller that only registered once at startup would silently go dark
+     * until manually restarted. Tying (re-)registration to the websocket
+     * reconnect means a server restart is recovered from on its own.
+     *
+     * Must be set before start(). The callback runs on this object's own thread,
+     * not the websocket's, so it may block (e.g. on an HTTP POST).
+     */
+    void setConnectionEstablishedCallback(std::function<void()> callback) {
+        connectionEstablishedCallback = std::move(callback);
+    }
+
   protected:
     void run() override;
 
@@ -64,6 +84,14 @@ class ServerConnection : public StoppableThread {
 
     // The creature we're working on
     std::shared_ptr<creatures::creature::Creature> creature;
+
+    // Set by the websocket Open event, consumed by run(). This hands the work
+    // off the websocket's callback thread so the (possibly blocking)
+    // connection-established callback runs on our own thread instead.
+    std::atomic<bool> connectionEstablished{false};
+
+    // Run on every websocket (re)connect; see setConnectionEstablishedCallback().
+    std::function<void()> connectionEstablishedCallback;
 
     std::string makeUrl() { return fmt::format("ws://{}:{}/api/v1/websocket", address, port); }
 
