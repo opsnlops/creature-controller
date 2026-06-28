@@ -9,6 +9,23 @@
  * Main configuration for the controller
  */
 
+// The hardware version this firmware was built for. It is reported to the host
+// in the INIT message so the controller knows the board's capabilities - most
+// importantly, whether Dynamixel is available (HW4 only). CC_VER4 also defines
+// CC_VER3, so CC_VER4 must be checked first.
+#if defined(CC_VER4)
+#define CREATURE_HARDWARE_VERSION 4
+#elif defined(CC_VER3)
+#define CREATURE_HARDWARE_VERSION 3
+#elif defined(CC_VER2)
+#define CREATURE_HARDWARE_VERSION 2
+#else
+// No CC_VERx set: this is a host/unit-test build that includes config.h but
+// never sends an INIT. Firmware builds always define a CC_VERx via CMake, so 0
+// can never reach the wire.
+#define CREATURE_HARDWARE_VERSION 0
+#endif
+
 #define INIT_REQUEST_TIME_MS 1000
 
 // Are we debugging the ADC?

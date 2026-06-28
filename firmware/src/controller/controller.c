@@ -382,7 +382,9 @@ void send_init_request(TimerHandle_t xTimer) {
 
     char message[USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH] = {0};
 
-    snprintf(message, USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH, "INIT\t%u", PROTOCOL_VERSION);
+    // Report our hardware version (3 = standard servos only, 4 = adds Dynamixel)
+    // so the host can configure us for what this board can actually drive.
+    snprintf(message, USB_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH, "INIT\t%u", CREATURE_HARDWARE_VERSION);
 
     send_to_controller(message);
     debug("sent init request");
