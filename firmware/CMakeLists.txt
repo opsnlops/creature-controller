@@ -79,7 +79,7 @@ endif()
 message("Building for platform ${PICO_PLATFORM}")
 
 project(creature-firmware
-        VERSION "4.1.0"
+        VERSION "4.1.1"
         DESCRIPTION "Pi Pico Firmwares for April's Creatures"
         HOMEPAGE_URL https://github.com/opsnlops/creature-controller/firmware
         LANGUAGES C CXX ASM)
