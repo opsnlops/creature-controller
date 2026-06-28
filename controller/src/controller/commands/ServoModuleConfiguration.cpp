@@ -19,7 +19,12 @@ ServoModuleConfiguration::ServoModuleConfiguration(std::shared_ptr<Logger> logge
 }
 
 Result<bool> ServoModuleConfiguration::getServoConfigurations(const std::shared_ptr<Controller> &controller,
-                                                              creatures::config::UARTDevice::module_name module) {
+                                                              creatures::config::UARTDevice::module_name module,
+                                                              u32 firmwareVer) {
+
+    // Remember the firmware version so addServoConfig() can reject motor types
+    // this firmware can't drive (see the Dynamixel gate below).
+    this->firmwareVersion = firmwareVer;
 
     if (!controller) {
         const auto errorMessage = "Controller is null in getServoConfigurations";
@@ -54,6 +59,19 @@ Result<bool> ServoModuleConfiguration::getServoConfigurations(const std::shared_
 }
 
 Result<bool> ServoModuleConfiguration::addServoConfig(const ServoConfig &servoConfig) {
+
+    // Dynamixel motors require firmware that supports them (version 4+, i.e. a
+    // HW4 board). Refuse to add one to a config bound for older firmware so we
+    // never send a DYNAMIXEL token a HW3 board can't parse.
+    if (servoConfig.getOutputLocation().type == creatures::creature::motor_type::dynamixel &&
+        firmwareVersion < DYNAMIXEL_MIN_FIRMWARE_VERSION) {
+        const auto errorMessage =
+            fmt::format("Configuration contains a Dynamixel motor (pin {}), but the attached firmware is version {}, "
+                        "which has no Dynamixel support (requires version {}+). This creature needs HW4 hardware.",
+                        servoConfig.getOutputHeader(), firmwareVersion, DYNAMIXEL_MIN_FIRMWARE_VERSION);
+        logger->error(errorMessage);
+        return Result<bool>{ControllerError(ControllerError::InvalidConfiguration, errorMessage)};
+    }
 
     // Check for duplicate output positions (compared by module, pin, AND motor type)
     for (const auto &existingConfig : servoConfigurations) {

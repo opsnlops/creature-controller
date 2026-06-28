@@ -1,3 +1,4 @@
+#include <cstdlib>
 #include <utility>
 
 #include "config/UARTDevice.h"
@@ -131,11 +132,14 @@ Result<bool> ServoModuleHandler::firmwareReadyForInitialization(u32 firmwareVer)
         return Result<bool>{ControllerError(ControllerError::InvalidConfiguration, "Module is shutting down")};
     }
 
-    // Make sure we got the version of the firmware we were built against
-    if (firmwareVer != FIRMWARE_VERSION) {
+    // Accept any firmware version this controller knows how to talk to. A HW3
+    // board reports 3 (standard servos only); a HW4 board reports 4 (adds
+    // Dynamixel). One controller binary supports either.
+    if (firmwareVer < MIN_SUPPORTED_FIRMWARE_VERSION || firmwareVer > MAX_SUPPORTED_FIRMWARE_VERSION) {
         std::string errorMessage =
-            fmt::format("Firmware version mismatch on module {}! Expected {}, got {}",
-                        UARTDevice::moduleNameToString(getModuleName()), FIRMWARE_VERSION, firmwareVer);
+            fmt::format("Unsupported firmware version on module {}: got {}, this controller supports {}-{}",
+                        UARTDevice::moduleNameToString(getModuleName()), firmwareVer, MIN_SUPPORTED_FIRMWARE_VERSION,
+                        MAX_SUPPORTED_FIRMWARE_VERSION);
         logger->critical(errorMessage);
         return Result<bool>{ControllerError(ControllerError::InvalidConfiguration, errorMessage)};
     }
@@ -143,12 +147,25 @@ Result<bool> ServoModuleHandler::firmwareReadyForInitialization(u32 firmwareVer)
     // Save the firmware version
     this->firmwareVersion = firmwareVer;
 
-    logger->debug("firmware is ready for initialization (version {})", firmwareVer);
+    logger->info("firmware is ready for initialization on module {} (version {}, Dynamixel {})",
+                 UARTDevice::moduleNameToString(getModuleName()), firmwareVer,
+                 firmwareVer >= DYNAMIXEL_MIN_FIRMWARE_VERSION ? "supported" : "not supported");
     this->messageRouter->setHandlerState(this->moduleId, creatures::io::MotorHandlerState::configuring);
 
-    // Go gather the configuration from the creature
+    // Go gather the configuration from the creature, gated to what this firmware
+    // version can actually drive.
     auto creatureConfigCommand = creatures::commands::ServoModuleConfiguration(logger);
-    creatureConfigCommand.getServoConfigurations(controller, getModuleName());
+    auto configResult = creatureConfigCommand.getServoConfigurations(controller, getModuleName(), this->firmwareVersion);
+    if (!configResult.isSuccess()) {
+        // An incompatible creature/hardware pairing - e.g. a creature with
+        // Dynamixel motors attached to HW3 firmware - cannot run on this board.
+        // Surface it clearly and halt rather than limp along with a creature
+        // that physically can't work here.
+        logger->critical("FATAL: cannot configure module {} for this firmware: {}",
+                         UARTDevice::moduleNameToString(getModuleName()), configResult.getError()->getMessage());
+        logger->critical("Halting the controller. Check that the creature config matches the attached hardware.");
+        std::exit(1);
+    }
 
     // ...and toss it to the serial handler
     creatures::io::Message message =

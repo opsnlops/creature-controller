@@ -35,8 +35,15 @@ using u64 = std::uint64_t;
 #define CONTROLLER_LOG_LEVEL "spdlog::level::trace"
 #define RP2040_LOG_LEVEL "spdlog::level::trace"
 
-// The version of the firmware we are expecting
-#define FIRMWARE_VERSION 4
+// Firmware/protocol versions this controller can talk to. A HW3 board reports
+// version 3 (standard servos only); a HW4 board reports 4 (adds Dynamixel). A
+// single controller binary supports either, so it accepts the whole range.
+#define MIN_SUPPORTED_FIRMWARE_VERSION 3
+#define MAX_SUPPORTED_FIRMWARE_VERSION 4
+
+// Dynamixel servo support was introduced in firmware version 4. A configuration
+// that contains Dynamixel motors cannot run on older (HW3) firmware.
+#define DYNAMIXEL_MIN_FIRMWARE_VERSION 4
 
 // GPIO
 #define GPIO_DEVICE "/dev/gpiomem"
