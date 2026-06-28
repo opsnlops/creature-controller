@@ -91,3 +91,12 @@ void resetQueueMock(QueueHandle_t xQueue);
 #define portTICK_PERIOD_MS 1
 #define pdMS_TO_TICKS(ms) (ms)
 #define configASSERT(x) if(!(x)) {printf("configASSERT FAILED: %s, line %d\n", __FILE__, __LINE__);}
+
+/* Task function macros mirror those in real task.h so headers that declare
+   task prototypes parse on host builds. */
+#ifndef portTASK_FUNCTION_PROTO
+#define portTASK_FUNCTION_PROTO(name, param) void name(void *param)
+#endif
+#ifndef portTASK_FUNCTION
+#define portTASK_FUNCTION(name, param) void name(void *param)
+#endif

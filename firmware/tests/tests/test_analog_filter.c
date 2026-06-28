@@ -55,24 +55,28 @@ void test_analog_filter_update_stable_input(void) {
 }
 
 void test_analog_filter_update_changing_input(void) {
-    // Create filter with predictable parameters
-    analog_filter filter = create_analog_filter(false, 0.5f, 20.0f, false);
+    // The snap curve saturates (snap == 1.0, i.e. a full jump to the new value)
+    // once the scaled input difference reaches 1, where scaled input is
+    // diff * snap_multiplier. To exercise *partial* smoothing for a 1000-count
+    // jump we need diff * snap_multiplier < 1, so use a small snap_multiplier.
+    // (In production big swings are meant to snap fully; this test targets the
+    // smoothing region on purpose.)
+    analog_filter filter = create_analog_filter(false, 0.0005f, 20.0f, false);
 
     // Initialize to ensure smooth_value is not garbage
     filter.smooth_value = 0.0f;
 
-    // Initial update
+    // Initial update: diff = 2000, scaled input = 1.0, so this snaps fully.
     analog_filter_update(&filter, 2000);
     TEST_ASSERT_EQUAL_UINT16(2000, filter.responsive_value);
 
-    // Second update with significantly different value
-    // With snap_multiplier=0.5, it should move partway toward the new value
+    // Second update: diff = 1000, scaled input = 0.5, so it moves only partway.
     analog_filter_update(&filter, 3000);
 
     // Responsive value should be somewhere between 2000 and 3000
     TEST_ASSERT_EQUAL_UINT16(3000, filter.raw_value);
-    TEST_ASSERT_GREATER_THAN(2000, filter.responsive_value);
-    TEST_ASSERT_LESS_THAN(3000, filter.responsive_value);
+    TEST_ASSERT_GREATER_THAN_UINT16(2000, filter.responsive_value);
+    TEST_ASSERT_LESS_THAN_UINT16(3000, filter.responsive_value);
     TEST_ASSERT_TRUE(filter.responsive_value_has_changed);
 }
 
@@ -129,20 +133,28 @@ void test_analog_filter_configuration_methods(void) {
 }
 
 void test_snap_curve_function(void) {
-    // Test the snap curve function at various points
+    // The snap curve maps a (scaled) input difference to a 0..1 smoothing
+    // factor: f(x) = min(1, (1 - 1/(x + 1)) * 2). It rises steeply and
+    // saturates at exactly 1.0 for all x >= 1.
+    //
+    // NOTE: Unity's TEST_ASSERT_LESS_THAN / GREATER_THAN are integer
+    // comparisons, so they cannot be used to check these fractional results
+    // (the arguments would be truncated to 0). Use float-aware assertions.
 
-    // Small input should give small output
-    TEST_ASSERT_LESS_THAN(0.2f, analog_filter_snap_curve(0.1f));
+    // Zero input means no movement.
+    TEST_ASSERT_FLOAT_WITHIN(0.0001f, 0.0f, analog_filter_snap_curve(0.0f));
 
-    // Medium input should give medium output
-    float medium_result = analog_filter_snap_curve(1.0f);
-    TEST_ASSERT_GREATER_THAN(0.3f, medium_result);
-    TEST_ASSERT_LESS_THAN(0.7f, medium_result);
+    // Small input gives a small (but non-zero) output.
+    TEST_ASSERT_FLOAT_WITHIN(0.0001f, 0.18182f, analog_filter_snap_curve(0.1f));
 
-    // Large input should give output close to 1.0
-    TEST_ASSERT_GREATER_THAN(0.9f, analog_filter_snap_curve(10.0f));
+    // A mid-range input (below saturation) gives a mid-range output.
+    float medium_result = analog_filter_snap_curve(0.4f);
+    TEST_ASSERT_TRUE(medium_result > 0.3f);
+    TEST_ASSERT_TRUE(medium_result < 0.7f);
 
-    // Very large input should give exactly 1.0
+    // The curve saturates at exactly 1.0 once x reaches 1.
+    TEST_ASSERT_EQUAL_FLOAT(1.0f, analog_filter_snap_curve(1.0f));
+    TEST_ASSERT_EQUAL_FLOAT(1.0f, analog_filter_snap_curve(10.0f));
     TEST_ASSERT_EQUAL_FLOAT(1.0f, analog_filter_snap_curve(100.0f));
 }
 

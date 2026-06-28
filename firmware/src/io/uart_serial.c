@@ -154,6 +154,9 @@ portTASK_FUNCTION(outgoing_uart_serial_writer_task, pvParameters) {
 void __isr serial_reader_isr() {
     static char lineBuffer[UART_SERIAL_INCOMING_MESSAGE_MAX_LENGTH];
     static u32 bufferIndex = 0;
+    // Set when a line outgrows lineBuffer; the rest of that line (through its
+    // newline) is then dropped rather than enqueued as a truncated fragment.
+    static bool overflowed = false;
 
     /*
      * Get all of the data we can in this pass, but remember this is an
@@ -173,6 +176,7 @@ void __isr serial_reader_isr() {
             // We heard a bell! Time to reset everything!
             memset(lineBuffer, '\0', UART_SERIAL_INCOMING_MESSAGE_MAX_LENGTH);
             bufferIndex = 0;
+            overflowed = false;
 
             // Let the user know, if the logger is up and running! 😅
             info("We heard the bell! The incoming buffer has been reset!");
@@ -181,6 +185,16 @@ void __isr serial_reader_isr() {
 
         // Check for newline character
         else if (ch == 0x0A) {
+
+            // A line that overran the buffer is unrecoverable, so discard it
+            // wholesale rather than enqueue a truncated, checksum-failing
+            // fragment.
+            if (overflowed) {
+                warning("discarding over-length input line from sender");
+                bufferIndex = 0;
+                overflowed = false;
+                continue;
+            }
 
             // If there was a blank line warn the sender
             if (bufferIndex == 0) {
@@ -193,18 +207,19 @@ void __isr serial_reader_isr() {
 
             bufferIndex = 0; // Reset buffer index
 
+        } else if (overflowed) {
+            // Already over length; swallow bytes until the next newline.
+            continue;
+
         } else if (bufferIndex < UART_SERIAL_INCOMING_MESSAGE_MAX_LENGTH - 1) {
             lineBuffer[bufferIndex++] = ch; // Store character and increment index
 
         } else {
-            // Buffer overflow handling
-            lineBuffer[UART_SERIAL_INCOMING_MESSAGE_MAX_LENGTH - 1] = '\0'; // Ensure null-termination
-            xQueueSendToBackFromISR(uart_serial_incoming_commands, lineBuffer, NULL);
-            uart_messages_received = uart_messages_received + 1;
-
-            bufferIndex = 0; // Reset buffer index
-
-            warning("buffer overflow on incoming data");
+            // The line is longer than the buffer. Enter overflow mode and drop
+            // everything through the next newline instead of enqueuing a
+            // partial command.
+            overflowed = true;
+            warning("buffer overflow on incoming data; discarding line");
         }
     }
 

@@ -9,6 +9,23 @@
  * Main configuration for the controller
  */
 
+// The hardware version this firmware was built for. It is reported to the host
+// in the INIT message so the controller knows the board's capabilities - most
+// importantly, whether Dynamixel is available (HW4 only). CC_VER4 also defines
+// CC_VER3, so CC_VER4 must be checked first.
+#if defined(CC_VER4)
+#define CREATURE_HARDWARE_VERSION 4
+#elif defined(CC_VER3)
+#define CREATURE_HARDWARE_VERSION 3
+#elif defined(CC_VER2)
+#define CREATURE_HARDWARE_VERSION 2
+#else
+// No CC_VERx set: this is a host/unit-test build that includes config.h but
+// never sends an INIT. Firmware builds always define a CC_VERx via CMake, so 0
+// can never reach the wire.
+#define CREATURE_HARDWARE_VERSION 0
+#endif
+
 #define INIT_REQUEST_TIME_MS 1000
 
 // Are we debugging the ADC?
@@ -143,6 +160,12 @@
 // Dynamixel controller task stack size
 #define DXL_TASK_STACK_SIZE 1024
 
+// Dynamixel status LED chain (one WS2812 per smart servo slot, ordered by ID)
+#define STATUS_LIGHTS_DYNAMIXEL_PIN 34
+#define STATUS_LIGHTS_DYNAMIXEL_COUNT 8
+#define STATUS_LIGHTS_DYNAMIXEL_IS_RGBW false
+#define STATUS_LIGHTS_DYNAMIXEL_BRIGHTNESS 64
+
 #endif
 
 #ifdef CC_VER2
@@ -225,18 +248,22 @@
 #define USE_STEPPERS 0
 
 /*
- * Logging Config
+ * Logging Config now lives in src/logging/logging_config.h (the single source
+ * of truth, included via logging.h), so it is no longer duplicated here.
  */
-#define DEFAULT_LOGGING_LEVEL LOG_LEVEL_DEBUG
-#define LOGGING_QUEUE_LENGTH 100
-#define LOGGING_MESSAGE_MAX_LENGTH 256
-#define LOGGING_LOG_VIA_PRINTF 1 // Add a printf() in the logger. Useful when a debugger is attached
 
 /*
  * Message Processor Config
  */
 #define INCOMING_MESSAGE_QUEUE_LENGTH 5
-#define INCOMING_MESSAGE_MAX_LENGTH 128
+// Must hold the largest line the host can send. The biggest is a CONFIG: one
+// SERVO/DYNAMIXEL token per servo on a module plus the trailing "\tCS nnnnn".
+// A full 8-servo module of DYNAMIXEL tokens is ~223 bytes, and 5 servos already
+// hit the old 128-byte limit exactly (one byte short once the checksum and null
+// were counted), which truncated the checksum digit and produced a guaranteed
+// mismatch. 256 leaves comfortable headroom; over-length lines are now dropped
+// cleanly (see usb_serial.c / uart_serial.c) rather than enqueued truncated.
+#define INCOMING_MESSAGE_MAX_LENGTH 256
 
 #define OUTGOING_MESSAGE_QUEUE_LENGTH 15
 #define OUTGOING_MESSAGE_MAX_LENGTH 384
@@ -245,7 +272,9 @@
  * USB Serial Config
  */
 #define USB_SERIAL_INCOMING_QUEUE_LENGTH 5
-#define USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH 128
+// Kept equal to INCOMING_MESSAGE_MAX_LENGTH (enforced by a _Static_assert in
+// message_processor.c). See the note there for the sizing rationale.
+#define USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH 256
 
 // Max bytes drained from the CDC RX FIFO per chunk. Bounds the inbound
 // callback's stack usage (it runs in the timer daemon) - never use a
@@ -294,7 +323,8 @@
  * UART Serial Config
  */
 #define UART_SERIAL_INCOMING_QUEUE_LENGTH 5
-#define UART_SERIAL_INCOMING_MESSAGE_MAX_LENGTH 128
+// Match the USB incoming size; same CONFIG-line sizing rationale applies.
+#define UART_SERIAL_INCOMING_MESSAGE_MAX_LENGTH 256
 
 #define UART_SERIAL_OUTGOING_QUEUE_LENGTH 15
 #define UART_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH 255
@@ -360,15 +390,28 @@
 #define I2C_DEVICE_MCP9808 0x18
 #define I2C_DEVICE_MCP9808_PRODUCT_ID 0x400 // This is used to make sure we're talking to the right device
 
-#define I2C_PAC1954_SENSOR_COUNT 3
 #define I2C_PAC1954_PRODUCT_ID 0x7B // This is used to make sure we're talking to the right device
 
 #define I2C_BOARD_PAC1954 0x10
+
+#ifdef CC_VER4
+// HW4 moved VBUS sensing from SENSE1 (channel 0) to SENSE4 (channel 3) on the
+// board PAC1954. SENSE1 is left unconnected; its slot is read each cycle but
+// the data is meaningless.
+#define I2C_PAC1954_SENSOR_COUNT 4
+#define I2C_BOARD_PAC1954_SENSOR_COUNT 4
+
+#define INCOMING_MOTOR_POWER_SENSOR_SLOT 1
+#define V3v3_SENSOR_SLOT 2
+#define VBUS_SENSOR_SLOT 3
+#else
+#define I2C_PAC1954_SENSOR_COUNT 3
 #define I2C_BOARD_PAC1954_SENSOR_COUNT 3
 
 #define VBUS_SENSOR_SLOT 0
 #define INCOMING_MOTOR_POWER_SENSOR_SLOT 1
 #define V3v3_SENSOR_SLOT 2
+#endif
 
 #endif
 

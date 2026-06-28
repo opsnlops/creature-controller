@@ -35,13 +35,17 @@ class ServoModuleConfiguration final : public ICommand {
      * @return Result indicating success or failure
      */
     Result<bool> getServoConfigurations(const std::shared_ptr<Controller> &controller,
-                                        creatures::config::UARTDevice::module_name module);
+                                        creatures::config::UARTDevice::module_name module, u32 firmwareVersion);
 
     std::string toMessage() override;
 
   private:
     std::vector<ServoConfig> servoConfigurations;
     std::shared_ptr<Logger> logger;
+
+    // Version reported by the firmware we're configuring. Gates motor types a
+    // given firmware can't drive (e.g. Dynamixel needs version 4+).
+    u32 firmwareVersion = 0;
 
     Result<bool> addServoConfig(const ServoConfig &servoConfig);
 };
