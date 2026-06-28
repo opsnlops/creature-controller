@@ -77,3 +77,7 @@ jobs:
         with:
           name: firmware-bundle-${{ matrix.platform }}-hw${{ matrix.hardware_version }}
           path: ${{github.workspace}}/firmware/build/*.uf2
+          # 7-day retention so per-commit firmware bundles don't pile up
+          # against the account-level Actions storage quota. Bump this if you
+          # need to pull an older .uf2; otherwise rebuild from the commit.
+          retention-days: 7

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.18)
 
 project(creature-controller
-        VERSION "4.0.0"
+        VERSION "4.0.1"
         DESCRIPTION "April's Creature Workshop Controller"
         HOMEPAGE_URL https://github.com/opsnlops/creature-controller
         LANGUAGES C CXX)
@@ -68,6 +68,7 @@ FetchContent_Declare(
         uvgrtp
         GIT_REPOSITORY https://github.com/ultravideo/uvgRTP.git
         GIT_TAG        v3.1.6
+        EXCLUDE_FROM_ALL   # keep uvgRTP's install() rules out of our .deb (collided with creature-server's opus/uvgrtp headers)
 )
 FetchContent_MakeAvailable(uvgrtp)
 
@@ -82,6 +83,7 @@ FetchContent_Declare(
         opus
         GIT_REPOSITORY  https://github.com/xiph/opus.git
         GIT_TAG         v1.5.2
+        EXCLUDE_FROM_ALL   # keep Opus' install() rules (headers, .a, cmake configs, .pc) out of our .deb
 )
 FetchContent_MakeAvailable(opus)
 # Optimise Opus even when the rest of the build is Debug
@@ -113,6 +115,7 @@ FetchContent_Declare(
         ixwebsocket
         GIT_REPOSITORY https://github.com/machinezone/IXWebSocket.git
         GIT_TAG        v11.4.6
+        EXCLUDE_FROM_ALL   # keep IXWebSocket's install() rules (headers, .a, cmake config, .pc) out of our .deb
 )
 FetchContent_MakeAvailable(ixwebsocket)
 

@@ -37,3 +37,7 @@ jobs:
         with:
           name: creature-controller-package-${{ matrix.os }}
           path: ${{github.workspace}}/package/
+          # 7-day retention so per-commit build packages don't pile up
+          # against the account-level Actions storage quota. Grab a package
+          # off a recent commit; older commits should be rebuilt.
+          retention-days: 7

@@ -51,27 +51,31 @@
 // Default to not shutting down
 std::atomic<bool> shutdown_requested(false);
 
-// Track SIGINT signals for fail-safe mechanism
-std::atomic<int> sigint_count(0);
+// Track shutdown signals for fail-safe mechanism
+std::atomic<int> shutdown_signal_count(0);
 
 /**
  * @brief Signal handler to gracefully shutdown the application
- * @param signal The received signal
+ * @param signal The received signal (SIGINT or SIGTERM)
  */
 void signal_handler(int signal) {
-    if (signal == SIGINT) {
-        int current_count = sigint_count.fetch_add(1) + 1;
+    if (signal != SIGINT && signal != SIGTERM) {
+        return;
+    }
 
-        if (current_count == 1) {
-            // First SIGINT - start graceful shutdown
-            std::cerr << "Caught SIGINT, requesting graceful shutdown..." << std::endl;
-            std::cerr << "(Press Ctrl+C again for immediate hard shutdown)" << std::endl;
-            shutdown_requested.store(true);
-        } else {
-            // Second or subsequent SIGINT - perform immediate hard shutdown
-            std::cerr << "Second SIGINT received, performing immediate hard shutdown..." << std::endl;
-            std::_Exit(EXIT_FAILURE);
-        }
+    const char *name = (signal == SIGINT) ? "SIGINT" : "SIGTERM";
+    int current_count = shutdown_signal_count.fetch_add(1) + 1;
+
+    if (current_count == 1) {
+        // First shutdown signal - start graceful shutdown
+        std::cerr << "Caught " << name << ", requesting graceful shutdown..." << std::endl;
+        std::cerr << "(Send another shutdown signal for immediate hard shutdown)" << std::endl;
+        shutdown_requested.store(true);
+    } else {
+        // Second or subsequent shutdown signal - perform immediate hard shutdown
+        std::cerr << "Second shutdown signal (" << name << ") received, performing immediate hard shutdown..."
+                  << std::endl;
+        std::_Exit(EXIT_FAILURE);
     }
 }
 
@@ -273,8 +277,10 @@ int main(int argc, char **argv) {
     using creatures::io::Message;
     using creatures::server::ServerConnection;
 
-    // Fire up the signal handlers
+    // Fire up the signal handlers. SIGTERM is what systemd sends on `systemctl stop`;
+    // without an explicit handler, SDL grabs it during SDL_InitSubSystem and swallows it.
     std::signal(SIGINT, signal_handler);
+    std::signal(SIGTERM, signal_handler);
 
     std::string version = fmt::format("{}.{}.{}", CREATURE_CONTROLLER_VERSION_MAJOR, CREATURE_CONTROLLER_VERSION_MINOR,
                                       CREATURE_CONTROLLER_VERSION_PATCH);
