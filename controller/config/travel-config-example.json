@@ -1,0 +1,27 @@
+{
+  "useGPIO": false,
+  "UARTs":
+    [
+      {
+        "enabled": true,
+        "deviceNode": "/dev/ttyACM0",
+        "module": "A"
+      }
+    ],
+  "ipAddress": "127.0.0.1",
+  "universe": 1,
+  "networkInterface": "lo",
+  "useRTPAudio": false,
+  "audioDevice": 0,
+  "powerDrawLimitWatts": 40.0,
+  "powerDrawWarningWatts": 32.0,
+  "powerDrawResponseSeconds": 4.0,
+  "temperatureLimitDegrees": 175.0,
+  "temperatureWarningDegrees": 160.0,
+  "temperatureLimitSeconds": 7.0,
+  "server": {
+    "enabled": true,
+    "address": "127.0.0.1",
+    "port": 8000
+  }
+}
