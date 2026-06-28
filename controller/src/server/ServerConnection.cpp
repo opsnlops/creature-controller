@@ -58,6 +58,18 @@ void ServerConnection::run() {
 
     // Wait until we're told to stop
     while (!stop_requested.load()) {
+
+        // If the websocket (re)connected since we last looked, run the
+        // connection-established callback. This fires both on the initial
+        // connect and after the server restarts and we reconnect, so the
+        // controller re-registers itself with the server automatically rather
+        // than needing a manual restart. exchange() makes sure we act on it
+        // exactly once per connect.
+        if (connectionEstablished.exchange(false) && connectionEstablishedCallback) {
+            logger->info("websocket (re)connected; re-registering with the server");
+            connectionEstablishedCallback();
+        }
+
         std::this_thread::sleep_for(interval);
     }
     logger->debug("ServerConnection thread stopping");
@@ -84,6 +96,11 @@ void ServerConnection::onMessage(const ix::WebSocketMessagePtr &msg) {
         logger->debug("received message: {}", msg->str);
     } else if (msg->type == ix::WebSocketMessageType::Open) {
         logger->info("Connection established");
+        // Flag the (re)connect for run() to act on. This fires on the first
+        // connect and on every reconnect after the server restarts, which is
+        // what drives automatic re-registration. Don't run the callback here -
+        // this is the websocket's own thread and the callback may block.
+        connectionEstablished.store(true);
     } else if (msg->type == ix::WebSocketMessageType::Error) {
         logger->error("Connection error: {}", msg->errorInfo.reason);
     }
