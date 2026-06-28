@@ -29,9 +29,6 @@
 #define WATCHDOG_TIMEOUT_MS 5000
 
 /*
- * Logging Config
+ * Logging Config now lives in src/logging/logging_config.h (the single source
+ * of truth, included via logging.h), so it is no longer duplicated here.
  */
-#define DEFAULT_LOGGING_LEVEL LOG_LEVEL_DEBUG
-#define LOGGING_QUEUE_LENGTH 100
-#define LOGGING_MESSAGE_MAX_LENGTH 256
-#define LOGGING_LOG_VIA_PRINTF 1

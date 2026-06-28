@@ -8,7 +8,7 @@
 #include <FreeRTOS.h>
 #include <task.h>
 
-#include "controller/config.h"
+#include "logging/logging_config.h"
 #include "types.h"
 
 /**
