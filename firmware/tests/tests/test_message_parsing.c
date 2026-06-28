@@ -9,6 +9,7 @@
 #include "logging_mocks.h"
 #include "messaging/messaging.h"
 #include "types.h"
+#include <stdio.h>
 #include <string.h>
 
 // Include stubs.h to get the declarations already defined there
@@ -137,6 +138,36 @@ void test_parseMessage_too_few_tokens(void) {
     TEST_ASSERT_FALSE(result);
 }
 
+void test_parseMessage_long_config_not_truncated(void) {
+    // Regression for the "checksum mismatch: 664 != 6641" field bug. A 5-servo
+    // module's CONFIG is a 128-byte wire line, which exactly overran the old
+    // 128-byte incoming buffer: the final checksum digit was sheared off, so the
+    // parsed checksum (664) no longer matched the body's real checksum (6641).
+    // The buffer is now large enough to hold a full module CONFIG intact.
+    const char *body = "CONFIG\tDYNAMIXEL 2 1000 2350 160\tSERVO 1 1475 1950\tSERVO 0 1400 1900"
+                       "\tDYNAMIXEL 4 1024 3072 187\tDYNAMIXEL 1 1024 3072 187";
+
+    // Build the on-the-wire line exactly as the host does: body + "\tCS <sum>".
+    u16 checksum = calculateChecksum(body);
+    char wire[USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH];
+    int wire_len = snprintf(wire, sizeof(wire), "%s\tCS %u", body, checksum);
+
+    // The line plus its null terminator must fit the incoming buffer; otherwise
+    // parseMessage's internal copy truncates it and the checksum cannot match.
+    TEST_ASSERT_LESS_THAN_INT(USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH, wire_len + 1);
+
+    GenericMessage msg;
+    memset(&msg, 0, sizeof(GenericMessage));
+    bool result = parseMessage(wire, &msg);
+
+    TEST_ASSERT_TRUE(result);
+    TEST_ASSERT_EQUAL_STRING("CONFIG", msg.messageType);
+    TEST_ASSERT_EQUAL_INT(5, msg.tokenCount); // five servo tokens, checksum excluded
+    // The crux: parsed checksum equals the one computed over the body (no shear).
+    TEST_ASSERT_EQUAL_UINT16(checksum, msg.expectedChecksum);
+    TEST_ASSERT_EQUAL_UINT16(msg.calculatedChecksum, msg.expectedChecksum);
+}
+
 int main(void) {
     UNITY_BEGIN();
 
@@ -150,6 +181,7 @@ int main(void) {
     RUN_TEST(test_parseMessage_valid_message);
     RUN_TEST(test_parseMessage_multiple_tokens);
     RUN_TEST(test_parseMessage_invalid_checksum);
+    RUN_TEST(test_parseMessage_long_config_not_truncated);
     RUN_TEST(test_parseMessage_too_few_tokens);
 
     return UNITY_END();

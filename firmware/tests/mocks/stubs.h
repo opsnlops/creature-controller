@@ -45,8 +45,11 @@ bool handleEmergencyStopMessage(const void *msg);
 #define OUTGOING_MESSAGE_MAX_LENGTH 384
 #endif
 
+// Fallback for test TUs that don't pull in controller/config.h. Keep this in
+// sync with config.h's value so a TU that includes both doesn't trip
+// -Wmacro-redefined.
 #ifndef INCOMING_MESSAGE_MAX_LENGTH
-#define INCOMING_MESSAGE_MAX_LENGTH 128
+#define INCOMING_MESSAGE_MAX_LENGTH 256
 #endif
 
 // Define TEST_BUILD to allow conditional compilation in the firmware code

@@ -239,7 +239,14 @@
  * Message Processor Config
  */
 #define INCOMING_MESSAGE_QUEUE_LENGTH 5
-#define INCOMING_MESSAGE_MAX_LENGTH 128
+// Must hold the largest line the host can send. The biggest is a CONFIG: one
+// SERVO/DYNAMIXEL token per servo on a module plus the trailing "\tCS nnnnn".
+// A full 8-servo module of DYNAMIXEL tokens is ~223 bytes, and 5 servos already
+// hit the old 128-byte limit exactly (one byte short once the checksum and null
+// were counted), which truncated the checksum digit and produced a guaranteed
+// mismatch. 256 leaves comfortable headroom; over-length lines are now dropped
+// cleanly (see usb_serial.c / uart_serial.c) rather than enqueued truncated.
+#define INCOMING_MESSAGE_MAX_LENGTH 256
 
 #define OUTGOING_MESSAGE_QUEUE_LENGTH 15
 #define OUTGOING_MESSAGE_MAX_LENGTH 384
@@ -248,7 +255,9 @@
  * USB Serial Config
  */
 #define USB_SERIAL_INCOMING_QUEUE_LENGTH 5
-#define USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH 128
+// Kept equal to INCOMING_MESSAGE_MAX_LENGTH (enforced by a _Static_assert in
+// message_processor.c). See the note there for the sizing rationale.
+#define USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH 256
 
 // Max bytes drained from the CDC RX FIFO per chunk. Bounds the inbound
 // callback's stack usage (it runs in the timer daemon) - never use a
@@ -297,7 +306,8 @@
  * UART Serial Config
  */
 #define UART_SERIAL_INCOMING_QUEUE_LENGTH 5
-#define UART_SERIAL_INCOMING_MESSAGE_MAX_LENGTH 128
+// Match the USB incoming size; same CONFIG-line sizing rationale applies.
+#define UART_SERIAL_INCOMING_MESSAGE_MAX_LENGTH 256
 
 #define UART_SERIAL_OUTGOING_QUEUE_LENGTH 15
 #define UART_SERIAL_OUTGOING_MESSAGE_MAX_LENGTH 255

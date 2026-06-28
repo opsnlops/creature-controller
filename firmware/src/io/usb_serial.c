@@ -70,6 +70,10 @@ void usb_serial_start() {
 void tud_cdc_rx_cb(uint8_t itf) {
     static char lineBuffer[USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH];
     static u32 bufferIndex = 0;
+    // Set when a line outgrows lineBuffer. Once set, the rest of that line
+    // (through its newline) is dropped instead of enqueued, so a truncated,
+    // checksum-failing fragment never reaches the parser.
+    static bool overflowed = false;
 
     // Drain the CDC RX FIFO in fixed-size chunks. This callback runs inside
     // tud_task() on the timer-daemon stack, so a FIFO-sized VLA here (the RX
@@ -103,6 +107,7 @@ void tud_cdc_rx_cb(uint8_t itf) {
                 // We heard a bell! Time to reset everything!
                 memset(lineBuffer, '\0', sizeof(lineBuffer));
                 bufferIndex = 0;
+                overflowed = false;
 
                 // Let the user know, if the logger is up and running! 😅
                 info("We heard the bell! The incoming buffer has been reset!");
@@ -113,6 +118,18 @@ void tud_cdc_rx_cb(uint8_t itf) {
             else if (ch == 0x0A) {
 
                 verbose("it's the blessed character");
+
+                // A line that overran the buffer is unrecoverable - we dropped
+                // bytes out of the middle - so discard the whole thing rather
+                // than enqueue a truncated fragment. A truncated line loses its
+                // last checksum digit and fails parsing in a confusing way (it
+                // looks like a checksum mismatch, not an over-length line).
+                if (overflowed) {
+                    warning("discarding over-length input line from sender");
+                    bufferIndex = 0;
+                    overflowed = false;
+                    continue;
+                }
 
                 // If there was a blank line warn the sender. Use continue, not
                 // break: break would discard every byte already read after
@@ -135,18 +152,20 @@ void tud_cdc_rx_cb(uint8_t itf) {
 
                 bufferIndex = 0; // Reset buffer index
 
+            } else if (overflowed) {
+                // Already over length; swallow bytes until the next newline.
+                continue;
+
             } else if (bufferIndex < USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH - 1) {
                 lineBuffer[bufferIndex++] = ch; // Store character and increment index
 
             } else {
-                // Buffer overflow handling
-                lineBuffer[USB_SERIAL_INCOMING_MESSAGE_MAX_LENGTH - 1] = '\0'; // Ensure null-termination
-                if (xQueueSendToBack(usb_serial_incoming_commands, lineBuffer, 0) != pdTRUE)
-                    incoming_messages_dropped++;
-
-                bufferIndex = 0; // Reset buffer index
-
-                warning("buffer overflow on incoming data");
+                // The line is longer than the buffer. Enter overflow mode and
+                // drop everything through the next newline instead of enqueuing
+                // a partial command. Count it once as a dropped message.
+                overflowed = true;
+                incoming_messages_dropped++;
+                warning("buffer overflow on incoming data; discarding line");
             }
         }
     }
