@@ -157,14 +157,24 @@ Result<bool> ServoModuleHandler::firmwareReadyForInitialization(u32 firmwareVer)
     auto creatureConfigCommand = creatures::commands::ServoModuleConfiguration(logger);
     auto configResult = creatureConfigCommand.getServoConfigurations(controller, getModuleName(), this->firmwareVersion);
     if (!configResult.isSuccess()) {
+        const auto error = configResult.getError().value();
+
         // An incompatible creature/hardware pairing - e.g. a creature with
         // Dynamixel motors attached to HW3 firmware - cannot run on this board.
         // Surface it clearly and halt rather than limp along with a creature
         // that physically can't work here.
-        logger->critical("FATAL: cannot configure module {} for this firmware: {}",
-                         UARTDevice::moduleNameToString(getModuleName()), configResult.getError()->getMessage());
-        logger->critical("Halting the controller. Check that the creature config matches the attached hardware.");
-        std::exit(1);
+        if (error.getErrorType() == ControllerError::IncompatibleHardware) {
+            logger->critical("FATAL: creature config is incompatible with the attached hardware on module {}: {}",
+                             UARTDevice::moduleNameToString(getModuleName()), error.getMessage());
+            logger->critical("Halting the controller. Check that the creature config matches the attached hardware.");
+            std::exit(1);
+        }
+
+        // Any other failure (e.g. no servos defined for this module) is not
+        // fatal here - log it and let the caller carry on.
+        logger->error("Failed to build servo configuration for module {}: {}",
+                      UARTDevice::moduleNameToString(getModuleName()), error.getMessage());
+        return Result<bool>{error};
     }
 
     // ...and toss it to the serial handler

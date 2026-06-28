@@ -17,7 +17,10 @@ class ControllerError {
         InvalidConfiguration,
         DestinationUnknown,
         IOError,
-        UnprocessableMessage
+        UnprocessableMessage,
+        // The creature config can't run on the attached hardware at all (e.g. a
+        // Dynamixel creature on HW3 firmware). Unrecoverable - the caller halts.
+        IncompatibleHardware
     };
 
     ControllerError(ErrorType errorType, const std::string &message);

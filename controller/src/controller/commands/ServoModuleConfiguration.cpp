@@ -70,7 +70,7 @@ Result<bool> ServoModuleConfiguration::addServoConfig(const ServoConfig &servoCo
                         "which has no Dynamixel support (requires version {}+). This creature needs HW4 hardware.",
                         servoConfig.getOutputHeader(), firmwareVersion, DYNAMIXEL_MIN_FIRMWARE_VERSION);
         logger->error(errorMessage);
-        return Result<bool>{ControllerError(ControllerError::InvalidConfiguration, errorMessage)};
+        return Result<bool>{ControllerError(ControllerError::IncompatibleHardware, errorMessage)};
     }
 
     // Check for duplicate output positions (compared by module, pin, AND motor type)
