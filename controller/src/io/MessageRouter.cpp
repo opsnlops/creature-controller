@@ -64,7 +64,7 @@ Result<bool> MessageRouter::sendMessageToCreature(const Message &message) {
 
 void MessageRouter::broadcastMessageToAllModules(const std::string &message) {
 
-    logger->info("📣 Broadcasting message to all modules: {}", message);
+    logger->debug("📣 Broadcasting message to all modules: {}", message);
 
     for (const auto &pair : servoHandlers) {
         creatures::config::UARTDevice::module_name moduleName = pair.first;

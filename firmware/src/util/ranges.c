@@ -6,15 +6,18 @@
 
 i32 convertRange(i32 input, const i32 oldMin, const i32 oldMax, const i32 newMin, const i32 newMax) {
 
-    if( input > oldMax ) {
+    // Clamping an out-of-range input is this helper's normal, designed
+    // behavior (it is called every frame from hot paths such as the status
+    // lights), so report it at verbose rather than warning.
+    if (input > oldMax) {
         const i32 newInput = oldMax;
-        warning("input (%d) is out of range %d to %d. capping at %d", input, oldMin, oldMax, newInput);
+        verbose("value %d above range %d..%d, clamping to %d", input, oldMin, oldMax, newInput);
         input = newInput;
     }
 
-    if( input < oldMin ) {
+    if (input < oldMin) {
         const i32 newInput = oldMin;
-        warning("input (%d) is out of range %d to %d. capping at %d", input, oldMin, oldMax, newInput);
+        verbose("value %d below range %d..%d, clamping to %d", input, oldMin, oldMax, newInput);
         input = newInput;
     }
 

@@ -26,10 +26,9 @@ class SpdlogLogger : public Logger {
             // Set up our locale. If this vomits, install `locales-all`
             std::locale::global(std::locale("en_US.UTF-8"));
         } catch (const std::runtime_error &e) {
-            throw LoggingException(
-                fmt::format("Unable to set the locale: '{}' (Hint: Make sure "
-                            "package locales-all is installed!)",
-                            std::string(e.what())));
+            throw LoggingException(fmt::format("Unable to set the locale: '{}' (Hint: Make sure "
+                                               "package locales-all is installed!)",
+                                               std::string(e.what())));
         }
 
         // Save our name
@@ -39,8 +38,25 @@ class SpdlogLogger : public Logger {
         ourLogger = spdlog::stdout_color_mt(ourName);
         ourLogger->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%n] [%^%l%$] %v");
 
-        // Default to debug level logging
-        ourLogger->set_level(spdlog::level::debug);
+        // Intentionally leave the level alone so this logger inherits spdlog's
+        // process-wide level (info by default). The configured level is applied
+        // later via setLevel() once the config file has been parsed.
+    }
+
+    void setLevel(const std::string &levelName) override {
+        auto level = spdlog::level::from_str(levelName);
+
+        // from_str() returns 'off' for anything it doesn't recognize, so guard
+        // against a typo silently muting all logging.
+        if (level == spdlog::level::off && levelName != "off") {
+            ourLogger->warn("Unrecognized log level '{}', keeping the current level", levelName);
+            return;
+        }
+
+        // Apply to every registered logger and make it the default for any
+        // loggers created afterward.
+        spdlog::set_level(level);
+        ourLogger->info("Log level set to '{}'", levelName);
     }
 
   protected:
@@ -64,8 +80,7 @@ class SpdlogLogger : public Logger {
         ourLogger->error(fmt::vformat(format, args));
     }
 
-    void logCritical(const std::string &format,
-                     fmt::format_args args) override {
+    void logCritical(const std::string &format, fmt::format_args args) override {
         ourLogger->critical(fmt::vformat(format, args));
     }
 

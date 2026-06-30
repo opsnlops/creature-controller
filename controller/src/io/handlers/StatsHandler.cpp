@@ -79,6 +79,13 @@ void StatsHandler::handle(std::shared_ptr<Logger> logger, const std::vector<std:
             statsMessage.checksumFailures = stringToU64(value);
         }
 
+        // Pipeline drops
+        else if (name == STATS_OUTGOING_DROPPED) {
+            statsMessage.outgoingMessagesDropped = stringToU64(value);
+        } else if (name == STATS_INCOMING_DROPPED) {
+            statsMessage.incomingMessagesDropped = stringToU64(value);
+        }
+
         // Movement
         else if (name == STATS_POSITIONS_PROCESSED) {
             statsMessage.positionMessagesProcessed = stringToU64(value);
@@ -112,8 +119,29 @@ void StatsHandler::handle(std::shared_ptr<Logger> logger, const std::vector<std:
         }
     }
 
+    // Warn if the firmware has dropped more messages than the last time it
+    // reported. A non-zero, growing drop count means the board is shedding
+    // telemetry or commands under load - worth surfacing at warning level.
+    // A decrease means the firmware restarted and reset its counters, so we
+    // simply re-baseline without warning.
+    if (haveDropBaseline) {
+        if (statsMessage.outgoingMessagesDropped > lastOutgoingMessagesDropped) {
+            logger->warn("firmware dropped {} more outgoing message(s) since last report (total {})",
+                         statsMessage.outgoingMessagesDropped - lastOutgoingMessagesDropped,
+                         statsMessage.outgoingMessagesDropped);
+        }
+        if (statsMessage.incomingMessagesDropped > lastIncomingMessagesDropped) {
+            logger->warn("firmware dropped {} more incoming message(s) since last report (total {})",
+                         statsMessage.incomingMessagesDropped - lastIncomingMessagesDropped,
+                         statsMessage.incomingMessagesDropped);
+        }
+    }
+    lastOutgoingMessagesDropped = statsMessage.outgoingMessagesDropped;
+    lastIncomingMessagesDropped = statsMessage.incomingMessagesDropped;
+    haveDropBaseline = true;
+
     // Now log it!
-    logger->info(statsMessage.toString());
+    logger->debug(statsMessage.toString());
 }
 
 } // namespace creatures

@@ -30,6 +30,10 @@
 #define STATS_FAILED_PARSE "F_PARSE"
 #define STATS_CHECKSUM_FAILED "CHKFAIL"
 
+// Pipeline drops (messages discarded because a queue was full)
+#define STATS_OUTGOING_DROPPED "OUT_DROP"
+#define STATS_INCOMING_DROPPED "IN_DROP"
+
 // Movement
 #define STATS_POSITIONS_PROCESSED "POS_PROC"
 
@@ -71,6 +75,8 @@ class StatsMessage {
     u64 parseSuccesses;
     u64 parseFailures;
     u64 checksumFailures;
+    u64 outgoingMessagesDropped;
+    u64 incomingMessagesDropped;
     u64 positionMessagesProcessed;
     u64 pwmWraps;
 

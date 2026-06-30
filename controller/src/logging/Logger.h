@@ -23,6 +23,12 @@ class Logger {
     // A chance to initialize the logger as needed
     virtual void init(std::string loggerName) = 0;
 
+    // Set the minimum severity that will be emitted. Accepts the standard
+    // level names (trace, debug, info, warn/warning, error, critical, off).
+    // Implementations are expected to apply this process-wide so every logger
+    // shares the same level.
+    virtual void setLevel(const std::string &levelName) = 0;
+
     template <typename... Args> void trace(const std::string &format, Args &&...args) {
         auto format_args = fmt::make_format_args(args...);
         logTrace(format, format_args);
