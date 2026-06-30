@@ -310,6 +310,10 @@ int main(int argc, char **argv) {
     // Yay, we have a valid config
     auto config = configResult.getValue().value();
 
+    // Apply the configured log level now that we've parsed the config. This is
+    // process-wide, so it affects every logger created from here on out too.
+    logger->setLevel(config->getLogLevel());
+
     if (commandLine->shouldValidateCreatureConfigOnly()) {
         if (!config->isUsingServer()) {
             logger->error("Server validation requested but server usage is disabled in config");

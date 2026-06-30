@@ -52,7 +52,7 @@ void BoardSensorHandler::handle(std::shared_ptr<Logger> handleLogger, const std:
         return;
     }
     boardTemperature = stringToDouble(split[1]);
-    handleLogger->info("Chassis temperature: {:.2f}F", boardTemperature);
+    handleLogger->debug("Chassis temperature: {:.2f}F", boardTemperature);
 
     // Update watchdog global temperature
     creatures::watchdog::WatchdogGlobals::updateTemperature(boardTemperature);
@@ -96,8 +96,8 @@ void BoardSensorHandler::handle(std::shared_ptr<Logger> handleLogger, const std:
 
         payloadJson["power_reports"].push_back(sensorInfo);
 
-        handleLogger->info("Sensor {}: voltage: {:.2f}V, current: {:.2f}A, power: {:.2f}W", sensorName, voltage,
-                           current, power);
+        handleLogger->debug("Sensor {}: voltage: {:.2f}V, current: {:.2f}A, power: {:.2f}W", sensorName, voltage,
+                            current, power);
 
         // Update watchdog global power draw for motor power sensor
         if (sensorName == "motor_power_in") {

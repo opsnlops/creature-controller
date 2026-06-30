@@ -16,9 +16,12 @@
 
 /*
  * DSENSE message format from firmware:
- *   DSENSE\tD1 45 128 7400\tD2 43 -50 7350
+ *   DSENSE\tD1 45 128 7400 2048\tD2 43 -50 7350 1024
  *
- * Each token after DSENSE: D<id> <temperature_F> <present_load> <voltage_mV>
+ * Each token after DSENSE: D<id> <temperature_F> <present_load> <voltage_mV> <present_position>
+ *
+ * The trailing <present_position> field was added later. Tokens without it
+ * (older firmware) are still accepted and simply omit the position.
  */
 
 namespace creatures {
@@ -48,8 +51,11 @@ void DynamixelSensorHandler::handle(std::shared_ptr<Logger> handleLogger, const 
         auto motorReport = tokens[i];
         auto split = splitString(motorReport);
 
-        if (split.size() != 4) {
-            handleLogger->warn("expected 4 fields in DSENSE motor token, got {}: {}", split.size(), motorReport);
+        // 5 fields is current firmware (with position); 4 is older firmware
+        // that predates the present_position field.
+        const bool hasPosition = (split.size() == 5);
+        if (split.size() != 4 && split.size() != 5) {
+            handleLogger->warn("expected 4 or 5 fields in DSENSE motor token, got {}: {}", split.size(), motorReport);
             continue;
         }
 
@@ -65,6 +71,8 @@ void DynamixelSensorHandler::handle(std::shared_ptr<Logger> handleLogger, const 
         // present_load can be negative, parse as signed via stringToU32 and cast
         int32_t presentLoad = static_cast<int32_t>(stringToU32(split[2]));
         u32 voltageMv = stringToU32(split[3]);
+        // present_position is the raw encoder value (0-4095 for XC430-class servos)
+        int32_t presentPosition = hasPosition ? static_cast<int32_t>(stringToU32(split[4])) : 0;
 
         double voltageV = static_cast<double>(voltageMv) / 1000.0;
 
@@ -82,10 +90,20 @@ void DynamixelSensorHandler::handle(std::shared_ptr<Logger> handleLogger, const 
             {"voltage_mv", voltageMv}, {"voltage_v", voltageV},
         };
 
+        // Only report position when the firmware actually sent it
+        if (hasPosition) {
+            motorInfo["present_position"] = presentPosition;
+        }
+
         payloadJson["dynamixel_motors"].push_back(motorInfo);
 
-        handleLogger->info("Dynamixel {} temp: {:.1f}F, load: {}, voltage: {:.2f}V", motorId, temperatureF, presentLoad,
-                           voltageV);
+        if (hasPosition) {
+            handleLogger->debug("Dynamixel {} temp: {:.1f}F, load: {}, voltage: {:.2f}V, position: {}", motorId,
+                                temperatureF, presentLoad, voltageV, presentPosition);
+        } else {
+            handleLogger->debug("Dynamixel {} temp: {:.1f}F, load: {}, voltage: {:.2f}V", motorId, temperatureF,
+                                presentLoad, voltageV);
+        }
     }
 
     // Update watchdog globals with max values across all Dynamixel servos

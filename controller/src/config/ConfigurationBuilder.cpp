@@ -215,6 +215,18 @@ Result<std::shared_ptr<creatures::config::Configuration>> ConfigurationBuilder::
         config->setUseServer(false);
     }
 
+    // Optional logging level. Left out of the required fields so existing config
+    // files keep working; defaults to "info" when absent.
+    if (j.contains("logLevel")) {
+        if (j["logLevel"].is_string()) {
+            config->setLogLevel(j["logLevel"].get<std::string>());
+        } else {
+            logger->warn("logLevel field is not a string, using default '{}'", config->getLogLevel());
+        }
+    } else {
+        logger->debug("no logLevel field found, using default '{}'", config->getLogLevel());
+    }
+
     logger->info("done parsing the main config file");
     return Result<std::shared_ptr<creatures::config::Configuration>>{config};
 }

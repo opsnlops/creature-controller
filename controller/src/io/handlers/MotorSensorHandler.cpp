@@ -78,8 +78,8 @@ void MotorSensorHandler::handle(std::shared_ptr<Logger> handleLogger, const std:
 
         payloadJson["motors"].push_back(motorInfo);
 
-        handleLogger->info("Motor {} position: {}, voltage: {:.2f}V, current: {:.2f}A, power: {:.2f}W", i - 1,
-                           motorPosition, motorVoltage, motorCurrent, motorPower);
+        handleLogger->debug("Motor {} position: {}, voltage: {:.2f}V, current: {:.2f}A, power: {:.2f}W", i - 1,
+                            motorPosition, motorVoltage, motorCurrent, motorPower);
     }
 
     // Send the message to the websocket

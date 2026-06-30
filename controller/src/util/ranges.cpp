@@ -2,21 +2,20 @@
 #include "ranges.h"
 #include "logging/Logger.h"
 
-int32_t convertRange(std::shared_ptr<creatures::Logger> logger, int32_t input,
-                     int32_t oldMin, int32_t oldMax, int32_t newMin,
-                     int32_t newMax) {
+int32_t convertRange(std::shared_ptr<creatures::Logger> logger, int32_t input, int32_t oldMin, int32_t oldMax,
+                     int32_t newMin, int32_t newMax) {
 
+    // Clamping an out-of-range input is this helper's normal, designed
+    // behavior, so report it at debug rather than warning to keep info quiet.
     if (input > oldMax) {
         int32_t newInput = oldMax;
-        logger->warn("input ({}) is out of range {} to {}. capping at {}",
-                     input, oldMin, oldMax, newInput);
+        logger->debug("value {} above range {}..{}, clamping to {}", input, oldMin, oldMax, newInput);
         input = newInput;
     }
 
     if (input < oldMin) {
         int32_t newInput = oldMin;
-        logger->warn("input ({}) is out of range {} to {}. capping at {}",
-                     input, oldMin, oldMax, newInput);
+        logger->debug("value {} below range {}..{}, clamping to {}", input, oldMin, oldMax, newInput);
         input = newInput;
     }
 

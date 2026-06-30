@@ -102,6 +102,12 @@ std::string Configuration::getServerAddress() const { return serverAddress; }
  */
 u16 Configuration::getServerPort() const { return serverPort; }
 
+/**
+ * @brief Get the configured minimum log level
+ * @return The log level name (e.g. "info")
+ */
+std::string Configuration::getLogLevel() const { return logLevel; }
+
 bool Configuration::getWatchdogDisabled() const { return watchdogDisabled; }
 
 /**
@@ -247,6 +253,15 @@ void Configuration::setServerPort(u16 _serverPort) {
     logger->debug("Set server port to {}", this->serverPort);
 }
 
+/**
+ * @brief Set the minimum log level to emit
+ * @param _logLevel The log level name (e.g. "info")
+ */
+void Configuration::setLogLevel(std::string _logLevel) {
+    this->logLevel = std::move(_logLevel);
+    logger->debug("Set log level to {}", this->logLevel);
+}
+
 void Configuration::setWatchdogDisabled(bool _watchdogDisabled) {
     this->watchdogDisabled = _watchdogDisabled;
     logger->debug("Set watchdogDisabled to {}", this->watchdogDisabled);
@@ -318,7 +333,8 @@ void Configuration::setDynamixelTemperatureWarningDegrees(double _dynamixelTempe
 
 void Configuration::setDynamixelTemperatureLimitSeconds(double _dynamixelTemperatureLimitSeconds) {
     this->dynamixelTemperatureLimitSeconds = _dynamixelTemperatureLimitSeconds;
-    logger->debug("Set Dynamixel temperature limit response time to {} seconds", this->dynamixelTemperatureLimitSeconds);
+    logger->debug("Set Dynamixel temperature limit response time to {} seconds",
+                  this->dynamixelTemperatureLimitSeconds);
 }
 
 void Configuration::setDynamixelLoadLimitPercent(double _dynamixelLoadLimitPercent) {

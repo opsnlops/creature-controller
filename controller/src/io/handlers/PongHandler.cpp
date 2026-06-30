@@ -32,7 +32,7 @@ void PongHandler::handle(std::shared_ptr<Logger> logger, const std::vector<std::
     auto pongMessage =
         fmt::format("pong from firmware for module {}! ({}us)",
                     UARTDevice::moduleNameToString(servoModuleHandler->getModuleName()), pingTimeMicroseconds);
-    logger->info(pongMessage);
+    logger->debug(pongMessage);
     servoModuleHandler->sendMessageToController(pongMessage);
 }
 

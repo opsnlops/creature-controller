@@ -86,8 +86,8 @@ TEST_F(MessageProcessorTest, ProcessMessage_EmptyPayload) {
 // --- Dynamixel sensor message tests ---
 
 TEST_F(MessageProcessorTest, ProcessMessage_DynamixelSensor_SingleMotor) {
-    // Format from firmware: DSENSE\tD<id> <temp> <load> <voltage_mV>
-    Message msg(moduleId, "DSENSE\tD1 45 128 7400");
+    // Format from firmware: DSENSE\tD<id> <temp> <load> <voltage_mV> <position>
+    Message msg(moduleId, "DSENSE\tD1 45 128 7400 2048");
     auto result = messageProcessor->processMessage(msg);
     EXPECT_TRUE(result.isSuccess());
     EXPECT_EQ(websocketQueue->size(), 1u);
@@ -95,7 +95,15 @@ TEST_F(MessageProcessorTest, ProcessMessage_DynamixelSensor_SingleMotor) {
 
 TEST_F(MessageProcessorTest, ProcessMessage_DynamixelSensor_MultipleMotors) {
     // Two Dynamixel servos reporting in
-    Message msg(moduleId, "DSENSE\tD1 45 128 7400\tD2 43 -50 7350");
+    Message msg(moduleId, "DSENSE\tD1 45 128 7400 2048\tD2 43 -50 7350 1024");
+    auto result = messageProcessor->processMessage(msg);
+    EXPECT_TRUE(result.isSuccess());
+    EXPECT_EQ(websocketQueue->size(), 1u);
+}
+
+TEST_F(MessageProcessorTest, ProcessMessage_DynamixelSensor_LegacyNoPosition) {
+    // Older firmware without the trailing position field is still accepted
+    Message msg(moduleId, "DSENSE\tD1 45 128 7400");
     auto result = messageProcessor->processMessage(msg);
     EXPECT_TRUE(result.isSuccess());
     EXPECT_EQ(websocketQueue->size(), 1u);

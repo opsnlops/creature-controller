@@ -42,6 +42,8 @@ class Configuration {
     std::string getServerAddress() const;
     u16 getServerPort() const;
 
+    [[nodiscard]] std::string getLogLevel() const;
+
     // Watchdog configuration getters
     [[nodiscard]] bool getWatchdogDisabled() const;
     [[nodiscard]] double getPowerDrawLimitWatts() const;
@@ -68,6 +70,8 @@ class Configuration {
     void setUseServer(bool _useServer);
     void setServerAddress(std::string _serverAddress);
     void setServerPort(u16 _serverPort);
+
+    void setLogLevel(std::string _logLevel);
 
     // Watchdog configuration setters
     void setWatchdogDisabled(bool _watchdogDisabled);
@@ -121,6 +125,9 @@ class Configuration {
     bool useServer = false;
     std::string serverAddress;
     u16 serverPort;
+
+    // Minimum log severity to emit (trace, debug, info, warn, error, critical, off)
+    std::string logLevel = "info";
 
     // Watchdog configuration
     bool watchdogDisabled = false;

@@ -751,7 +751,7 @@ portTASK_FUNCTION(dynamixel_controller_task, pvParameters) {
                     char dsense_msg[OUTGOING_MESSAGE_MAX_LENGTH] = {0};
                     int offset = snprintf(dsense_msg, sizeof(dsense_msg), "DSENSE");
 
-                    for (u8 i = 0; i < result_count && offset < (int)sizeof(dsense_msg) - 30; i++) {
+                    for (u8 i = 0; i < result_count && offset < (int)sizeof(dsense_msg) - 45; i++) {
                         if (sync_results[i].valid) {
                             // Convert voltage from Dynamixel units (0.1V) to mV
                             u32 voltage_mv = (u32)sync_results[i].status.present_voltage * 100;
@@ -759,9 +759,11 @@ portTASK_FUNCTION(dynamixel_controller_task, pvParameters) {
                             // Convert temperature from Celsius to Fahrenheit
                             double temp_f = (double)sync_results[i].status.present_temperature * 9.0 / 5.0 + 32.0;
 
-                            offset += snprintf(dsense_msg + offset, sizeof(dsense_msg) - offset, "\tD%u %.1f %d %lu",
-                                               sync_results[i].id, temp_f,
-                                               sync_results[i].status.present_load, (unsigned long)voltage_mv);
+                            // Token: D<id> <temp_F> <load> <voltage_mV> <position>
+                            offset +=
+                                snprintf(dsense_msg + offset, sizeof(dsense_msg) - offset, "\tD%u %.1f %d %lu %ld",
+                                         sync_results[i].id, temp_f, sync_results[i].status.present_load,
+                                         (unsigned long)voltage_mv, (long)sync_results[i].status.present_position);
 
                             // Check for hardware errors
                             if (sync_results[i].servo_error != 0) {
