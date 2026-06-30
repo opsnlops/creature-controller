@@ -199,6 +199,13 @@ void i2c_sensor_read_timer_callback(TimerHandle_t xTimer) {
     eeprom_hours_motor_sample(sensor_power_data[INCOMING_MOTOR_POWER_SENSOR_SLOT].voltage);
 #endif
 
+#ifdef CC_VER4
+    // Watch the motor power rail for a cut-and-restore so we can re-init the
+    // Dynamixel servos when power comes back. Pure arithmetic - no bus access -
+    // so it is safe to do here in the sensor callback.
+    controller_motor_power_sample(sensor_power_data[INCOMING_MOTOR_POWER_SENSOR_SLOT].voltage);
+#endif
+
     i2c_timer_count += 1;
 }
 

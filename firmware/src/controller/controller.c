@@ -617,6 +617,7 @@ bool configureDynamixelServo(u8 dxl_id, u32 min_pos, u32 max_pos, u32 profile_ve
         entry->min_position = min_pos;
         entry->max_position = max_pos;
         entry->requested_position = (min_pos + max_pos) / 2; // Center
+        entry->profile_velocity = profile_velocity;          // Retained for re-init after a power cycle
         entry->is_configured = true;
         dxl_motor_count++;
 
@@ -706,6 +707,53 @@ void dynamixel_set_torque_all(bool enable) {
     }
 }
 
+// Whether the incoming motor power rail is currently up. Starts true so a board
+// that boots with the motors already powered does not see a spurious "restored"
+// edge on the very first reading. The Dynamixel task reads this to avoid talking
+// to servos that have no power.
+static volatile bool motor_power_rail_present = true;
+
+// Set when the motor power rail returns after being cut while the controller is
+// running, signalling the Dynamixel task to re-apply servo configuration.
+static volatile bool dxl_reinit_requested = false;
+
+// Re-apply Dynamixel configuration after the motor power rail was cycled. The
+// servos come back with torque disabled and their Profile Velocity register at
+// the factory default, so restore the velocity we were configured with and then
+// re-enable torque. Runs on the Dynamixel control task, which owns the bus.
+static void dynamixel_reinitialize_all(void) {
+    if (dxl_ctx == NULL || dxl_motor_count == 0) {
+        return;
+    }
+
+    info("re-initializing %u Dynamixel servos after motor power restore", dxl_motor_count);
+
+    // Snapshot ids and velocities under the mutex, then do bus ops without it held
+    u8 ids[MAX_DYNAMIXEL_SERVOS];
+    u32 velocities[MAX_DYNAMIXEL_SERVOS];
+    u8 count = 0;
+
+    if (xSemaphoreTake(dxl_motors_mutex, portMAX_DELAY) == pdTRUE) {
+        count = dxl_motor_count;
+        for (u8 i = 0; i < count; i++) {
+            ids[i] = dxl_motors[i].dxl_id;
+            velocities[i] = dxl_motors[i].profile_velocity;
+        }
+        xSemaphoreGive(dxl_motors_mutex);
+    }
+
+    // Restore each servo's Profile Velocity (lost on the power cycle)
+    for (u8 i = 0; i < count; i++) {
+        dxl_result_t res = dxl_set_profile_velocity(dxl_ctx, ids[i], velocities[i]);
+        if (res != DXL_OK) {
+            warning("failed to restore Profile Velocity for Dynamixel %u (result=%d)", ids[i], res);
+        }
+    }
+
+    // Torque and status LED back on
+    dynamixel_set_torque_all(true);
+}
+
 portTASK_FUNCTION(dynamixel_controller_task, pvParameters) {
     (void)pvParameters;
 
@@ -722,8 +770,20 @@ portTASK_FUNCTION(dynamixel_controller_task, pvParameters) {
     for (EVER) {
         TickType_t wake_time = xTaskGetTickCount();
 
-        if (controller_safe_to_run && dxl_motor_count > 0) {
+        // Skip all bus traffic while the motor power rail is down - there is no
+        // point talking to servos that have no power, and it only racks up bus
+        // timeouts. Work resumes (starting with a re-init) when power returns.
+        if (controller_safe_to_run && dxl_motor_count > 0 && motor_power_rail_present) {
             u8 count = 0;
+
+            // If the motor power rail was cycled, the servos came back torque-off
+            // with a default Profile Velocity. Re-apply their config before
+            // resuming normal control. Cleared before the work so a transition
+            // that arrives mid-re-init is caught on the next pass.
+            if (dxl_reinit_requested) {
+                dxl_reinit_requested = false;
+                dynamixel_reinitialize_all();
+            }
 
             // Build position array under mutex
             if (xSemaphoreTake(dxl_motors_mutex, pdMS_TO_TICKS(5)) == pdTRUE) {
@@ -789,6 +849,28 @@ const dxl_metrics_t *controller_get_dxl_metrics(void) {
         return NULL;
     }
     return dxl_hal_metrics(dxl_ctx);
+}
+
+void controller_motor_power_sample(float voltage) {
+    if (motor_power_rail_present) {
+        // Watch for the rail dropping out (smart plug switched off, etc.)
+        if (voltage < MOTOR_POWER_RAIL_LOST_VOLTAGE) {
+            motor_power_rail_present = false;
+            info("motor power rail lost (%.2fV)", voltage);
+        }
+    } else {
+        // Watch for the rail coming back up
+        if (voltage > MOTOR_POWER_RAIL_RESTORED_VOLTAGE) {
+            motor_power_rail_present = true;
+            info("motor power rail restored (%.2fV)", voltage);
+
+            // Only re-init if the controller has us running; otherwise the
+            // normal first-frame path will configure the motors from scratch.
+            if (controller_safe_to_run) {
+                dxl_reinit_requested = true;
+            }
+        }
+    }
 }
 
 #endif

@@ -101,6 +101,16 @@
 // PAC1954 channel reads above this many volts.
 #define MOTOR_POWER_ON_VOLTAGE_THRESHOLD 3.0f
 
+// Edge-detection thresholds for the incoming-motor-power rail being cut and
+// restored (e.g. a smart plug powering the motors off while the board stays up
+// over USB). The rail is treated as lost once it drops near zero and restored
+// once it climbs back up. The restore threshold sits a little below 5V because
+// some motors run on a 5V rail that can sag slightly. The gap between the two
+// provides hysteresis so a noisy reading near the boundary does not trigger
+// repeated re-inits.
+#define MOTOR_POWER_RAIL_LOST_VOLTAGE 2.0f
+#define MOTOR_POWER_RAIL_RESTORED_VOLTAGE 4.5f
+
 /*
  * EEPROM Config
  */

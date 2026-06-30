@@ -262,6 +262,8 @@ typedef struct {
     u32 min_position;       /**< Minimum allowed position (0-4095) */
     u32 max_position;       /**< Maximum allowed position (0-4095) */
     u32 requested_position; /**< Next position to write via Sync Write */
+    u32 profile_velocity;   /**< Profile Velocity register value; retained so it
+                                 can be re-applied after a motor power cycle */
     bool is_configured;     /**< True if this motor has been configured */
 } DynamixelMotorEntry;
 
@@ -330,5 +332,21 @@ portTASK_FUNCTION_PROTO(dynamixel_controller_task, pvParameters);
  * @return Pointer to the metrics struct, or NULL if HAL not initialized
  */
 const dxl_metrics_t *controller_get_dxl_metrics(void);
+
+/**
+ * @brief Feed the latest motor-power-rail voltage in for edge detection
+ *
+ * Called from the sensor task each time the incoming-motor-power rail is read.
+ * Detects the rail being cut (e.g. a smart plug powering the motors off while
+ * the board stays up over USB) and restored, and requests a re-initialization
+ * of the Dynamixel servos when power comes back - they lose torque enable and
+ * their Profile Velocity register across a power cycle.
+ *
+ * Pure arithmetic; performs no bus access, so it is safe to call from the
+ * sensor timer callback.
+ *
+ * @param voltage The incoming motor power rail voltage, in volts
+ */
+void controller_motor_power_sample(float voltage);
 
 #endif
