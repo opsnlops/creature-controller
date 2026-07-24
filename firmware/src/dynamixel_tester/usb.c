@@ -4,12 +4,11 @@
 #include <FreeRTOS.h>
 #include <timers.h>
 
-#include <hardware/gpio.h>
-
 #include "logging/logging.h"
 
 #include "config.h"
 #include "shell.h"
+#include "status_led.h"
 #include "types.h"
 #include "usb.h"
 
@@ -28,18 +27,8 @@ void usb_init() {
 
     tud_init(BOARD_TUD_RHPORT);
 
-    gpio_init(CDC_MOUNTED_LED_PIN);
-    gpio_set_dir(CDC_MOUNTED_LED_PIN, GPIO_OUT);
-    gpio_put(CDC_MOUNTED_LED_PIN, false);
+    status_led_init();
     cdc_connected = false;
-
-    gpio_init(INCOMING_LED_PIN);
-    gpio_set_dir(INCOMING_LED_PIN, GPIO_OUT);
-    gpio_put(INCOMING_LED_PIN, false);
-
-    gpio_init(OUTGOING_LED_PIN);
-    gpio_set_dir(OUTGOING_LED_PIN, GPIO_OUT);
-    gpio_put(OUTGOING_LED_PIN, false);
 }
 
 void usb_start() {
@@ -65,15 +54,15 @@ void usb_start() {
 void usbDeviceTimerCallback(TimerHandle_t xTimer) { tud_task(); }
 
 void clear_data_transmission_lights_timer(TimerHandle_t xTimer) {
-    gpio_put(INCOMING_LED_PIN, false);
-    gpio_put(OUTGOING_LED_PIN, false);
+    status_led_set(STATUS_LED_INCOMING, false);
+    status_led_set(STATUS_LED_OUTGOING, false);
 }
 
 void is_cdc_connected_timer(TimerHandle_t xTimer) {
 
     if (tud_cdc_connected()) {
 
-        gpio_put(CDC_MOUNTED_LED_PIN, true);
+        status_led_set(STATUS_LED_MOUNTED, true);
 
         if (!cdc_connected) {
             debug("CDC connected");
@@ -82,7 +71,7 @@ void is_cdc_connected_timer(TimerHandle_t xTimer) {
         }
 
     } else {
-        gpio_put(CDC_MOUNTED_LED_PIN, false);
+        status_led_set(STATUS_LED_MOUNTED, false);
 
         if (cdc_connected) {
             debug("CDC disconnected");
@@ -126,7 +115,7 @@ void tud_resume_cb(void) {
 void cdc_send(char const *message) {
 
     if (tud_cdc_connected()) {
-        gpio_put(OUTGOING_LED_PIN, true);
+        status_led_set(STATUS_LED_OUTGOING, true);
         tud_cdc_n_write_str(0, message);
         tud_cdc_n_write_flush(0);
         debug("sent CDC message: %s", message);

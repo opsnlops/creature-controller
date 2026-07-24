@@ -276,8 +276,12 @@ set(DYNAMIXEL_TESTER_ADDITIONAL_SOURCES
         ${DYNAMIXEL_SOURCES}
         src/dynamixel_tester/main.c
         src/dynamixel_tester/config.h
+        src/dynamixel_tester/alive_display.h
+        src/dynamixel_tester/alive_display.c
         src/dynamixel_tester/shell.h
         src/dynamixel_tester/shell.c
+        src/dynamixel_tester/status_led.h
+        src/dynamixel_tester/status_led.c
         src/dynamixel_tester/usb.h
         src/dynamixel_tester/usb.c
         src/dynamixel_tester/usb_descriptors.c
