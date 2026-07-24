@@ -3,10 +3,10 @@
 
 /**
  * @file dynamixel_registers.h
- * @brief Dynamixel XC430 control table register addresses and protocol constants
+ * @brief Dynamixel XC330 control table register addresses and protocol constants
  *
- * Register addresses and sizes for XC430-series servos using Protocol 2.0.
- * See the Dynamixel XC430 e-Manual for the complete control table.
+ * Register addresses and sizes for XC330-series servos using Protocol 2.0.
+ * See the Dynamixel XC330 e-Manual for the complete control table.
  */
 
 // ---- Protocol 2.0 Constants ----
