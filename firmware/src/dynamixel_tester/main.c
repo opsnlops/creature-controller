@@ -16,6 +16,7 @@
 #include "logging/logging.h"
 #include "logging/logging_api.h"
 
+#include "alive_display.h"
 #include "config.h"
 #include "shell.h"
 #include "types.h"
@@ -47,9 +48,13 @@ int main() {
     bi_decl(bi_program_version_string(CREATURE_FIRMWARE_VERSION_STRING))
     bi_decl(bi_program_feature("FreeRTOS Version: " tskKERNEL_VERSION_NUMBER))
     bi_decl(bi_1pin_with_name(DXL_DATA_PIN, "Dynamixel Data"))
+#if STATUS_LED_USE_WS2812
+    bi_decl(bi_1pin_with_name(STATUS_LED_WS2812_PIN, "Status LEDs (WS2812 chain)"))
+#else
     bi_decl(bi_1pin_with_name(CDC_MOUNTED_LED_PIN, "CDC Mounted LED"))
     bi_decl(bi_1pin_with_name(INCOMING_LED_PIN, "Data Received LED"))
     bi_decl(bi_1pin_with_name(OUTGOING_LED_PIN, "Data Transmitted LED"))
+#endif
 
     stdio_init_all();
 
@@ -93,6 +98,11 @@ int main() {
 portTASK_FUNCTION(startup_task, pvParameters) {
     usb_init();
     usb_start();
+
+    // Light up the otherwise-idle LED chains so it's obvious the board is alive.
+    alive_display_init();
+    alive_display_start();
+
     vTaskDelete(NULL);
 }
 

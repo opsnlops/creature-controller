@@ -19,6 +19,7 @@
 #include "dynamixel/dynamixel_servo.h"
 #include "logging/logging.h"
 #include "shell.h"
+#include "status_led.h"
 #include "types.h"
 #include "usb.h"
 #include "version.h"
@@ -886,7 +887,7 @@ portTASK_FUNCTION(shell_task, pvParameters) {
 
 // Automatically called by TinyUSB when data is received
 void tud_cdc_rx_cb(__attribute__((unused)) uint8_t itf) {
-    gpio_put(INCOMING_LED_PIN, true);
+    status_led_set(STATUS_LED_INCOMING, true);
 
     u32 count = tud_cdc_available();
     if (count == 0)
