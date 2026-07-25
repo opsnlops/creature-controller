@@ -45,17 +45,21 @@ void DynamixelSensorHandler::handle(std::shared_ptr<Logger> handleLogger, const 
     json payloadJson;
     double maxTemp = 0.0;
     double maxAbsLoad = 0.0;
+    int onlineCount = 0;
 
     // Process each motor token (skip token[0] which is "DSENSE")
     for (size_t i = 1; i < tokens.size(); i++) {
         auto motorReport = tokens[i];
         auto split = splitString(motorReport);
 
-        // 5 fields is current firmware (with position); 4 is older firmware
-        // that predates the present_position field.
-        const bool hasPosition = (split.size() == 5);
-        if (split.size() != 4 && split.size() != 5) {
-            handleLogger->warn("expected 4 or 5 fields in DSENSE motor token, got {}: {}", split.size(), motorReport);
+        // 6 fields is current firmware, the last being the online flag; 5
+        // predates that flag and 4 also predates present_position. Firmware
+        // without the flag only reported servos it actually heard from, so
+        // anything it sent counts as online.
+        const bool hasPosition = (split.size() >= 5);
+        const bool hasOnlineFlag = (split.size() == 6);
+        if (split.size() < 4 || split.size() > 6) {
+            handleLogger->warn("expected 4 to 6 fields in DSENSE motor token, got {}: {}", split.size(), motorReport);
             continue;
         }
 
@@ -74,20 +78,28 @@ void DynamixelSensorHandler::handle(std::shared_ptr<Logger> handleLogger, const 
         // present_position is the raw encoder value (0-4095 for XC430-class servos)
         int32_t presentPosition = hasPosition ? static_cast<int32_t>(stringToU32(split[4])) : 0;
 
+        const bool online = hasOnlineFlag ? (stringToU32(split[5]) != 0) : true;
+
         double voltageV = static_cast<double>(voltageMv) / 1000.0;
 
-        // Track max values for watchdog monitoring
-        if (temperatureF > maxTemp) {
-            maxTemp = temperatureF;
-        }
-        double absLoad = std::abs(static_cast<double>(presentLoad));
-        if (absLoad > maxAbsLoad) {
-            maxAbsLoad = absLoad;
+        // Track max values for watchdog monitoring, from online servos only. An
+        // offline servo reports zeros, which say nothing about how hot or
+        // loaded it was.
+        if (online) {
+            onlineCount++;
+
+            if (temperatureF > maxTemp) {
+                maxTemp = temperatureF;
+            }
+            double absLoad = std::abs(static_cast<double>(presentLoad));
+            if (absLoad > maxAbsLoad) {
+                maxAbsLoad = absLoad;
+            }
         }
 
         json motorInfo = {
             {"dxl_id", motorId},       {"temperature_f", temperatureF}, {"present_load", presentLoad},
-            {"voltage_mv", voltageMv}, {"voltage_v", voltageV},
+            {"voltage_mv", voltageMv}, {"voltage_v", voltageV},         {"online", online},
         };
 
         // Only report position when the firmware actually sent it
@@ -97,7 +109,9 @@ void DynamixelSensorHandler::handle(std::shared_ptr<Logger> handleLogger, const 
 
         payloadJson["dynamixel_motors"].push_back(motorInfo);
 
-        if (hasPosition) {
+        if (!online) {
+            handleLogger->debug("Dynamixel {} is offline", motorId);
+        } else if (hasPosition) {
             handleLogger->debug("Dynamixel {} temp: {:.1f}F, load: {}, voltage: {:.2f}V, position: {}", motorId,
                                 temperatureF, presentLoad, voltageV, presentPosition);
         } else {
@@ -106,9 +120,13 @@ void DynamixelSensorHandler::handle(std::shared_ptr<Logger> handleLogger, const 
         }
     }
 
-    // Update watchdog globals with max values across all Dynamixel servos
-    creatures::watchdog::WatchdogGlobals::updateDynamixelTemperature(maxTemp);
-    creatures::watchdog::WatchdogGlobals::updateDynamixelLoad(maxAbsLoad);
+    // Update watchdog globals with max values across the servos we heard from.
+    // With none online we have no reading at all, and feeding it zeros would
+    // look like a cool, unloaded bus rather than an absent one.
+    if (onlineCount > 0) {
+        creatures::watchdog::WatchdogGlobals::updateDynamixelTemperature(maxTemp);
+        creatures::watchdog::WatchdogGlobals::updateDynamixelLoad(maxAbsLoad);
+    }
 
     // Send to websocket
     auto message = creatures::server::DynamixelSensorReportMessage(logger, payloadJson);

@@ -981,6 +981,66 @@ static void dynamixel_set_torque_all(bool enable) {
     }
 }
 
+/**
+ * Build and send a DSENSE report.
+ *
+ * Every configured servo appears in every report, with a trailing online flag.
+ * A servo we did not hear from — because it failed to answer, or because the
+ * whole bus has no power — reports zeros with the flag clear. Omitting it
+ * instead, as this used to do, leaves the controller showing the last good
+ * reading as though it were current, which is worse than showing nothing.
+ *
+ * @param ids servo IDs to report on, in motor map order
+ * @param id_count how many entries ids holds
+ * @param results sync read results, or NULL when the bus was not read at all
+ * @param result_count how many entries results holds
+ */
+static void dynamixel_send_sensor_report(const u8 *ids, u8 id_count, const dxl_sync_status_result_t *results,
+                                         u8 result_count) {
+    char dsense_msg[OUTGOING_MESSAGE_MAX_LENGTH] = {0};
+    int offset = snprintf(dsense_msg, sizeof(dsense_msg), "DSENSE");
+
+    for (u8 i = 0; i < id_count && offset < (int)sizeof(dsense_msg) - DXL_SENSOR_REPORT_TOKEN_MAX; i++) {
+        const dxl_sync_status_result_t *reading = NULL;
+
+        for (u8 j = 0; j < result_count; j++) {
+            if (results[j].id == ids[i] && results[j].valid) {
+                reading = &results[j];
+                break;
+            }
+        }
+
+        if (reading != NULL) {
+            // Convert voltage from Dynamixel units (0.1V) to mV
+            u32 voltage_mv = (u32)reading->status.present_voltage * 100;
+
+            // Convert temperature from Celsius to Fahrenheit
+            double temp_f = (double)reading->status.present_temperature * 9.0 / 5.0 + 32.0;
+
+            // Token: D<id> <temp_F> <load> <voltage_mV> <position> <online>
+            offset += snprintf(dsense_msg + offset, sizeof(dsense_msg) - offset, "\tD%u %.1f %d %lu %ld 1", ids[i],
+                               temp_f, reading->status.present_load, (unsigned long)voltage_mv,
+                               (long)reading->status.present_position);
+
+            // Check for hardware errors
+            if (reading->servo_error != 0) {
+                warning("Dynamixel %u reports hardware error: 0x%02X", ids[i], reading->servo_error);
+            }
+        } else {
+            offset += snprintf(dsense_msg + offset, sizeof(dsense_msg) - offset, "\tD%u 0.0 0 0 0 0", ids[i]);
+        }
+    }
+
+    // Track the send result rather than discarding it: a full outgoing queue
+    // drops the report just as effectively as a failed bus read, and the two
+    // want different fixes.
+    if (send_to_controller(dsense_msg)) {
+        dsense_messages_sent++;
+    } else {
+        dsense_sends_dropped++;
+    }
+}
+
 // Re-apply Dynamixel configuration after the motor power rail was cycled. The
 // servos come back with torque disabled and their Profile Velocity register at
 // the factory default, so restore the velocity we were configured with, confirm
@@ -1088,9 +1148,34 @@ portTASK_FUNCTION(dynamixel_controller_task, pvParameters) {
             }
         }
 
-        // Skip all bus traffic while the motor power rail is down - there is no
-        // point talking to servos that have no power, and it only racks up bus
-        // timeouts. Work resumes (starting with a re-init) when power returns.
+        if (controller_safe_to_run && dxl_motor_count > 0 && !motor_power_rail_present) {
+            // Rail is down, so no bus traffic - there is no point talking to
+            // servos that have no power, and it only racks up timeouts. Keep
+            // reporting them as offline, though, or the controller goes on
+            // showing the last good readings as if they were current. Nothing
+            // can change until power returns, so report at a slower cadence.
+            if (frame_counter % DXL_SENSOR_REPORT_OFFLINE_INTERVAL_FRAMES == 0) {
+                u8 offline_ids[MAX_DYNAMIXEL_SERVOS];
+                u8 offline_count = 0;
+
+                if (xSemaphoreTake(dxl_motors_mutex, pdMS_TO_TICKS(5)) == pdTRUE) {
+                    offline_count = dxl_motor_count;
+                    for (u8 i = 0; i < offline_count; i++) {
+                        offline_ids[i] = dxl_motors[i].dxl_id;
+                    }
+                    xSemaphoreGive(dxl_motors_mutex);
+                }
+
+                if (offline_count > 0) {
+                    dynamixel_send_sensor_report(offline_ids, offline_count, NULL, 0);
+                }
+            }
+
+            frame_counter++;
+        }
+
+        // Normal operation, with the rail up. Work resumes here (starting with a
+        // re-init) once power returns.
         if (controller_safe_to_run && dxl_motor_count > 0 && motor_power_rail_present) {
             u8 count = 0;
 
@@ -1119,7 +1204,10 @@ portTASK_FUNCTION(dynamixel_controller_task, pvParameters) {
                 dxl_sync_write_position(dxl_ctx, sync_positions, count);
             }
 
-            // Periodic telemetry read
+            // Periodic telemetry read. The report goes out whether or not the
+            // read succeeded — servos that did not answer are flagged offline
+            // rather than left out, so every configured servo is accounted for
+            // in every report.
             if (count > 0 && frame_counter % DXL_SENSOR_REPORT_INTERVAL_FRAMES == 0) {
                 u8 result_count = 0;
                 dxl_result_t res = dxl_sync_read_status(dxl_ctx, sync_ids, count, sync_results, &result_count);
@@ -1128,42 +1216,7 @@ portTASK_FUNCTION(dynamixel_controller_task, pvParameters) {
                     dsense_reads_failed++;
                 }
 
-                if (res == DXL_OK && result_count > 0) {
-                    // Build and send DSENSE message
-                    char dsense_msg[OUTGOING_MESSAGE_MAX_LENGTH] = {0};
-                    int offset = snprintf(dsense_msg, sizeof(dsense_msg), "DSENSE");
-
-                    for (u8 i = 0; i < result_count && offset < (int)sizeof(dsense_msg) - 45; i++) {
-                        if (sync_results[i].valid) {
-                            // Convert voltage from Dynamixel units (0.1V) to mV
-                            u32 voltage_mv = (u32)sync_results[i].status.present_voltage * 100;
-
-                            // Convert temperature from Celsius to Fahrenheit
-                            double temp_f = (double)sync_results[i].status.present_temperature * 9.0 / 5.0 + 32.0;
-
-                            // Token: D<id> <temp_F> <load> <voltage_mV> <position>
-                            offset +=
-                                snprintf(dsense_msg + offset, sizeof(dsense_msg) - offset, "\tD%u %.1f %d %lu %ld",
-                                         sync_results[i].id, temp_f, sync_results[i].status.present_load,
-                                         (unsigned long)voltage_mv, (long)sync_results[i].status.present_position);
-
-                            // Check for hardware errors
-                            if (sync_results[i].servo_error != 0) {
-                                warning("Dynamixel %u reports hardware error: 0x%02X", sync_results[i].id,
-                                        sync_results[i].servo_error);
-                            }
-                        }
-                    }
-
-                    // Track the send result rather than discarding it: a full
-                    // outgoing queue drops the report just as effectively as a
-                    // failed bus read, and the two want different fixes.
-                    if (send_to_controller(dsense_msg)) {
-                        dsense_messages_sent++;
-                    } else {
-                        dsense_sends_dropped++;
-                    }
-                }
+                dynamixel_send_sensor_report(sync_ids, count, sync_results, (res == DXL_OK) ? result_count : 0);
             }
 
             // Periodic tally so a stalled telemetry path is visible from here

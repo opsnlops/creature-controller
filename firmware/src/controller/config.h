@@ -164,6 +164,15 @@
 // Dynamixel sensor reporting interval (every 10 frames = 200ms at 50Hz)
 #define DXL_SENSOR_REPORT_INTERVAL_FRAMES 10
 
+// Reporting interval while the motor rail is down. Nothing can change until
+// power comes back, so the report only needs to be often enough that the
+// controller knows the servos are still offline (50 frames = 1s at 50Hz).
+#define DXL_SENSOR_REPORT_OFFLINE_INTERVAL_FRAMES 50
+
+// Longest a single DSENSE servo token can be, used to stop building the message
+// before the buffer runs out: "\tD255 999.9 -32768 65535 -2147483648 0"
+#define DXL_SENSOR_REPORT_TOKEN_MAX 45
+
 // How often to log the running DSENSE delivery counts. A stalled telemetry path
 // is otherwise invisible from this end — the reads and the sends both fail
 // quietly — so report the tally periodically (1000 frames = 20s at 50Hz).
