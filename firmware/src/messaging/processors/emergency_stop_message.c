@@ -28,8 +28,11 @@ bool handleEmergencyStopMessage(const GenericMessage *msg) {
     emergency_stop_active = true;
 
 #ifdef CC_VER4
-    // Disable Dynamixel torque before powering off
-    dynamixel_set_torque_all(false);
+    // Disable Dynamixel torque before powering off. The Dynamixel task owns the
+    // bus, so this is a request rather than a direct write - it takes effect
+    // within one 20ms frame. The task also refuses any torque enable once the
+    // emergency stop flag is set, so nothing can re-arm the servos behind us.
+    dynamixel_request_torque_all(false);
 #endif
 
 #ifdef CC_VER3

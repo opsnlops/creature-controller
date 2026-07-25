@@ -428,7 +428,7 @@ void controller_disconnected() {
     controller_safe_to_run = false;
 
 #ifdef CC_VER4
-    dynamixel_set_torque_all(false);
+    dynamixel_request_torque_all(false);
 #endif
 
     // Back to idle we go!
@@ -462,7 +462,7 @@ void first_frame_received(const bool yesOrNo) {
         enable_all_motors();
 #endif
 #ifdef CC_VER4
-        dynamixel_set_torque_all(true);
+        dynamixel_request_torque_all(true);
 #endif
     } else {
         info("We haven't received our first frame from the controller yet");
@@ -470,7 +470,7 @@ void first_frame_received(const bool yesOrNo) {
         disable_all_motors();
 #endif
 #ifdef CC_VER4
-        dynamixel_set_torque_all(false);
+        dynamixel_request_torque_all(false);
 #endif
     }
 }
@@ -584,6 +584,28 @@ static volatile bool motor_power_rail_present = true;
 // was down. Signals the Dynamixel task to (re-)apply servo configuration.
 static volatile bool dxl_reinit_requested = false;
 
+/*
+ * Pending torque change, serviced by the Dynamixel task.
+ *
+ * The task owns the bus and the velocity_confirmed state machine, and it must
+ * own them alone. Callers on other tasks used to drive torque directly, which
+ * put two tasks through the same multi-step sequence at once: a re-initialize
+ * clears every confirmed flag and re-establishes them one servo at a time, so a
+ * caller reading those flags mid-flight would decide servos were unconfigured
+ * and drive them torque-off underneath it. The bus mutex serializes individual
+ * transactions; it cannot make a whole sequence atomic. Requesting the change
+ * and letting the task perform it does.
+ */
+typedef enum {
+    DXL_TORQUE_REQUEST_NONE = 0,
+    DXL_TORQUE_REQUEST_ENABLE,
+    DXL_TORQUE_REQUEST_DISABLE,
+} dxl_torque_request_t;
+
+static volatile dxl_torque_request_t dxl_torque_request = DXL_TORQUE_REQUEST_NONE;
+
+static void dynamixel_set_torque_all(bool enable);
+
 // Running tally of the Dynamixel telemetry path, reported periodically by the
 // Dynamixel task. Both failure modes are otherwise silent from this end: a bus
 // read that returns nothing, and a report that is built but dropped because the
@@ -593,10 +615,20 @@ static u32 dsense_sends_dropped = 0;
 static u32 dsense_reads_failed = 0;
 
 void resetDynamixelMotorMap(void) {
+    // Any torque request still queued refers to a configuration that is about to
+    // cease to exist, so drop it rather than let it be applied to the new map.
+    dxl_torque_request = DXL_TORQUE_REQUEST_NONE;
+
     // Let go of the servos before we forget they exist. Once the map is cleared
     // there is no list of IDs left to command, so anything still holding torque
     // would keep holding it — with settings from a configuration we are in the
     // middle of throwing away.
+    //
+    // This one is done inline rather than handed to the Dynamixel task: the
+    // release has to happen while the servo IDs are still known, and the task
+    // could not run it until after this function had already cleared them.
+    // Configuration is processed with controller_safe_to_run false, so the
+    // task's control sequence is idle while this runs.
     dynamixel_set_torque_all(false);
 
     if (xSemaphoreTake(dxl_motors_mutex, portMAX_DELAY) == pdTRUE) {
@@ -661,6 +693,65 @@ static bool dynamixel_apply_profile_velocity(u8 dxl_id, u32 velocity) {
     }
 
     error("giving up on Profile Velocity for Dynamixel %u after %u attempts; leaving it torque-off", dxl_id,
+          DXL_WRITE_MAX_ATTEMPTS);
+    return false;
+}
+
+/**
+ * Set a servo's torque state and read it back to confirm, retrying on failure.
+ *
+ * Same reasoning as dynamixel_apply_profile_velocity, and the same root cause: a
+ * servo that has just had its power restored may not answer the first write. A
+ * torque enable that quietly fails leaves that servo limp while the rest of the
+ * system believes it is holding position, and a torque disable that quietly
+ * fails leaves it energized when we wanted it released — which is the more
+ * dangerous direction of the two. Both are worth retrying and confirming.
+ *
+ * Must be called from a task context (it delays between attempts).
+ *
+ * @return true if the servo is confirmed to be in the requested torque state
+ */
+static bool dynamixel_apply_torque(u8 dxl_id, bool enable) {
+    const u32 expected = enable ? 1u : 0u;
+
+    for (u8 attempt = 1; attempt <= DXL_WRITE_MAX_ATTEMPTS; attempt++) {
+        if (!motor_power_rail_present) {
+            warning("motor power rail went down while setting torque on Dynamixel %u; abandoning the attempt", dxl_id);
+            return false;
+        }
+
+        dxl_result_t res = dxl_set_torque(dxl_ctx, dxl_id, enable);
+
+        if (res == DXL_OK) {
+            u32 readback = 0;
+            res = dxl_read_register(dxl_ctx, dxl_id, DXL_REG_TORQUE_ENABLE, 1, &readback);
+
+            if (res == DXL_OK && readback == expected) {
+                if (attempt > 1) {
+                    info("torque %s on Dynamixel %u confirmed on attempt %u", enable ? "enable" : "disable", dxl_id,
+                         attempt);
+                }
+                return true;
+            }
+
+            if (res == DXL_OK) {
+                warning("Dynamixel %u torque read back as %lu, expected %lu (attempt %u of %u)", dxl_id,
+                        (unsigned long)readback, (unsigned long)expected, attempt, DXL_WRITE_MAX_ATTEMPTS);
+            } else {
+                warning("failed to read back torque for Dynamixel %u (%s, attempt %u of %u)", dxl_id,
+                        dxl_result_to_string(res), attempt, DXL_WRITE_MAX_ATTEMPTS);
+            }
+        } else {
+            warning("failed to %s torque on Dynamixel %u (%s, attempt %u of %u)", enable ? "enable" : "disable", dxl_id,
+                    dxl_result_to_string(res), attempt, DXL_WRITE_MAX_ATTEMPTS);
+        }
+
+        if (attempt < DXL_WRITE_MAX_ATTEMPTS) {
+            vTaskDelay(pdMS_TO_TICKS(DXL_WRITE_RETRY_DELAY_MS));
+        }
+    }
+
+    error("giving up on torque %s for Dynamixel %u after %u attempts", enable ? "enable" : "disable", dxl_id,
           DXL_WRITE_MAX_ATTEMPTS);
     return false;
 }
@@ -801,7 +892,14 @@ bool requestDynamixelPosition(u8 dxl_id, u32 position) {
     return result;
 }
 
-void dynamixel_set_torque_all(bool enable) {
+void dynamixel_request_torque_all(bool enable) {
+    dxl_torque_request = enable ? DXL_TORQUE_REQUEST_ENABLE : DXL_TORQUE_REQUEST_DISABLE;
+    debug("requested Dynamixel torque %s", enable ? "enable" : "disable");
+}
+
+// Apply a torque change to every configured servo. Runs on the Dynamixel task
+// only — everyone else goes through dynamixel_request_torque_all().
+static void dynamixel_set_torque_all(bool enable) {
     if (dxl_ctx == NULL || dxl_motor_count == 0) {
         return;
     }
@@ -830,6 +928,10 @@ void dynamixel_set_torque_all(bool enable) {
         xSemaphoreGive(dxl_motors_mutex);
     }
 
+    u8 energized = 0; // confirmed holding torque
+    u8 released = 0;  // confirmed released, whether asked for or withheld
+    u8 failed = 0;    // could not be confirmed either way
+
     for (u8 i = 0; i < count; i++) {
         // A servo we could not confirm the settings on stays limp — moving at
         // an unknown speed is worse than not moving at all. Drive it torque-off
@@ -841,16 +943,40 @@ void dynamixel_set_torque_all(bool enable) {
             error("leaving Dynamixel %u torque-off: its Profile Velocity was never confirmed", ids[i]);
         }
 
-        dxl_result_t res = dxl_set_torque(dxl_ctx, ids[i], want_torque);
-        if (res != DXL_OK) {
-            warning("failed to %s torque on Dynamixel %u (%s)", want_torque ? "enable" : "disable", ids[i],
-                    dxl_result_to_string(res));
+        if (dynamixel_apply_torque(ids[i], want_torque)) {
+            if (want_torque) {
+                energized++;
+            } else {
+                released++;
+            }
+        } else {
+            failed++;
         }
 
-        // LED follows torque state
+        // LED follows torque state. Cosmetic, so it gets one attempt and no
+        // read-back — a servo with the wrong LED still behaves correctly.
         dxl_result_t led_res = dxl_set_led(dxl_ctx, ids[i], want_torque);
         if (led_res != DXL_OK) {
             warning("failed to set LED on Dynamixel %u (%s)", ids[i], dxl_result_to_string(led_res));
+        }
+    }
+
+    // State the outcome plainly, counting what each servo actually ended up
+    // doing rather than how many writes landed. A servo held off on purpose is
+    // not an enabled servo, and a servo that would not take a torque enable is
+    // limp while everything else assumes it is holding.
+    if (enable) {
+        if (energized == count) {
+            info("torque enabled on all %u Dynamixel servos", count);
+        } else {
+            error("torque enabled on %u of %u Dynamixel servos (%u held off, %u could not be confirmed)", energized,
+                  count, released, failed);
+        }
+    } else {
+        if (released == count) {
+            info("torque disabled on all %u Dynamixel servos", count);
+        } else {
+            error("torque disabled on %u of %u Dynamixel servos (%u could not be confirmed)", released, count, failed);
         }
     }
 }
@@ -941,6 +1067,26 @@ portTASK_FUNCTION(dynamixel_controller_task, pvParameters) {
 
     for (EVER) {
         TickType_t wake_time = xTaskGetTickCount();
+
+        // Service any torque request from another task. This sits outside the
+        // safe-to-run gate on purpose: a disconnect clears that flag before
+        // asking for torque off, and releasing the servos is precisely what we
+        // still have to do.
+        dxl_torque_request_t torque_request = dxl_torque_request;
+        if (torque_request != DXL_TORQUE_REQUEST_NONE) {
+            dxl_torque_request = DXL_TORQUE_REQUEST_NONE;
+
+            if (torque_request == DXL_TORQUE_REQUEST_ENABLE && is_emergency_stop_active()) {
+                error("ignoring Dynamixel torque enable request: emergency stop is active");
+            } else if (torque_request == DXL_TORQUE_REQUEST_ENABLE && dxl_reinit_requested) {
+                // A re-initialize is already queued and ends by enabling torque
+                // itself. Let it do the work with freshly confirmed settings
+                // instead of racing ahead using stale ones.
+                debug("deferring torque enable to the pending re-initialize");
+            } else {
+                dynamixel_set_torque_all(torque_request == DXL_TORQUE_REQUEST_ENABLE);
+            }
+        }
 
         // Skip all bus traffic while the motor power rail is down - there is no
         // point talking to servos that have no power, and it only racks up bus

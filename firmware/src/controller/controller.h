@@ -316,14 +316,29 @@ bool configureDynamixelServo(u8 dxl_id, u32 min_pos, u32 max_pos, u32 profile_ve
 bool requestDynamixelPosition(u8 dxl_id, u32 position);
 
 /**
- * @brief Enable or disable torque on all configured Dynamixel servos
+ * @brief Ask for torque to be enabled or disabled on all configured servos
  *
- * Called from first_frame_received(true) to enable, and from
+ * Records the request and returns immediately; the Dynamixel task performs it
+ * at the top of its next frame, within one 20ms period.
+ *
+ * Callers must not drive torque directly. The Dynamixel task owns both the bus
+ * and the per-servo "settings confirmed" state that decides which servos may be
+ * energized, and those have to be read and acted on as one sequence. A second
+ * task walking that sequence concurrently will make decisions from a half
+ * updated view — a re-initialize clears every confirmed flag before restoring
+ * them one servo at a time, so a caller reading them mid-flight sees servos as
+ * unconfigured and releases them underneath it.
+ *
+ * Safe to call from any task, including with controller_safe_to_run already
+ * cleared; the request is serviced regardless of run state so that a disconnect
+ * can still release the servos.
+ *
+ * Called from first_frame_received() to enable and disable, and from
  * controller_disconnected() / emergency stop to disable.
  *
  * @param enable true to enable torque, false to disable
  */
-void dynamixel_set_torque_all(bool enable);
+void dynamixel_request_torque_all(bool enable);
 
 /**
  * @brief FreeRTOS task for Dynamixel servo control
