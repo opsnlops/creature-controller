@@ -49,6 +49,24 @@ struct dxl_hal_context {
     u32 dma_chan;
     u8 rx_buffer[DXL_MAX_PACKET_SIZE];
     SemaphoreHandle_t rx_complete_sem;
+
+    /*
+     * Serializes access to the bus AND to the mutable scratch state in this
+     * context (rx_buffer, work_pkt, multi_rx_buf, last_servo_error, alarm_state).
+     *
+     * The half-duplex bus tolerates exactly one transaction at a time, but the
+     * Dynamixel control task is not its only user: the inbound message chain
+     * (priority 5) and the USB device task (priority 4) both reach the bus via
+     * torque and configuration calls, and both outrank the control task
+     * (priority 2). Transactions are fully preemptible - the multi-response
+     * path blocks on rx_complete_sem for its whole receive window - so without
+     * this lock a higher-priority caller can interleave its packet with one
+     * already in flight.
+     *
+     * Recursive so the servo layer can hold it across build-and-transmit
+     * sequences that use work_pkt while the HAL entry points take it again.
+     */
+    SemaphoreHandle_t bus_mutex;
     alarm_pool_t *alarm_pool;
     struct dxl_alarm_state alarm_state;
 
@@ -248,13 +266,20 @@ dxl_hal_context_t *dxl_hal_init(const dxl_hal_config_t *config) {
     }
     ctx->alarm_state.rx_sem = ctx->rx_complete_sem;
 
+    // Bus lock. Recursive so nested servo-layer/HAL-layer takes are safe.
+    ctx->bus_mutex = xSemaphoreCreateRecursiveMutex();
+    if (ctx->bus_mutex == NULL) {
+        error("dynamixel HAL: failed to create bus mutex");
+        goto fail_delete_sem;
+    }
+
     // Create a dedicated alarm pool with IRQ priority safe for FreeRTOS API calls.
     // The default pool uses PICO_DEFAULT_IRQ_PRIORITY (0x80), which is higher priority
     // than configMAX_SYSCALL_INTERRUPT_PRIORITY (0xA0) and cannot call xSemaphoreGiveFromISR.
     ctx->alarm_pool = alarm_pool_create_with_unused_hardware_alarm(4);
     if (ctx->alarm_pool == NULL) {
         error("dynamixel HAL: failed to create alarm pool");
-        goto fail_delete_sem;
+        goto fail_delete_bus_mutex;
     }
     uint alarm_num = alarm_pool_hardware_alarm_num(ctx->alarm_pool);
     uint alarm_irq = hardware_alarm_get_irq_num(alarm_num);
@@ -265,6 +290,8 @@ dxl_hal_context_t *dxl_hal_init(const dxl_hal_config_t *config) {
 
     return ctx;
 
+fail_delete_bus_mutex:
+    vSemaphoreDelete(ctx->bus_mutex);
 fail_delete_sem:
     vSemaphoreDelete(ctx->rx_complete_sem);
 fail_release_dma:
@@ -282,13 +309,42 @@ fail_free_ctx:
     return NULL;
 }
 
+bool dxl_hal_bus_lock(dxl_hal_context_t *ctx) {
+    if (ctx == NULL || ctx->bus_mutex == NULL) {
+        return false;
+    }
+
+    if (xSemaphoreTakeRecursive(ctx->bus_mutex, pdMS_TO_TICKS(DXL_BUS_LOCK_TIMEOUT_MS)) != pdTRUE) {
+        // The lock is priority-inheriting and every transaction is bounded, so
+        // this should not happen. If it does, the caller skips its bus work
+        // rather than trampling a transaction that is still in flight.
+        warning("dynamixel HAL: timed out waiting for the bus lock");
+        return false;
+    }
+
+    return true;
+}
+
+void dxl_hal_bus_unlock(dxl_hal_context_t *ctx) {
+    if (ctx == NULL || ctx->bus_mutex == NULL) {
+        return;
+    }
+    xSemaphoreGiveRecursive(ctx->bus_mutex);
+}
+
 void dxl_hal_set_baud_rate(dxl_hal_context_t *ctx, u32 baud_rate) {
+    if (!dxl_hal_bus_lock(ctx)) {
+        return;
+    }
+
     ctx->baud_rate = baud_rate;
 
     float div = (float)clock_get_hz(clk_sys) / (8.0f * (float)baud_rate);
 
     pio_sm_set_clkdiv(ctx->pio, ctx->sm_tx, div);
     pio_sm_set_clkdiv(ctx->pio, ctx->sm_rx, div);
+
+    dxl_hal_bus_unlock(ctx);
 
     info("dynamixel HAL: baud rate changed to %lu", baud_rate);
 }
@@ -313,7 +369,8 @@ void dxl_hal_flush_rx(dxl_hal_context_t *ctx) {
     }
 }
 
-dxl_result_t dxl_hal_txrx(dxl_hal_context_t *ctx, const dxl_packet_t *tx_pkt, dxl_packet_t *rx_pkt, u32 timeout_ms) {
+static dxl_result_t dxl_hal_txrx_locked(dxl_hal_context_t *ctx, const dxl_packet_t *tx_pkt, dxl_packet_t *rx_pkt,
+                                        u32 timeout_ms) {
     ctx->last_servo_error = 0;
 
     // Broadcast packets get no response - just transmit
@@ -445,8 +502,20 @@ dxl_result_t dxl_hal_txrx(dxl_hal_context_t *ctx, const dxl_packet_t *tx_pkt, dx
     return parse_res;
 }
 
-dxl_result_t dxl_hal_txrx_multi(dxl_hal_context_t *ctx, const dxl_packet_t *tx_pkt, u16 data_per_response,
-                                u8 expected_count, dxl_packet_t *rx_pkts, u8 *received_count, u32 timeout_ms) {
+dxl_result_t dxl_hal_txrx(dxl_hal_context_t *ctx, const dxl_packet_t *tx_pkt, dxl_packet_t *rx_pkt, u32 timeout_ms) {
+    if (!dxl_hal_bus_lock(ctx)) {
+        return DXL_TX_FAIL;
+    }
+
+    dxl_result_t res = dxl_hal_txrx_locked(ctx, tx_pkt, rx_pkt, timeout_ms);
+
+    dxl_hal_bus_unlock(ctx);
+    return res;
+}
+
+static dxl_result_t dxl_hal_txrx_multi_locked(dxl_hal_context_t *ctx, const dxl_packet_t *tx_pkt, u16 data_per_response,
+                                              u8 expected_count, dxl_packet_t *rx_pkts, u8 *received_count,
+                                              u32 timeout_ms) {
     ctx->last_servo_error = 0;
     *received_count = 0;
 
@@ -629,7 +698,21 @@ dxl_result_t dxl_hal_txrx_multi(dxl_hal_context_t *ctx, const dxl_packet_t *tx_p
     return DXL_OK;
 }
 
-dxl_result_t dxl_hal_tx(dxl_hal_context_t *ctx, const dxl_packet_t *tx_pkt) {
+dxl_result_t dxl_hal_txrx_multi(dxl_hal_context_t *ctx, const dxl_packet_t *tx_pkt, u16 data_per_response,
+                                u8 expected_count, dxl_packet_t *rx_pkts, u8 *received_count, u32 timeout_ms) {
+    if (!dxl_hal_bus_lock(ctx)) {
+        *received_count = 0;
+        return DXL_TX_FAIL;
+    }
+
+    dxl_result_t res =
+        dxl_hal_txrx_multi_locked(ctx, tx_pkt, data_per_response, expected_count, rx_pkts, received_count, timeout_ms);
+
+    dxl_hal_bus_unlock(ctx);
+    return res;
+}
+
+static dxl_result_t dxl_hal_tx_locked(dxl_hal_context_t *ctx, const dxl_packet_t *tx_pkt) {
     u8 tx_buf[DXL_MAX_PACKET_SIZE];
     size_t tx_len = 0;
 
@@ -666,4 +749,15 @@ dxl_result_t dxl_hal_tx(dxl_hal_context_t *ctx, const dxl_packet_t *tx_pkt) {
 
     ctx->metrics.tx_packets = ctx->metrics.tx_packets + 1;
     return DXL_OK;
+}
+
+dxl_result_t dxl_hal_tx(dxl_hal_context_t *ctx, const dxl_packet_t *tx_pkt) {
+    if (!dxl_hal_bus_lock(ctx)) {
+        return DXL_TX_FAIL;
+    }
+
+    dxl_result_t res = dxl_hal_tx_locked(ctx, tx_pkt);
+
+    dxl_hal_bus_unlock(ctx);
+    return res;
 }

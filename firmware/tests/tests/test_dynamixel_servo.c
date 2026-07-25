@@ -24,8 +24,8 @@ static dxl_packet_t last_tx_pkt;
 static bool tx_called;
 
 // Configurable stub behavior for dxl_hal_txrx
-static bool stub_torque_on;           // when true, torque read returns 1
-static bool stub_txrx_return_ok;      // when true, txrx returns DXL_OK with a response
+static bool stub_torque_on;      // when true, torque read returns 1
+static bool stub_txrx_return_ok; // when true, txrx returns DXL_OK with a response
 
 PIO pio0 = NULL;
 PIO pio1 = NULL;
@@ -61,6 +61,26 @@ const dxl_metrics_t *dxl_hal_metrics(dxl_hal_context_t *ctx) {
 }
 
 void dxl_hal_flush_rx(dxl_hal_context_t *ctx) { (void)ctx; }
+
+// Bus lock stubs. The real one serializes the several tasks that reach the bus;
+// on the host there is only one, so track the take/give balance instead and let
+// the tests assert the servo layer never leaves the bus locked.
+static int bus_lock_depth = 0;
+static bool bus_lock_should_fail = false;
+
+bool dxl_hal_bus_lock(dxl_hal_context_t *ctx) {
+    (void)ctx;
+    if (bus_lock_should_fail) {
+        return false;
+    }
+    bus_lock_depth++;
+    return true;
+}
+
+void dxl_hal_bus_unlock(dxl_hal_context_t *ctx) {
+    (void)ctx;
+    bus_lock_depth--;
+}
 
 dxl_result_t dxl_hal_tx(dxl_hal_context_t *ctx, const dxl_packet_t *tx_pkt) {
     (void)ctx;
@@ -119,9 +139,13 @@ void setUp(void) {
     tx_called = false;
     stub_torque_on = false;
     stub_txrx_return_ok = true;
+    bus_lock_depth = 0;
+    bus_lock_should_fail = false;
 }
 
-void tearDown(void) {}
+// Every test ends with the bus released. A servo-layer path that returns while
+// still holding the lock would wedge every other task on the bus.
+void tearDown(void) { TEST_ASSERT_EQUAL_INT_MESSAGE(0, bus_lock_depth, "bus lock left unbalanced"); }
 
 // ---- Baud rate conversion tests ----
 
@@ -253,6 +277,54 @@ void test_sync_write_over_max(void) {
     TEST_ASSERT_FALSE(tx_called);
 }
 
+// ---- Bus lock tests ----
+
+void test_sync_write_gives_up_when_bus_is_locked(void) {
+    dxl_sync_position_t entries[] = {{.id = 1, .position = 2048}};
+
+    bus_lock_should_fail = true;
+
+    // Nothing may reach the wire while another task owns the bus
+    dxl_result_t res = dxl_sync_write_position(fake_ctx, entries, 1);
+    TEST_ASSERT_EQUAL(DXL_TX_FAIL, res);
+    TEST_ASSERT_FALSE(tx_called);
+}
+
+void test_sync_read_gives_up_when_bus_is_locked(void) {
+    const u8 ids[] = {1, 2};
+    dxl_sync_status_result_t results[2];
+    u8 result_count = 99;
+
+    bus_lock_should_fail = true;
+
+    dxl_result_t res = dxl_sync_read_status(fake_ctx, ids, 2, results, &result_count);
+    TEST_ASSERT_EQUAL(DXL_TX_FAIL, res);
+    TEST_ASSERT_EQUAL_UINT8(0, result_count);
+}
+
+void test_sync_write_holds_bus_across_build_and_transmit(void) {
+    dxl_sync_position_t entries[] = {{.id = 1, .position = 2048}};
+
+    dxl_result_t res = dxl_sync_write_position(fake_ctx, entries, 1);
+    TEST_ASSERT_EQUAL(DXL_OK, res);
+
+    // Taken and released exactly once — the workspace packet is never exposed
+    // between build and transmit, and the bus is not left held afterwards.
+    TEST_ASSERT_EQUAL_INT(0, bus_lock_depth);
+    TEST_ASSERT_TRUE(tx_called);
+}
+
+void test_sync_write_rejects_bad_count_without_taking_bus(void) {
+    dxl_sync_position_t entries[1];
+    memset(entries, 0, sizeof(entries));
+
+    // Argument validation happens before the lock, so a bad call cannot
+    // contend for the bus at all
+    dxl_result_t res = dxl_sync_write_position(fake_ctx, entries, 0);
+    TEST_ASSERT_EQUAL(DXL_INVALID_PACKET, res);
+    TEST_ASSERT_EQUAL_INT(0, bus_lock_depth);
+}
+
 // ---- Hardware error string tests ----
 
 void test_hw_error_none(void) {
@@ -346,6 +418,12 @@ int main(void) {
     RUN_TEST(test_sync_write_produces_valid_wire_packet);
     RUN_TEST(test_sync_write_zero_count);
     RUN_TEST(test_sync_write_over_max);
+
+    // Bus lock
+    RUN_TEST(test_sync_write_gives_up_when_bus_is_locked);
+    RUN_TEST(test_sync_read_gives_up_when_bus_is_locked);
+    RUN_TEST(test_sync_write_holds_bus_across_build_and_transmit);
+    RUN_TEST(test_sync_write_rejects_bad_count_without_taking_bus);
 
     // EEPROM safety
     RUN_TEST(test_set_id_blocked_when_torque_on);

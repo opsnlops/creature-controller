@@ -36,6 +36,14 @@ typedef struct {
 #define DXL_MULTI_RX_BUF_SIZE (DXL_MAX_PACKET_SIZE * DXL_MAX_MULTI_RESPONSES)
 
 /**
+ * @brief How long a caller waits for the bus lock before giving up
+ *
+ * Comfortably longer than the slowest single transaction, so this only trips
+ * if something has genuinely gone wrong rather than during normal contention.
+ */
+#define DXL_BUS_LOCK_TIMEOUT_MS 250
+
+/**
  * @brief Dynamixel bus metrics
  *
  * Counters are incremented by the HAL during normal operation.
@@ -142,11 +150,38 @@ void dxl_hal_flush_rx(dxl_hal_context_t *ctx);
 u32 dxl_hal_get_baud_rate(dxl_hal_context_t *ctx);
 
 /**
+ * @brief Take the bus lock
+ *
+ * Serializes bus transactions and the HAL's shared scratch state across the
+ * several tasks that reach the Dynamixel bus. Every HAL transaction entry
+ * point takes this itself, so callers only need it to hold the bus across a
+ * multi-step sequence — notably anything that builds into the workspace packet
+ * from dxl_hal_work_pkt() and then transmits it.
+ *
+ * The lock is recursive: taking it around a call that takes it again is safe.
+ * Every successful lock must be matched by a dxl_hal_bus_unlock().
+ *
+ * Must be called from a task context, never an ISR.
+ *
+ * @param ctx HAL context
+ * @return true if the lock was taken, false on timeout (do no bus work)
+ */
+bool dxl_hal_bus_lock(dxl_hal_context_t *ctx);
+
+/**
+ * @brief Release the bus lock
+ *
+ * @param ctx HAL context
+ */
+void dxl_hal_bus_unlock(dxl_hal_context_t *ctx);
+
+/**
  * @brief Get the pre-allocated workspace packet for building TX packets
  *
  * Avoids per-call heap allocation in hot paths. The returned pointer is
- * valid for the lifetime of the HAL context. Not reentrant — only one
- * caller should use this at a time.
+ * valid for the lifetime of the HAL context. Not reentrant — hold the bus
+ * lock (dxl_hal_bus_lock) across build-and-transmit to keep a second caller
+ * from overwriting the packet mid-sequence.
  *
  * @param ctx HAL context
  * @return Pointer to a reusable dxl_packet_t

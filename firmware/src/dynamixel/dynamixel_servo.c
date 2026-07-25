@@ -200,6 +200,13 @@ dxl_result_t dxl_sync_write_position(dxl_hal_context_t *ctx, const dxl_sync_posi
         return DXL_INVALID_PACKET;
     }
 
+    // Hold the bus across build-and-transmit: the workspace packet is shared
+    // context state, so a second caller could otherwise rewrite it between the
+    // build below and the transmit at the end.
+    if (!dxl_hal_bus_lock(ctx)) {
+        return DXL_TX_FAIL;
+    }
+
     // Use pre-allocated workspace from HAL context
     dxl_packet_t *tx_pkt = dxl_hal_work_pkt(ctx);
 
@@ -228,7 +235,10 @@ dxl_result_t dxl_sync_write_position(dxl_hal_context_t *ctx, const dxl_sync_posi
     tx_pkt->param_count = offset;
 
     // Sync Write is broadcast — no response expected
-    return dxl_hal_tx(ctx, tx_pkt);
+    dxl_result_t res = dxl_hal_tx(ctx, tx_pkt);
+
+    dxl_hal_bus_unlock(ctx);
+    return res;
 }
 
 // Sync Read register block: addresses 126-146 (21 bytes)
@@ -256,6 +266,13 @@ dxl_result_t dxl_sync_read_status(dxl_hal_context_t *ctx, const u8 *ids, u8 id_c
         memset(&results[i].status, 0, sizeof(dxl_servo_status_t));
         results[i].valid = false;
         results[i].servo_error = 0;
+    }
+
+    // Hold the bus from packet build all the way through parsing: both the
+    // workspace packet and the multi-response buffer are shared context state,
+    // and the responses are still being read out of rx_pkts below.
+    if (!dxl_hal_bus_lock(ctx)) {
+        return DXL_TX_FAIL;
     }
 
     // Use pre-allocated workspace from HAL context (avoids per-frame heap allocation)
@@ -288,6 +305,7 @@ dxl_result_t dxl_sync_read_status(dxl_hal_context_t *ctx, const u8 *ids, u8 id_c
     dxl_result_t res = dxl_hal_txrx_multi(ctx, tx_pkt, SYNC_READ_DATA_LENGTH, id_count, rx_pkts, &received, timeout);
 
     if (res != DXL_OK) {
+        dxl_hal_bus_unlock(ctx);
         return res;
     }
 
@@ -332,6 +350,7 @@ dxl_result_t dxl_sync_read_status(dxl_hal_context_t *ctx, const u8 *ids, u8 id_c
     }
     *result_count = valid_count;
 
+    dxl_hal_bus_unlock(ctx);
     return DXL_OK;
 }
 
