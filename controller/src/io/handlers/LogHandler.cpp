@@ -33,21 +33,30 @@ void LogHandler::handle(std::shared_ptr<Logger> logger, const std::vector<std::s
         return;
     }
 
+    // Carry the firmware's own ms-since-boot (tokens[1]) through to the output.
+    // Our timestamp is when we got around to printing the line, which says
+    // nothing about the order the firmware actually emitted things in — and
+    // that ordering is exactly what you need when reading through an init or a
+    // power-restore sequence.
+    //
+    // The firmware's text stays an argument rather than becoming part of the
+    // format string; it is not ours and may legitimately contain braces.
+    auto uptime = tokens[1];
     auto level = tokens[2];
     auto message = tokens[3];
 
     if (level == FIRMWARE_LOGGING_VERBOSE)
-        logger->trace("📟 {}", message);
+        logger->trace("📟 [{}ms] {}", uptime, message);
     else if (level == FIRMWARE_LOGGING_DEBUG)
-        logger->debug("📟 {}", message);
+        logger->debug("📟 [{}ms] {}", uptime, message);
     else if (level == FIRMWARE_LOGGING_INFO)
-        logger->info("📟 {}", message);
+        logger->info("📟 [{}ms] {}", uptime, message);
     else if (level == FIRMWARE_LOGGING_WARNING)
-        logger->warn("📟 {}", message);
+        logger->warn("📟 [{}ms] {}", uptime, message);
     else if (level == FIRMWARE_LOGGING_ERROR)
-        logger->error("📟 {}", message);
+        logger->error("📟 [{}ms] {}", uptime, message);
     else if (level == FIRMWARE_LOGGING_FATAL)
-        logger->critical("📟 {}", message);
+        logger->critical("📟 [{}ms] {}", uptime, message);
     else
         logger->warn("Unknown logging level from firmware: {}, message: {}", level, message);
 }

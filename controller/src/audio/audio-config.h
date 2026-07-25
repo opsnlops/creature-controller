@@ -30,6 +30,16 @@ inline constexpr size_t PREFILL_FRAMES = 3;       // 30 ms warm-up
 // ── Monitoring thresholds ────────────────────────────────
 inline constexpr float BUF_HIGH_WATERMARK = 0.8f;
 inline constexpr float BUF_LOW_WATERMARK = 0.1f;
+
+// How often the monitoring loop samples the client. Detailed stats are emitted
+// at debug on every pass; the info-level summary is far less frequent so a
+// healthy system stays quiet in the normal log.
 inline constexpr int STATS_INTERVAL_SEC = 5;
+inline constexpr int SUMMARY_INTERVAL_SEC = 60;
+inline constexpr int SUMMARY_EVERY_N_SAMPLES = SUMMARY_INTERVAL_SEC / STATS_INTERVAL_SEC;
+
+// Mixer reporting, counted in mixed frames. Each frame is FRAME_MS of audio.
+inline constexpr uint64_t MIX_STATS_FRAME_INTERVAL = 250;
+inline constexpr uint64_t MIX_SUMMARY_FRAME_INTERVAL = MIX_STATS_FRAME_INTERVAL * 24;
 
 } // namespace creatures::audio

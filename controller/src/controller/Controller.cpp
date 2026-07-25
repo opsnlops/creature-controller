@@ -132,17 +132,57 @@ void Controller::run() {
     auto target_delta = microseconds(1000000 / creature->getServoUpdateFrequencyHz());
     auto next_target_time = high_resolution_clock::now() + target_delta;
 
+    // State for the periodic summary. Tracking the wall clock lets us report the
+    // rate we actually achieved, which says far more about the health of the
+    // loop than a frame count that only ever goes up.
+    auto lastSummaryTime = steady_clock::now();
+    u64 lastSummaryFrames = 0;
+    bool wasReady = true;
+
     while (!stop_requested.load()) {
 
         number_of_frames = number_of_frames + 1;
 
-        if (number_of_frames % 100 == 0) {
+        // Fine-grained progress, for when you are watching a problem happen
+        if (number_of_frames % CONTROLLER_FRAME_LOG_INTERVAL == 0) {
             u64 _frames = number_of_frames; // copy the atomic value
-            logger->info("frames: {}", _frames);
+            logger->debug("frames: {}", _frames);
+        }
+
+        if (number_of_frames % CONTROLLER_FRAME_SUMMARY_INTERVAL == 0) {
+            const u64 _frames = number_of_frames;
+            const auto now = steady_clock::now();
+            const auto elapsed = duration_cast<milliseconds>(now - lastSummaryTime).count();
+
+            if (elapsed > 0) {
+                const double fps = static_cast<double>(_frames - lastSummaryFrames) * 1000.0 / elapsed;
+                logger->info("frames: {} ({:.1f} fps)", _frames, fps);
+            } else {
+                logger->info("frames: {}", _frames);
+            }
+
+            lastSummaryTime = now;
+            lastSummaryFrames = _frames;
         }
 
         // If we haven't received a frame yet, don't do anything
-        if (receivedFirstFrame && messageRouter->allHandlersReady()) {
+        const bool ready = receivedFirstFrame && messageRouter->allHandlersReady();
+
+        // Announce the transition either way. Being stalled is worth saying
+        // once and worth repeating occasionally, but not every couple of
+        // seconds for as long as it lasts.
+        if (ready != wasReady) {
+            if (ready) {
+                logger->info("sending frames now: receivedFirstFrame and all handlers are ready");
+            } else {
+                logger->warn("not sending frames because we're not ready! "
+                             "receivedFirstFrame: {}, firmwareReady: {}",
+                             receivedFirstFrame, messageRouter->allHandlersReady());
+            }
+            wasReady = ready;
+        }
+
+        if (ready) {
 
             // Go fetch the positions
 
@@ -165,9 +205,11 @@ void Controller::run() {
             creature->calculateNextServoPositions();
         } else {
 
-            // If we're stalled, log why every few frames
-            if (number_of_frames % 100 == 0) {
-                logger->warn("not sending frames because we're not ready! "
+            // Still stalled - remind us at the summary cadence rather than
+            // every couple of seconds, so a long stall stays visible without
+            // burying everything else
+            if (number_of_frames % CONTROLLER_FRAME_SUMMARY_INTERVAL == 0) {
+                logger->warn("still not sending frames! "
                              "receivedFirstFrame: {}, firmwareReady: {}",
                              receivedFirstFrame, messageRouter->allHandlersReady());
             }

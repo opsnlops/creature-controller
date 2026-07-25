@@ -35,6 +35,16 @@ using u64 = std::uint64_t;
 #define CONTROLLER_LOG_LEVEL "spdlog::level::trace"
 #define RP2040_LOG_LEVEL "spdlog::level::trace"
 
+/*
+ * Control loop reporting, counted in frames. The frame count is valuable when
+ * something is wrong, so the fine-grained line stays available at debug; a
+ * healthy run only needs the occasional summary at info.
+ *
+ * At the usual 50Hz these work out to roughly 2 seconds and 60 seconds.
+ */
+#define CONTROLLER_FRAME_LOG_INTERVAL 100
+#define CONTROLLER_FRAME_SUMMARY_INTERVAL 3000
+
 // Firmware/protocol versions this controller can talk to. A HW3 board reports
 // version 3 (standard servos only); a HW4 board reports 4 (adds Dynamixel). A
 // single controller binary supports either, so it accepts the whole range.

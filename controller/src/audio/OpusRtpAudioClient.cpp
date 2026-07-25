@@ -595,6 +595,12 @@ void OpusRtpAudioClient::audioMixingThread() {
     uint64_t lastDialogFramesSeen = 0;
     uint64_t lastBgmFramesSeen = 0;
 
+    // Baselines for the periodic summary, so it can report what changed in the
+    // last window rather than repeating ever-growing totals
+    uint64_t lastSummaryUnderruns = 0;
+    uint64_t lastSummaryDialogOverruns = 0;
+    uint64_t lastSummaryBgmOverruns = 0;
+
     while (!stop_requested.load()) {
         frameCount++;
 
@@ -683,14 +689,41 @@ void OpusRtpAudioClient::audioMixingThread() {
             log_->info("Audio playback started with {} bytes buffered", queuedBytes);
         }
 
-        // Enhanced stats every 5 seconds (250 frames at 20ms)
-        if (frameCount % 250 == 0) {
+        // Detailed stats, for when someone is actually digging into the audio
+        // path. One line rather than two: the overrun counts were always
+        // emitted alongside the mix stats anyway.
+        if (frameCount % MIX_STATS_FRAME_INTERVAL == 0) {
             float dialogHitRate = (float)dialogHits / frameCount * 100.0f;
             float bgmHitRate = (float)bgmHits / frameCount * 100.0f;
 
-            log_->info("Mix stats: frames={}, underruns={}, dialog_hits={:.1f}%, bgm_hits={:.1f}%, queued={} bytes",
-                       frameCount, underruns, dialogHitRate, bgmHitRate, queuedBytes);
-            log_->info("Buffer overruns: dialog={}, bgm={}", dialogBufferOverruns_.load(), bgmBufferOverruns_.load());
+            log_->debug("Mix stats: frames={}, underruns={}, dialog_hits={:.1f}%, bgm_hits={:.1f}%, queued={} bytes, "
+                        "overruns dialog={} bgm={}",
+                        frameCount, underruns, dialogHitRate, bgmHitRate, queuedBytes, dialogBufferOverruns_.load(),
+                        bgmBufferOverruns_.load());
+        }
+
+        // Periodic summary. Reports what changed since the last one rather than
+        // ever-growing totals, and only raises its voice when something
+        // actually went wrong during the window.
+        if (frameCount % MIX_SUMMARY_FRAME_INTERVAL == 0) {
+            const uint64_t dialogOverruns = dialogBufferOverruns_.load();
+            const uint64_t bgmOverruns = bgmBufferOverruns_.load();
+
+            const uint64_t newUnderruns = underruns - lastSummaryUnderruns;
+            const uint64_t newDialogOverruns = dialogOverruns - lastSummaryDialogOverruns;
+            const uint64_t newBgmOverruns = bgmOverruns - lastSummaryBgmOverruns;
+
+            if (newUnderruns > 0 || newDialogOverruns > 0 || newBgmOverruns > 0) {
+                log_->warn("Audio mixer: {} underruns, {} dialog overruns, {} bgm overruns in the last {} frames "
+                           "({} mixed in total)",
+                           newUnderruns, newDialogOverruns, newBgmOverruns, MIX_SUMMARY_FRAME_INTERVAL, frameCount);
+            } else {
+                log_->info("Audio mixer healthy: {} frames mixed, no underruns or overruns", frameCount);
+            }
+
+            lastSummaryUnderruns = underruns;
+            lastSummaryDialogOverruns = dialogOverruns;
+            lastSummaryBgmOverruns = bgmOverruns;
         }
     }
 

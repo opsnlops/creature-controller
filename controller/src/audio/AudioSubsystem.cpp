@@ -101,6 +101,14 @@ void AudioSubsystem::monitoringLoop() {
 
     log_->debug("Audio monitoring loop started");
 
+    // Buffer warnings are edge triggered. A buffer sitting outside its
+    // watermarks stays a problem, but restating it on every sample buries
+    // everything else in the log, so report entering and leaving the condition
+    // rather than repeating it.
+    enum class BufferState { Normal, High, Low };
+    BufferState lastBufferState = BufferState::Normal;
+    int samplesSinceSummary = 0;
+
     while (!stopMon_.load()) {
         // Sleep in smaller increments to be more responsive to shutdown
         for (int i = 0; i < STATS_INTERVAL_SEC * 10 && !stopMon_.load(); ++i) {
@@ -110,14 +118,39 @@ void AudioSubsystem::monitoringLoop() {
             break;
 
         if (rtpClient_) {
-            log_->info("Audio stats: {}", getStats());
+            log_->debug("Audio stats: {}", getStats());
 
-            // Log warnings for unusual conditions
-            float bufferLevel = rtpClient_->getBufferLevel();
+            const float bufferLevel = rtpClient_->getBufferLevel();
+            const bool receiving = rtpClient_->isReceiving();
+
+            BufferState bufferState = BufferState::Normal;
             if (bufferLevel > BUF_HIGH_WATERMARK) {
-                log_->warn("Audio buffer level high: {:.1f}%", bufferLevel * 100.0f);
-            } else if (bufferLevel < BUF_LOW_WATERMARK && rtpClient_->isReceiving()) {
-                log_->warn("Audio buffer level low: {:.1f}%", bufferLevel * 100.0f);
+                bufferState = BufferState::High;
+            } else if (bufferLevel < BUF_LOW_WATERMARK && receiving) {
+                bufferState = BufferState::Low;
+            }
+
+            if (bufferState != lastBufferState) {
+                switch (bufferState) {
+                case BufferState::High:
+                    log_->warn("Audio buffer level high: {:.1f}%", bufferLevel * 100.0f);
+                    break;
+                case BufferState::Low:
+                    log_->warn("Audio buffer level low: {:.1f}%", bufferLevel * 100.0f);
+                    break;
+                case BufferState::Normal:
+                    log_->info("Audio buffer level normal: {:.1f}% (receiving={})", bufferLevel * 100.0f,
+                               receiving ? "yes" : "no");
+                    break;
+                }
+                lastBufferState = bufferState;
+            }
+
+            // Periodic summary, so the normal log still shows the audio path is
+            // alive without a line on every sample
+            if (++samplesSinceSummary >= SUMMARY_EVERY_N_SAMPLES) {
+                samplesSinceSummary = 0;
+                log_->info("Audio: {}", getStats());
             }
         }
     }
