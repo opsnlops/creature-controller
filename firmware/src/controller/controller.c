@@ -22,7 +22,9 @@
 
 #ifdef CC_VER4
 #include "dynamixel/dynamixel_hal.h"
+#include "dynamixel/dynamixel_registers.h"
 #include "dynamixel/dynamixel_servo.h"
+#include "messaging/processors/emergency_stop_message.h"
 #include <stdio.h>
 #include <task.h>
 #endif
@@ -571,7 +573,32 @@ void resetServoMotorMap(void) {
 
 #ifdef CC_VER4
 
+// Whether the incoming motor power rail is currently up. Starts true so a board
+// that boots with the motors already powered does not see a spurious "restored"
+// edge on the very first reading. The Dynamixel task reads this to avoid talking
+// to servos that have no power.
+static volatile bool motor_power_rail_present = true;
+
+// Set when servo configuration still needs to be applied to the bus — either the
+// motor power rail returned after being cut, or a CONFIG arrived while the rail
+// was down. Signals the Dynamixel task to (re-)apply servo configuration.
+static volatile bool dxl_reinit_requested = false;
+
+// Running tally of the Dynamixel telemetry path, reported periodically by the
+// Dynamixel task. Both failure modes are otherwise silent from this end: a bus
+// read that returns nothing, and a report that is built but dropped because the
+// outgoing queue is full. Owned entirely by the Dynamixel task.
+static u32 dsense_messages_sent = 0;
+static u32 dsense_sends_dropped = 0;
+static u32 dsense_reads_failed = 0;
+
 void resetDynamixelMotorMap(void) {
+    // Let go of the servos before we forget they exist. Once the map is cleared
+    // there is no list of IDs left to command, so anything still holding torque
+    // would keep holding it — with settings from a configuration we are in the
+    // middle of throwing away.
+    dynamixel_set_torque_all(false);
+
     if (xSemaphoreTake(dxl_motors_mutex, portMAX_DELAY) == pdTRUE) {
         memset(dxl_motors, 0, sizeof(dxl_motors));
         dxl_motor_count = 0;
@@ -579,6 +606,86 @@ void resetDynamixelMotorMap(void) {
         debug("Dynamixel motor map reset");
     } else {
         warning("failed to take dxl_motors_mutex in resetDynamixelMotorMap");
+    }
+}
+
+/**
+ * Write a servo's Profile Velocity and read the register back to confirm it
+ * actually landed. A servo that is still booting after a power cycle may not
+ * answer at all, or may answer before it has applied the write, so the
+ * read-back is what we trust rather than the write's return code. Retries a
+ * few times with a short pause to give the servo time to come up.
+ *
+ * Must be called from a task context (it delays between attempts).
+ *
+ * @return true if the servo is confirmed to hold the requested velocity
+ */
+static bool dynamixel_apply_profile_velocity(u8 dxl_id, u32 velocity) {
+    for (u8 attempt = 1; attempt <= DXL_WRITE_MAX_ATTEMPTS; attempt++) {
+        // The rail can drop out mid-sequence (brownout, a plug switched off
+        // between servos). Retrying into a dead bus just buys three timeouts
+        // per servo, so stop as soon as we know the power is gone.
+        if (!motor_power_rail_present) {
+            warning("motor power rail went down while configuring Dynamixel %u; abandoning the attempt", dxl_id);
+            return false;
+        }
+
+        dxl_result_t res = dxl_set_profile_velocity(dxl_ctx, dxl_id, velocity);
+
+        if (res == DXL_OK) {
+            u32 readback = 0;
+            res = dxl_read_register(dxl_ctx, dxl_id, DXL_REG_PROFILE_VELOCITY, 4, &readback);
+
+            if (res == DXL_OK && readback == velocity) {
+                if (attempt > 1) {
+                    info("Profile Velocity for Dynamixel %u confirmed on attempt %u", dxl_id, attempt);
+                }
+                return true;
+            }
+
+            if (res == DXL_OK) {
+                warning("Dynamixel %u Profile Velocity read back as %lu, expected %lu (attempt %u of %u)", dxl_id,
+                        (unsigned long)readback, (unsigned long)velocity, attempt, DXL_WRITE_MAX_ATTEMPTS);
+            } else {
+                warning("failed to read back Profile Velocity for Dynamixel %u (%s, attempt %u of %u)", dxl_id,
+                        dxl_result_to_string(res), attempt, DXL_WRITE_MAX_ATTEMPTS);
+            }
+        } else {
+            warning("failed to set Profile Velocity for Dynamixel %u (%s, attempt %u of %u)", dxl_id,
+                    dxl_result_to_string(res), attempt, DXL_WRITE_MAX_ATTEMPTS);
+        }
+
+        if (attempt < DXL_WRITE_MAX_ATTEMPTS) {
+            vTaskDelay(pdMS_TO_TICKS(DXL_WRITE_RETRY_DELAY_MS));
+        }
+    }
+
+    error("giving up on Profile Velocity for Dynamixel %u after %u attempts; leaving it torque-off", dxl_id,
+          DXL_WRITE_MAX_ATTEMPTS);
+    return false;
+}
+
+/**
+ * Record whether a servo's Profile Velocity is confirmed, so torque enable can
+ * skip the ones we could not configure.
+ *
+ * Looks the servo up by ID rather than by index because the caller releases the
+ * motor map lock to do its bus work. Today the only writers to the map
+ * (configureDynamixelServo, resetDynamixelMotorMap) both run on the inbound
+ * message chain and so cannot interleave with each other; if that ever changes,
+ * a servo that disappeared from the map mid-write is simply not marked.
+ */
+static void dynamixel_mark_velocity_confirmed(u8 dxl_id, bool confirmed) {
+    if (xSemaphoreTake(dxl_motors_mutex, portMAX_DELAY) == pdTRUE) {
+        for (u8 i = 0; i < dxl_motor_count; i++) {
+            if (dxl_motors[i].dxl_id == dxl_id) {
+                dxl_motors[i].velocity_confirmed = confirmed;
+                break;
+            }
+        }
+        xSemaphoreGive(dxl_motors_mutex);
+    } else {
+        warning("failed to take dxl_motors_mutex in dynamixel_mark_velocity_confirmed");
     }
 }
 
@@ -591,6 +698,15 @@ bool configureDynamixelServo(u8 dxl_id, u32 min_pos, u32 max_pos, u32 profile_ve
     if (dxl_id == 0 || dxl_id > DXL_MAX_ID) {
         error("invalid Dynamixel ID: %u", dxl_id);
         return false;
+    }
+
+    // A velocity above the servo's limit would be rejected or silently clamped,
+    // and we would then never be able to confirm it — which now costs us torque
+    // on that servo. Clamp here so an over-range config does not leave it limp.
+    if (profile_velocity > DXL_MAX_PROFILE_VELOCITY) {
+        warning("Profile Velocity %lu for Dynamixel %u exceeds the maximum of %u, clamping",
+                (unsigned long)profile_velocity, dxl_id, DXL_MAX_PROFILE_VELOCITY);
+        profile_velocity = DXL_MAX_PROFILE_VELOCITY;
     }
 
     bool result = false;
@@ -619,6 +735,7 @@ bool configureDynamixelServo(u8 dxl_id, u32 min_pos, u32 max_pos, u32 profile_ve
         entry->requested_position = (min_pos + max_pos) / 2; // Center
         entry->profile_velocity = profile_velocity;          // Retained for re-init after a power cycle
         entry->is_configured = true;
+        entry->velocity_confirmed = false; // Set below, once the servo reads it back
         dxl_motor_count++;
 
         result = true;
@@ -628,16 +745,26 @@ bool configureDynamixelServo(u8 dxl_id, u32 min_pos, u32 max_pos, u32 profile_ve
         return false;
     }
 
-    // Set Profile Velocity (outside mutex — HAL has its own synchronization)
-    dxl_result_t dxl_res = dxl_set_profile_velocity(dxl_ctx, dxl_id, profile_velocity);
-    if (dxl_res != DXL_OK) {
-        warning("failed to set Profile Velocity for Dynamixel %u (result=%d)", dxl_id, dxl_res);
-        // Non-fatal — the servo will still work, just with default velocity
+    // Set Profile Velocity (outside mutex — HAL has its own synchronization).
+    // If the motor power rail is down there is nothing on the bus to answer us,
+    // so skip the writes rather than spending three timeouts per servo proving
+    // what we already know. The settings are applied when the rail comes back.
+    bool confirmed = false;
+
+    if (motor_power_rail_present) {
+        confirmed = dynamixel_apply_profile_velocity(dxl_id, profile_velocity);
+        dynamixel_mark_velocity_confirmed(dxl_id, confirmed);
+    } else {
+        dynamixel_mark_velocity_confirmed(dxl_id, false);
+        dxl_reinit_requested = true;
     }
 
     info("configured Dynamixel servo %u: pos range [%lu-%lu], profile "
-         "velocity %lu",
-         dxl_id, (unsigned long)min_pos, (unsigned long)max_pos, (unsigned long)profile_velocity);
+         "velocity %lu (%s)",
+         dxl_id, (unsigned long)min_pos, (unsigned long)max_pos, (unsigned long)profile_velocity,
+         confirmed                  ? "confirmed"
+         : motor_power_rail_present ? "UNCONFIRMED, torque will stay off"
+                                    : "deferred, motor power rail is down — will be applied when power returns");
 
     return result;
 }
@@ -679,48 +806,60 @@ void dynamixel_set_torque_all(bool enable) {
         return;
     }
 
+    // Servos with no power hold no torque, and nothing on the bus will answer.
+    // The re-init that follows the rail coming back sets torque appropriately.
+    if (!motor_power_rail_present) {
+        info("skipping %s torque on %u Dynamixel servos: motor power rail is down", enable ? "enabling" : "disabling",
+             dxl_motor_count);
+        return;
+    }
+
     info("%s torque on %u Dynamixel servos", enable ? "enabling" : "disabling", dxl_motor_count);
 
     // Read motor count/IDs under mutex, then release before bus operations
     u8 ids[MAX_DYNAMIXEL_SERVOS];
+    bool confirmed[MAX_DYNAMIXEL_SERVOS];
     u8 count = 0;
 
     if (xSemaphoreTake(dxl_motors_mutex, portMAX_DELAY) == pdTRUE) {
         count = dxl_motor_count;
         for (u8 i = 0; i < count; i++) {
             ids[i] = dxl_motors[i].dxl_id;
+            confirmed[i] = dxl_motors[i].velocity_confirmed;
         }
         xSemaphoreGive(dxl_motors_mutex);
     }
 
     for (u8 i = 0; i < count; i++) {
-        dxl_result_t res = dxl_set_torque(dxl_ctx, ids[i], enable);
+        // A servo we could not confirm the settings on stays limp — moving at
+        // an unknown speed is worse than not moving at all. Drive it torque-off
+        // explicitly rather than just skipping it, in case it is still holding
+        // torque from before.
+        bool want_torque = enable && confirmed[i];
+
+        if (enable && !confirmed[i]) {
+            error("leaving Dynamixel %u torque-off: its Profile Velocity was never confirmed", ids[i]);
+        }
+
+        dxl_result_t res = dxl_set_torque(dxl_ctx, ids[i], want_torque);
         if (res != DXL_OK) {
-            warning("failed to %s torque on Dynamixel %u (result=%d)", enable ? "enable" : "disable", ids[i], res);
+            warning("failed to %s torque on Dynamixel %u (%s)", want_torque ? "enable" : "disable", ids[i],
+                    dxl_result_to_string(res));
         }
 
         // LED follows torque state
-        dxl_result_t led_res = dxl_set_led(dxl_ctx, ids[i], enable);
+        dxl_result_t led_res = dxl_set_led(dxl_ctx, ids[i], want_torque);
         if (led_res != DXL_OK) {
-            warning("failed to set LED on Dynamixel %u (result=%d)", ids[i], led_res);
+            warning("failed to set LED on Dynamixel %u (%s)", ids[i], dxl_result_to_string(led_res));
         }
     }
 }
 
-// Whether the incoming motor power rail is currently up. Starts true so a board
-// that boots with the motors already powered does not see a spurious "restored"
-// edge on the very first reading. The Dynamixel task reads this to avoid talking
-// to servos that have no power.
-static volatile bool motor_power_rail_present = true;
-
-// Set when the motor power rail returns after being cut while the controller is
-// running, signalling the Dynamixel task to re-apply servo configuration.
-static volatile bool dxl_reinit_requested = false;
-
 // Re-apply Dynamixel configuration after the motor power rail was cycled. The
 // servos come back with torque disabled and their Profile Velocity register at
-// the factory default, so restore the velocity we were configured with and then
-// re-enable torque. Runs on the Dynamixel control task, which owns the bus.
+// the factory default, so restore the velocity we were configured with, confirm
+// it took, and then re-enable torque on the servos we could confirm. Runs on
+// the Dynamixel control task, which owns the bus.
 static void dynamixel_reinitialize_all(void) {
     if (dxl_ctx == NULL || dxl_motor_count == 0) {
         return;
@@ -728,7 +867,9 @@ static void dynamixel_reinitialize_all(void) {
 
     info("re-initializing %u Dynamixel servos after motor power restore", dxl_motor_count);
 
-    // Snapshot ids and velocities under the mutex, then do bus ops without it held
+    // Snapshot ids and velocities under the mutex, then do bus ops without it
+    // held. Everything the servos knew died with the power rail, so nothing is
+    // confirmed until it has been written and read back again.
     u8 ids[MAX_DYNAMIXEL_SERVOS];
     u32 velocities[MAX_DYNAMIXEL_SERVOS];
     u8 count = 0;
@@ -738,19 +879,50 @@ static void dynamixel_reinitialize_all(void) {
         for (u8 i = 0; i < count; i++) {
             ids[i] = dxl_motors[i].dxl_id;
             velocities[i] = dxl_motors[i].profile_velocity;
+            dxl_motors[i].velocity_confirmed = false;
         }
         xSemaphoreGive(dxl_motors_mutex);
     }
 
-    // Restore each servo's Profile Velocity (lost on the power cycle)
+    // Restore each servo's Profile Velocity (lost on the power cycle), using the
+    // same write-and-verify path as initial configuration
+    u8 confirmed_count = 0;
     for (u8 i = 0; i < count; i++) {
-        dxl_result_t res = dxl_set_profile_velocity(dxl_ctx, ids[i], velocities[i]);
-        if (res != DXL_OK) {
-            warning("failed to restore Profile Velocity for Dynamixel %u (result=%d)", ids[i], res);
+        bool confirmed = dynamixel_apply_profile_velocity(ids[i], velocities[i]);
+        dynamixel_mark_velocity_confirmed(ids[i], confirmed);
+
+        if (confirmed) {
+            confirmed_count++;
         }
     }
 
-    // Torque and status LED back on
+    // Say what happened either way. A clean run is otherwise silent — the
+    // per-servo lines only appear on a retry or a failure — which makes "every
+    // servo confirmed" and "the whole loop was skipped" look identical in the
+    // log of an init path that really needs to be readable.
+    if (confirmed_count == count) {
+        info("re-initialized %u of %u Dynamixel servos (all confirmed)", confirmed_count, count);
+    } else {
+        error("re-initialized %u of %u Dynamixel servos; %u will stay torque-off", confirmed_count, count,
+              (u8)(count - confirmed_count));
+    }
+
+    // Torque and status LED back on, for the servos we could confirm — but only
+    // if the creature is supposed to be moving at all. An emergency stop halts
+    // the message processor, not this task, so without this check a power rail
+    // blip would quietly re-arm a creature that was deliberately stopped. The
+    // first-frame check keeps us from energizing servos to their centered
+    // defaults before the controller has actually commanded a position.
+    if (is_emergency_stop_active()) {
+        error("not enabling Dynamixel torque after power restore: emergency stop is active");
+        return;
+    }
+
+    if (!has_first_frame_been_received) {
+        info("not enabling Dynamixel torque after power restore: no frames from the controller yet");
+        return;
+    }
+
     dynamixel_set_torque_all(true);
 }
 
@@ -806,6 +978,10 @@ portTASK_FUNCTION(dynamixel_controller_task, pvParameters) {
                 u8 result_count = 0;
                 dxl_result_t res = dxl_sync_read_status(dxl_ctx, sync_ids, count, sync_results, &result_count);
 
+                if (res != DXL_OK || result_count == 0) {
+                    dsense_reads_failed++;
+                }
+
                 if (res == DXL_OK && result_count > 0) {
                     // Build and send DSENSE message
                     char dsense_msg[OUTGOING_MESSAGE_MAX_LENGTH] = {0};
@@ -833,8 +1009,21 @@ portTASK_FUNCTION(dynamixel_controller_task, pvParameters) {
                         }
                     }
 
-                    send_to_controller(dsense_msg);
+                    // Track the send result rather than discarding it: a full
+                    // outgoing queue drops the report just as effectively as a
+                    // failed bus read, and the two want different fixes.
+                    if (send_to_controller(dsense_msg)) {
+                        dsense_messages_sent++;
+                    } else {
+                        dsense_sends_dropped++;
+                    }
                 }
+            }
+
+            // Periodic tally so a stalled telemetry path is visible from here
+            if (frame_counter % DXL_SENSOR_REPORT_STATS_INTERVAL_FRAMES == 0) {
+                info("DSENSE telemetry: %lu sent, %lu dropped, %lu reads failed", (unsigned long)dsense_messages_sent,
+                     (unsigned long)dsense_sends_dropped, (unsigned long)dsense_reads_failed);
             }
 
             frame_counter++;
@@ -864,11 +1053,11 @@ void controller_motor_power_sample(float voltage) {
             motor_power_rail_present = true;
             info("motor power rail restored (%.2fV)", voltage);
 
-            // Only re-init if the controller has us running; otherwise the
-            // normal first-frame path will configure the motors from scratch.
-            if (controller_safe_to_run) {
-                dxl_reinit_requested = true;
-            }
+            // Always ask for a re-init. Anything configured while the rail was
+            // down was deferred rather than written, so the servos need their
+            // settings either way. The Dynamixel task holds the request until
+            // it is safe to run and there are motors to configure.
+            dxl_reinit_requested = true;
         }
     }
 }

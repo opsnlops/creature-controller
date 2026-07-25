@@ -164,11 +164,22 @@
 // Dynamixel sensor reporting interval (every 10 frames = 200ms at 50Hz)
 #define DXL_SENSOR_REPORT_INTERVAL_FRAMES 10
 
+// How often to log the running DSENSE delivery counts. A stalled telemetry path
+// is otherwise invisible from this end — the reads and the sends both fail
+// quietly — so report the tally periodically (1000 frames = 20s at 50Hz).
+#define DXL_SENSOR_REPORT_STATS_INTERVAL_FRAMES 1000
+
 // Dynamixel controller task priority (same as control task)
 #define DXL_TASK_PRIORITY 2
 
 // Dynamixel controller task stack size
 #define DXL_TASK_STACK_SIZE 1024
+
+// A servo that has just had its power restored may not answer the first write
+// while it is still booting. Retry register writes this many times before
+// giving up, pausing between attempts to let the servo finish coming up.
+#define DXL_WRITE_MAX_ATTEMPTS 3
+#define DXL_WRITE_RETRY_DELAY_MS 20
 
 // Dynamixel status LED chain (one WS2812 per smart servo slot, ordered by ID)
 #define STATUS_LIGHTS_DYNAMIXEL_PIN 34

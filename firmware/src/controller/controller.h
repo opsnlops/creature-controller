@@ -258,13 +258,18 @@ void resetServoMotorMap(void);
  * @brief Structure mapping a Dynamixel motor to its configuration
  */
 typedef struct {
-    u8 dxl_id;              /**< Dynamixel bus address (1-253) */
-    u32 min_position;       /**< Minimum allowed position (0-4095) */
-    u32 max_position;       /**< Maximum allowed position (0-4095) */
-    u32 requested_position; /**< Next position to write via Sync Write */
-    u32 profile_velocity;   /**< Profile Velocity register value; retained so it
-                                 can be re-applied after a motor power cycle */
-    bool is_configured;     /**< True if this motor has been configured */
+    u8 dxl_id;               /**< Dynamixel bus address (1-253) */
+    u32 min_position;        /**< Minimum allowed position (0-4095) */
+    u32 max_position;        /**< Maximum allowed position (0-4095) */
+    u32 requested_position;  /**< Next position to write via Sync Write */
+    u32 profile_velocity;    /**< Profile Velocity register value; retained so it
+                                  can be re-applied after a motor power cycle */
+    bool is_configured;      /**< True if this motor has been configured */
+    bool velocity_confirmed; /**< True once the servo has been read back and is
+                                  known to hold the requested Profile Velocity.
+                                  Torque is only enabled on confirmed servos —
+                                  a limp servo beats one moving at the wrong
+                                  speed. */
 } DynamixelMotorEntry;
 
 /**
@@ -288,7 +293,9 @@ void resetDynamixelMotorMap(void);
 /**
  * @brief Configure a Dynamixel servo
  *
- * Adds the servo to the motor map and sets its Profile Velocity.
+ * Adds the servo to the motor map and sets its Profile Velocity, reading the
+ * register back to confirm the write landed. A servo whose velocity cannot be
+ * confirmed stays in the map but is left out of torque enable.
  * Does NOT enable torque (torque tracks power relay state).
  *
  * @param dxl_id Bus address (1-253)
