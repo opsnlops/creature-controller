@@ -2,15 +2,15 @@
 
 ## Context
 
-Adding a new build target for testing/programming Dynamixel servos (XC430 and similar) using Protocol 2.0. The protocol implementation lives in a shared `src/dynamixel/` library so it can be reused by the main controller target later. The tester application in `src/dynamixel_tester/` follows the programmer target's interactive shell pattern.
+Adding a new build target for testing/programming Dynamixel servos (XC330 and similar) using Protocol 2.0. The protocol implementation lives in a shared `src/dynamixel/` library so it can be reused by the main controller target later. The tester application in `src/dynamixel_tester/` follows the programmer target's interactive shell pattern.
 
-Hardware: PIO-based half-duplex UART on a single GPIO pin. The XC430 is 3.3V TTL, same as the RP2350, so no level shifter is needed. Uses 2 PIO state machines (one TX, one RX) on the same pin, leveraging the existing `uart_tx.pio` and `uart_rx.pio` programs already in the repo.
+Hardware: PIO-based half-duplex UART on a single GPIO pin. The XC330 is 3.3V TTL, same as the RP2350, so no level shifter is needed. Uses 2 PIO state machines (one TX, one RX) on the same pin, leveraging the existing `uart_tx.pio` and `uart_rx.pio` programs already in the repo.
 
 ## New Files
 
 ### Shared Library: `src/dynamixel/` (4 files)
 
-**`dynamixel_registers.h`** - XC430 control table register addresses, baud rate indices, operating modes, position limits, factory reset options. Pure `#define` constants.
+**`dynamixel_registers.h`** - XC330 control table register addresses, baud rate indices, operating modes, position limits, factory reset options. Pure `#define` constants.
 
 **`dynamixel_protocol.h/c`** - Protocol 2.0 packet layer:
 - `dxl_packet_t` struct (id, instruction, params[], param_count, error)
