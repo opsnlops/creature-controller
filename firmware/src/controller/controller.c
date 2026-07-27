@@ -72,6 +72,10 @@ dxl_hal_context_t *dxl_ctx = NULL;
 
 // Mutex for thread-safe access to dxl_motors
 static SemaphoreHandle_t dxl_motors_mutex = NULL;
+
+// Defined below with the rest of the Dynamixel task state; declared here so
+// first_frame_received can request a re-init (issue #19).
+static volatile bool dxl_reinit_requested;
 #endif
 
 /**
@@ -462,7 +466,15 @@ void first_frame_received(const bool yesOrNo) {
         enable_all_motors();
 #endif
 #ifdef CC_VER4
-        dynamixel_request_torque_all(true);
+        // Powering the PWM motor rails just above can sag the supply the
+        // Dynamixels share hard enough to reboot them — wiping the settings we
+        // verified moments ago (Profile Velocity back to factory default,
+        // status LED off) while the stale confirmed flags say everything is
+        // fine (issue #19). Don't trust any pre-power-on confirmation: request
+        // a full re-initialize, which re-verifies every servo (the
+        // write-confirm retries absorb their boot time) and ends by enabling
+        // torque itself now that the first frame is here.
+        dxl_reinit_requested = true;
 #endif
     } else {
         info("We haven't received our first frame from the controller yet");
