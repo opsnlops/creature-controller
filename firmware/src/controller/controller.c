@@ -605,6 +605,7 @@ typedef enum {
 static volatile dxl_torque_request_t dxl_torque_request = DXL_TORQUE_REQUEST_NONE;
 
 static void dynamixel_set_torque_all(bool enable);
+static bool dynamixel_apply_led(u8 dxl_id, bool on);
 
 // Running tally of the Dynamixel telemetry path, reported periodically by the
 // Dynamixel task. Both failure modes are otherwise silent from this end: a bus
@@ -630,6 +631,27 @@ void resetDynamixelMotorMap(void) {
     // Configuration is processed with controller_safe_to_run false, so the
     // task's control sequence is idle while this runs.
     dynamixel_set_torque_all(false);
+
+    // The status lights mean "settings verified" (issue #18), and the settings
+    // they vouch for are about to be thrown away — go dark until the next
+    // CONFIG re-verifies. Inline for the same reason as the torque release
+    // above: once the map clears, the IDs to command are gone. Servos that
+    // reappear in the new configuration get their light rewritten either way;
+    // this sweep is for the ones that don't.
+    if (motor_power_rail_present) {
+        u8 ids[MAX_DYNAMIXEL_SERVOS];
+        u8 count = 0;
+        if (xSemaphoreTake(dxl_motors_mutex, portMAX_DELAY) == pdTRUE) {
+            count = dxl_motor_count;
+            for (u8 i = 0; i < count; i++) {
+                ids[i] = dxl_motors[i].dxl_id;
+            }
+            xSemaphoreGive(dxl_motors_mutex);
+        }
+        for (u8 i = 0; i < count; i++) {
+            dynamixel_apply_led(ids[i], false);
+        }
+    }
 
     if (xSemaphoreTake(dxl_motors_mutex, portMAX_DELAY) == pdTRUE) {
         memset(dxl_motors, 0, sizeof(dxl_motors));
@@ -719,10 +741,11 @@ static bool dynamixel_apply_torque(u8 dxl_id, bool enable) {
 }
 
 /*
- * The status light means one thing: this servo is holding torque. That makes it
- * worth the same confirm-and-retry treatment as the torque write itself — a
- * light that failed to come on after a power restore is a servo reported as
- * limp when it is actually holding.
+ * The status light means one thing: this servo's settings were written and read
+ * back (issue #18). It comes on at the end of verification — initial CONFIG or
+ * the re-init after a power restore — before any torque is applied, so standing
+ * at the rig you can see that configuration landed without waiting for frames.
+ * It says nothing about torque: a lit servo may well be limp.
  */
 static bool dynamixel_apply_led(u8 dxl_id, bool on) {
     return dynamixel_apply_register(dxl_id, DXL_REG_LED, 1, on ? 1u : 0u, on ? "status light on" : "status light off");
@@ -817,6 +840,12 @@ bool configureDynamixelServo(u8 dxl_id, u32 min_pos, u32 max_pos, u32 profile_ve
     if (motor_power_rail_present) {
         confirmed = dynamixel_apply_profile_velocity(dxl_id, profile_velocity);
         dynamixel_mark_velocity_confirmed(dxl_id, confirmed);
+
+        // Settings verified — light the servo's status LED (issue #18). Off on a
+        // failed confirm, in case it was lit by a previous configuration.
+        if (!dynamixel_apply_led(dxl_id, confirmed)) {
+            warning("Dynamixel %u status light may not match its verification state", dxl_id);
+        }
     } else {
         dynamixel_mark_velocity_confirmed(dxl_id, false);
         dxl_reinit_requested = true;
@@ -927,13 +956,9 @@ static void dynamixel_set_torque_all(bool enable) {
             failed++;
         }
 
-        // The status light means exactly one thing: this servo is holding
-        // torque. So it follows the state we actually confirmed, not the one we
-        // asked for. A servo whose torque could not be confirmed gets its light
-        // turned off — better dark than advertising a hold that may not exist.
-        if (!dynamixel_apply_led(ids[i], torque_ok && want_torque)) {
-            warning("Dynamixel %u status light may not match its torque state", ids[i]);
-        }
+        // The status light is deliberately not touched here: it means "settings
+        // verified", not "holding torque" (issue #18), and verification state
+        // doesn't change on a torque transition.
     }
 
     // State the outcome plainly, counting what each servo actually ended up
@@ -1051,6 +1076,12 @@ static void dynamixel_reinitialize_all(void) {
     for (u8 i = 0; i < count; i++) {
         bool confirmed = dynamixel_apply_profile_velocity(ids[i], velocities[i]);
         dynamixel_mark_velocity_confirmed(ids[i], confirmed);
+
+        // The LED register reset with the rail, so relight it as each servo's
+        // settings are re-verified (issue #18).
+        if (!dynamixel_apply_led(ids[i], confirmed)) {
+            warning("Dynamixel %u status light may not match its verification state", ids[i]);
+        }
 
         if (confirmed) {
             confirmed_count++;
