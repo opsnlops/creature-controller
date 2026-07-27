@@ -642,49 +642,56 @@ void resetDynamixelMotorMap(void) {
 }
 
 /**
- * Write a servo's Profile Velocity and read the register back to confirm it
- * actually landed. A servo that is still booting after a power cycle may not
- * answer at all, or may answer before it has applied the write, so the
- * read-back is what we trust rather than the write's return code. Retries a
- * few times with a short pause to give the servo time to come up.
+ * Write a servo register and read it back to confirm it actually landed,
+ * retrying a few times with a short pause between attempts.
+ *
+ * A servo that is still booting after a power cycle may not answer at all, or
+ * may answer before it has applied the write, so the read-back is what we trust
+ * rather than the write's return code.
  *
  * Must be called from a task context (it delays between attempts).
  *
- * @return true if the servo is confirmed to hold the requested velocity
+ * @param dxl_id servo to write to
+ * @param address register address
+ * @param length register width in bytes
+ * @param value value to write
+ * @param what what we are setting, for the log
+ * @return true if the servo is confirmed to hold the requested value
  */
-static bool dynamixel_apply_profile_velocity(u8 dxl_id, u32 velocity) {
+static bool dynamixel_apply_register(u8 dxl_id, u16 address, u16 length, u32 value, const char *what) {
     for (u8 attempt = 1; attempt <= DXL_WRITE_MAX_ATTEMPTS; attempt++) {
         // The rail can drop out mid-sequence (brownout, a plug switched off
-        // between servos). Retrying into a dead bus just buys three timeouts
-        // per servo, so stop as soon as we know the power is gone.
+        // between servos). Retrying into a dead bus just buys timeouts per
+        // servo, so stop as soon as we know the power is gone.
         if (!motor_power_rail_present) {
-            warning("motor power rail went down while configuring Dynamixel %u; abandoning the attempt", dxl_id);
+            warning("motor power rail went down while setting %s on Dynamixel %u; abandoning the attempt", what,
+                    dxl_id);
             return false;
         }
 
-        dxl_result_t res = dxl_set_profile_velocity(dxl_ctx, dxl_id, velocity);
+        dxl_result_t res = dxl_write_register(dxl_ctx, dxl_id, address, length, value);
 
         if (res == DXL_OK) {
             u32 readback = 0;
-            res = dxl_read_register(dxl_ctx, dxl_id, DXL_REG_PROFILE_VELOCITY, 4, &readback);
+            res = dxl_read_register(dxl_ctx, dxl_id, address, length, &readback);
 
-            if (res == DXL_OK && readback == velocity) {
+            if (res == DXL_OK && readback == value) {
                 if (attempt > 1) {
-                    info("Profile Velocity for Dynamixel %u confirmed on attempt %u", dxl_id, attempt);
+                    info("%s on Dynamixel %u confirmed on attempt %u", what, dxl_id, attempt);
                 }
                 return true;
             }
 
             if (res == DXL_OK) {
-                warning("Dynamixel %u Profile Velocity read back as %lu, expected %lu (attempt %u of %u)", dxl_id,
-                        (unsigned long)readback, (unsigned long)velocity, attempt, DXL_WRITE_MAX_ATTEMPTS);
+                warning("Dynamixel %u %s read back as %lu, expected %lu (attempt %u of %u)", dxl_id, what,
+                        (unsigned long)readback, (unsigned long)value, attempt, DXL_WRITE_MAX_ATTEMPTS);
             } else {
-                warning("failed to read back Profile Velocity for Dynamixel %u (%s, attempt %u of %u)", dxl_id,
+                warning("failed to read back %s for Dynamixel %u (%s, attempt %u of %u)", what, dxl_id,
                         dxl_result_to_string(res), attempt, DXL_WRITE_MAX_ATTEMPTS);
             }
         } else {
-            warning("failed to set Profile Velocity for Dynamixel %u (%s, attempt %u of %u)", dxl_id,
-                    dxl_result_to_string(res), attempt, DXL_WRITE_MAX_ATTEMPTS);
+            warning("failed to set %s on Dynamixel %u (%s, attempt %u of %u)", what, dxl_id, dxl_result_to_string(res),
+                    attempt, DXL_WRITE_MAX_ATTEMPTS);
         }
 
         if (attempt < DXL_WRITE_MAX_ATTEMPTS) {
@@ -692,68 +699,33 @@ static bool dynamixel_apply_profile_velocity(u8 dxl_id, u32 velocity) {
         }
     }
 
-    error("giving up on Profile Velocity for Dynamixel %u after %u attempts; leaving it torque-off", dxl_id,
-          DXL_WRITE_MAX_ATTEMPTS);
+    error("giving up on %s for Dynamixel %u after %u attempts", what, dxl_id, DXL_WRITE_MAX_ATTEMPTS);
     return false;
 }
 
-/**
- * Set a servo's torque state and read it back to confirm, retrying on failure.
- *
- * Same reasoning as dynamixel_apply_profile_velocity, and the same root cause: a
- * servo that has just had its power restored may not answer the first write. A
- * torque enable that quietly fails leaves that servo limp while the rest of the
+static bool dynamixel_apply_profile_velocity(u8 dxl_id, u32 velocity) {
+    return dynamixel_apply_register(dxl_id, DXL_REG_PROFILE_VELOCITY, 4, velocity, "Profile Velocity");
+}
+
+/*
+ * A torque enable that quietly fails leaves a servo limp while the rest of the
  * system believes it is holding position, and a torque disable that quietly
- * fails leaves it energized when we wanted it released — which is the more
- * dangerous direction of the two. Both are worth retrying and confirming.
- *
- * Must be called from a task context (it delays between attempts).
- *
- * @return true if the servo is confirmed to be in the requested torque state
+ * fails leaves it energized when we wanted it released — the more dangerous of
+ * the two. Both are worth confirming.
  */
 static bool dynamixel_apply_torque(u8 dxl_id, bool enable) {
-    const u32 expected = enable ? 1u : 0u;
+    return dynamixel_apply_register(dxl_id, DXL_REG_TORQUE_ENABLE, 1, enable ? 1u : 0u,
+                                    enable ? "torque enable" : "torque disable");
+}
 
-    for (u8 attempt = 1; attempt <= DXL_WRITE_MAX_ATTEMPTS; attempt++) {
-        if (!motor_power_rail_present) {
-            warning("motor power rail went down while setting torque on Dynamixel %u; abandoning the attempt", dxl_id);
-            return false;
-        }
-
-        dxl_result_t res = dxl_set_torque(dxl_ctx, dxl_id, enable);
-
-        if (res == DXL_OK) {
-            u32 readback = 0;
-            res = dxl_read_register(dxl_ctx, dxl_id, DXL_REG_TORQUE_ENABLE, 1, &readback);
-
-            if (res == DXL_OK && readback == expected) {
-                if (attempt > 1) {
-                    info("torque %s on Dynamixel %u confirmed on attempt %u", enable ? "enable" : "disable", dxl_id,
-                         attempt);
-                }
-                return true;
-            }
-
-            if (res == DXL_OK) {
-                warning("Dynamixel %u torque read back as %lu, expected %lu (attempt %u of %u)", dxl_id,
-                        (unsigned long)readback, (unsigned long)expected, attempt, DXL_WRITE_MAX_ATTEMPTS);
-            } else {
-                warning("failed to read back torque for Dynamixel %u (%s, attempt %u of %u)", dxl_id,
-                        dxl_result_to_string(res), attempt, DXL_WRITE_MAX_ATTEMPTS);
-            }
-        } else {
-            warning("failed to %s torque on Dynamixel %u (%s, attempt %u of %u)", enable ? "enable" : "disable", dxl_id,
-                    dxl_result_to_string(res), attempt, DXL_WRITE_MAX_ATTEMPTS);
-        }
-
-        if (attempt < DXL_WRITE_MAX_ATTEMPTS) {
-            vTaskDelay(pdMS_TO_TICKS(DXL_WRITE_RETRY_DELAY_MS));
-        }
-    }
-
-    error("giving up on torque %s for Dynamixel %u after %u attempts", enable ? "enable" : "disable", dxl_id,
-          DXL_WRITE_MAX_ATTEMPTS);
-    return false;
+/*
+ * The status light means one thing: this servo is holding torque. That makes it
+ * worth the same confirm-and-retry treatment as the torque write itself — a
+ * light that failed to come on after a power restore is a servo reported as
+ * limp when it is actually holding.
+ */
+static bool dynamixel_apply_led(u8 dxl_id, bool on) {
+    return dynamixel_apply_register(dxl_id, DXL_REG_LED, 1, on ? 1u : 0u, on ? "status light on" : "status light off");
 }
 
 /**
@@ -943,7 +915,9 @@ static void dynamixel_set_torque_all(bool enable) {
             error("leaving Dynamixel %u torque-off: its Profile Velocity was never confirmed", ids[i]);
         }
 
-        if (dynamixel_apply_torque(ids[i], want_torque)) {
+        const bool torque_ok = dynamixel_apply_torque(ids[i], want_torque);
+
+        if (torque_ok) {
             if (want_torque) {
                 energized++;
             } else {
@@ -953,11 +927,12 @@ static void dynamixel_set_torque_all(bool enable) {
             failed++;
         }
 
-        // LED follows torque state. Cosmetic, so it gets one attempt and no
-        // read-back — a servo with the wrong LED still behaves correctly.
-        dxl_result_t led_res = dxl_set_led(dxl_ctx, ids[i], want_torque);
-        if (led_res != DXL_OK) {
-            warning("failed to set LED on Dynamixel %u (%s)", ids[i], dxl_result_to_string(led_res));
+        // The status light means exactly one thing: this servo is holding
+        // torque. So it follows the state we actually confirmed, not the one we
+        // asked for. A servo whose torque could not be confirmed gets its light
+        // turned off — better dark than advertising a hold that may not exist.
+        if (!dynamixel_apply_led(ids[i], torque_ok && want_torque)) {
+            warning("Dynamixel %u status light may not match its torque state", ids[i]);
         }
     }
 
