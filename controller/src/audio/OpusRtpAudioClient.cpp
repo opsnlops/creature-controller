@@ -17,6 +17,7 @@
 #include <utility>
 
 #include "audio/AlsaMixerControl.h"
+#include "audio/AudioOutputKeepalive.h"
 #include "audio/RtpPacket.h"
 #include "util/thread_name.h"
 
@@ -487,6 +488,7 @@ void OpusRtpAudioClient::audioPlayoutThread() {
 
     constexpr size_t targetQueueFrames = TARGET_PLAYOUT_FRAMES * FRAMES_PER_CHUNK;
     constexpr auto idleTimeout = std::chrono::milliseconds(STREAM_IDLE_TIMEOUT_MS);
+    AudioOutputKeepalive outputKeepalive(*audioOutput_, targetQueueFrames);
 
     GainRamp dialogGain(dialogGainLinear_.load());
     GainRamp bgmGain(bgmGainLinear_.load());
@@ -495,9 +497,22 @@ void OpusRtpAudioClient::audioPlayoutThread() {
     uint64_t activeBgmGeneration = 0;
     uint64_t lastSummaryFrame = 0;
 
+    if (!outputKeepalive.start()) {
+        log_->error("Unable to start the audio output keepalive");
+        stop_requested.store(true);
+        return;
+    }
+    log_->info("Audio output keepalive started with {:.1f} ms queued",
+               static_cast<double>(audioOutput_->queuedFrames()) * 1000.0 / SAMPLE_RATE);
+
     while (!stop_requested.load()) {
         const auto initial = bgmBuffer_->initialPlayout();
         if (!initial.has_value()) {
+            if (!outputKeepalive.refillSilence()) {
+                log_->error("Unable to maintain idle audio output");
+                stop_requested.store(true);
+                break;
+            }
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
             continue;
         }
@@ -507,33 +522,28 @@ void OpusRtpAudioClient::audioPlayoutThread() {
         dialogBuffer_->discardBefore(nextTimestamp);
         bgmBuffer_->discardBefore(nextTimestamp);
 
-        audioOutput_->stopAndClear();
-
-        size_t initialFrames = 0;
-        do {
-            std::array<int16_t, FRAMES_PER_CHUNK> mixed{};
-            mixTimestamp(nextTimestamp, mixed, dialogGeneration, bgmDecoderGeneration, dialogGain, bgmGain);
-            if (!audioOutput_->write(mixed)) {
-                log_->error("Unable to queue initial audio frame");
+        while (!stop_requested.load() && Clock::now() < initial->startTime) {
+            if (!outputKeepalive.refillSilence()) {
+                log_->error("Unable to maintain audio output before RTP playout");
                 stop_requested.store(true);
                 break;
             }
-            nextTimestamp += FRAMES_PER_CHUNK;
-            mixedFrames_.fetch_add(1);
-            ++initialFrames;
-        } while (initialFrames < INITIAL_PLAYOUT_FRAMES &&
-                 audioOutput_->queuedFrames() + audioOutput_->pipelineLatencyFrames() < targetQueueFrames);
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
         if (stop_requested.load()) {
             break;
         }
 
-        if (Clock::now() < initial->startTime) {
-            std::this_thread::sleep_until(initial->startTime);
-        }
-        if (!audioOutput_->start()) {
+        std::array<int16_t, FRAMES_PER_CHUNK> initialMixed{};
+        mixTimestamp(nextTimestamp, initialMixed, dialogGeneration, bgmDecoderGeneration, dialogGain, bgmGain);
+        if (!audioOutput_->write(initialMixed)) {
+            log_->error("Unable to queue initial audio frame");
             stop_requested.store(true);
             break;
         }
+        nextTimestamp += FRAMES_PER_CHUNK;
+        mixedFrames_.fetch_add(1);
+
         log_->info("Audio playout started at RTP timestamp {} with {:.1f} ms queued", initial->timestamp,
                    static_cast<double>(audioOutput_->queuedFrames()) * 1000.0 / SAMPLE_RATE);
 
@@ -588,11 +598,8 @@ void OpusRtpAudioClient::audioPlayoutThread() {
             }
         }
 
-        audioOutput_->stopAndClear();
-        log_->debug("Audio playout paused while waiting for the next RTP session");
+        log_->debug("Audio playout returned to idle keepalive");
     }
-
-    audioOutput_->stopAndClear();
 }
 
 bool OpusRtpAudioClient::openSocket(int &socket, const std::string &group) const {

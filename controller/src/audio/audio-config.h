@@ -27,7 +27,6 @@ inline constexpr uint8_t OUTPUT_CH = 1;
 
 // Playout
 inline constexpr size_t RTP_JITTER_BUFFER_FRAMES = 32;
-inline constexpr size_t INITIAL_PLAYOUT_FRAMES = 2;
 inline constexpr size_t TARGET_PLAYOUT_FRAMES = 2;
 inline constexpr size_t AUDIO_DEVICE_PERIOD_FRAMES = 256;
 inline constexpr size_t AUDIO_OUTPUT_RING_FRAMES = 8192;

@@ -9,6 +9,11 @@ RTP playback uses ALSA directly on Linux and CoreAudio directly on macOS. The
 native backends expose the device clock and hardware delay needed for precise
 playout monitoring.
 
+The output stream remains active between RTP sessions with a bounded queue of
+silence. This prevents USB audio devices from dropping the beginning of a
+sound while their playback path wakes up. The controller stops the native
+output only during shutdown or device-error recovery.
+
 `audioDeviceName` selects an output using the exact name printed by
 `creature-controller --list-sound-devices`. It is preferred over
 `audioDevice`, whose numeric index remains available for backward
