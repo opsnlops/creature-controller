@@ -14,13 +14,13 @@
 #include <netinet/in.h>
 
 // Third-party includes
-#include <SDL.h>
 #include <argparse/argparse.hpp>
 
 // Project includes
 #include "CommandLine.h"
 #include "ConfigurationBuilder.h"
 #include "Version.h"
+#include "audio/AudioOutput.h"
 #include "audio/audio-config.h"
 #include "logging/Logger.h"
 #include "logging/SpdlogLogger.h"
@@ -160,26 +160,7 @@ void CommandLine::listNetworkDevices() {
     displayNetworkInterfaces(interfaces);
 }
 
-void CommandLine::listAudioDevices() {
-    std::cout << "Available audio devices for RTP playback:" << std::endl;
-
-    if (SDL_Init(SDL_INIT_AUDIO) < 0) {
-        std::cerr << "Failed to initialize SDL: " << SDL_GetError() << std::endl;
-        return;
-    }
-
-    int numDevices = SDL_GetNumAudioDevices(0);
-
-    std::cout << "Number of audio devices: " << numDevices << std::endl;
-    for (int i = 0; i < numDevices; ++i) {
-        const char *deviceName = SDL_GetAudioDeviceName(i, 0);
-        if (deviceName) {
-            std::cout << "  Device " << i << ": " << deviceName << std::endl;
-        }
-    }
-
-    SDL_Quit();
-}
+void CommandLine::listAudioDevices() { audio::listAudioOutputDevices(std::cout); }
 
 void CommandLine::collectNetworkInterfaces(struct ifaddrs *ifaddr,
                                            std::map<std::string, std::pair<int, std::vector<std::string>>> &interfaces,

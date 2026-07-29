@@ -50,6 +50,40 @@ TEST_F(ConfigurationTest, SetAndGetNetworkDeviceName) {
     ASSERT_EQ(config->getNetworkDeviceName(), deviceName);
 }
 
+TEST_F(ConfigurationTest, AudioConfigHasSafeDefaults) {
+    const auto &audioConfig = config->getAudioConfig();
+
+    EXPECT_EQ(audioConfig.deviceNumber, creatures::audio::DEFAULT_SOUND_DEVICE_NUMBER);
+    EXPECT_FALSE(audioConfig.deviceName.has_value());
+    EXPECT_FLOAT_EQ(audioConfig.dialogGainDb, creatures::audio::DEFAULT_DIALOG_GAIN_DB);
+    EXPECT_FLOAT_EQ(audioConfig.bgmGainDb, creatures::audio::DEFAULT_BGM_GAIN_DB);
+    EXPECT_FLOAT_EQ(audioConfig.limiterCeilingDb, creatures::audio::DEFAULT_LIMITER_CEILING_DB);
+    EXPECT_FALSE(audioConfig.outputVolumePercent.has_value());
+}
+
+TEST_F(ConfigurationTest, SetsAudioConfig) {
+    config->setSoundDeviceNumber(2);
+    config->setSoundDeviceName("plughw:CARD=S3,DEV=0");
+    config->setDialogGainDb(1.5f);
+    config->setBgmGainDb(-8.0f);
+    config->setLimiterCeilingDb(-2.0f);
+    config->setOutputVolumePercent(72);
+    config->setAlsaMixerCard("hw:1");
+    config->setAlsaMixerElement("PCM");
+
+    const auto &audioConfig = config->getAudioConfig();
+    EXPECT_EQ(audioConfig.deviceNumber, 2);
+    ASSERT_TRUE(audioConfig.deviceName.has_value());
+    EXPECT_EQ(*audioConfig.deviceName, "plughw:CARD=S3,DEV=0");
+    EXPECT_FLOAT_EQ(audioConfig.dialogGainDb, 1.5f);
+    EXPECT_FLOAT_EQ(audioConfig.bgmGainDb, -8.0f);
+    EXPECT_FLOAT_EQ(audioConfig.limiterCeilingDb, -2.0f);
+    ASSERT_TRUE(audioConfig.outputVolumePercent.has_value());
+    EXPECT_EQ(*audioConfig.outputVolumePercent, 72);
+    EXPECT_EQ(audioConfig.alsaMixerCard, "hw:1");
+    EXPECT_EQ(audioConfig.alsaMixerElement, "PCM");
+}
+
 TEST_F(ConfigurationTest, AddAndGetUARTDevices) {
     UARTDevice device1(mockLogger);
     UARTDevice device2(mockLogger);

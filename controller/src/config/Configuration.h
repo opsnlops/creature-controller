@@ -28,6 +28,7 @@ class Configuration {
     bool getUseGPIO() const;
     bool getUseAudioSubsystem() const;
     u8 getSoundDeviceNumber() const;
+    [[nodiscard]] const audio::AudioConfig &getAudioConfig() const;
 
     // Networking details
     std::string getNetworkDeviceIPAddress() const;
@@ -62,6 +63,13 @@ class Configuration {
     void setUseGPIO(bool _useGPIO);
     void setUseAudioSubsystem(bool _useAudioSubsystem);
     void setSoundDeviceNumber(u8 _soundDeviceNumber);
+    void setSoundDeviceName(std::string deviceName);
+    void setDialogGainDb(float gainDb);
+    void setBgmGainDb(float gainDb);
+    void setLimiterCeilingDb(float ceilingDb);
+    void setOutputVolumePercent(u8 volumePercent);
+    void setAlsaMixerCard(std::string card);
+    void setAlsaMixerElement(std::string element);
     void setNetworkDeviceName(const std::string &_deviceName);
     void setUniverse(u16 _universe);
     void addUARTDevice(UARTDevice _uartDevice);
@@ -101,7 +109,7 @@ class Configuration {
     // Do we use the audio subsystem?
     bool useAudioSubsystem = false;
 
-    u8 soundDeviceNumber = audio::DEFAULT_SOUND_DEVICE_NUMBER;
+    audio::AudioConfig audioConfig;
 
     // Which network interface to bind to?
     std::string networkDeviceName = DEFAULT_NETWORK_INTERFACE_NAME;

@@ -1,10 +1,12 @@
 FROM debian:trixie AS build
 
-# Set up the build environment
-RUN apt update -y && apt upgrade -y
-RUN apt install -y clang locales-all libssl-dev ninja-build cmake git \
+# Set up the build environment. Keep the package index refresh in the same
+# layer as installation so a cached Debian base never uses stale indexes.
+RUN apt update -y && apt upgrade -y && \
+    apt install -y clang locales-all libssl-dev ninja-build cmake git \
                    pkgconf libbson-dev libpthreadpool-dev libutf8proc-dev \
-                   file zlib1g-dev libsdl2-mixer-dev libsdl2-dev libcurl4-openssl-dev
+                   file zlib1g-dev libasound2-dev libcurl4-openssl-dev && \
+    rm -rf /var/lib/apt/lists/*
 
 # Copy the source code into the build directory
 COPY src/ /build/creature-controller/src
@@ -29,9 +31,9 @@ RUN cd /build/creature-controller/build && ctest --output-on-failure -E SerialOu
 
 FROM debian:trixie-slim AS runtime
 
-RUN apt update -y && apt upgrade -y
-RUN apt install -y locales-all file zlib1g libsasl2-2 libicu76 libsdl2-mixer-2.0-0 flac libutf8proc3 \
-                   libuuid1 util-linux pipewire libuv1 libcurl4 libprotobuf32t64 && \
+RUN apt update -y && apt upgrade -y && \
+    apt install -y locales-all file zlib1g libsasl2-2 libicu76 libutf8proc3 libasound2t64 libuuid1 util-linux \
+                   libuv1 libcurl4 libprotobuf32t64 && \
     rm -rf /var/lib/apt/lists
 
 WORKDIR /app

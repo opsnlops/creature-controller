@@ -17,7 +17,8 @@ AudioSubsystem::AudioSubsystem(std::shared_ptr<creatures::Logger> log) : log_(lo
     log_->debug("AudioSubsystem created");
 }
 
-bool AudioSubsystem::initialize(uint8_t creatureChannel, const std::string &ifaceIp, uint8_t audioDev, uint16_t port) {
+bool AudioSubsystem::initialize(uint8_t creatureChannel, const std::string &ifaceIp, const AudioConfig &audioConfig,
+                                uint16_t port) {
     if (creatureChannel < 1 || creatureChannel > 16) {
         log_->error("Invalid creature channel: {} (must be 1-16)", creatureChannel);
         return false;
@@ -37,7 +38,7 @@ bool AudioSubsystem::initialize(uint8_t creatureChannel, const std::string &ifac
     rtpClient_ = std::make_shared<OpusRtpAudioClient>(log_,
                                                       dialogGroup, // Dialog channel for this creature
                                                       bgmGroup,    // BGM channel (always channel 17)
-                                                      port, creatureChannel, ifaceIp, audioDev);
+                                                      port, creatureChannel, ifaceIp, audioConfig);
 
     if (!rtpClient_) {
         log_->error("Failed to create RTP audio client");
@@ -46,6 +47,18 @@ bool AudioSubsystem::initialize(uint8_t creatureChannel, const std::string &ifac
 
     log_->info("Audio subsystem initialized successfully");
     return true;
+}
+
+void AudioSubsystem::setDialogGainDb(float gainDb) {
+    if (rtpClient_) {
+        rtpClient_->setDialogGainDb(gainDb);
+    }
+}
+
+void AudioSubsystem::setBgmGainDb(float gainDb) {
+    if (rtpClient_) {
+        rtpClient_->setBgmGainDb(gainDb);
+    }
 }
 
 void AudioSubsystem::run() {
@@ -92,8 +105,18 @@ std::string AudioSubsystem::getStats() const {
         return "audio disabled";
     }
 
-    return fmt::format("packets received={}, buffer={:.1f}%, receiving={}", rtpClient_->getPacketsReceived(),
-                       rtpClient_->getBufferLevel() * 100.0f, rtpClient_->isReceiving() ? "yes" : "no");
+    const double outputQueueMilliseconds =
+        static_cast<double>(rtpClient_->getOutputQueuedFrames()) * 1000.0 / SAMPLE_RATE;
+    const double targetQueueMilliseconds =
+        static_cast<double>(TARGET_PLAYOUT_FRAMES * FRAMES_PER_CHUNK) * 1000.0 / SAMPLE_RATE;
+    const auto packetAge = rtpClient_->getLastPacketAge();
+    const std::string packetAgeText = packetAge.has_value() ? fmt::format("{} ms ago", packetAge->count()) : "never";
+
+    return fmt::format(
+        "packets received={}, output queue={:.1f}/{:.1f} ms, RTP queued dialog={} BGM={}, last packet={}, receiving={}",
+        rtpClient_->getPacketsReceived(), outputQueueMilliseconds, targetQueueMilliseconds,
+        rtpClient_->getDialogBufferedFrames(), rtpClient_->getBgmBufferedFrames(), packetAgeText,
+        rtpClient_->isReceiving() ? "yes" : "no");
 }
 
 void AudioSubsystem::monitoringLoop() {
@@ -101,11 +124,9 @@ void AudioSubsystem::monitoringLoop() {
 
     log_->debug("Audio monitoring loop started");
 
-    // Buffer warnings are edge triggered. A buffer sitting outside its
-    // watermarks stays a problem, but restating it on every sample buries
-    // everything else in the log, so report entering and leaving the condition
-    // rather than repeating it.
-    enum class BufferState { Normal, High, Low };
+    // Low-buffer warnings are edge triggered so a single incident does not
+    // bury the rest of the controller log.
+    enum class BufferState { Normal, Low };
     BufferState lastBufferState = BufferState::Normal;
     int samplesSinceSummary = 0;
 
@@ -124,22 +145,19 @@ void AudioSubsystem::monitoringLoop() {
             const bool receiving = rtpClient_->isReceiving();
 
             BufferState bufferState = BufferState::Normal;
-            if (bufferLevel > BUF_HIGH_WATERMARK) {
-                bufferState = BufferState::High;
-            } else if (bufferLevel < BUF_LOW_WATERMARK && receiving) {
+            if (bufferLevel < 0.25f && receiving) {
                 bufferState = BufferState::Low;
             }
 
             if (bufferState != lastBufferState) {
+                const double queuedMilliseconds =
+                    static_cast<double>(rtpClient_->getOutputQueuedFrames()) * 1000.0 / SAMPLE_RATE;
                 switch (bufferState) {
-                case BufferState::High:
-                    log_->warn("Audio buffer level high: {:.1f}%", bufferLevel * 100.0f);
-                    break;
                 case BufferState::Low:
-                    log_->warn("Audio buffer level low: {:.1f}%", bufferLevel * 100.0f);
+                    log_->warn("Audio output queue low: {:.1f} ms", queuedMilliseconds);
                     break;
                 case BufferState::Normal:
-                    log_->info("Audio buffer level normal: {:.1f}% (receiving={})", bufferLevel * 100.0f,
+                    log_->info("Audio output queue normal: {:.1f} ms (receiving={})", queuedMilliseconds,
                                receiving ? "yes" : "no");
                     break;
                 }

@@ -277,8 +277,7 @@ int main(int argc, char **argv) {
     using creatures::io::Message;
     using creatures::server::ServerConnection;
 
-    // Fire up the signal handlers. SIGTERM is what systemd sends on `systemctl stop`;
-    // without an explicit handler, SDL grabs it during SDL_InitSubSystem and swallows it.
+    // Fire up the signal handlers. SIGTERM is what systemd sends on `systemctl stop`.
     std::signal(SIGINT, signal_handler);
     std::signal(SIGTERM, signal_handler);
 
@@ -385,7 +384,7 @@ int main(int argc, char **argv) {
 
         if (audioSubsystem->initialize(creatureAudioChannel,                // Dialog channel (1-16)
                                        config->getNetworkDeviceIPAddress(), // Network interface
-                                       config->getSoundDeviceNumber())) {   // SDL audio device index
+                                       config->getAudioConfig())) {
 
             logger->info("Audio subsystem initialized: dialog channel {}, BGM channel 17", creatureAudioChannel);
         } else {
