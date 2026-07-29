@@ -48,7 +48,9 @@ bool Configuration::getUseGPIO() const { return useGPIO; }
 
 bool Configuration::getUseAudioSubsystem() const { return useAudioSubsystem; }
 
-u8 Configuration::getSoundDeviceNumber() const { return soundDeviceNumber; }
+u8 Configuration::getSoundDeviceNumber() const { return audioConfig.deviceNumber; }
+
+const audio::AudioConfig &Configuration::getAudioConfig() const { return audioConfig; }
 
 uint Configuration::getNetworkDeviceIndex() const { return networkDeviceIndex; }
 
@@ -172,8 +174,38 @@ void Configuration::setUseGPIO(bool _useGPIO) {
 }
 
 void Configuration::setSoundDeviceNumber(u8 _soundDeviceNumber) {
-    this->soundDeviceNumber = _soundDeviceNumber;
-    logger->debug("Set soundDeviceNumber to {}", this->soundDeviceNumber);
+    audioConfig.deviceNumber = _soundDeviceNumber;
+    logger->debug("Set soundDeviceNumber to {}", audioConfig.deviceNumber);
+}
+
+void Configuration::setDialogGainDb(float gainDb) {
+    audioConfig.dialogGainDb = gainDb;
+    logger->debug("Set dialogGainDb to {:.1f}", audioConfig.dialogGainDb);
+}
+
+void Configuration::setBgmGainDb(float gainDb) {
+    audioConfig.bgmGainDb = gainDb;
+    logger->debug("Set bgmGainDb to {:.1f}", audioConfig.bgmGainDb);
+}
+
+void Configuration::setLimiterCeilingDb(float ceilingDb) {
+    audioConfig.limiterCeilingDb = ceilingDb;
+    logger->debug("Set limiterCeilingDb to {:.1f}", audioConfig.limiterCeilingDb);
+}
+
+void Configuration::setOutputVolumePercent(u8 volumePercent) {
+    audioConfig.outputVolumePercent = volumePercent;
+    logger->debug("Set outputVolumePercent to {}", volumePercent);
+}
+
+void Configuration::setAlsaMixerCard(std::string card) {
+    audioConfig.alsaMixerCard = std::move(card);
+    logger->debug("Set alsaMixerCard to {}", audioConfig.alsaMixerCard);
+}
+
+void Configuration::setAlsaMixerElement(std::string element) {
+    audioConfig.alsaMixerElement = std::move(element);
+    logger->debug("Set alsaMixerElement to {}", audioConfig.alsaMixerElement);
 }
 
 void Configuration::setUseAudioSubsystem(bool _useAudioSubsystem) {

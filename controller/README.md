@@ -58,35 +58,24 @@ coding error. (Servos are strong and snapping PLA is easy!)
 
    curl -v -d @kenny.json https://server.prod.chirpchirp.dev/api/v1/creature
 
-## Audio Volume Helper
+## Audio Levels
 
-If you need the ALSA mixer level pinned to 95% at boot (so SDL playback starts at a known loudness), use the helper script at `scripts/set-alsa-volume.sh`. It wraps `amixer` and defaults to card `0`, control `Master`, and `95%`, but you can override each value:
+Dialog and BGM gain are independently configurable in decibels. RTP playback
+uses native ALSA output on Linux and CoreAudio on macOS. Linux builds can also
+set an ALSA playback element directly at startup:
 
-```bash
-./scripts/set-alsa-volume.sh --card 1 --control PCM --percent 95%
+```json
+{
+  "dialogGainDb": 0.0,
+  "bgmGainDb": -6.0,
+  "limiterCeilingDb": -1.0,
+  "outputVolumePercent": 75,
+  "alsaMixerCard": "default",
+  "alsaMixerElement": "PCM"
+}
 ```
 
-To run it automatically at startup via systemd, copy it to a location on the root filesystem (or reference it directly inside the repo) and add a small service:
-
-```
-# /etc/systemd/system/alsa-volume.service
-[Unit]
-Description=Set ALSA mixer level for Creature Controller audio
-After=sound.target
-
-[Service]
-Type=oneshot
-ExecStart=/usr/local/bin/set-alsa-volume.sh --card 0 --control Master --percent 95% --unmute
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Then enable it once with:
-
-```bash
-sudo systemctl enable --now alsa-volume.service
-```
-
-This guarantees the hardware mixer is set before the controller process starts. See `docs/audio-volume.md` for a deeper walkthrough.
+These fields are optional. The stream gains default to 0 dB, and hardware
+volume is left unchanged unless `outputVolumePercent` is present. See
+`docs/audio-volume.md` for device and control-selection details.
   

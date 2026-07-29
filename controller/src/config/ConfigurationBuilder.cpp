@@ -119,6 +119,67 @@ Result<std::shared_ptr<creatures::config::Configuration>> ConfigurationBuilder::
     config->setUseAudioSubsystem(useRTPAudioResult.getValue().value());
 
     config->setSoundDeviceNumber(j["audioDevice"]);
+
+    if (j.contains("dialogGainDb")) {
+        if (!j["dialogGainDb"].is_number()) {
+            return makeError("Field 'dialogGainDb' must be a number");
+        }
+        const float gainDb = j["dialogGainDb"].get<float>();
+        if (gainDb < audio::MIN_GAIN_DB || gainDb > audio::MAX_GAIN_DB) {
+            return makeError(
+                fmt::format("Field 'dialogGainDb' must be between {} and {}", audio::MIN_GAIN_DB, audio::MAX_GAIN_DB));
+        }
+        config->setDialogGainDb(gainDb);
+    }
+
+    if (j.contains("bgmGainDb")) {
+        if (!j["bgmGainDb"].is_number()) {
+            return makeError("Field 'bgmGainDb' must be a number");
+        }
+        const float gainDb = j["bgmGainDb"].get<float>();
+        if (gainDb < audio::MIN_GAIN_DB || gainDb > audio::MAX_GAIN_DB) {
+            return makeError(
+                fmt::format("Field 'bgmGainDb' must be between {} and {}", audio::MIN_GAIN_DB, audio::MAX_GAIN_DB));
+        }
+        config->setBgmGainDb(gainDb);
+    }
+
+    if (j.contains("limiterCeilingDb")) {
+        if (!j["limiterCeilingDb"].is_number()) {
+            return makeError("Field 'limiterCeilingDb' must be a number");
+        }
+        const float ceilingDb = j["limiterCeilingDb"].get<float>();
+        if (ceilingDb < audio::MIN_GAIN_DB || ceilingDb > 0.0f) {
+            return makeError(fmt::format("Field 'limiterCeilingDb' must be between {} and 0", audio::MIN_GAIN_DB));
+        }
+        config->setLimiterCeilingDb(ceilingDb);
+    }
+
+    if (j.contains("outputVolumePercent")) {
+        if (!j["outputVolumePercent"].is_number_integer()) {
+            return makeError("Field 'outputVolumePercent' must be an integer");
+        }
+        const int volumePercent = j["outputVolumePercent"].get<int>();
+        if (volumePercent < 0 || volumePercent > 100) {
+            return makeError("Field 'outputVolumePercent' must be between 0 and 100");
+        }
+        config->setOutputVolumePercent(static_cast<u8>(volumePercent));
+    }
+
+    if (j.contains("alsaMixerCard")) {
+        if (!j["alsaMixerCard"].is_string()) {
+            return makeError("Field 'alsaMixerCard' must be a string");
+        }
+        config->setAlsaMixerCard(j["alsaMixerCard"].get<std::string>());
+    }
+
+    if (j.contains("alsaMixerElement")) {
+        if (!j["alsaMixerElement"].is_string()) {
+            return makeError("Field 'alsaMixerElement' must be a string");
+        }
+        config->setAlsaMixerElement(j["alsaMixerElement"].get<std::string>());
+    }
+
     config->setNetworkDeviceName(j["networkInterface"]);
 
     // Set watchdog configuration

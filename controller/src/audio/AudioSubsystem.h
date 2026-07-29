@@ -24,13 +24,16 @@ class AudioSubsystem : public StoppableThread {
      * Initialize the audio subsystem with creature-specific configuration
      * @param creatureChannel The dialog channel for this creature (1-16)
      * @param ifaceIp The network interface IP address
-     * @param audioDeviceIndex SDL audio device index (from --list-sound-devices)
+     * @param audioConfig Output device and mixer configuration
      * @param port RTP port number
      * @return true if initialization succeeded
      */
     bool initialize(uint8_t creatureChannel, // 1-16
-                    const std::string &ifaceIp = "10.19.63.11", uint8_t audioDeviceIndex = DEFAULT_SOUND_DEVICE_NUMBER,
+                    const std::string &ifaceIp = "10.19.63.11", const AudioConfig &audioConfig = {},
                     uint16_t port = RTP_PORT);
+
+    void setDialogGainDb(float gainDb);
+    void setBgmGainDb(float gainDb);
 
     /* StoppableThread interface */
     void run() override;

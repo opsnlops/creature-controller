@@ -124,9 +124,26 @@ if(TARGET ixwebsocket)
     target_compile_options(ixwebsocket PRIVATE -w)
 endif()
 
-# SDL
-find_package(SDL2 REQUIRED)
-find_package(SDL2_mixer REQUIRED)
+# Native low-latency audio output
+set(AUDIO_PLATFORM_SOURCES)
+set(AUDIO_PLATFORM_LIBRARIES)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    find_package(ALSA REQUIRED)
+    list(APPEND AUDIO_PLATFORM_SOURCES src/audio/AlsaAudioOutput.cpp)
+    list(APPEND AUDIO_PLATFORM_LIBRARIES ${ALSA_LIBRARIES})
+elseif(APPLE)
+    find_library(AUDIOUNIT_FRAMEWORK AudioUnit REQUIRED)
+    find_library(COREAUDIO_FRAMEWORK CoreAudio REQUIRED)
+    find_library(COREFOUNDATION_FRAMEWORK CoreFoundation REQUIRED)
+    list(APPEND AUDIO_PLATFORM_SOURCES src/audio/CoreAudioOutput.cpp)
+    list(APPEND AUDIO_PLATFORM_LIBRARIES
+            ${AUDIOUNIT_FRAMEWORK}
+            ${COREAUDIO_FRAMEWORK}
+            ${COREFOUNDATION_FRAMEWORK}
+    )
+else()
+    message(FATAL_ERROR "Native audio output is only implemented for Linux and macOS")
+endif()
 
 # libcurl for HTTP requests
 find_package(CURL REQUIRED)
@@ -145,6 +162,13 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
 endif()
 
 add_library(creature_lib
+
+        # Audio protocol sources
+        src/audio/AudioOutput.h
+        ${AUDIO_PLATFORM_SOURCES}
+        src/audio/audio-config.h
+        src/audio/RtpPacket.cpp
+        src/audio/RtpPacket.h
 
         # Configuration Sources
         src/config/CommandLine.cpp
@@ -298,15 +322,20 @@ target_include_directories(creature_lib PUBLIC
         ${nlohmann_json_SOURCE_DIR}/include
         ${spdlog_SOURCE_DIR}/include
         ${ixwebsocket_SOURCE_DIR}
-        ${SDL2_INCLUDE_DIRS}
-        ${SDL2_MIXER_INCLUDE_DIRS}
         ${opus_SOURCE_DIR}/include
 )
 
+if(ALSA_FOUND)
+    target_include_directories(creature_lib PUBLIC ${ALSA_INCLUDE_DIRS})
+endif()
+
+target_link_libraries(creature_lib PUBLIC ${AUDIO_PLATFORM_LIBRARIES})
 
 add_executable(creature-controller
         src/main.cpp
         src/audio/audio-config.h
+        src/audio/AlsaMixerControl.cpp
+        src/audio/AlsaMixerControl.h
         src/audio/AudioSubsystem.cpp
         src/audio/AudioSubsystem.h
         src/audio/OpusRtpAudioClient.cpp
@@ -318,8 +347,6 @@ target_link_libraries(creature-controller
         creature_lib
         libe131
         fmt::fmt
-        SDL2::SDL2
-        SDL2_mixer::SDL2_mixer
         argparse
         ixwebsocket
         spdlog::spdlog $<$<BOOL:${MINGW}>:ws2_32>
@@ -328,6 +355,10 @@ target_link_libraries(creature-controller
         opus
         CURL::libcurl
 )
+
+if(ALSA_FOUND)
+    target_compile_definitions(creature-controller PRIVATE CREATURE_HAS_ALSA=1)
+endif()
 
 install(TARGETS creature-controller
         COMPONENT creature-controller
@@ -344,6 +375,7 @@ install(TARGETS creature-controller
 enable_testing()
 
 add_executable(creature-controller-test
+        tests/audio/RtpPacket_test.cpp
         tests/config/CreatureBuilder_test.cpp
         tests/creature_test.cpp
         tests/creature/DifferentialHead_test.cpp

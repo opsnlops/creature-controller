@@ -1,62 +1,48 @@
-# Audio Volume Initialization
+# Audio level configuration
 
-This application pushes audio through SDL/ALSA, but the actual hardware volume is controlled by ALSA mixer levels. To guarantee a predictable loudness at boot, use the helper script shipped in `scripts/set-alsa-volume.sh` and optionally wire it into a systemd unit.
+The controller manages two different kinds of audio level:
 
-## Prerequisites
+- dialog and BGM gain are applied independently before the streams are mixed;
+- output volume changes the Linux audio device's ALSA playback control.
 
-- `alsa-utils` (provides `amixer`)
-- Access to the mixer you want to control (e.g., `Master`, `PCM`, or a USB DAC control)
+RTP playback uses ALSA directly on Linux and CoreAudio directly on macOS. The
+native backends expose the device clock and hardware delay needed for precise
+playout monitoring.
 
-## Script Usage
+`audioDevice` selects the index printed by `creature-controller --list-sound-devices`.
+Device 0 is the platform's default output. Native device ordering can differ
+from older SDL-based builds, so run the listing once when upgrading a
+controller that selected a non-default device.
 
-```
-./scripts/set-alsa-volume.sh \
-    --card 0 \
-    --control Master \
-    --percent 95% \
-    --unmute
-```
+All audio fields are optional:
 
-### Options
-
-- `--card <index|name>`: ALSA card target. Use `aplay -l` to list cards.
-- `--control <name>`: Mixer control to adjust (default `Master`).
-- `--percent <0-100%>`: Desired volume percentage (default `95%`).
-- `--unmute`: Clears the mute flag on the control.
-- `--dry-run`: Prints the `amixer` command without executing it.
-
-Install `alsa-utils` if the script reports `amixer` missing:
-
-```
-sudo apt-get update
-sudo apt-get install -y alsa-utils
+```json
+{
+  "dialogGainDb": 0.0,
+  "bgmGainDb": -6.0,
+  "limiterCeilingDb": -1.0,
+  "outputVolumePercent": 75,
+  "alsaMixerCard": "default",
+  "alsaMixerElement": "PCM"
+}
 ```
 
-## Systemd Integration
+`dialogGainDb` and `bgmGainDb` accept values from -90 dB through +12 dB. A
+runtime gain change uses a 2 ms de-click transition; incoming audio does not
+fade in.
 
-Create a unit so the mixer level is enforced during boot:
+`limiterCeilingDb` accepts values from -90 dB through 0 dB. It bounds the
+mixed signal before conversion to 16-bit PCM.
 
-```
-# /etc/systemd/system/alsa-volume.service
-[Unit]
-Description=Set ALSA mixer level for Creature Controller audio
-After=sound.target
+When `outputVolumePercent` is omitted, the controller does not change the
+hardware mixer. When it is present, Linux builds use the ALSA mixer API to set
+the selected playback element to a value from 0 through 100 percent.
 
-[Service]
-Type=oneshot
-ExecStart=/usr/local/bin/set-alsa-volume.sh --card 0 --control Master --percent 95% --unmute
+`alsaMixerCard` defaults to `default`. `alsaMixerElement` may identify a
+specific playback element such as `Master`, `PCM`, or `Speaker`. If the
+element is omitted, the controller prefers those names in that order and then
+uses the first active playback-volume element.
 
-[Install]
-WantedBy=multi-user.target
-```
-
-Steps:
-
-1. Copy `scripts/set-alsa-volume.sh` to `/usr/local/bin/set-alsa-volume.sh` (or adjust `ExecStart` to point to the repo copy) and ensure it is executable.
-2. Put the unit file above into `/etc/systemd/system/alsa-volume.service`.
-3. Enable and start it:
-   ```
-   sudo systemctl enable --now alsa-volume.service
-   ```
-
-On the next boot, the mixer level will be set before the creature controller launches.
+Some USB audio devices expose no hardware playback volume. The controller
+logs a warning and continues playing audio when no suitable element exists.
+Dialog and BGM software gain remain available in that case.

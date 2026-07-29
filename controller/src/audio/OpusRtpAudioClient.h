@@ -1,167 +1,127 @@
-//
-// OpusRtpAudioClient.h - Enhanced with separate stream debugging
-//
-
 #pragma once
+
 #include <array>
 #include <atomic>
-#include <fstream>
+#include <chrono>
+#include <cstdint>
 #include <memory>
-#include <mutex>
+#include <optional>
 #include <string>
 #include <thread>
 #include <vector>
 
-#include <SDL.h>
 #include <opus.h>
 
+#include "audio/AudioOutput.h"
 #include "audio/audio-config.h"
 #include "logging/Logger.h"
 #include "util/StoppableThread.h"
 
 namespace creatures::audio {
 
-// AudioDebugger class for debugging RTP and audio data with separate files
-class AudioDebugger {
-  public:
-    static void enableDebugging();
-    static void writeDialogAudio(const int16_t *samples, size_t count);
-    static void writeBgmAudio(const int16_t *samples, size_t count);
-    static void writeMixedAudio(const int16_t *samples, size_t count);
-    static void writeRtpPacket(const std::vector<uint8_t> &packet, const std::string &streamType);
-
-  private:
-    static std::ofstream dialogAudioFile_;
-    static std::ofstream bgmAudioFile_;
-    static std::ofstream mixedAudioFile_;
-    static std::ofstream dialogRtpFile_;
-    static std::ofstream bgmRtpFile_;
-    static std::atomic<bool> debugEnabled_;
-};
-
 class OpusRtpAudioClient final : public StoppableThread {
   public:
-    OpusRtpAudioClient(std::shared_ptr<creatures::Logger> log,
-                       std::string dialogGroup, // 239.19.63.<1-16>
-                       std::string bgmGroup,    // 239.19.63.17
-                       uint16_t port,           // 5004
-                       uint8_t dialogIdx,       // 1-16
-                       std::string ifaceIp,
-                       uint8_t audioDeviceIndex = 0);
-
+    OpusRtpAudioClient(std::shared_ptr<creatures::Logger> log, std::string dialogGroup, std::string bgmGroup,
+                       uint16_t port, uint8_t dialogIndex, std::string interfaceIp, AudioConfig audioConfig);
     ~OpusRtpAudioClient() override;
 
-    /* shutdown method for explicit cleanup */
+    void start() override;
     void shutdown() override;
 
-    /* stats for AudioSubsystem */
-    [[nodiscard]] bool isReceiving() const { return running_.load(); }
-    [[nodiscard]] uint64_t getPacketsReceived() const { return totalPkts_.load(); }
-    [[nodiscard]] float getBufferLevel() const { return bufLvl_.load(); }
+    void setDialogGainDb(float gainDb);
+    void setBgmGainDb(float gainDb);
+
+    [[nodiscard]] bool isReceiving() const;
+    [[nodiscard]] uint64_t getPacketsReceived() const { return totalPackets_.load(); }
+    [[nodiscard]] float getBufferLevel() const { return bufferLevel_.load(); }
+    [[nodiscard]] size_t getOutputQueuedFrames() const { return outputQueuedFrames_.load(); }
+    [[nodiscard]] size_t getDialogBufferedFrames() const { return dialogBufferedFrames_.load(); }
+    [[nodiscard]] size_t getBgmBufferedFrames() const { return bgmBufferedFrames_.load(); }
+    [[nodiscard]] std::optional<std::chrono::milliseconds> getLastPacketAge() const;
 
   private:
-    void run() override;
+    class RtpJitterBuffer;
 
-    /* Stream handling threads */
-    void dialogStreamThread();
-    void bgmStreamThread();
-    void audioMixingThread();
-
-    /* helpers */
-    bool openSocket(int &sock, const std::string &group) const;
-    static bool recvPacket(int sock, std::vector<uint8_t> &pkt);
-
-    /* RTP packet parsing */
-    static uint32_t extractSSRC(const std::vector<uint8_t> &packet);
-    bool isValidRtpPacket(const std::vector<uint8_t> &packet);
-
-    /* SSRC change detection and decoder reset */
-    void checkAndHandleSSRCChange(uint32_t newSSRC, OpusDecoder *decoder, std::atomic<uint32_t> &lastSSRC,
-                                  const std::string &streamName);
-
-    /* immutable after ctor */
-    std::shared_ptr<creatures::Logger> log_;
-    const std::string dlgGrp_, bgmGrp_, ifaceIp_;
-    const uint16_t port_;
-    const uint8_t dialogIdx_;
-    const uint8_t audioDeviceIndex_;
-
-    /* runtime */
-    int sockDlg_{-1}, sockBgm_{-1};
-    OpusDecoder *decDlg_{nullptr};
-    OpusDecoder *decBgm_{nullptr};
-    SDL_AudioDeviceID dev_{0};
-
-    /* Enhanced audio frame structure with RTP metadata */
-    struct AudioFrame {
-        std::array<int16_t, FRAMES_PER_CHUNK> data{};
-        std::atomic<bool> ready{false};
-        uint16_t sequenceNumber{0}; // RTP sequence number
-        uint32_t timestamp{0};      // RTP timestamp
+    struct StreamStats {
+        std::atomic<uint64_t> packetsReceived{0};
+        std::atomic<uint64_t> invalidPackets{0};
+        std::atomic<uint64_t> duplicatePackets{0};
+        std::atomic<uint64_t> bufferOverruns{0};
+        std::atomic<uint64_t> decodedFrames{0};
+        std::atomic<uint64_t> fecFrames{0};
+        std::atomic<uint64_t> concealedFrames{0};
+        std::atomic<uint64_t> decodeErrors{0};
     };
 
-    // Ring buffers for each stream
-    static constexpr size_t RING_BUFFER_SIZE = 16; // Increased for debugging
-    std::array<AudioFrame, RING_BUFFER_SIZE> dialogFrames_;
-    std::array<AudioFrame, RING_BUFFER_SIZE> bgmFrames_;
+    struct GainRamp {
+        explicit GainRamp(float initialGain) : current(initialGain), target(initialGain) {}
 
-    std::atomic<size_t> dialogWriteIdx_{0};
-    std::atomic<size_t> dialogReadIdx_{0};
-    std::atomic<size_t> bgmWriteIdx_{0};
-    std::atomic<size_t> bgmReadIdx_{0};
+        void setTarget(float gain);
+        float next();
 
-    /* Enhanced sequence number tracking */
-    std::atomic<uint16_t> lastDialogSeq_{0};
-    std::atomic<uint16_t> lastBgmSeq_{0};
-    std::atomic<bool> dialogSeqInit_{false};
-    std::atomic<bool> bgmSeqInit_{false};
+        float current;
+        float target;
+        float step{0.0f};
+        size_t samplesRemaining{0};
+    };
 
-    /* Worker threads */
+    void run() override;
+    void receiveStream(int socket, RtpJitterBuffer &buffer, StreamStats &stats, const std::string &streamName);
+    void audioPlayoutThread();
+
+    bool initializeAudioDevice();
+    bool initializeDecoders();
+    bool openSockets();
+    void joinWorkerThreads();
+    void releaseResources();
+
+    bool decodeTimestamp(RtpJitterBuffer &buffer, OpusDecoder *decoder, uint32_t timestamp,
+                         std::array<int16_t, FRAMES_PER_CHUNK> &samples, StreamStats &stats,
+                         uint64_t &observedGeneration, const char *streamName);
+    void mixTimestamp(uint32_t timestamp, std::array<int16_t, FRAMES_PER_CHUNK> &mixed, uint64_t &dialogGeneration,
+                      uint64_t &bgmGeneration, GainRamp &dialogGain, GainRamp &bgmGain);
+
+    bool openSocket(int &socket, const std::string &group) const;
+    static bool receivePacket(int socket, std::vector<uint8_t> &packet);
+
+    std::shared_ptr<creatures::Logger> log_;
+    const std::string dialogGroup_;
+    const std::string bgmGroup_;
+    const std::string interfaceIp_;
+    const uint16_t port_;
+    const uint8_t dialogIndex_;
+    const AudioConfig audioConfig_;
+
+    int dialogSocket_{-1};
+    int bgmSocket_{-1};
+    OpusDecoder *dialogDecoder_{nullptr};
+    OpusDecoder *bgmDecoder_{nullptr};
+    std::unique_ptr<AudioOutput> audioOutput_;
+
+    std::unique_ptr<RtpJitterBuffer> dialogBuffer_;
+    std::unique_ptr<RtpJitterBuffer> bgmBuffer_;
+
+    std::thread mainThread_;
     std::thread dialogThread_;
     std::thread bgmThread_;
-    std::thread mixingThread_;
+    std::thread playoutThread_;
 
-    /* SSRC tracking for decoder reset detection */
-    std::atomic<uint32_t> lastDialogSSRC_{0};
-    std::atomic<uint32_t> lastBgmSSRC_{0};
-    std::atomic<bool> dialogSSRCInitialized_{false};
-    std::atomic<bool> bgmSSRCInitialized_{false};
+    std::atomic<float> dialogGainLinear_{1.0f};
+    std::atomic<float> bgmGainLinear_{1.0f};
+    const float limiterCeilingLinear_;
 
-    /* Thread-safe decoder access */
-    std::mutex dialogDecoderMutex_;
-    std::mutex bgmDecoderMutex_;
-
-    /* Statistics */
     std::atomic<bool> running_{false};
-    std::atomic<uint64_t> totalPkts_{0};
-    std::atomic<uint64_t> dialogPkts_{0};
-    std::atomic<uint64_t> bgmPkts_{0};
-    std::atomic<float> bufLvl_{0.0f};
-    std::atomic<uint64_t> ssrcResets_{0};
+    std::atomic<int64_t> lastPacketArrivalNanoseconds_{0};
+    std::atomic<uint64_t> totalPackets_{0};
+    std::atomic<float> bufferLevel_{0.0f};
+    std::atomic<size_t> outputQueuedFrames_{0};
+    std::atomic<size_t> dialogBufferedFrames_{0};
+    std::atomic<size_t> bgmBufferedFrames_{0};
+    std::atomic<uint64_t> mixedFrames_{0};
+    std::atomic<uint64_t> playoutDeadlineMisses_{0};
 
-    /* Enhanced debugging counters */
-    std::atomic<uint64_t> dialogDecodeSuccess_{0};
-    std::atomic<uint64_t> dialogDecodeFailed_{0};
-    std::atomic<uint64_t> dialogFramesProduced_{0};
-    std::atomic<uint64_t> dialogBufferOverruns_{0};
-
-    std::atomic<uint64_t> bgmDecodeSuccess_{0};
-    std::atomic<uint64_t> bgmDecodeFailed_{0};
-    std::atomic<uint64_t> bgmFramesProduced_{0};
-    std::atomic<uint64_t> bgmBufferOverruns_{0};
-
-    // Add this method to help debug ring buffer state
-    void logRingBufferState(const std::string &streamName, size_t writeIdx, size_t readIdx,
-                            const std::array<AudioFrame, RING_BUFFER_SIZE> &frames) {
-        size_t availableFrames = 0;
-        for (const auto &frame : frames) {
-            if (frame.ready.load())
-                availableFrames++;
-        }
-
-        log_->debug("{} ring buffer: write={}, read={}, available={}/{}", streamName, writeIdx, readIdx,
-                    availableFrames, RING_BUFFER_SIZE);
-    }
+    StreamStats dialogStats_;
+    StreamStats bgmStats_;
 };
 
 } // namespace creatures::audio
