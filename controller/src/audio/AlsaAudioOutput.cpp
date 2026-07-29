@@ -2,9 +2,11 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cctype>
 #include <cerrno>
 #include <cstdlib>
 #include <cstring>
+#include <sstream>
 #include <string>
 #include <unordered_set>
 #include <utility>
@@ -59,6 +61,19 @@ std::vector<AlsaDevice> enumerateDevices() {
 
     snd_device_name_free_hint(hints);
     return devices;
+}
+
+std::string trim(std::string value) {
+    const auto isNotSpace = [](unsigned char character) { return !std::isspace(character); };
+    value.erase(value.begin(), std::find_if(value.begin(), value.end(), isNotSpace));
+    value.erase(std::find_if(value.rbegin(), value.rend(), isNotSpace).base(), value.end());
+    return value;
+}
+
+bool isRelevantPcmDetail(const std::string &line) {
+    return line.find("PCM") != std::string::npos || line.starts_with("access") || line.starts_with("format") ||
+           line.starts_with("subformat") || line.starts_with("channels") || line.starts_with("rate") ||
+           line.starts_with("exact rate");
 }
 
 class AlsaAudioOutput final : public AudioOutput {
@@ -145,6 +160,7 @@ class AlsaAudioOutput final : public AudioOutput {
         log_->info("ALSA output ready: device {} ('{}'), period={} frames ({:.2f} ms), buffer={} frames ({:.2f} ms)",
                    deviceIndex, device.name, periodFrames_, framesToMilliseconds(periodFrames_), bufferFrames_,
                    framesToMilliseconds(bufferFrames_));
+        logPcmPath();
         return true;
     }
 
@@ -257,6 +273,45 @@ class AlsaAudioOutput final : public AudioOutput {
 
     static double framesToMilliseconds(snd_pcm_uframes_t frames) {
         return static_cast<double>(frames) * 1000.0 / SAMPLE_RATE;
+    }
+
+    void logPcmPath() const {
+        snd_output_t *output = nullptr;
+        if (snd_output_buffer_open(&output) < 0 || output == nullptr) {
+            log_->debug("Unable to create ALSA PCM diagnostic output");
+            return;
+        }
+
+        const int dumpResult = snd_pcm_dump(pcm_, output);
+        char *buffer = nullptr;
+        const size_t bufferSize = snd_output_buffer_string(output, &buffer);
+        const std::string dump =
+            dumpResult >= 0 && buffer != nullptr && bufferSize > 0 ? std::string(buffer, bufferSize) : std::string{};
+        snd_output_close(output);
+
+        if (dump.empty()) {
+            log_->debug("ALSA did not provide PCM path details");
+            return;
+        }
+
+        std::istringstream lines(dump);
+        std::string line;
+        std::vector<std::string> details;
+        while (std::getline(lines, line)) {
+            line = trim(std::move(line));
+            if (!line.empty() && isRelevantPcmDetail(line)) {
+                details.push_back(std::move(line));
+            }
+        }
+
+        if (details.empty()) {
+            return;
+        }
+
+        log_->info("ALSA PCM path (different rates indicate resampling):");
+        for (const std::string &detail : details) {
+            log_->info("  {}", detail);
+        }
     }
 
     std::shared_ptr<creatures::Logger> log_;
