@@ -44,6 +44,7 @@ inline constexpr float MAX_GAIN_DB = 12.0f;
 
 struct AudioConfig {
     uint8_t deviceNumber{DEFAULT_SOUND_DEVICE_NUMBER};
+    std::optional<std::string> deviceName;
     float dialogGainDb{DEFAULT_DIALOG_GAIN_DB};
     float bgmGainDb{DEFAULT_BGM_GAIN_DB};
     float limiterCeilingDb{DEFAULT_LIMITER_CEILING_DB};

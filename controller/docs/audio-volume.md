@@ -9,15 +9,22 @@ RTP playback uses ALSA directly on Linux and CoreAudio directly on macOS. The
 native backends expose the device clock and hardware delay needed for precise
 playout monitoring.
 
-`audioDevice` selects the index printed by `creature-controller --list-sound-devices`.
-Device 0 is the platform's default output. Native device ordering can differ
-from older SDL-based builds, so run the listing once when upgrading a
-controller that selected a non-default device.
+`audioDeviceName` selects an output using the exact name printed by
+`creature-controller --list-sound-devices`. It is preferred over
+`audioDevice`, whose numeric index remains available for backward
+compatibility. Names such as `plughw:CARD=S3,DEV=0` remain stable when ALSA
+enumeration order changes. If a configured name is unavailable, audio
+initialization fails instead of silently selecting another output.
+
+On CoreAudio, `audioDeviceName` matches the displayed device name and must
+identify exactly one device. When no name is configured, device 0 remains the
+platform's default output.
 
 All audio fields are optional:
 
 ```json
 {
+  "audioDeviceName": "plughw:CARD=S3,DEV=0",
   "dialogGainDb": 0.0,
   "bgmGainDb": -6.0,
   "limiterCeilingDb": -1.0,

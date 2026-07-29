@@ -63,6 +63,7 @@ class Configuration {
     void setUseGPIO(bool _useGPIO);
     void setUseAudioSubsystem(bool _useAudioSubsystem);
     void setSoundDeviceNumber(u8 _soundDeviceNumber);
+    void setSoundDeviceName(std::string deviceName);
     void setDialogGainDb(float gainDb);
     void setBgmGainDb(float gainDb);
     void setLimiterCeilingDb(float ceilingDb);

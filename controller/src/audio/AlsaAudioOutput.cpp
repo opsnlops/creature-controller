@@ -6,6 +6,7 @@
 #include <cerrno>
 #include <cstdlib>
 #include <cstring>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <unordered_set>
@@ -84,17 +85,23 @@ class AlsaAudioOutput final : public AudioOutput {
     bool open(const AudioConfig &config) override {
         close();
 
-        const auto devices = enumerateDevices();
-        size_t deviceIndex = config.deviceNumber;
-        if (deviceIndex >= devices.size()) {
-            log_->warn("ALSA output device {} is unavailable; using device 0", deviceIndex);
-            deviceIndex = 0;
+        std::string deviceName;
+        std::optional<size_t> deviceIndex;
+        if (config.deviceName.has_value()) {
+            deviceName = *config.deviceName;
+        } else {
+            const auto devices = enumerateDevices();
+            deviceIndex = config.deviceNumber;
+            if (*deviceIndex >= devices.size()) {
+                log_->warn("ALSA output device {} is unavailable; using device 0", *deviceIndex);
+                deviceIndex = 0;
+            }
+            deviceName = devices[*deviceIndex].name;
         }
-        const AlsaDevice &device = devices[deviceIndex];
 
-        int result = snd_pcm_open(&pcm_, device.name.c_str(), SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
+        int result = snd_pcm_open(&pcm_, deviceName.c_str(), SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
         if (result < 0) {
-            log_->error("Unable to open ALSA output '{}': {}", device.name, snd_strerror(result));
+            log_->error("Unable to open configured ALSA output '{}': {}", deviceName, snd_strerror(result));
             pcm_ = nullptr;
             return false;
         }
@@ -117,7 +124,7 @@ class AlsaAudioOutput final : public AudioOutput {
                    "set sample rate") ||
             sampleRate != SAMPLE_RATE) {
             if (sampleRate != SAMPLE_RATE) {
-                log_->error("ALSA output '{}' cannot provide the required {} Hz sample rate (received {})", device.name,
+                log_->error("ALSA output '{}' cannot provide the required {} Hz sample rate (received {})", deviceName,
                             SAMPLE_RATE, sampleRate);
             }
             close();
@@ -157,9 +164,17 @@ class AlsaAudioOutput final : public AudioOutput {
             return false;
         }
 
-        log_->info("ALSA output ready: device {} ('{}'), period={} frames ({:.2f} ms), buffer={} frames ({:.2f} ms)",
-                   deviceIndex, device.name, periodFrames_, framesToMilliseconds(periodFrames_), bufferFrames_,
-                   framesToMilliseconds(bufferFrames_));
+        if (deviceIndex.has_value()) {
+            log_->info(
+                "ALSA output ready: device {} ('{}'), period={} frames ({:.2f} ms), buffer={} frames ({:.2f} ms)",
+                *deviceIndex, deviceName, periodFrames_, framesToMilliseconds(periodFrames_), bufferFrames_,
+                framesToMilliseconds(bufferFrames_));
+        } else {
+            log_->info(
+                "ALSA output ready: named device '{}', period={} frames ({:.2f} ms), buffer={} frames ({:.2f} ms)",
+                deviceName, periodFrames_, framesToMilliseconds(periodFrames_), bufferFrames_,
+                framesToMilliseconds(bufferFrames_));
+        }
         logPcmPath();
         return true;
     }

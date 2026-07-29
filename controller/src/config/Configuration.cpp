@@ -178,6 +178,11 @@ void Configuration::setSoundDeviceNumber(u8 _soundDeviceNumber) {
     logger->debug("Set soundDeviceNumber to {}", audioConfig.deviceNumber);
 }
 
+void Configuration::setSoundDeviceName(std::string deviceName) {
+    audioConfig.deviceName = std::move(deviceName);
+    logger->debug("Set soundDeviceName to {}", *audioConfig.deviceName);
+}
+
 void Configuration::setDialogGainDb(float gainDb) {
     audioConfig.dialogGainDb = gainDb;
     logger->debug("Set dialogGainDb to {:.1f}", audioConfig.dialogGainDb);

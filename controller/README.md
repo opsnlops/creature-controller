@@ -66,6 +66,7 @@ set an ALSA playback element directly at startup:
 
 ```json
 {
+  "audioDeviceName": "plughw:CARD=S3,DEV=0",
   "dialogGainDb": 0.0,
   "bgmGainDb": -6.0,
   "limiterCeilingDb": -1.0,

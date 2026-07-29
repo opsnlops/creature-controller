@@ -1,5 +1,6 @@
 
 #include <fstream>
+#include <limits>
 #include <sstream>
 #include <string>
 
@@ -22,7 +23,6 @@ ConfigurationBuilder::ConfigurationBuilder(std::shared_ptr<Logger> logger, std::
     requiredTopLevelFields = {
         "useGPIO",
         "useRTPAudio",
-        "audioDevice",
         "UARTs",
         "networkInterface",
         "universe",
@@ -118,7 +118,32 @@ Result<std::shared_ptr<creatures::config::Configuration>> ConfigurationBuilder::
     }
     config->setUseAudioSubsystem(useRTPAudioResult.getValue().value());
 
-    config->setSoundDeviceNumber(j["audioDevice"]);
+    if (!j.contains("audioDevice") && !j.contains("audioDeviceName")) {
+        return makeError("Either 'audioDeviceName' or 'audioDevice' must be configured");
+    }
+
+    if (j.contains("audioDevice")) {
+        if (!j["audioDevice"].is_number_integer()) {
+            return makeError("Field 'audioDevice' must be an integer");
+        }
+        const int deviceNumber = j["audioDevice"].get<int>();
+        if (deviceNumber < 0 || deviceNumber > std::numeric_limits<u8>::max()) {
+            return makeError(
+                fmt::format("Field 'audioDevice' must be between 0 and {}", std::numeric_limits<u8>::max()));
+        }
+        config->setSoundDeviceNumber(static_cast<u8>(deviceNumber));
+    }
+
+    if (j.contains("audioDeviceName")) {
+        if (!j["audioDeviceName"].is_string()) {
+            return makeError("Field 'audioDeviceName' must be a string");
+        }
+        const std::string deviceName = j["audioDeviceName"].get<std::string>();
+        if (deviceName.empty()) {
+            return makeError("Field 'audioDeviceName' must not be empty");
+        }
+        config->setSoundDeviceName(deviceName);
+    }
 
     if (j.contains("dialogGainDb")) {
         if (!j["dialogGainDb"].is_number()) {

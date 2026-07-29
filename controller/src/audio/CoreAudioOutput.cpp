@@ -117,10 +117,30 @@ class CoreAudioOutput final : public AudioOutput {
             return false;
         }
 
-        size_t deviceIndex = config.deviceNumber;
-        if (deviceIndex >= devices.size()) {
-            log_->warn("CoreAudio output device {} is unavailable; using device 0", deviceIndex);
-            deviceIndex = 0;
+        size_t deviceIndex = 0;
+        if (config.deviceName.has_value()) {
+            std::vector<size_t> matches;
+            for (size_t index = 0; index < devices.size(); ++index) {
+                if (devices[index].name == *config.deviceName) {
+                    matches.push_back(index);
+                }
+            }
+            if (matches.empty()) {
+                log_->error("Configured CoreAudio output '{}' is unavailable", *config.deviceName);
+                return false;
+            }
+            if (matches.size() > 1) {
+                log_->error("Configured CoreAudio output '{}' is ambiguous ({} matching devices)", *config.deviceName,
+                            matches.size());
+                return false;
+            }
+            deviceIndex = matches.front();
+        } else {
+            deviceIndex = config.deviceNumber;
+            if (deviceIndex >= devices.size()) {
+                log_->warn("CoreAudio output device {} is unavailable; using device 0", deviceIndex);
+                deviceIndex = 0;
+            }
         }
         device_ = devices[deviceIndex].id;
 
@@ -177,11 +197,18 @@ class CoreAudioOutput final : public AudioOutput {
         }
 
         pipelineLatencyFrames_ = readPipelineLatency();
-        log_->info("CoreAudio output ready: device {} ('{}'), period={} frames ({:.2f} ms), pipeline={} frames "
-                   "({:.2f} ms)",
-                   deviceIndex, devices[deviceIndex].name, devicePeriodFrames_,
-                   framesToMilliseconds(devicePeriodFrames_), pipelineLatencyFrames_,
-                   framesToMilliseconds(pipelineLatencyFrames_));
+        if (config.deviceName.has_value()) {
+            log_->info("CoreAudio output ready: named device '{}', period={} frames ({:.2f} ms), pipeline={} frames "
+                       "({:.2f} ms)",
+                       devices[deviceIndex].name, devicePeriodFrames_, framesToMilliseconds(devicePeriodFrames_),
+                       pipelineLatencyFrames_, framesToMilliseconds(pipelineLatencyFrames_));
+        } else {
+            log_->info("CoreAudio output ready: device {} ('{}'), period={} frames ({:.2f} ms), pipeline={} frames "
+                       "({:.2f} ms)",
+                       deviceIndex, devices[deviceIndex].name, devicePeriodFrames_,
+                       framesToMilliseconds(devicePeriodFrames_), pipelineLatencyFrames_,
+                       framesToMilliseconds(pipelineLatencyFrames_));
+        }
         return true;
     }
 
