@@ -155,15 +155,22 @@ TEST(RtcpTimingTest, SelectsTheFirstFutureTimestampAfterALateJoin) {
     EXPECT_EQ(classifyRtcpEnqueue(*next, now, 2ms), RtcpEnqueueState::Wait);
 }
 
-TEST(RtcpTimingTest, RejectsADeadlineThatIndicatesUnsynchronizedClocks) {
+TEST(RtcpTimingTest, EnforcesConfiguredClockSynchronizationGuard) {
     const RtcpPlayoutPlan plan{
         .mediaSystemTime = RtcpSystemClock::time_point{},
         .presentationDeadline = RtcpSteadyClock::time_point{} + 500ms,
         .enqueueDeadline = RtcpSteadyClock::time_point{} + 480ms,
     };
+    const auto maximumDifference = std::chrono::milliseconds(RTCP_MAX_DEADLINE_DISTANCE_MS);
 
-    EXPECT_FALSE(rtcpPresentationDeadlinePlausible(plan, RtcpSteadyClock::time_point{}, 20ms, 50ms));
-    EXPECT_TRUE(rtcpPresentationDeadlinePlausible(plan, RtcpSteadyClock::time_point{} + 480ms, 20ms, 1ms));
+    EXPECT_TRUE(
+        rtcpPresentationDeadlinePlausible(plan, RtcpSteadyClock::time_point{} + 470ms, 20ms, maximumDifference));
+    EXPECT_TRUE(
+        rtcpPresentationDeadlinePlausible(plan, RtcpSteadyClock::time_point{} + 490ms, 20ms, maximumDifference));
+    EXPECT_FALSE(
+        rtcpPresentationDeadlinePlausible(plan, RtcpSteadyClock::time_point{} + 469ms, 20ms, maximumDifference));
+    EXPECT_FALSE(
+        rtcpPresentationDeadlinePlausible(plan, RtcpSteadyClock::time_point{} + 491ms, 20ms, maximumDifference));
 }
 
 TEST(RtcpTimingTest, VerifiesCnameAndClockRelationship) {

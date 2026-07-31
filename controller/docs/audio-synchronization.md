@@ -23,9 +23,14 @@ uses RTCP only when:
 - their NTP/RTP clock relationships agree;
 - the mapped deadline is consistent with the packet's LAN arrival time.
 
-The last check rejects mappings more than 50 ms from the arrival-based
+The last check rejects mappings more than 10 ms from the arrival-based
 estimate. The fallback warning includes a signed `mapping/arrival delta`; a
 large value usually means the controller and server clocks need attention.
+This ±10 ms guard qualifies whether RTCP timing is safe to use; it is not a
+promise of speaker-to-speaker alignment. Two controllers near opposite limits
+could still differ by almost 20 ms, so all controllers and the server must use
+the same LAN time source and keep their clocks substantially closer than the
+guard.
 
 BGM is the master timeline. The dialog packet with the same RTP timestamp is
 decoded into the same output frame.

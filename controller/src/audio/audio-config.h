@@ -45,7 +45,7 @@ inline constexpr uint16_t RTCP_STARTUP_WAIT_MS = FRAME_MS;
 inline constexpr uint16_t RTCP_MAX_REPORT_AGE_MS = 2500;
 inline constexpr uint16_t RTCP_CLOCK_COMPATIBILITY_US = 1000;
 inline constexpr uint16_t RTCP_START_LATE_TOLERANCE_US = 2000;
-inline constexpr uint16_t RTCP_MAX_DEADLINE_DISTANCE_MS = 50;
+inline constexpr uint16_t RTCP_MAX_DEADLINE_DISTANCE_MS = 10;
 inline constexpr size_t RTCP_REPORT_CACHE_ENTRIES = 8;
 
 // Mixer
