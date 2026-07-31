@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.18)
 
 project(creature-controller
-        VERSION "4.3.1"
+        VERSION "4.3.2"
         DESCRIPTION "April's Creature Workshop Controller"
         HOMEPAGE_URL https://github.com/opsnlops/creature-controller
         LANGUAGES C CXX)
@@ -164,6 +164,8 @@ endif()
 add_library(creature_lib
 
         # Audio protocol sources
+        src/audio/AudioOutputKeepalive.cpp
+        src/audio/AudioOutputKeepalive.h
         src/audio/AudioOutput.h
         ${AUDIO_PLATFORM_SOURCES}
         src/audio/audio-config.h
@@ -375,6 +377,7 @@ install(TARGETS creature-controller
 enable_testing()
 
 add_executable(creature-controller-test
+        tests/audio/AudioOutputKeepalive_test.cpp
         tests/audio/RtpPacket_test.cpp
         tests/config/CreatureBuilder_test.cpp
         tests/creature_test.cpp
