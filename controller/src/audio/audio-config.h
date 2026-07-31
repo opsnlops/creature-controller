@@ -16,8 +16,10 @@ inline constexpr uint8_t DEFAULT_SOUND_DEVICE_NUMBER = 0;
 inline constexpr char DIALOG_GROUP_BASE[] = "239.19.63."; // +1...+16
 inline constexpr char BGM_GROUP[] = "239.19.63.17";
 inline constexpr uint16_t RTP_PORT = 5004;
+inline constexpr uint16_t RTCP_PORT = RTP_PORT + 1;
 inline constexpr uint8_t RTP_OPUS_PAYLOAD_TYPE = 96;
 inline constexpr size_t MAX_RTP_PACKET_SIZE = 2048;
+inline constexpr size_t MAX_RTCP_PACKET_SIZE = 2048;
 
 // Opus framing
 inline constexpr uint32_t SAMPLE_RATE = 48'000;
@@ -33,6 +35,18 @@ inline constexpr size_t AUDIO_OUTPUT_RING_FRAMES = 8192;
 inline constexpr uint16_t PACKET_WAIT_MS = 2;
 inline constexpr uint16_t STREAM_IDLE_TIMEOUT_MS = 250;
 inline constexpr uint16_t GAIN_RAMP_MS = 2;
+inline constexpr uint16_t DEFAULT_COMMON_PLAYOUT_DELAY_MS = 20;
+inline constexpr int16_t DEFAULT_AUDIO_DEVICE_COMPENSATION_MS = 0;
+inline constexpr uint16_t MIN_COMMON_PLAYOUT_DELAY_MS = 20;
+inline constexpr uint16_t MAX_COMMON_PLAYOUT_DELAY_MS = 500;
+inline constexpr int16_t MAX_ABSOLUTE_DEVICE_COMPENSATION_MS = 100;
+inline constexpr uint16_t RTCP_ENQUEUE_HEADROOM_MS = 5;
+inline constexpr uint16_t RTCP_STARTUP_WAIT_MS = FRAME_MS;
+inline constexpr uint16_t RTCP_MAX_REPORT_AGE_MS = 2500;
+inline constexpr uint16_t RTCP_CLOCK_COMPATIBILITY_US = 1000;
+inline constexpr uint16_t RTCP_START_LATE_TOLERANCE_US = 2000;
+inline constexpr uint16_t RTCP_MAX_DEADLINE_DISTANCE_MS = 50;
+inline constexpr size_t RTCP_REPORT_CACHE_ENTRIES = 8;
 
 // Mixer
 inline constexpr float DEFAULT_DIALOG_GAIN_DB = 0.0f;
@@ -50,6 +64,8 @@ struct AudioConfig {
     std::optional<uint8_t> outputVolumePercent;
     std::string alsaMixerCard{"default"};
     std::string alsaMixerElement;
+    uint16_t commonPlayoutDelayMs{DEFAULT_COMMON_PLAYOUT_DELAY_MS};
+    int16_t audioDeviceCompensationMs{DEFAULT_AUDIO_DEVICE_COMPENSATION_MS};
 };
 
 // Monitoring

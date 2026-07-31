@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.18)
 
 project(creature-controller
-        VERSION "4.3.2"
+        VERSION "4.4.0"
         DESCRIPTION "April's Creature Workshop Controller"
         HOMEPAGE_URL https://github.com/opsnlops/creature-controller
         LANGUAGES C CXX)
@@ -169,6 +169,10 @@ add_library(creature_lib
         src/audio/AudioOutput.h
         ${AUDIO_PLATFORM_SOURCES}
         src/audio/audio-config.h
+        src/audio/RtcpPacket.cpp
+        src/audio/RtcpPacket.h
+        src/audio/RtcpTiming.cpp
+        src/audio/RtcpTiming.h
         src/audio/RtpPacket.cpp
         src/audio/RtpPacket.h
 
@@ -378,6 +382,8 @@ enable_testing()
 
 add_executable(creature-controller-test
         tests/audio/AudioOutputKeepalive_test.cpp
+        tests/audio/RtcpPacket_test.cpp
+        tests/audio/RtcpTiming_test.cpp
         tests/audio/RtpPacket_test.cpp
         tests/config/CreatureBuilder_test.cpp
         tests/creature_test.cpp

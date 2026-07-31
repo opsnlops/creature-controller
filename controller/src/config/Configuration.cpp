@@ -213,6 +213,16 @@ void Configuration::setAlsaMixerElement(std::string element) {
     logger->debug("Set alsaMixerElement to {}", audioConfig.alsaMixerElement);
 }
 
+void Configuration::setCommonPlayoutDelayMs(uint16_t delayMs) {
+    audioConfig.commonPlayoutDelayMs = delayMs;
+    logger->debug("Set commonPlayoutDelayMs to {}", audioConfig.commonPlayoutDelayMs);
+}
+
+void Configuration::setAudioDeviceCompensationMs(int16_t compensationMs) {
+    audioConfig.audioDeviceCompensationMs = compensationMs;
+    logger->debug("Set audioDeviceCompensationMs to {}", audioConfig.audioDeviceCompensationMs);
+}
+
 void Configuration::setUseAudioSubsystem(bool _useAudioSubsystem) {
     this->useAudioSubsystem = _useAudioSubsystem;
     logger->debug("Set useAudioSubsystem to {}", this->useAudioSubsystem);

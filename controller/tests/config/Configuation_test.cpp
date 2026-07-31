@@ -59,6 +59,8 @@ TEST_F(ConfigurationTest, AudioConfigHasSafeDefaults) {
     EXPECT_FLOAT_EQ(audioConfig.bgmGainDb, creatures::audio::DEFAULT_BGM_GAIN_DB);
     EXPECT_FLOAT_EQ(audioConfig.limiterCeilingDb, creatures::audio::DEFAULT_LIMITER_CEILING_DB);
     EXPECT_FALSE(audioConfig.outputVolumePercent.has_value());
+    EXPECT_EQ(audioConfig.commonPlayoutDelayMs, creatures::audio::DEFAULT_COMMON_PLAYOUT_DELAY_MS);
+    EXPECT_EQ(audioConfig.audioDeviceCompensationMs, creatures::audio::DEFAULT_AUDIO_DEVICE_COMPENSATION_MS);
 }
 
 TEST_F(ConfigurationTest, SetsAudioConfig) {
@@ -70,6 +72,8 @@ TEST_F(ConfigurationTest, SetsAudioConfig) {
     config->setOutputVolumePercent(72);
     config->setAlsaMixerCard("hw:1");
     config->setAlsaMixerElement("PCM");
+    config->setCommonPlayoutDelayMs(20);
+    config->setAudioDeviceCompensationMs(3);
 
     const auto &audioConfig = config->getAudioConfig();
     EXPECT_EQ(audioConfig.deviceNumber, 2);
@@ -82,6 +86,8 @@ TEST_F(ConfigurationTest, SetsAudioConfig) {
     EXPECT_EQ(*audioConfig.outputVolumePercent, 72);
     EXPECT_EQ(audioConfig.alsaMixerCard, "hw:1");
     EXPECT_EQ(audioConfig.alsaMixerElement, "PCM");
+    EXPECT_EQ(audioConfig.commonPlayoutDelayMs, 20);
+    EXPECT_EQ(audioConfig.audioDeviceCompensationMs, 3);
 }
 
 TEST_F(ConfigurationTest, AddAndGetUARTDevices) {

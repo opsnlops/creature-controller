@@ -7,6 +7,7 @@
 #include <cstring>
 #include <deque>
 #include <fcntl.h>
+#include <limits>
 #include <mutex>
 #include <optional>
 #include <sys/select.h>
@@ -18,6 +19,7 @@
 
 #include "audio/AlsaMixerControl.h"
 #include "audio/AudioOutputKeepalive.h"
+#include "audio/RtcpPacket.h"
 #include "audio/RtpPacket.h"
 #include "util/thread_name.h"
 
@@ -37,6 +39,11 @@ float decibelsToLinear(float decibels) {
 
 bool timestampPrecedes(uint32_t lhs, uint32_t rhs) { return static_cast<int32_t>(lhs - rhs) < 0; }
 
+Clock::duration framesToClockDuration(size_t frames) {
+    return std::chrono::duration_cast<Clock::duration>(
+        std::chrono::duration<double>(static_cast<double>(frames) / SAMPLE_RATE));
+}
+
 } // namespace
 
 class OpusRtpAudioClient::RtpJitterBuffer {
@@ -52,6 +59,8 @@ class OpusRtpAudioClient::RtpJitterBuffer {
         uint32_t timestamp;
         Clock::time_point startTime;
         uint64_t generation;
+        uint32_t synchronizationSource;
+        Clock::time_point arrival;
     };
 
     PushResult push(ReceivedRtpPacket packet) {
@@ -126,13 +135,13 @@ class OpusRtpAudioClient::RtpJitterBuffer {
             return std::nullopt;
         }
 
-        const bool nextFrameAvailable = frames_.contains(timestamp + FRAMES_PER_CHUNK);
-        const auto waitTime = std::chrono::milliseconds(FRAME_MS + PACKET_WAIT_MS);
-        if (!nextFrameAvailable && Clock::now() - frame->second.arrival < waitTime) {
-            return std::nullopt;
-        }
-
-        return InitialPlayout{timestamp, frame->second.arrival + std::chrono::milliseconds(FRAME_MS), generation_};
+        return InitialPlayout{
+            .timestamp = timestamp,
+            .startTime = frame->second.arrival + std::chrono::milliseconds(FRAME_MS),
+            .generation = generation_,
+            .synchronizationSource = *synchronizationSource_,
+            .arrival = frame->second.arrival,
+        };
     }
 
     void discardBefore(uint32_t timestamp) {
@@ -150,6 +159,11 @@ class OpusRtpAudioClient::RtpJitterBuffer {
     [[nodiscard]] uint64_t generation() const {
         std::lock_guard<std::mutex> lock(mutex_);
         return generation_;
+    }
+
+    [[nodiscard]] std::optional<uint32_t> synchronizationSource() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return synchronizationSource_;
     }
 
     [[nodiscard]] size_t size() const {
@@ -238,6 +252,39 @@ std::optional<std::chrono::milliseconds> OpusRtpAudioClient::getLastPacketAge() 
         std::chrono::nanoseconds(std::max<int64_t>(0, now - lastArrival)));
 }
 
+std::optional<std::chrono::milliseconds> OpusRtpAudioClient::getLastRtcpReportAge() const {
+    const auto synchronizationSource = bgmBuffer_->synchronizationSource();
+    if (!synchronizationSource.has_value()) {
+        return std::nullopt;
+    }
+    const auto report = bgmRtcpReports_.find(*synchronizationSource);
+    if (!report.has_value()) {
+        return std::nullopt;
+    }
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::max(Clock::duration::zero(), Clock::now() - report->receivedAt));
+}
+
+uint64_t OpusRtpAudioClient::getRtcpReportsReceived() const {
+    return dialogRtcpStats_.reportsReceived.load() + bgmRtcpStats_.reportsReceived.load();
+}
+
+uint64_t OpusRtpAudioClient::getRtcpInvalidReports() const {
+    return dialogRtcpStats_.invalidReports.load() + bgmRtcpStats_.invalidReports.load();
+}
+
+const char *OpusRtpAudioClient::getTimingModeName() const {
+    switch (timingMode_.load()) {
+    case TimingMode::Waiting:
+        return "waiting";
+    case TimingMode::Rtcp:
+        return "rtcp";
+    case TimingMode::ArrivalFallback:
+        return "arrival_fallback";
+    }
+    return "unknown";
+}
+
 bool OpusRtpAudioClient::isReceiving() const {
     const auto packetAge = getLastPacketAge();
     return running_.load() && packetAge.has_value() && *packetAge < std::chrono::seconds(1);
@@ -286,10 +333,20 @@ void OpusRtpAudioClient::run() {
                                 std::ref(dialogStats_), "Dialog");
     bgmThread_ = std::thread(&OpusRtpAudioClient::receiveStream, this, bgmSocket_, std::ref(*bgmBuffer_),
                              std::ref(bgmStats_), "BGM");
+    if (dialogRtcpSocket_ >= 0) {
+        dialogRtcpThread_ = std::thread(&OpusRtpAudioClient::receiveRtcpStream, this, dialogRtcpSocket_,
+                                        std::ref(dialogRtcpReports_), std::ref(dialogRtcpStats_), "Dialog");
+    }
+    if (bgmRtcpSocket_ >= 0) {
+        bgmRtcpThread_ = std::thread(&OpusRtpAudioClient::receiveRtcpStream, this, bgmRtcpSocket_,
+                                     std::ref(bgmRtcpReports_), std::ref(bgmRtcpStats_), "BGM");
+    }
     playoutThread_ = std::thread(&OpusRtpAudioClient::audioPlayoutThread, this);
 
-    log_->info("RTP audio client running with {:.1f} dB dialog gain and {:.1f} dB BGM gain", audioConfig_.dialogGainDb,
-               audioConfig_.bgmGainDb);
+    log_->info("RTP audio client running with {:.1f} dB dialog gain, {:.1f} dB BGM gain, {} ms common playout "
+               "delay, and {:+d} ms device compensation",
+               audioConfig_.dialogGainDb, audioConfig_.bgmGainDb, audioConfig_.commonPlayoutDelayMs,
+               audioConfig_.audioDeviceCompensationMs);
 
     while (!stop_requested.load()) {
         constexpr float targetFrames = static_cast<float>(TARGET_PLAYOUT_FRAMES * FRAMES_PER_CHUNK);
@@ -330,10 +387,26 @@ bool OpusRtpAudioClient::initializeDecoders() {
 }
 
 bool OpusRtpAudioClient::openSockets() {
-    if (!openSocket(dialogSocket_, dialogGroup_)) {
+    if (!openSocket(dialogSocket_, dialogGroup_, port_, "RTP")) {
         return false;
     }
-    return openSocket(bgmSocket_, bgmGroup_);
+    if (!openSocket(bgmSocket_, bgmGroup_, port_, "RTP")) {
+        return false;
+    }
+
+    if (port_ == std::numeric_limits<uint16_t>::max()) {
+        log_->warn("RTCP reception disabled because RTP port {} has no adjacent UDP port", port_);
+        return true;
+    }
+
+    const uint16_t rtcpPort = static_cast<uint16_t>(port_ + 1U);
+    if (!openSocket(dialogRtcpSocket_, dialogGroup_, rtcpPort, "RTCP")) {
+        log_->warn("Dialog RTCP timing is unavailable; audio will use arrival-time fallback");
+    }
+    if (!openSocket(bgmRtcpSocket_, bgmGroup_, rtcpPort, "RTCP")) {
+        log_->warn("BGM RTCP timing is unavailable; audio will use arrival-time fallback");
+    }
+    return true;
 }
 
 void OpusRtpAudioClient::joinWorkerThreads() {
@@ -342,6 +415,12 @@ void OpusRtpAudioClient::joinWorkerThreads() {
     }
     if (bgmThread_.joinable()) {
         bgmThread_.join();
+    }
+    if (dialogRtcpThread_.joinable()) {
+        dialogRtcpThread_.join();
+    }
+    if (bgmRtcpThread_.joinable()) {
+        bgmRtcpThread_.join();
     }
     if (playoutThread_.joinable()) {
         playoutThread_.join();
@@ -367,6 +446,14 @@ void OpusRtpAudioClient::releaseResources() {
         close(bgmSocket_);
         bgmSocket_ = -1;
     }
+    if (dialogRtcpSocket_ >= 0) {
+        close(dialogRtcpSocket_);
+        dialogRtcpSocket_ = -1;
+    }
+    if (bgmRtcpSocket_ >= 0) {
+        close(bgmRtcpSocket_);
+        bgmRtcpSocket_ = -1;
+    }
     if (dialogDecoder_ != nullptr) {
         opus_decoder_destroy(dialogDecoder_);
         dialogDecoder_ = nullptr;
@@ -383,7 +470,7 @@ void OpusRtpAudioClient::receiveStream(int socket, RtpJitterBuffer &buffer, Stre
     std::vector<uint8_t> packet(MAX_RTP_PACKET_SIZE);
 
     while (!stop_requested.load()) {
-        if (!receivePacket(socket, packet)) {
+        if (!receivePacket(socket, packet, MAX_RTP_PACKET_SIZE)) {
             continue;
         }
 
@@ -415,6 +502,36 @@ void OpusRtpAudioClient::receiveStream(int socket, RtpJitterBuffer &buffer, Stre
     log_->info("{} receiver stopped: packets={}, invalid={}, duplicates={}, overruns={}", streamName,
                stats.packetsReceived.load(), stats.invalidPackets.load(), stats.duplicatePackets.load(),
                stats.bufferOverruns.load());
+}
+
+void OpusRtpAudioClient::receiveRtcpStream(int socket, RtcpReportCache &reports, RtcpStats &stats,
+                                           const std::string &streamName) {
+    setThreadName(streamName == "Dialog" ? "rtcp-dialog-rx" : "rtcp-bgm-rx");
+    std::vector<uint8_t> packet(MAX_RTCP_PACKET_SIZE);
+
+    while (!stop_requested.load()) {
+        if (!receivePacket(socket, packet, MAX_RTCP_PACKET_SIZE)) {
+            continue;
+        }
+
+        auto report = parseRtcpSenderReport(packet);
+        if (!report.has_value()) {
+            stats.invalidReports.fetch_add(1);
+            continue;
+        }
+
+        log_->debug("{} RTCP sender report received: SSRC {}, CNAME '{}', RTP timestamp {}, NTP {}.{}", streamName,
+                    report->synchronizationSource, report->canonicalName, report->rtpTimestamp,
+                    static_cast<uint32_t>(report->ntpTimestamp >> 32U), static_cast<uint32_t>(report->ntpTimestamp));
+        stats.reportsReceived.fetch_add(1);
+        if (reports.store(std::move(*report), Clock::now())) {
+            stats.cacheEvictions.fetch_add(1);
+        }
+    }
+
+    log_->info("{} RTCP receiver stopped: reports={}, invalid={}, cache_evictions={}, source_mismatches={}, stale={}",
+               streamName, stats.reportsReceived.load(), stats.invalidReports.load(), stats.cacheEvictions.load(),
+               stats.sourceMismatches.load(), stats.staleReports.load());
 }
 
 bool OpusRtpAudioClient::decodeTimestamp(RtpJitterBuffer &buffer, OpusDecoder *decoder, uint32_t timestamp,
@@ -488,13 +605,16 @@ void OpusRtpAudioClient::audioPlayoutThread() {
 
     constexpr size_t targetQueueFrames = TARGET_PLAYOUT_FRAMES * FRAMES_PER_CHUNK;
     constexpr auto idleTimeout = std::chrono::milliseconds(STREAM_IDLE_TIMEOUT_MS);
-    AudioOutputKeepalive outputKeepalive(*audioOutput_, targetQueueFrames);
+    const size_t idleQueueFrames =
+        rtcpIdleQueueFrames(audioConfig_.commonPlayoutDelayMs, audioConfig_.audioDeviceCompensationMs);
+    AudioOutputKeepalive outputKeepalive(*audioOutput_, idleQueueFrames);
 
     GainRamp dialogGain(dialogGainLinear_.load());
     GainRamp bgmGain(bgmGainLinear_.load());
     uint64_t dialogGeneration = 0;
     uint64_t bgmDecoderGeneration = 0;
     uint64_t activeBgmGeneration = 0;
+    uint64_t arrivalFallbackGeneration = 0;
     uint64_t lastSummaryFrame = 0;
 
     if (!outputKeepalive.start()) {
@@ -502,10 +622,15 @@ void OpusRtpAudioClient::audioPlayoutThread() {
         stop_requested.store(true);
         return;
     }
-    log_->info("Audio output keepalive started with {:.1f} ms queued",
-               static_cast<double>(audioOutput_->queuedFrames()) * 1000.0 / SAMPLE_RATE);
+    const double idleQueueMilliseconds = static_cast<double>(idleQueueFrames) * 1000.0 / SAMPLE_RATE;
+    const double enqueueHeadroomMilliseconds = static_cast<double>(audioConfig_.commonPlayoutDelayMs) -
+                                               idleQueueMilliseconds -
+                                               std::max<int>(0, audioConfig_.audioDeviceCompensationMs);
+    log_->info("Audio output keepalive started with {:.1f} ms queued ({:.1f} ms RTCP enqueue headroom)",
+               static_cast<double>(audioOutput_->queuedFrames()) * 1000.0 / SAMPLE_RATE, enqueueHeadroomMilliseconds);
 
     while (!stop_requested.load()) {
+        timingMode_.store(TimingMode::Waiting);
         const auto initial = bgmBuffer_->initialPlayout();
         if (!initial.has_value()) {
             if (!outputKeepalive.refillSilence()) {
@@ -517,35 +642,203 @@ void OpusRtpAudioClient::audioPlayoutThread() {
             continue;
         }
 
-        activeBgmGeneration = initial->generation;
         uint32_t nextTimestamp = initial->timestamp;
-        dialogBuffer_->discardBefore(nextTimestamp);
-        bgmBuffer_->discardBefore(nextTimestamp);
+        const auto now = Clock::now();
+        const auto dialogSynchronizationSource = dialogBuffer_->synchronizationSource();
+        const auto bgmReport = bgmRtcpReports_.find(initial->synchronizationSource);
+        const auto dialogReport = dialogSynchronizationSource.has_value()
+                                      ? dialogRtcpReports_.find(*dialogSynchronizationSource)
+                                      : std::optional<TimedRtcpSenderReport>{};
 
-        while (!stop_requested.load() && Clock::now() < initial->startTime) {
+        const auto reportIsFresh = [now](const std::optional<TimedRtcpSenderReport> &report) {
+            return report.has_value() && now - report->receivedAt <= std::chrono::milliseconds(RTCP_MAX_REPORT_AGE_MS);
+        };
+
+        const bool freshReports = reportIsFresh(bgmReport) && reportIsFresh(dialogReport);
+        const bool compatibleReports =
+            freshReports && rtcpClockMappingsCompatible(bgmReport->report, dialogReport->report,
+                                                        std::chrono::microseconds(RTCP_CLOCK_COMPATIBILITY_US));
+
+        std::optional<RtcpPlayoutPlanner> rtcpPlanner;
+        std::optional<RtcpPlayoutPlan> initialRtcpPlan;
+        bool rtcpDeadlineIsPlausible = false;
+        int64_t mappingArrivalDeltaMicroseconds = 0;
+        if (compatibleReports) {
+            rtcpPlanner.emplace(RtcpClockPair::capture(), std::chrono::milliseconds(audioConfig_.commonPlayoutDelayMs),
+                                std::chrono::milliseconds(audioConfig_.audioDeviceCompensationMs));
+            initialRtcpPlan = rtcpPlanner->plan(bgmReport->report, nextTimestamp, audioOutput_->queuedFrames());
+            if (initialRtcpPlan.has_value()) {
+                const auto expectedPresentation =
+                    initial->arrival + std::chrono::milliseconds(audioConfig_.commonPlayoutDelayMs);
+                mappingArrivalDeltaMicroseconds = std::chrono::duration_cast<std::chrono::microseconds>(
+                                                      initialRtcpPlan->presentationDeadline - expectedPresentation)
+                                                      .count();
+                rtcpDeadlineIsPlausible = rtcpPresentationDeadlinePlausible(
+                    *initialRtcpPlan, initial->arrival, std::chrono::milliseconds(audioConfig_.commonPlayoutDelayMs),
+                    std::chrono::milliseconds(RTCP_MAX_DEADLINE_DISTANCE_MS));
+            }
+        }
+
+        const bool generationLockedToFallback = initial->generation == arrivalFallbackGeneration;
+        const bool useRtcp =
+            !generationLockedToFallback && compatibleReports && initialRtcpPlan.has_value() && rtcpDeadlineIsPlausible;
+        if (!generationLockedToFallback && !useRtcp &&
+            now - initial->arrival < std::chrono::milliseconds(RTCP_STARTUP_WAIT_MS)) {
             if (!outputKeepalive.refillSilence()) {
-                log_->error("Unable to maintain audio output before RTP playout");
+                log_->error("Unable to maintain audio output while waiting for RTCP");
                 stop_requested.store(true);
                 break;
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        }
-        if (stop_requested.load()) {
-            break;
+            continue;
         }
 
         std::array<int16_t, FRAMES_PER_CHUNK> initialMixed{};
-        mixTimestamp(nextTimestamp, initialMixed, dialogGeneration, bgmDecoderGeneration, dialogGain, bgmGain);
+        bool initialDecoded = false;
+        std::optional<RtcpPlayoutPlan> finalRtcpPlan;
+        if (useRtcp) {
+            mixTimestamp(nextTimestamp, initialMixed, dialogGeneration, bgmDecoderGeneration, dialogGain, bgmGain);
+            initialDecoded = true;
+
+            bool retryWithNextTimestamp = false;
+            while (!stop_requested.load() && bgmBuffer_->generation() == initial->generation) {
+                if (!outputKeepalive.refillSilence()) {
+                    log_->error("Unable to maintain audio output before RTCP playout");
+                    stop_requested.store(true);
+                    break;
+                }
+
+                finalRtcpPlan = rtcpPlanner->plan(bgmReport->report, nextTimestamp, audioOutput_->queuedFrames());
+                if (!finalRtcpPlan.has_value()) {
+                    break;
+                }
+
+                const auto enqueueNow = Clock::now();
+                const auto enqueueState = classifyRtcpEnqueue(*finalRtcpPlan, enqueueNow,
+                                                              std::chrono::microseconds(RTCP_START_LATE_TOLERANCE_US));
+                if (enqueueState == RtcpEnqueueState::Missed) {
+                    const auto enqueueLateness = std::chrono::duration_cast<std::chrono::microseconds>(
+                        enqueueNow - finalRtcpPlan->enqueueDeadline);
+                    rtcpLateFramesDropped_.fetch_add(1);
+                    nextTimestamp += FRAMES_PER_CHUNK;
+                    dialogBuffer_->discardBefore(nextTimestamp);
+                    bgmBuffer_->discardBefore(nextTimestamp);
+                    log_->debug("Skipped late RTCP startup frame; next RTP timestamp {}, enqueue deadline missed by "
+                                "{} us",
+                                nextTimestamp, enqueueLateness.count());
+                    retryWithNextTimestamp = true;
+                    break;
+                }
+                if (enqueueState == RtcpEnqueueState::Ready) {
+                    break;
+                }
+
+                const auto remaining = finalRtcpPlan->enqueueDeadline - enqueueNow;
+                std::this_thread::sleep_for(
+                    std::min(remaining, std::chrono::duration_cast<Clock::duration>(std::chrono::milliseconds(1))));
+            }
+
+            if (stop_requested.load()) {
+                break;
+            }
+            if (retryWithNextTimestamp || bgmBuffer_->generation() != initial->generation) {
+                continue;
+            }
+            if (!finalRtcpPlan.has_value()) {
+                log_->warn("RTCP timing calculation failed for BGM generation {}; using arrival-time fallback",
+                           initial->generation);
+            } else {
+                timingMode_.store(TimingMode::Rtcp);
+                log_->info("Audio timing mode RTCP selected for BGM SSRC {} and dialog SSRC {} (CNAME '{}', "
+                           "mapping NTP {}.{} to RTP {}, delay={} ms, compensation={:+d} ms, "
+                           "mapping/arrival delta={:+d} us)",
+                           initial->synchronizationSource, *dialogSynchronizationSource,
+                           bgmReport->report.canonicalName,
+                           static_cast<uint32_t>(bgmReport->report.ntpTimestamp >> 32U),
+                           static_cast<uint32_t>(bgmReport->report.ntpTimestamp), bgmReport->report.rtpTimestamp,
+                           audioConfig_.commonPlayoutDelayMs, audioConfig_.audioDeviceCompensationMs,
+                           mappingArrivalDeltaMicroseconds);
+            }
+        }
+
+        if (!finalRtcpPlan.has_value()) {
+            timingMode_.store(TimingMode::ArrivalFallback);
+            if (!generationLockedToFallback) {
+                arrivalFallbackGeneration = initial->generation;
+                rtcpFallbacks_.fetch_add(1);
+
+                if (!bgmReport.has_value() && !bgmRtcpReports_.empty()) {
+                    bgmRtcpStats_.sourceMismatches.fetch_add(1);
+                }
+                if (!dialogReport.has_value() && !dialogRtcpReports_.empty()) {
+                    dialogRtcpStats_.sourceMismatches.fetch_add(1);
+                }
+                if (bgmReport.has_value() && !reportIsFresh(bgmReport)) {
+                    bgmRtcpStats_.staleReports.fetch_add(1);
+                }
+                if (dialogReport.has_value() && !reportIsFresh(dialogReport)) {
+                    dialogRtcpStats_.staleReports.fetch_add(1);
+                }
+
+                log_->warn("RTCP timing unavailable for BGM generation {}; using arrival-time fallback "
+                           "(BGM report={}, dialog report={}, fresh={}, compatible={}, plan={}, plausible={}, "
+                           "mapping/arrival delta={:+d} us, output queue={:.1f} ms, BGM cache={}, dialog cache={})",
+                           initial->generation, bgmReport.has_value() ? "yes" : "no",
+                           dialogReport.has_value() ? "yes" : "no", freshReports ? "yes" : "no",
+                           compatibleReports ? "yes" : "no", initialRtcpPlan.has_value() ? "yes" : "no",
+                           rtcpDeadlineIsPlausible ? "yes" : "no", mappingArrivalDeltaMicroseconds,
+                           static_cast<double>(audioOutput_->queuedFrames()) * 1000.0 / SAMPLE_RATE,
+                           bgmRtcpReports_.size(), dialogRtcpReports_.size());
+            }
+            while (!stop_requested.load() && bgmBuffer_->generation() == initial->generation &&
+                   Clock::now() < initial->startTime) {
+                if (!outputKeepalive.refillSilence()) {
+                    log_->error("Unable to maintain audio output before fallback playout");
+                    stop_requested.store(true);
+                    break;
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
+            if (stop_requested.load()) {
+                break;
+            }
+            if (bgmBuffer_->generation() != initial->generation) {
+                continue;
+            }
+            if (!initialDecoded) {
+                mixTimestamp(nextTimestamp, initialMixed, dialogGeneration, bgmDecoderGeneration, dialogGain, bgmGain);
+            }
+        }
+
+        activeBgmGeneration = initial->generation;
+        dialogBuffer_->discardBefore(nextTimestamp);
+        bgmBuffer_->discardBefore(nextTimestamp);
+
+        const size_t queuedBeforeInitialWrite = audioOutput_->queuedFrames();
+        const auto initialWriteTime = Clock::now();
         if (!audioOutput_->write(initialMixed)) {
             log_->error("Unable to queue initial audio frame");
             stop_requested.store(true);
             break;
         }
+        if (finalRtcpPlan.has_value()) {
+            const auto predictedPresentation = initialWriteTime + framesToClockDuration(queuedBeforeInitialWrite) +
+                                               std::chrono::milliseconds(audioConfig_.audioDeviceCompensationMs);
+            const int64_t startLateness = std::chrono::duration_cast<std::chrono::microseconds>(
+                                              predictedPresentation - finalRtcpPlan->presentationDeadline)
+                                              .count();
+            lastStartLatenessMicroseconds_.store(startLateness);
+            log_->info("RTCP playout started at RTP timestamp {} from report RTP timestamp {} (start lateness {:+d} "
+                       "us, {} frames queued before write)",
+                       initial->timestamp, bgmReport->report.rtpTimestamp, startLateness, queuedBeforeInitialWrite);
+        } else {
+            lastStartLatenessMicroseconds_.store(0);
+            log_->info("Arrival-time playout started at RTP timestamp {} with {:.1f} ms queued", initial->timestamp,
+                       static_cast<double>(audioOutput_->queuedFrames()) * 1000.0 / SAMPLE_RATE);
+        }
+
         nextTimestamp += FRAMES_PER_CHUNK;
         mixedFrames_.fetch_add(1);
-
-        log_->info("Audio playout started at RTP timestamp {} with {:.1f} ms queued", initial->timestamp,
-                   static_cast<double>(audioOutput_->queuedFrames()) * 1000.0 / SAMPLE_RATE);
 
         while (!stop_requested.load() && bgmBuffer_->generation() == activeBgmGeneration &&
                !bgmBuffer_->isIdleFor(idleTimeout)) {
@@ -582,10 +875,12 @@ void OpusRtpAudioClient::audioPlayoutThread() {
             const uint64_t frameCount = mixedFrames_.fetch_add(1) + 1;
 
             if (frameCount % MIX_STATS_FRAME_INTERVAL == 0) {
-                log_->debug("Audio playout: frames={}, queued={:.1f} ms, deadline_misses={}, underruns={}, dialog "
-                            "fec/plc/errors={}/{}/{}, BGM fec/plc/errors={}/{}/{}",
+                log_->debug("Audio playout: frames={}, queued={:.1f} ms, timing={}, deadline_misses={}, "
+                            "RTCP_late_drops={}, underruns={}, dialog fec/plc/errors={}/{}/{}, BGM "
+                            "fec/plc/errors={}/{}/{}",
                             frameCount, static_cast<double>(audioOutput_->queuedFrames()) * 1000.0 / SAMPLE_RATE,
-                            playoutDeadlineMisses_.load(), audioOutput_->underruns(), dialogStats_.fecFrames.load(),
+                            getTimingModeName(), playoutDeadlineMisses_.load(), rtcpLateFramesDropped_.load(),
+                            audioOutput_->underruns(), dialogStats_.fecFrames.load(),
                             dialogStats_.concealedFrames.load(), dialogStats_.decodeErrors.load(),
                             bgmStats_.fecFrames.load(), bgmStats_.concealedFrames.load(),
                             bgmStats_.decodeErrors.load());
@@ -602,10 +897,10 @@ void OpusRtpAudioClient::audioPlayoutThread() {
     }
 }
 
-bool OpusRtpAudioClient::openSocket(int &socket, const std::string &group) const {
+bool OpusRtpAudioClient::openSocket(int &socket, const std::string &group, uint16_t port, const char *protocol) const {
     socket = ::socket(AF_INET, SOCK_DGRAM, 0);
     if (socket < 0) {
-        log_->error("Unable to create RTP socket for {}: {}", group, std::strerror(errno));
+        log_->error("Unable to create {} socket for {}: {}", protocol, group, std::strerror(errno));
         return false;
     }
 
@@ -616,15 +911,15 @@ bool OpusRtpAudioClient::openSocket(int &socket, const std::string &group) const
 
     int receiveBufferSize = 256 * 1024;
     if (setsockopt(socket, SOL_SOCKET, SO_RCVBUF, &receiveBufferSize, sizeof(receiveBufferSize)) < 0) {
-        log_->warn("Unable to enlarge the RTP receive buffer for {}: {}", group, std::strerror(errno));
+        log_->warn("Unable to enlarge the {} receive buffer for {}: {}", protocol, group, std::strerror(errno));
     }
 
     sockaddr_in address{};
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = inet_addr(group.c_str());
-    address.sin_port = htons(port_);
+    address.sin_port = htons(port);
     if (bind(socket, reinterpret_cast<sockaddr *>(&address), sizeof(address)) < 0) {
-        log_->error("Unable to bind RTP socket to {}:{}: {}", group, port_, std::strerror(errno));
+        log_->error("Unable to bind {} socket to {}:{}: {}", protocol, group, port, std::strerror(errno));
         close(socket);
         socket = -1;
         return false;
@@ -634,7 +929,8 @@ bool OpusRtpAudioClient::openSocket(int &socket, const std::string &group) const
     membership.imr_multiaddr.s_addr = inet_addr(group.c_str());
     membership.imr_interface.s_addr = inet_addr(interfaceIp_.c_str());
     if (setsockopt(socket, IPPROTO_IP, IP_ADD_MEMBERSHIP, &membership, sizeof(membership)) < 0) {
-        log_->error("Unable to join multicast group {} on {}: {}", group, interfaceIp_, std::strerror(errno));
+        log_->error("Unable to join {} multicast group {} on {}: {}", protocol, group, interfaceIp_,
+                    std::strerror(errno));
         close(socket);
         socket = -1;
         return false;
@@ -642,17 +938,17 @@ bool OpusRtpAudioClient::openSocket(int &socket, const std::string &group) const
 
     const int flags = fcntl(socket, F_GETFL, 0);
     if (flags < 0 || fcntl(socket, F_SETFL, flags | O_NONBLOCK) < 0) {
-        log_->error("Unable to make RTP socket non-blocking for {}: {}", group, std::strerror(errno));
+        log_->error("Unable to make {} socket non-blocking for {}: {}", protocol, group, std::strerror(errno));
         close(socket);
         socket = -1;
         return false;
     }
 
-    log_->info("Joined RTP multicast group {} on {}", group, interfaceIp_);
+    log_->info("Joined {} multicast group {} on {}:{}", protocol, group, interfaceIp_, port);
     return true;
 }
 
-bool OpusRtpAudioClient::receivePacket(int socket, std::vector<uint8_t> &packet) {
+bool OpusRtpAudioClient::receivePacket(int socket, std::vector<uint8_t> &packet, size_t maximumSize) {
     fd_set readSockets;
     FD_ZERO(&readSockets);
     FD_SET(socket, &readSockets);
@@ -663,9 +959,13 @@ bool OpusRtpAudioClient::receivePacket(int socket, std::vector<uint8_t> &packet)
         return false;
     }
 
-    packet.resize(MAX_RTP_PACKET_SIZE);
+    packet.resize(maximumSize + 1U);
     const ssize_t bytesReceived = recv(socket, packet.data(), packet.size(), 0);
     if (bytesReceived <= 0) {
+        return false;
+    }
+    if (static_cast<size_t>(bytesReceived) > maximumSize) {
+        packet.clear();
         return false;
     }
     packet.resize(static_cast<size_t>(bytesReceived));

@@ -70,6 +70,8 @@ class Configuration {
     void setOutputVolumePercent(u8 volumePercent);
     void setAlsaMixerCard(std::string card);
     void setAlsaMixerElement(std::string element);
+    void setCommonPlayoutDelayMs(uint16_t delayMs);
+    void setAudioDeviceCompensationMs(int16_t compensationMs);
     void setNetworkDeviceName(const std::string &_deviceName);
     void setUniverse(u16 _universe);
     void addUARTDevice(UARTDevice _uartDevice);
