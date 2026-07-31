@@ -1,4 +1,4 @@
-
+#include <algorithm>
 #include <fstream>
 #include <limits>
 #include <sstream>
@@ -203,6 +203,41 @@ Result<std::shared_ptr<creatures::config::Configuration>> ConfigurationBuilder::
             return makeError("Field 'alsaMixerElement' must be a string");
         }
         config->setAlsaMixerElement(j["alsaMixerElement"].get<std::string>());
+    }
+
+    if (j.contains("commonPlayoutDelayMs")) {
+        if (!j["commonPlayoutDelayMs"].is_number_integer()) {
+            return makeError("Field 'commonPlayoutDelayMs' must be an integer");
+        }
+        const int delayMs = j["commonPlayoutDelayMs"].get<int>();
+        if (delayMs < audio::MIN_COMMON_PLAYOUT_DELAY_MS || delayMs > audio::MAX_COMMON_PLAYOUT_DELAY_MS) {
+            return makeError(fmt::format("Field 'commonPlayoutDelayMs' must be between {} and {}",
+                                         audio::MIN_COMMON_PLAYOUT_DELAY_MS, audio::MAX_COMMON_PLAYOUT_DELAY_MS));
+        }
+        config->setCommonPlayoutDelayMs(static_cast<uint16_t>(delayMs));
+    }
+
+    if (j.contains("audioDeviceCompensationMs")) {
+        if (!j["audioDeviceCompensationMs"].is_number_integer()) {
+            return makeError("Field 'audioDeviceCompensationMs' must be an integer");
+        }
+        const int compensationMs = j["audioDeviceCompensationMs"].get<int>();
+        if (compensationMs < -audio::MAX_ABSOLUTE_DEVICE_COMPENSATION_MS ||
+            compensationMs > audio::MAX_ABSOLUTE_DEVICE_COMPENSATION_MS) {
+            return makeError(fmt::format("Field 'audioDeviceCompensationMs' must be between -{} and {}",
+                                         audio::MAX_ABSOLUTE_DEVICE_COMPENSATION_MS,
+                                         audio::MAX_ABSOLUTE_DEVICE_COMPENSATION_MS));
+        }
+        config->setAudioDeviceCompensationMs(static_cast<int16_t>(compensationMs));
+    }
+
+    const auto &audioConfig = config->getAudioConfig();
+    const int minimumDelayForCompensation =
+        audio::FRAME_MS + audio::RTCP_ENQUEUE_HEADROOM_MS + std::max<int>(0, audioConfig.audioDeviceCompensationMs);
+    if (audioConfig.commonPlayoutDelayMs < minimumDelayForCompensation) {
+        return makeError(
+            fmt::format("Field 'commonPlayoutDelayMs' must be at least {} when audioDeviceCompensationMs is {}",
+                        minimumDelayForCompensation, audioConfig.audioDeviceCompensationMs));
     }
 
     config->setNetworkDeviceName(j["networkInterface"]);

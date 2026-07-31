@@ -17,6 +17,8 @@
   "dialogGainDb": 0.0,
   "bgmGainDb": -6.0,
   "limiterCeilingDb": -1.0,
+  "commonPlayoutDelayMs": 20,
+  "audioDeviceCompensationMs": 0,
   "outputVolumePercent": 75,
   "alsaMixerCard": "default",
   "alsaMixerElement": "PCM",

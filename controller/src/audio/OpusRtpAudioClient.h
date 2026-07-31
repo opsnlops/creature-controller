@@ -13,6 +13,7 @@
 #include <opus.h>
 
 #include "audio/AudioOutput.h"
+#include "audio/RtcpTiming.h"
 #include "audio/audio-config.h"
 #include "logging/Logger.h"
 #include "util/StoppableThread.h"
@@ -38,6 +39,12 @@ class OpusRtpAudioClient final : public StoppableThread {
     [[nodiscard]] size_t getDialogBufferedFrames() const { return dialogBufferedFrames_.load(); }
     [[nodiscard]] size_t getBgmBufferedFrames() const { return bgmBufferedFrames_.load(); }
     [[nodiscard]] std::optional<std::chrono::milliseconds> getLastPacketAge() const;
+    [[nodiscard]] std::optional<std::chrono::milliseconds> getLastRtcpReportAge() const;
+    [[nodiscard]] uint64_t getRtcpReportsReceived() const;
+    [[nodiscard]] uint64_t getRtcpInvalidReports() const;
+    [[nodiscard]] uint64_t getRtcpFallbacks() const { return rtcpFallbacks_.load(); }
+    [[nodiscard]] int64_t getLastStartLatenessMicroseconds() const { return lastStartLatenessMicroseconds_.load(); }
+    [[nodiscard]] const char *getTimingModeName() const;
 
   private:
     class RtpJitterBuffer;
@@ -51,6 +58,20 @@ class OpusRtpAudioClient final : public StoppableThread {
         std::atomic<uint64_t> fecFrames{0};
         std::atomic<uint64_t> concealedFrames{0};
         std::atomic<uint64_t> decodeErrors{0};
+    };
+
+    struct RtcpStats {
+        std::atomic<uint64_t> reportsReceived{0};
+        std::atomic<uint64_t> invalidReports{0};
+        std::atomic<uint64_t> cacheEvictions{0};
+        std::atomic<uint64_t> sourceMismatches{0};
+        std::atomic<uint64_t> staleReports{0};
+    };
+
+    enum class TimingMode : uint8_t {
+        Waiting,
+        Rtcp,
+        ArrivalFallback,
     };
 
     struct GainRamp {
@@ -67,6 +88,7 @@ class OpusRtpAudioClient final : public StoppableThread {
 
     void run() override;
     void receiveStream(int socket, RtpJitterBuffer &buffer, StreamStats &stats, const std::string &streamName);
+    void receiveRtcpStream(int socket, RtcpReportCache &reports, RtcpStats &stats, const std::string &streamName);
     void audioPlayoutThread();
 
     bool initializeAudioDevice();
@@ -81,8 +103,8 @@ class OpusRtpAudioClient final : public StoppableThread {
     void mixTimestamp(uint32_t timestamp, std::array<int16_t, FRAMES_PER_CHUNK> &mixed, uint64_t &dialogGeneration,
                       uint64_t &bgmGeneration, GainRamp &dialogGain, GainRamp &bgmGain);
 
-    bool openSocket(int &socket, const std::string &group) const;
-    static bool receivePacket(int socket, std::vector<uint8_t> &packet);
+    bool openSocket(int &socket, const std::string &group, uint16_t port, const char *protocol) const;
+    static bool receivePacket(int socket, std::vector<uint8_t> &packet, size_t maximumSize);
 
     std::shared_ptr<creatures::Logger> log_;
     const std::string dialogGroup_;
@@ -94,16 +116,22 @@ class OpusRtpAudioClient final : public StoppableThread {
 
     int dialogSocket_{-1};
     int bgmSocket_{-1};
+    int dialogRtcpSocket_{-1};
+    int bgmRtcpSocket_{-1};
     OpusDecoder *dialogDecoder_{nullptr};
     OpusDecoder *bgmDecoder_{nullptr};
     std::unique_ptr<AudioOutput> audioOutput_;
 
     std::unique_ptr<RtpJitterBuffer> dialogBuffer_;
     std::unique_ptr<RtpJitterBuffer> bgmBuffer_;
+    RtcpReportCache dialogRtcpReports_{RTCP_REPORT_CACHE_ENTRIES};
+    RtcpReportCache bgmRtcpReports_{RTCP_REPORT_CACHE_ENTRIES};
 
     std::thread mainThread_;
     std::thread dialogThread_;
     std::thread bgmThread_;
+    std::thread dialogRtcpThread_;
+    std::thread bgmRtcpThread_;
     std::thread playoutThread_;
 
     std::atomic<float> dialogGainLinear_{1.0f};
@@ -119,9 +147,15 @@ class OpusRtpAudioClient final : public StoppableThread {
     std::atomic<size_t> bgmBufferedFrames_{0};
     std::atomic<uint64_t> mixedFrames_{0};
     std::atomic<uint64_t> playoutDeadlineMisses_{0};
+    std::atomic<uint64_t> rtcpFallbacks_{0};
+    std::atomic<uint64_t> rtcpLateFramesDropped_{0};
+    std::atomic<int64_t> lastStartLatenessMicroseconds_{0};
+    std::atomic<TimingMode> timingMode_{TimingMode::Waiting};
 
     StreamStats dialogStats_;
     StreamStats bgmStats_;
+    RtcpStats dialogRtcpStats_;
+    RtcpStats bgmRtcpStats_;
 };
 
 } // namespace creatures::audio

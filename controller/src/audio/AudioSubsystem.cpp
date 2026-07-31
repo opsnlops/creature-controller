@@ -111,12 +111,18 @@ std::string AudioSubsystem::getStats() const {
         static_cast<double>(TARGET_PLAYOUT_FRAMES * FRAMES_PER_CHUNK) * 1000.0 / SAMPLE_RATE;
     const auto packetAge = rtpClient_->getLastPacketAge();
     const std::string packetAgeText = packetAge.has_value() ? fmt::format("{} ms ago", packetAge->count()) : "never";
+    const auto reportAge = rtpClient_->getLastRtcpReportAge();
+    const std::string reportAgeText = reportAge.has_value() ? fmt::format("{} ms", reportAge->count()) : "none";
 
     return fmt::format(
-        "packets received={}, output queue={:.1f}/{:.1f} ms, RTP queued dialog={} BGM={}, last packet={}, receiving={}",
+        "packets received={}, output queue={:.1f}/{:.1f} ms, RTP queued dialog={} BGM={}, last packet={}, "
+        "receiving={}, timing={}, RTCP reports={}/{} valid/invalid, report age={}, fallbacks={}, start lateness={:+d} "
+        "us",
         rtpClient_->getPacketsReceived(), outputQueueMilliseconds, targetQueueMilliseconds,
         rtpClient_->getDialogBufferedFrames(), rtpClient_->getBgmBufferedFrames(), packetAgeText,
-        rtpClient_->isReceiving() ? "yes" : "no");
+        rtpClient_->isReceiving() ? "yes" : "no", rtpClient_->getTimingModeName(), rtpClient_->getRtcpReportsReceived(),
+        rtpClient_->getRtcpInvalidReports(), reportAgeText, rtpClient_->getRtcpFallbacks(),
+        rtpClient_->getLastStartLatenessMicroseconds());
 }
 
 void AudioSubsystem::monitoringLoop() {
