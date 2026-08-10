@@ -1,10 +1,10 @@
 # Dynamixel Servo Tester
 
-A firmware target for testing and configuring Dynamixel XC430 servos using Protocol 2.0. Connect via USB serial to interactively ping, scan, configure, and move servos.
+A firmware target for testing and configuring Dynamixel XC330 servos using Protocol 2.0. Connect via USB serial to interactively ping, scan, configure, and move servos.
 
 ## Hardware Setup
 
-The tester communicates with servos over a single GPIO pin using PIO-based half-duplex UART. The XC430 is 3.3V TTL (same as the RP2350), so no level shifter is needed.
+The tester communicates with servos over a single GPIO pin using PIO-based half-duplex UART. The XC330 is 3.3V TTL (same as the RP2350), so no level shifter is needed.
 
 - **Data pin**: GPIO 15 (configurable in `src/dynamixel_tester/config.h`)
 - **Default baud rate**: 1,000,000 bps
@@ -18,9 +18,9 @@ Connect three wires between the RP2350 board and the Dynamixel servo:
 |--------|-----------|
 | GPIO 15 | DATA |
 | GND | GND |
-| -- | VIN (external 12V supply) |
+| -- | VIN (external 5V supply) |
 
-The servo needs external 12V power. The data line connects directly to the GPIO pin.
+The servo needs external 5V power. The data line connects directly to the GPIO pin.
 
 ## Building and Flashing
 
@@ -216,7 +216,7 @@ The tester is built on a shared Dynamixel library (`src/dynamixel/`) that can be
 
 ```
 src/dynamixel/                  # Shared library
-  dynamixel_registers.h         # XC430 control table addresses
+  dynamixel_registers.h         # XC330 control table addresses
   dynamixel_protocol.h/c        # Protocol 2.0 packet layer (CRC16, byte stuffing)
   dynamixel_hal.h/c             # PIO half-duplex UART with DMA
   dynamixel_servo.h/c           # High-level servo operations
@@ -238,7 +238,7 @@ src/dynamixel_tester/           # Tester application
 
 ## Common Register Addresses
 
-For use with the `RR` and `RW` commands. See the [XC430 e-Manual](https://emanual.robotis.com/docs/en/dxl/x/xc430-w240t/) for the complete control table.
+For use with the `RR` and `RW` commands. See the [XC330 e-Manual](https://emanual.robotis.com/docs/en/dxl/x/) for the complete control table.
 
 | Address | Size | Name | Access |
 |---------|------|------|--------|
