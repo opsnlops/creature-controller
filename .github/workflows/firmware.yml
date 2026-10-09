@@ -25,7 +25,7 @@ jobs:
           - 4
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: 'true'
 
@@ -33,7 +33,7 @@ jobs:
         run: sudo apt update && sudo apt install gcc-arm-none-eabi libnewlib-arm-none-eabi build-essential libzopfli-dev
 
       - name: Clone pico-sdk
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: raspberrypi/pico-sdk
           ref: 2.2.0
@@ -42,7 +42,7 @@ jobs:
           submodules: 'true'
 
       - name: Clone FreeRTOS-Kernel
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: raspberrypi/FreeRTOS-Kernel
           path: FreeRTOS-Kernel
@@ -73,7 +73,7 @@ jobs:
         run: PICO_SDK_PATH=$GITHUB_WORKSPACE/pico-sdk FREERTOS_KERNEL_PATH=$GITHUB_WORKSPACE/FreeRTOS-Kernel cmake --build . --config $BUILD_TYPE --parallel 4
 
       - name: Save artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: firmware-bundle-${{ matrix.platform }}-hw${{ matrix.hardware_version }}
           path: ${{github.workspace}}/firmware/build/*.uf2

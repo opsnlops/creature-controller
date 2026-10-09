@@ -16,7 +16,7 @@ jobs:
           - ubuntu-24.04-arm
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: 'true'
 
@@ -40,7 +40,7 @@ jobs:
           done
 
       - name: Upload creature-controller package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: creature-controller-package-${{ matrix.os }}
           path: ${{ github.workspace }}/controller/package/creature-controller_*.deb
@@ -49,7 +49,7 @@ jobs:
           retention-days: 7
 
       - name: Upload creature-audio-router package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: creature-audio-router-package-${{ matrix.os }}
           path: ${{ github.workspace }}/controller/package/creature-audio-router_*.deb
