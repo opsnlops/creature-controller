@@ -4,7 +4,7 @@ FROM debian:trixie AS build
 # layer as installation so a cached Debian base never uses stale indexes.
 RUN apt update -y && apt upgrade -y && \
     apt install -y clang locales-all libssl-dev ninja-build cmake git \
-                   pkgconf libbson-dev libpthreadpool-dev libutf8proc-dev \
+                   dpkg-dev pkgconf libbson-dev libpthreadpool-dev libutf8proc-dev \
                    file zlib1g-dev libasound2-dev libcurl4-openssl-dev && \
     rm -rf /var/lib/apt/lists/*
 
@@ -12,6 +12,9 @@ RUN apt update -y && apt upgrade -y && \
 COPY src/ /build/creature-controller/src
 COPY cmake/ /build/creature-controller/cmake
 COPY lib/ /build/creature-controller/lib
+COPY config/ /build/creature-controller/config
+COPY packaging/ /build/creature-controller/packaging
+COPY docs/ /build/creature-controller/docs
 COPY tests/ /build/creature-controller/tests
 COPY CMakeLists.txt /build/creature-controller/
 COPY LICENSE /build/creature-controller/LICENSE
@@ -43,8 +46,17 @@ CMD ["/app/creature-controller"]
 
 
 # Small build for creating a deb package
-FROM build AS package
+FROM build AS packages
 
 # Make a package
 RUN mkdir -p /package
-RUN cd /build/creature-controller/build/ && cpack -G DEB && cp *.deb /package
+RUN cd /build/creature-controller/build/ && cpack -G DEB && cpack --config CPackAudioRouterConfig.cmake -G DEB && cp *.deb /package
+
+# Validate the router in a clean Debian installation before exporting packages.
+FROM debian:trixie-slim AS audio-router-package-test
+COPY --from=packages /package/creature-audio-router_*.deb /tmp/creature-audio-router.deb
+COPY packaging/audio-router/check-package.sh /tmp/check-package.sh
+RUN /tmp/check-package.sh /tmp/creature-audio-router.deb && touch /tmp/package-validated
+
+FROM packages AS package
+COPY --from=audio-router-package-test /tmp/package-validated /package/.router-validated

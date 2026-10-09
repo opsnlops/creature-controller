@@ -33,4 +33,23 @@ set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
 
 set(CPACK_DEBIAN_PACKAGE_DEPENDS "locales-all, zlib1g, libsasl2-2, libicu76, libasound2t64, libutf8proc3, libuuid1, libcurl4, libprotobuf32t64")
 
+# Build independently installable products from the same shared implementation.
+set(CPACK_DEB_COMPONENT_INSTALL ON)
+if(CREATURE_BUILD_CONTROLLER)
+    set(CPACK_COMPONENTS_ALL creature-controller)
+else()
+    set(CPACK_COMPONENTS_ALL creature-audio-router)
+    set(CPACK_PACKAGE_VERSION "${CREATURE_AUDIO_ROUTER_VERSION}")
+    unset(CPACK_DEBIAN_PACKAGE_RELEASE)
+endif()
+set(CPACK_DEBIAN_CREATURE-CONTROLLER_PACKAGE_NAME "creature-controller")
+set(CPACK_DEBIAN_CREATURE-AUDIO-ROUTER_PACKAGE_NAME "creature-audio-router")
+set(CPACK_DEBIAN_CREATURE-AUDIO-ROUTER_PACKAGE_DEPENDS "libasound2t64, init-system-helpers")
+set(CPACK_DEBIAN_CREATURE-AUDIO-ROUTER_PACKAGE_DESCRIPTION "Multichannel Opus/RTP audio routing for Creature Workshop HDMI speakers")
+set(CPACK_DEBIAN_CREATURE-AUDIO-ROUTER_PACKAGE_CONTROL_EXTRA
+    "${CMAKE_CURRENT_SOURCE_DIR}/packaging/audio-router/conffiles;${CMAKE_CURRENT_SOURCE_DIR}/packaging/audio-router/postinst;${CMAKE_CURRENT_SOURCE_DIR}/packaging/audio-router/prerm;${CMAKE_CURRENT_SOURCE_DIR}/packaging/audio-router/postrm")
+set(CPACK_DEBIAN_PACKAGE_CONTROL_STRICT_PERMISSION ON)
 include(CPack)
+
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/CPackAudioRouterConfig.cmake.in"
+               "${CMAKE_CURRENT_BINARY_DIR}/CPackAudioRouterConfig.cmake" @ONLY)

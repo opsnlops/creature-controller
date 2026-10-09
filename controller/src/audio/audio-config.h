@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace creatures::audio {
 
@@ -55,7 +56,13 @@ inline constexpr float DEFAULT_LIMITER_CEILING_DB = -1.0f;
 inline constexpr float MIN_GAIN_DB = -90.0f;
 inline constexpr float MAX_GAIN_DB = 12.0f;
 
+enum class SpeakerChannel { Mono, FrontLeft, FrontRight, Center, Lfe, RearLeft, RearRight, SideLeft, SideRight };
+
+[[nodiscard]] const char *speakerChannelName(SpeakerChannel channel);
+[[nodiscard]] SpeakerChannel parseSpeakerChannel(const std::string &name);
+
 struct AudioConfig {
+    std::vector<SpeakerChannel> channels{SpeakerChannel::Mono};
     uint8_t deviceNumber{DEFAULT_SOUND_DEVICE_NUMBER};
     std::optional<std::string> deviceName;
     float dialogGainDb{DEFAULT_DIALOG_GAIN_DB};
@@ -67,6 +74,46 @@ struct AudioConfig {
     uint16_t commonPlayoutDelayMs{DEFAULT_COMMON_PLAYOUT_DELAY_MS};
     int16_t audioDeviceCompensationMs{DEFAULT_AUDIO_DEVICE_COMPENSATION_MS};
 };
+
+struct InputConfig {
+    uint8_t channel{1}; // Creature multicast channel 1-16, or BGM channel 17.
+    float gainDb{0.0f};
+};
+
+struct AudioRoute {
+    size_t input{0};
+    size_t output{0};
+    float gainDb{0.0f};
+};
+
+struct BassSend {
+    size_t input{0};
+    float gainDb{0.0f};
+};
+
+struct BassConfig {
+    size_t output{0};
+    float crossoverHz{80.0f};
+    float gainDb{0.0f};
+    bool invertPolarity{false};
+    std::vector<BassSend> sends;
+    std::vector<size_t> highPassOutputs;
+};
+
+struct AudioEngineConfig {
+    std::string interfaceIp;
+    uint16_t port{RTP_PORT};
+    AudioConfig output;
+    std::vector<InputConfig> inputs;
+    std::vector<AudioRoute> routes;
+    std::optional<BassConfig> bass;
+    // Controllers retain arrival fallback; routers require RTCP by default.
+    bool requireRtcp{false};
+};
+
+void validateAudioEngineConfig(const AudioEngineConfig &config);
+[[nodiscard]] AudioEngineConfig creatureAudioConfig(uint8_t channel, const std::string &interfaceIp,
+                                                    const AudioConfig &output, uint16_t port = RTP_PORT);
 
 // Monitoring
 inline constexpr int STATS_INTERVAL_SEC = 5;

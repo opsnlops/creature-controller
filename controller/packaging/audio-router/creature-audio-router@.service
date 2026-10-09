@@ -1,0 +1,20 @@
+[Unit]
+Description=Creature multichannel audio router (%i)
+Documentation=man:creature-audio-router(1)
+After=network-online.target sound.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+DynamicUser=yes
+SupplementaryGroups=audio
+ExecStart=/usr/bin/creature-audio-router --config /etc/creature/audio-router/%i.json
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

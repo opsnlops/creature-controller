@@ -1,10 +1,13 @@
 cmake_minimum_required(VERSION 3.18)
 
 project(creature-controller
-        VERSION "4.4.1"
+        VERSION "4.5.0"
         DESCRIPTION "April's Creature Workshop Controller"
         HOMEPAGE_URL https://github.com/opsnlops/creature-controller
         LANGUAGES C CXX)
+
+option(CREATURE_BUILD_CONTROLLER "Build the motor controller and its tests" ON)
+include(CTest)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 20)
@@ -29,6 +32,7 @@ configure_file(src/Version.h.in Version.h)
 
 include(FetchContent)
 set(FETCHCONTENT_QUIET OFF)
+find_package(Threads REQUIRED)
 
 find_package(PkgConfig REQUIRED)
 
@@ -49,6 +53,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(spdlog)
 
+if(CREATURE_BUILD_CONTROLLER)
 # argparse
 FetchContent_Declare(
         argparse
@@ -57,20 +62,15 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(argparse)
 
+endif()
+
+if(BUILD_TESTING)
 FetchContent_Declare(
         googletest
         URL https://github.com/google/googletest/archive/refs/tags/v1.17.0.zip
 )
 FetchContent_MakeAvailable(googletest)
-
-# uvgRTP
-FetchContent_Declare(
-        uvgrtp
-        GIT_REPOSITORY https://github.com/ultravideo/uvgRTP.git
-        GIT_TAG        v3.1.6
-        EXCLUDE_FROM_ALL   # keep uvgRTP's install() rules out of our .deb (collided with creature-server's opus/uvgrtp headers)
-)
-FetchContent_MakeAvailable(uvgrtp)
+endif()
 
 # Opus
 # Force Opus' own CMake options *before* the project is configured
@@ -85,12 +85,18 @@ FetchContent_Declare(
         GIT_TAG         v1.5.2
         EXCLUDE_FROM_ALL   # keep Opus' install() rules (headers, .a, cmake configs, .pc) out of our .deb
 )
+# Opus also reads the global BUILD_TESTING option; scope it to avoid enabling
+# third-party test executables in our CTest suite.
+set(CREATURE_SAVED_BUILD_TESTING ${BUILD_TESTING})
+set(BUILD_TESTING OFF)
 FetchContent_MakeAvailable(opus)
+set(BUILD_TESTING ${CREATURE_SAVED_BUILD_TESTING})
 # Optimise Opus even when the rest of the build is Debug
 target_compile_options(opus PRIVATE
         $<$<CONFIG:Debug>:-O3>
 )
 
+if(CREATURE_BUILD_CONTROLLER)
 # Set up lib131 as an external library
 add_library(libe131 STATIC
         lib/libe131/src/e131.c
@@ -105,12 +111,15 @@ target_include_directories(libe131
         ${CMAKE_CURRENT_SOURCE_DIR}/lib/libe131/src/
 )
 
+endif()
+
 FetchContent_Declare(
         json
         URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz)
 FetchContent_MakeAvailable(json)
 
 
+if(CREATURE_BUILD_CONTROLLER)
 FetchContent_Declare(
         ixwebsocket
         GIT_REPOSITORY https://github.com/machinezone/IXWebSocket.git
@@ -122,6 +131,8 @@ FetchContent_MakeAvailable(ixwebsocket)
 # Suppress warnings from third-party ixwebsocket code
 if(TARGET ixwebsocket)
     target_compile_options(ixwebsocket PRIVATE -w)
+endif()
+
 endif()
 
 # Native low-latency audio output
@@ -146,7 +157,9 @@ else()
 endif()
 
 # libcurl for HTTP requests
-find_package(CURL REQUIRED)
+if(CREATURE_BUILD_CONTROLLER)
+    find_package(CURL REQUIRED)
+endif()
 
 include_directories(
         src/
@@ -161,20 +174,73 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
     endif()
 endif()
 
-add_library(creature_lib
-
-        # Audio protocol sources
+add_library(creature_audio STATIC
+        src/audio/AudioConfig.cpp
+        src/audio/AudioEngine.cpp
+        src/audio/PacketReceiver.cpp
+        src/audio/AlsaMixerControl.cpp
         src/audio/AudioOutputKeepalive.cpp
-        src/audio/AudioOutputKeepalive.h
-        src/audio/AudioOutput.h
-        ${AUDIO_PLATFORM_SOURCES}
-        src/audio/audio-config.h
+        src/audio/RoutingMixer.cpp
         src/audio/RtcpPacket.cpp
-        src/audio/RtcpPacket.h
         src/audio/RtcpTiming.cpp
-        src/audio/RtcpTiming.h
         src/audio/RtpPacket.cpp
-        src/audio/RtpPacket.h
+        src/util/thread_name.cpp
+        ${AUDIO_PLATFORM_SOURCES}
+)
+add_library(creature::audio ALIAS creature_audio)
+target_include_directories(creature_audio PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(creature_audio PUBLIC fmt::fmt opus Threads::Threads PRIVATE ${AUDIO_PLATFORM_LIBRARIES})
+if(ALSA_FOUND)
+    target_include_directories(creature_audio PRIVATE ${ALSA_INCLUDE_DIRS})
+    target_compile_definitions(creature_audio PRIVATE CREATURE_HAS_ALSA=1)
+endif()
+
+set(CREATURE_AUDIO_ROUTER_VERSION "0.1.0")
+add_library(creature_audio_router_config STATIC src/audio-router/RouterConfig.cpp)
+target_link_libraries(creature_audio_router_config PUBLIC creature::audio nlohmann_json::nlohmann_json)
+add_executable(creature-audio-router src/audio-router/main.cpp)
+target_link_libraries(creature-audio-router PRIVATE creature_audio_router_config spdlog::spdlog)
+target_compile_definitions(creature-audio-router PRIVATE CREATURE_AUDIO_ROUTER_VERSION="${CREATURE_AUDIO_ROUTER_VERSION}")
+install(TARGETS creature-audio-router RUNTIME DESTINATION bin COMPONENT creature-audio-router)
+# Install a reproducible compressed section-1 manual.
+configure_file(docs/man/creature-audio-router.1 ${CMAKE_CURRENT_BINARY_DIR}/creature-audio-router.1 COPYONLY)
+find_program(CREATURE_MAN_GZIP gzip REQUIRED)
+execute_process(COMMAND "${CREATURE_MAN_GZIP}" -n -c "${CMAKE_CURRENT_BINARY_DIR}/creature-audio-router.1"
+                OUTPUT_FILE "${CMAKE_CURRENT_BINARY_DIR}/creature-audio-router.1.gz"
+                COMMAND_ERROR_IS_FATAL ANY)
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/creature-audio-router.1.gz"
+        DESTINATION share/man/man1 COMPONENT creature-audio-router)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    install(FILES config/audio-router.json DESTINATION /etc/creature COMPONENT creature-audio-router)
+    install(DIRECTORY DESTINATION /etc/creature/audio-router COMPONENT creature-audio-router)
+    install(FILES packaging/audio-router/creature-audio-router.service packaging/audio-router/creature-audio-router@.service
+            DESTINATION lib/systemd/system COMPONENT creature-audio-router)
+    install(FILES README.md DESTINATION share/doc/creature-audio-router COMPONENT creature-audio-router)
+    install(FILES LICENSE DESTINATION share/doc/creature-audio-router RENAME copyright COMPONENT creature-audio-router)
+    install(FILES docs/audio-router-setup.md docs/audio-synchronization.md docs/audio-volume.md DESTINATION share/doc/creature-audio-router/docs COMPONENT creature-audio-router)
+    install(FILES config/audio-router.json DESTINATION share/doc/creature-audio-router/config COMPONENT creature-audio-router)
+    install(FILES config/audio-router-bass-example.json DESTINATION share/doc/creature-audio-router/examples COMPONENT creature-audio-router)
+endif()
+
+
+if(BUILD_TESTING)
+    add_executable(creature-audio-test
+        tests/audio/AudioOutputKeepalive_test.cpp
+        tests/audio/RtcpPacket_test.cpp
+        tests/audio/RtcpTiming_test.cpp
+        tests/audio/RtpPacket_test.cpp
+        tests/audio/RoutingMixer_test.cpp
+        tests/audio/RtpJitterBuffer_test.cpp
+        tests/audio/AudioEngine_test.cpp
+        tests/audio/RouterConfig_test.cpp
+    )
+    target_link_libraries(creature-audio-test PRIVATE creature_audio_router_config gtest_main)
+    include(GoogleTest)
+    gtest_discover_tests(creature-audio-test)
+endif()
+
+if(CREATURE_BUILD_CONTROLLER)
+add_library(creature_lib
 
         # Configuration Sources
         src/config/CommandLine.cpp
@@ -260,8 +326,6 @@ add_library(creature_lib
         src/util/fast_hsv2rgb_32bit.cpp
         src/util/ranges.cpp
         src/util/MessageQueue.h
-        src/util/thread_name.cpp
-        src/util/thread_name.h
         src/util/string_utils.cpp
         src/util/string_utils.h
         src/util/http_utils.cpp
@@ -335,17 +399,13 @@ if(ALSA_FOUND)
     target_include_directories(creature_lib PUBLIC ${ALSA_INCLUDE_DIRS})
 endif()
 
-target_link_libraries(creature_lib PUBLIC ${AUDIO_PLATFORM_LIBRARIES})
+target_link_libraries(creature_lib PUBLIC creature::audio)
 
 add_executable(creature-controller
         src/main.cpp
         src/audio/audio-config.h
-        src/audio/AlsaMixerControl.cpp
-        src/audio/AlsaMixerControl.h
         src/audio/AudioSubsystem.cpp
         src/audio/AudioSubsystem.h
-        src/audio/OpusRtpAudioClient.cpp
-        src/audio/OpusRtpAudioClient.h
 )
 
 target_link_libraries(creature-controller
@@ -357,8 +417,6 @@ target_link_libraries(creature-controller
         ixwebsocket
         spdlog::spdlog $<$<BOOL:${MINGW}>:ws2_32>
         nlohmann_json::nlohmann_json
-        uvgrtp
-        opus
         CURL::libcurl
 )
 
@@ -378,13 +436,9 @@ install(TARGETS creature-controller
 # Set up testing
 #
 
-enable_testing()
+if(BUILD_TESTING)
 
 add_executable(creature-controller-test
-        tests/audio/AudioOutputKeepalive_test.cpp
-        tests/audio/RtcpPacket_test.cpp
-        tests/audio/RtcpTiming_test.cpp
-        tests/audio/RtpPacket_test.cpp
         tests/config/CreatureBuilder_test.cpp
         tests/creature_test.cpp
         tests/creature/DifferentialHead_test.cpp
@@ -438,6 +492,9 @@ set_property(TARGET creature-controller-test PROPERTY FOLDER "tests")
 # Register the test with CTest
 include(GoogleTest)
 gtest_discover_tests(creature-controller-test)
+
+endif() # BUILD_TESTING
+endif() # CREATURE_BUILD_CONTROLLER
 
 # where to find our CMake modules
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")

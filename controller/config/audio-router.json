@@ -1,0 +1,23 @@
+{
+  "networkInterface": "eth0",
+  "logLevel": "info",
+  "requireRtcp": true,
+  "output": {
+    "deviceName": "hdmi:CARD=vc4hdmi0,DEV=0",
+    "channels": ["front_left", "front_right", "rear_left", "rear_right", "center", "lfe", "side_left", "side_right"],
+    "commonPlayoutDelayMs": 20,
+    "audioDeviceCompensationMs": 0,
+    "limiterCeilingDb": -1.0
+  },
+  "inputs": [
+    {"channel": 1, "gainDb": 0.0},
+    {"channel": 2, "gainDb": 0.0},
+    {"channel": 17, "gainDb": -6.0}
+  ],
+  "routes": [
+    {"input": 1, "output": "front_left"},
+    {"input": 2, "output": "front_right"},
+    {"input": 17, "output": "front_left"},
+    {"input": 17, "output": "front_right"}
+  ]
+}

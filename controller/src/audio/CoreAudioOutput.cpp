@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <cmath>
 #include <cstring>
 #include <string>
 #include <utility>
@@ -110,6 +111,13 @@ class CoreAudioOutput final : public AudioOutput {
 
     bool open(const AudioConfig &config) override {
         close();
+        channels_ = config.channels.size();
+        if (channels_ == 0 || channels_ > 8)
+            return false;
+        outputRing_.resize(std::max<size_t>(AUDIO_OUTPUT_RING_FRAMES,
+                                            static_cast<size_t>(config.commonPlayoutDelayMs) * SAMPLE_RATE / 1000 +
+                                                2 * FRAMES_PER_CHUNK) *
+                           channels_);
 
         const auto devices = enumerateDevices();
         if (devices.empty()) {
@@ -175,10 +183,10 @@ class CoreAudioOutput final : public AudioOutput {
         format.mFormatID = kAudioFormatLinearPCM;
         format.mFormatFlags =
             kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked | kAudioFormatFlagsNativeEndian;
-        format.mBytesPerPacket = sizeof(int16_t);
+        format.mBytesPerPacket = static_cast<UInt32>(sizeof(int16_t) * channels_);
         format.mFramesPerPacket = 1;
-        format.mBytesPerFrame = sizeof(int16_t);
-        format.mChannelsPerFrame = OUTPUT_CH;
+        format.mBytesPerFrame = static_cast<UInt32>(sizeof(int16_t) * channels_);
+        format.mChannelsPerFrame = static_cast<UInt32>(channels_);
         format.mBitsPerChannel = 16;
 
         AURenderCallbackStruct callback{
@@ -191,6 +199,7 @@ class CoreAudioOutput final : public AudioOutput {
             !check(AudioUnitSetProperty(audioUnit_, kAudioUnitProperty_SetRenderCallback, kAudioUnitScope_Input, 0,
                                         &callback, sizeof(callback)),
                    "install output callback") ||
+            !configureChannelMap(config.channels) ||
             !check(AudioUnitInitialize(audioUnit_), "initialize output unit")) {
             close();
             return false;
@@ -252,6 +261,8 @@ class CoreAudioOutput final : public AudioOutput {
     }
 
     bool write(std::span<const int16_t> samples) override {
+        if (samples.size() % channels_ != 0)
+            return false;
         const uint64_t read = readPosition_.load(std::memory_order_acquire);
         const uint64_t write = writePosition_.load(std::memory_order_relaxed);
         const size_t used = static_cast<size_t>(write - read);
@@ -270,9 +281,10 @@ class CoreAudioOutput final : public AudioOutput {
     }
 
     [[nodiscard]] size_t queuedFrames() const override {
-        const uint64_t write = writePosition_.load(std::memory_order_acquire);
+        // Read first: the producer can advance the write cursor while the device consumes.
         const uint64_t read = readPosition_.load(std::memory_order_acquire);
-        return static_cast<size_t>(write - read) + (running_.load() ? pipelineLatencyFrames_ : 0);
+        const uint64_t write = writePosition_.load(std::memory_order_acquire);
+        return static_cast<size_t>(write - read) / channels_ + (running_.load() ? pipelineLatencyFrames_ : 0);
     }
 
     [[nodiscard]] size_t pipelineLatencyFrames() const override { return pipelineLatencyFrames_; }
@@ -291,18 +303,19 @@ class CoreAudioOutput final : public AudioOutput {
         }
 
         auto *destination = static_cast<int16_t *>(buffers->mBuffers[0].mData);
-        const size_t destinationFrames = std::min<size_t>(frames, buffers->mBuffers[0].mDataByteSize / sizeof(int16_t));
+        const size_t destinationSamples = std::min<size_t>(static_cast<size_t>(frames) * channels_,
+                                                           buffers->mBuffers[0].mDataByteSize / sizeof(int16_t));
         const uint64_t read = readPosition_.load(std::memory_order_relaxed);
         const uint64_t write = writePosition_.load(std::memory_order_acquire);
         const size_t available = static_cast<size_t>(write - read);
-        const size_t copied = std::min(destinationFrames, available);
+        const size_t copied = std::min(destinationSamples, available);
 
         const size_t start = static_cast<size_t>(read % outputRing_.size());
         const size_t first = std::min(copied, outputRing_.size() - start);
         std::copy_n(outputRing_.begin() + static_cast<std::ptrdiff_t>(start), first, destination);
         std::copy_n(outputRing_.begin(), copied - first, destination + static_cast<std::ptrdiff_t>(first));
         std::fill(destination + static_cast<std::ptrdiff_t>(copied),
-                  destination + static_cast<std::ptrdiff_t>(destinationFrames), 0);
+                  destination + static_cast<std::ptrdiff_t>(destinationSamples), 0);
         readPosition_.store(read + copied, std::memory_order_release);
 
         for (UInt32 index = 1; index < buffers->mNumberBuffers; ++index) {
@@ -310,10 +323,53 @@ class CoreAudioOutput final : public AudioOutput {
                 std::memset(buffers->mBuffers[index].mData, 0, buffers->mBuffers[index].mDataByteSize);
             }
         }
-        if (copied < destinationFrames && running_.load()) {
+        if (copied < destinationSamples && running_.load()) {
             underruns_.fetch_add(1);
         }
         return noErr;
+    }
+
+    bool configureChannelMap(const std::vector<SpeakerChannel> &channels) {
+        std::vector<unsigned char> storage(offsetof(AudioChannelLayout, mChannelDescriptions) +
+                                           channels.size() * sizeof(AudioChannelDescription));
+        auto *layout = reinterpret_cast<AudioChannelLayout *>(storage.data());
+        layout->mChannelLayoutTag = kAudioChannelLayoutTag_UseChannelDescriptions;
+        layout->mNumberChannelDescriptions = static_cast<UInt32>(channels.size());
+        for (size_t i = 0; i < channels.size(); ++i) {
+            auto &label = layout->mChannelDescriptions[i].mChannelLabel;
+            switch (channels[i]) {
+            case SpeakerChannel::Mono:
+                label = kAudioChannelLabel_Mono;
+                break;
+            case SpeakerChannel::FrontLeft:
+                label = kAudioChannelLabel_Left;
+                break;
+            case SpeakerChannel::FrontRight:
+                label = kAudioChannelLabel_Right;
+                break;
+            case SpeakerChannel::Center:
+                label = kAudioChannelLabel_Center;
+                break;
+            case SpeakerChannel::Lfe:
+                label = kAudioChannelLabel_LFEScreen;
+                break;
+            case SpeakerChannel::RearLeft:
+                label = kAudioChannelLabel_RearSurroundLeft;
+                break;
+            case SpeakerChannel::RearRight:
+                label = kAudioChannelLabel_RearSurroundRight;
+                break;
+            case SpeakerChannel::SideLeft:
+                label = kAudioChannelLabel_LeftSurround;
+                break;
+            case SpeakerChannel::SideRight:
+                label = kAudioChannelLabel_RightSurround;
+                break;
+            }
+        }
+        return check(AudioUnitSetProperty(audioUnit_, kAudioUnitProperty_AudioChannelLayout, kAudioUnitScope_Input, 0,
+                                          layout, static_cast<UInt32>(storage.size())),
+                     "set speaker channel map");
     }
 
     bool check(OSStatus status, const char *operation) const {
@@ -365,7 +421,18 @@ class CoreAudioOutput final : public AudioOutput {
             kAudioObjectPropertyElementMain,
         };
         readProperty(device_, safetyAddress, &safetyOffset, size);
-        return static_cast<size_t>(latency) + safetyOffset + devicePeriodFrames_;
+        Float64 deviceRate = SAMPLE_RATE;
+        size = sizeof(deviceRate);
+        AudioObjectPropertyAddress rateAddress{
+            kAudioDevicePropertyNominalSampleRate,
+            kAudioObjectPropertyScopeGlobal,
+            kAudioObjectPropertyElementMain,
+        };
+        readProperty(device_, rateAddress, &deviceRate, size);
+        if (!std::isfinite(deviceRate) || deviceRate <= 0)
+            deviceRate = SAMPLE_RATE;
+        const double nativeFrames = static_cast<double>(latency) + safetyOffset + devicePeriodFrames_;
+        return static_cast<size_t>(std::ceil(nativeFrames * SAMPLE_RATE / deviceRate));
     }
 
     static double framesToMilliseconds(size_t frames) { return static_cast<double>(frames) * 1000.0 / SAMPLE_RATE; }
@@ -376,7 +443,8 @@ class CoreAudioOutput final : public AudioOutput {
     UInt32 devicePeriodFrames_{AUDIO_DEVICE_PERIOD_FRAMES};
     size_t pipelineLatencyFrames_{0};
 
-    std::array<int16_t, AUDIO_OUTPUT_RING_FRAMES> outputRing_{};
+    size_t channels_{1};
+    std::vector<int16_t> outputRing_;
     std::atomic<uint64_t> readPosition_{0};
     std::atomic<uint64_t> writePosition_{0};
     std::atomic<uint64_t> underruns_{0};

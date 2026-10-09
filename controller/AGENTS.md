@@ -24,7 +24,7 @@ GoogleTest support is wired in but currently disabled. To enable tests, uncommen
 
 ### Packaging
 ```bash
-./make_package.sh  # Builds a Debian package inside Docker
+./make_packages.sh  # Builds both Debian packages inside Docker
 ```
 
 ### Code Formatting

@@ -16,4 +16,4 @@ RUN cmake -S controller/ -B build -G Ninja
 RUN cmake --build build
 
 # Make the package
-RUN cd build && cpack -G DEB && cp *.deb /package
+RUN cd build && cpack -G DEB && cpack --config CPackAudioRouterConfig.cmake -G DEB && cp *.deb /package

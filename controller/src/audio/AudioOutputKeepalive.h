@@ -1,8 +1,8 @@
 #pragma once
 
-#include <array>
 #include <cstddef>
 #include <cstdint>
+#include <vector>
 
 #include "audio/AudioOutput.h"
 #include "audio/audio-config.h"
@@ -11,7 +11,7 @@ namespace creatures::audio {
 
 class AudioOutputKeepalive {
   public:
-    AudioOutputKeepalive(AudioOutput &output, size_t targetFrames);
+    AudioOutputKeepalive(AudioOutput &output, size_t targetFrames, size_t channels = 1);
 
     bool start();
     bool refillSilence();
@@ -19,7 +19,8 @@ class AudioOutputKeepalive {
   private:
     AudioOutput &output_;
     const size_t targetFrames_;
-    std::array<int16_t, FRAMES_PER_CHUNK> silence_{};
+    const size_t channels_;
+    std::vector<int16_t> silence_;
     bool started_{false};
 };
 

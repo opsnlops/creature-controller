@@ -35,7 +35,7 @@ class FakeAudioOutput final : public AudioOutput {
         if (!writeSucceeds) {
             return false;
         }
-        queued += samples.size();
+        queued += samples.size() / channels;
         return true;
     }
 
@@ -43,6 +43,7 @@ class FakeAudioOutput final : public AudioOutput {
     [[nodiscard]] size_t pipelineLatencyFrames() const override { return 0; }
     [[nodiscard]] uint64_t underruns() const override { return 0; }
 
+    size_t channels{1};
     size_t queued{0};
     size_t startCalls{0};
     size_t stopCalls{0};
@@ -123,4 +124,21 @@ TEST(AudioOutputKeepaliveTest, ClearsPrimedFramesWhenStartFails) {
 }
 
 } // namespace
+} // namespace creatures::audio
+
+namespace creatures::audio {
+TEST(AudioOutputKeepaliveTest, MultichannelQueueAccountingUsesFrames) {
+    FakeAudioOutput output;
+    output.channels = 8;
+    AudioOutputKeepalive keepalive(output, 720, 8);
+    ASSERT_TRUE(keepalive.start());
+    EXPECT_EQ(output.queued, 720);
+    EXPECT_EQ(output.writeSizes, (std::vector<size_t>{480 * 8, 240 * 8}));
+    output.queued = 600;
+    output.writeSizes.clear();
+    ASSERT_TRUE(keepalive.refillSilence());
+    EXPECT_EQ(output.queued, 720);
+    EXPECT_EQ(output.writeSizes, (std::vector<size_t>{120 * 8}));
+    EXPECT_TRUE(output.allSamplesWereSilent);
+}
 } // namespace creatures::audio

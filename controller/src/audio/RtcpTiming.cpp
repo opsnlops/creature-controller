@@ -36,6 +36,12 @@ RtcpReportCache::RtcpReportCache(size_t capacity) : capacity_(capacity) {
     }
 }
 
+void RtcpReportCache::clear() {
+    std::lock_guard lock(mutex_);
+    reports_.clear();
+    insertionOrder_.clear();
+}
+
 bool RtcpReportCache::store(RtcpSenderReport report, RtcpSteadyClock::time_point receivedAt) {
     std::lock_guard<std::mutex> lock(mutex_);
     const uint32_t synchronizationSource = report.synchronizationSource;
@@ -86,13 +92,15 @@ RtcpSteadyClock::time_point RtcpClockPair::toSteady(RtcpSystemClock::time_point 
     return steadyTime + std::chrono::duration_cast<RtcpSteadyClock::duration>(time - systemTime);
 }
 
-size_t rtcpIdleQueueFrames(uint16_t commonPlayoutDelayMs, int16_t deviceCompensationMs) {
+size_t rtcpIdleQueueFrames(uint16_t commonPlayoutDelayMs, int16_t deviceCompensationMs, size_t pipelineLatencyFrames) {
     const int positiveCompensation = std::max<int>(0, deviceCompensationMs);
     const int availableQueueMilliseconds =
         static_cast<int>(commonPlayoutDelayMs) - RTCP_ENQUEUE_HEADROOM_MS - positiveCompensation;
     const int queueMilliseconds = std::max<int>(FRAME_MS, availableQueueMilliseconds);
     const size_t configuredFrames = static_cast<size_t>(queueMilliseconds) * SAMPLE_RATE / 1000U;
-    return std::min(TARGET_PLAYOUT_FRAMES * static_cast<size_t>(FRAMES_PER_CHUNK), configuredFrames);
+    const size_t targetFrames = std::max(TARGET_PLAYOUT_FRAMES * static_cast<size_t>(FRAMES_PER_CHUNK),
+                                         pipelineLatencyFrames + FRAMES_PER_CHUNK);
+    return std::min(targetFrames, configuredFrames);
 }
 
 RtcpPlayoutPlanner::RtcpPlayoutPlanner(RtcpClockPair clockPair, std::chrono::milliseconds commonPlayoutDelay,

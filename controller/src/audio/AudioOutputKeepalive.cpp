@@ -2,11 +2,15 @@
 
 #include <algorithm>
 #include <span>
+#include <stdexcept>
 
 namespace creatures::audio {
 
-AudioOutputKeepalive::AudioOutputKeepalive(AudioOutput &output, size_t targetFrames)
-    : output_(output), targetFrames_(targetFrames) {}
+AudioOutputKeepalive::AudioOutputKeepalive(AudioOutput &output, size_t targetFrames, size_t channels)
+    : output_(output), targetFrames_(targetFrames), channels_(channels), silence_(FRAMES_PER_CHUNK * channels) {
+    if (channels == 0 || channels > 8)
+        throw std::invalid_argument("Invalid keepalive channel count");
+}
 
 bool AudioOutputKeepalive::start() {
     if (started_) {
@@ -31,8 +35,8 @@ bool AudioOutputKeepalive::refillSilence() {
 
     size_t framesRemaining = targetFrames_ - queuedFrames;
     while (framesRemaining > 0) {
-        const size_t framesToWrite = std::min(framesRemaining, silence_.size());
-        if (!output_.write(std::span<const int16_t>(silence_.data(), framesToWrite))) {
+        const size_t framesToWrite = std::min<size_t>(framesRemaining, FRAMES_PER_CHUNK);
+        if (!output_.write(std::span<const int16_t>(silence_.data(), framesToWrite * channels_))) {
             return false;
         }
         framesRemaining -= framesToWrite;

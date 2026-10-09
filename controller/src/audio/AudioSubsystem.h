@@ -9,7 +9,7 @@
 #include <string>
 #include <thread>
 
-#include "audio/OpusRtpAudioClient.h"
+#include "audio/AudioEngine.h"
 #include "audio/audio-config.h"
 #include "logging/Logger.h"
 #include "util/StoppableThread.h"
@@ -36,23 +36,27 @@ class AudioSubsystem : public StoppableThread {
     void setBgmGainDb(float gainDb);
 
     /* StoppableThread interface */
+    ~AudioSubsystem() override;
+    void start() override;
     void run() override;
     void shutdown() override;
 
     /* Status and monitoring */
     [[nodiscard]] bool isReceiving() const;
     [[nodiscard]] std::string getStats() const;
-    [[nodiscard]] bool isRunning() const { return running_.load(); }
+    [[nodiscard]] bool isRunning() const {
+        return audioEngine_ && audioEngine_->state() == AudioEngine::State::Running;
+    }
 
   private:
     void monitoringLoop();
 
     std::shared_ptr<creatures::Logger> log_;
-    std::shared_ptr<OpusRtpAudioClient> rtpClient_;
+    std::unique_ptr<AudioEngine> audioEngine_;
     std::thread monThread_;
 
+    uint8_t dialogChannel_{1};
     std::atomic<bool> stopMon_{false};
-    std::atomic<bool> running_{false};
 };
 
 } // namespace creatures::audio

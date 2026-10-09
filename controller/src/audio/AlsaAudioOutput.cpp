@@ -84,6 +84,9 @@ class AlsaAudioOutput final : public AudioOutput {
 
     bool open(const AudioConfig &config) override {
         close();
+        channels_ = config.channels.size();
+        if (channels_ == 0 || channels_ > 8)
+            return false;
 
         std::string deviceName;
         std::optional<size_t> deviceIndex;
@@ -113,7 +116,8 @@ class AlsaAudioOutput final : public AudioOutput {
                    "set interleaved access") ||
             !check(snd_pcm_hw_params_set_format(pcm_, hardwareParameters, SND_PCM_FORMAT_S16),
                    "set signed 16-bit format") ||
-            !check(snd_pcm_hw_params_set_channels(pcm_, hardwareParameters, OUTPUT_CH), "set mono output")) {
+            !check(snd_pcm_hw_params_set_channels(pcm_, hardwareParameters, static_cast<unsigned int>(channels_)),
+                   "set output channel count")) {
             close();
             return false;
         }
@@ -139,10 +143,17 @@ class AlsaAudioOutput final : public AudioOutput {
             return false;
         }
 
-        snd_pcm_uframes_t requestedBuffer = TARGET_PLAYOUT_FRAMES * FRAMES_PER_CHUNK;
+        snd_pcm_uframes_t requestedBuffer =
+            std::max<size_t>(TARGET_PLAYOUT_FRAMES * FRAMES_PER_CHUNK,
+                             static_cast<size_t>(config.commonPlayoutDelayMs) * SAMPLE_RATE / 1000 + FRAMES_PER_CHUNK);
         if (!check(snd_pcm_hw_params_set_buffer_size_near(pcm_, hardwareParameters, &requestedBuffer),
                    "set buffer size") ||
             !check(snd_pcm_hw_params(pcm_, hardwareParameters), "apply hardware parameters")) {
+            close();
+            return false;
+        }
+
+        if (channels_ > 1 && !configureChannelMap(config.channels)) {
             close();
             return false;
         }
@@ -218,27 +229,29 @@ class AlsaAudioOutput final : public AudioOutput {
     }
 
     bool write(std::span<const int16_t> samples) override {
-        if (pcm_ == nullptr) {
+        if (pcm_ == nullptr || samples.size() % channels_ != 0) {
             return false;
         }
 
         size_t offset = 0;
         int waitsRemaining = 10;
         bool recovered = false;
+        int recoveriesRemaining = 3;
         while (offset < samples.size()) {
-            const snd_pcm_sframes_t written =
-                snd_pcm_writei(pcm_, samples.data() + offset, static_cast<snd_pcm_uframes_t>(samples.size() - offset));
+            const snd_pcm_sframes_t written = snd_pcm_writei(
+                pcm_, samples.data() + offset, static_cast<snd_pcm_uframes_t>((samples.size() - offset) / channels_));
             if (written > 0) {
-                offset += static_cast<size_t>(written);
+                offset += static_cast<size_t>(written) * channels_;
                 continue;
             }
             if (written == -EAGAIN && waitsRemaining-- > 0) {
                 snd_pcm_wait(pcm_, PACKET_WAIT_MS);
                 continue;
             }
-            if (written == -EPIPE || written == -ESTRPIPE) {
+            if ((written == -EPIPE || written == -ESTRPIPE) && recoveriesRemaining-- > 0) {
                 underruns_.fetch_add(1);
-                const int recoverResult = snd_pcm_recover(pcm_, static_cast<int>(written), 1);
+                // Preparing drops a failed/suspended queue without an unbounded resume wait.
+                const int recoverResult = snd_pcm_prepare(pcm_);
                 if (recoverResult < 0) {
                     log_->error("Unable to recover ALSA output: {}", snd_strerror(recoverResult));
                     return false;
@@ -278,6 +291,52 @@ class AlsaAudioOutput final : public AudioOutput {
     [[nodiscard]] uint64_t underruns() const override { return underruns_.load(); }
 
   private:
+    bool configureChannelMap(const std::vector<SpeakerChannel> &channels) {
+        std::vector<unsigned int> storage(1 + channels.size());
+        auto *requested = reinterpret_cast<snd_pcm_chmap_t *>(storage.data());
+        requested->channels = static_cast<unsigned int>(channels.size());
+        for (size_t i = 0; i < channels.size(); ++i) {
+            switch (channels[i]) {
+            case SpeakerChannel::FrontLeft:
+                requested->pos[i] = SND_CHMAP_FL;
+                break;
+            case SpeakerChannel::FrontRight:
+                requested->pos[i] = SND_CHMAP_FR;
+                break;
+            case SpeakerChannel::Center:
+                requested->pos[i] = SND_CHMAP_FC;
+                break;
+            case SpeakerChannel::Lfe:
+                requested->pos[i] = SND_CHMAP_LFE;
+                break;
+            case SpeakerChannel::RearLeft:
+                requested->pos[i] = SND_CHMAP_RL;
+                break;
+            case SpeakerChannel::RearRight:
+                requested->pos[i] = SND_CHMAP_RR;
+                break;
+            case SpeakerChannel::SideLeft:
+                requested->pos[i] = SND_CHMAP_SL;
+                break;
+            case SpeakerChannel::SideRight:
+                requested->pos[i] = SND_CHMAP_SR;
+                break;
+            case SpeakerChannel::Mono:
+                requested->pos[i] = SND_CHMAP_MONO;
+                break;
+            }
+        }
+        // Fixed maps may reject setting even when the existing map already matches.
+        (void)snd_pcm_set_chmap(pcm_, requested);
+        auto *actual = snd_pcm_get_chmap(pcm_);
+        const bool matches = actual != nullptr && actual->channels == requested->channels &&
+                             std::equal(requested->pos, requested->pos + requested->channels, actual->pos);
+        std::free(actual);
+        if (!matches)
+            log_->error("ALSA cannot verify the requested speaker map; refusing ambiguous routing");
+        return matches;
+    }
+
     bool check(int result, const char *operation) const {
         if (result >= 0) {
             return true;
@@ -333,6 +392,7 @@ class AlsaAudioOutput final : public AudioOutput {
     snd_pcm_t *pcm_{nullptr};
     snd_pcm_uframes_t periodFrames_{0};
     snd_pcm_uframes_t bufferFrames_{0};
+    size_t channels_{1};
     bool started_{false};
     std::atomic<uint64_t> underruns_{0};
 };

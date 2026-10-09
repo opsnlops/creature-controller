@@ -20,6 +20,7 @@ class AudioOutput {
     virtual void stopAndClear() = 0;
     virtual void close() = 0;
 
+    // Interleaved samples; samples.size() must be a multiple of the configured channel count.
     virtual bool write(std::span<const int16_t> samples) = 0;
 
     // Best available estimate of frames waiting between the application and

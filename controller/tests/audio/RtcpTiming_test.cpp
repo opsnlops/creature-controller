@@ -187,5 +187,11 @@ TEST(RtcpTimingTest, VerifiesCnameAndClockRelationship) {
     EXPECT_FALSE(rtcpClockMappingsCompatible(first, second, 1ms));
 }
 
+TEST(RtcpTimingTest, IdleQueueAccountsForNativePipelineWithinCommonDelayHeadroom) {
+    EXPECT_EQ(rtcpIdleQueueFrames(100, 0, 2400), 2880);
+    EXPECT_EQ(rtcpIdleQueueFrames(40, 0, 2400), 1680);
+    EXPECT_EQ(rtcpIdleQueueFrames(100, 10, 2400), 2880);
+}
+
 } // namespace
 } // namespace creatures::audio

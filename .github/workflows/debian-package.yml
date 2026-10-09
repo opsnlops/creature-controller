@@ -1,14 +1,13 @@
-name: Create Debian Package
+name: Build Debian Packages
 
 on: [push, pull_request]
-
-env:
-  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
-  BUILD_TYPE: Release
 
 jobs:
   build:
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: controller
     strategy:
       fail-fast: false
       matrix:
@@ -16,28 +15,43 @@ jobs:
           - ubuntu-24.04
           - ubuntu-24.04-arm
     steps:
-
-
       - name: Checkout
         uses: actions/checkout@v4
         with:
           submodules: 'true'
 
-      - name: Build in container
-        run: docker build --pull -f ${{github.workspace}}/controller/Dockerfile controller/ -t temp-image
+      - name: Build both Debian packages
+        run: ./make_packages.sh
 
-      - name: Build temp container
-        run: docker create --name temp-container temp-image
+      - name: Verify both Debian packages
+        shell: bash
+        run: |
+          shopt -s nullglob
+          expected_arch=$(dpkg --print-architecture)
+          for package_name in creature-controller creature-audio-router; do
+            packages=(package/"${package_name}"_*.deb)
+            if [ "${#packages[@]}" -ne 1 ]; then
+              echo "Expected exactly one ${package_name} Debian package, found ${#packages[@]}" >&2
+              exit 1
+            fi
+            test "$(dpkg-deb --field "${packages[0]}" Package)" = "$package_name"
+            test "$(dpkg-deb --field "${packages[0]}" Architecture)" = "$expected_arch"
+            dpkg-deb --info "${packages[0]}"
+          done
 
-      - name: Copy Package
-        run: mkdir ${{github.workspace}}/package/ && docker cp temp-container:/package/ ${{github.workspace}}/
-
-      - name: Save artifact
+      - name: Upload creature-controller package
         uses: actions/upload-artifact@v4
         with:
           name: creature-controller-package-${{ matrix.os }}
-          path: ${{github.workspace}}/package/
-          # 7-day retention so per-commit build packages don't pile up
-          # against the account-level Actions storage quota. Grab a package
-          # off a recent commit; older commits should be rebuilt.
+          path: ${{ github.workspace }}/controller/package/creature-controller_*.deb
+          if-no-files-found: error
+          # Keep per-commit package storage bounded; rebuild older commits.
+          retention-days: 7
+
+      - name: Upload creature-audio-router package
+        uses: actions/upload-artifact@v4
+        with:
+          name: creature-audio-router-package-${{ matrix.os }}
+          path: ${{ github.workspace }}/controller/package/creature-audio-router_*.deb
+          if-no-files-found: error
           retention-days: 7

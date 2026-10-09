@@ -24,6 +24,7 @@ class RtcpReportCache {
   public:
     explicit RtcpReportCache(size_t capacity);
 
+    void clear();
     bool store(RtcpSenderReport report, RtcpSteadyClock::time_point receivedAt);
     [[nodiscard]] std::optional<TimedRtcpSenderReport> find(uint32_t synchronizationSource) const;
     [[nodiscard]] bool empty() const;
@@ -70,7 +71,8 @@ class RtcpPlayoutPlanner {
     std::chrono::milliseconds deviceCompensation_;
 };
 
-[[nodiscard]] size_t rtcpIdleQueueFrames(uint16_t commonPlayoutDelayMs, int16_t deviceCompensationMs);
+[[nodiscard]] size_t rtcpIdleQueueFrames(uint16_t commonPlayoutDelayMs, int16_t deviceCompensationMs,
+                                         size_t pipelineLatencyFrames = 0);
 [[nodiscard]] std::optional<RtcpSystemClock::time_point> ntpToSystemTime(uint64_t ntpTimestamp);
 [[nodiscard]] int32_t signedRtpTimestampDifference(uint32_t timestamp, uint32_t reference);
 [[nodiscard]] std::optional<RtcpSystemClock::time_point> rtpSystemTime(const RtcpSenderReport &report,

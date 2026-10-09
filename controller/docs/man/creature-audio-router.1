@@ -1,0 +1,166 @@
+.TH "CREATURE-AUDIO-ROUTER" "1" "2026-10-09" "Creature Workshop" "User Commands"
+.SH NAME
+creature\-audio\-router \- route Creature Workshop audio to HDMI speakers
+.SH SYNOPSIS
+.B creature\-audio\-router
+.RB [ \-\-config " PATH" ]
+.RB [ \-\-check\-config ]
+.br
+.B creature\-audio\-router
+.RB { \-\-list\-sound\-devices " | " \-\-version " | " \-\-help }
+.SH DESCRIPTION
+Receives mono Opus/RTP bird voices and background music from the Creature
+Server and mixes them into one native audio output. Linux uses ALSA;
+macOS uses CoreAudio. The output supports one through eight named channels
+at 48 kHz with signed 16-bit PCM.
+.PP
+Run one process per physical HDMI device. Two named systemd instances can
+use the Raspberry Pi 5's two HDMI outputs. Each process decodes an input
+once, then distributes it through the configured routes and optional
+software bass crossover.
+.SH OPTIONS
+.TP
+.B \-\-config PATH
+Read the JSON configuration from PATH. Default: /etc/creature/audio-router.json.
+.TP
+.B \-\-check\-config
+Validate configuration and exit without opening audio devices or sockets. This does not verify interface availability, device capabilities, permissions, or clock synchronization.
+.TP
+.B \-\-list\-sound\-devices
+List native audio outputs and exit. Use an exact output name in output.deviceName.
+.TP
+.B \-\-version
+Print the product version and exit.
+.TP
+.B \-h, \-\-help
+Print usage and exit.
+.SH CONFIGURATION
+The configuration is a JSON object. Unknown fields, invalid ranges, duplicate
+inputs or routes, and references to unsubscribed inputs are rejected.
+Comments and trailing commas are not supported.
+.SS Network and logging
+.TP
+.B networkInterface
+Required interface name with one IPv4 address, or an explicit local IPv4 address. The interface name is resolved at startup.
+.TP
+.B rtpPort
+RTP UDP port, 1 through 65534. Default: 5004. RTCP uses the adjacent port, normally 5005.
+.TP
+.B requireRtcp
+Require usable BGM RTCP timing before playback. Default: true. Setting false permits arrival-time fallback for an entire source generation.
+.TP
+.B logLevel
+One of trace, debug, info, warn, error, critical, or off. Default: info. Logs are written to standard output for capture by the journal.
+.SS Output
+The required output object contains deviceName and channels.
+.TP
+.B deviceName
+Exact native output name. Startup fails if the selected device cannot be opened.
+.TP
+.B channels
+Ordered array of speaker names: front_left, front_right, rear_left, rear_right, center, lfe, side_left, and side_right. The separate mono name is valid only for a single-channel output. Names must be unique. ALSA must expose a verifiable multichannel speaker map.
+.TP
+.B commonPlayoutDelayMs
+Shared presentation delay, 20 through 500 ms. Default: 20. Use the same value on synchronized routers and controllers.
+.TP
+.B audioDeviceCompensationMs
+Per-device correction, -100 through +100 ms. Default: 0. Positive values enqueue earlier to account for additional output latency. The common delay must leave at least 15 ms plus any positive compensation; measured native pipeline latency may require more.
+.TP
+.B limiterCeilingDb
+Final PCM clamp ceiling, -90 through 0 dB. Default: -1. Provide mixing headroom with input and route gains.
+.TP
+.B outputVolumePercent
+Optional ALSA hardware playback volume, 0 through 100. Omit to leave hardware volume unchanged.
+.TP
+.B alsaMixerCard
+ALSA mixer card for optional hardware volume. Default: default.
+.TP
+.B alsaMixerElement
+Optional ALSA playback-volume element. When omitted, common playback elements are preferred.
+.SS Inputs and routes
+The required inputs array contains objects with channel and optional gainDb.
+Bird channels are 1 through 16; channel 17 is BGM and must be subscribed as
+the timing master, even if it has no audible route. Each input joins
+239.19.63.<channel>. Input gain defaults to 0 dB.
+.PP
+The required routes array contains objects with input (a subscribed channel
+number), output (a configured speaker name), and optional gainDb (default 0).
+Input gain applies before fanout; route gain trims an individual destination.
+All gains accept -90 through +12 dB. Unrouted outputs remain silent.
+.SS Optional bass crossover
+The bass object selects an output named lfe, a crossoverHz value from 20
+through 200 (default 80), gainDb (default 0), and invertPolarity (default false).
+Its required inputs array contains source channel and optional gainDb objects.
+Each source contributes once, independent of ordinary route fanout.
+.PP
+Optional highPassOutputs names the full-range destinations receiving
+complementary high-pass filtering. The filters use a fourth-order
+Linkwitz-Riley crossover. Without highPassOutputs, ordinary routes stay
+full range. The bass output cannot also receive an ordinary route.
+.SH SYNCHRONIZATION
+Keep the server and receiving hosts' system clocks synchronized, normally
+through the workshop PTP deployment. RTCP maps the server media timeline
+to wall time; it does not synchronize host clocks.
+.PP
+BGM establishes the presentation timeline. A bird joins after its matching
+RTCP report has the same CNAME and a compatible RTP/wall-clock relationship.
+A missing or incompatible bird remains silent independently of BGM.
+With requireRtcp enabled, unusable BGM timing keeps the output silent.
+.PP
+The audio device remains running through idle periods. Measure physical
+HDMI/AVR latency before setting compensation. RTCP aligns session starts;
+continuous correction of independent DAC clock drift is not implemented.
+.SH SERVICES
+The default service uses /etc/creature/audio-router.json. A named instance
+creature-audio-router@NAME.service uses /etc/creature/audio-router/NAME.json.
+Use one owner per physical audio device.
+.PP
+Services are disabled on first installation. They run as dynamic users with
+membership in audio. Configuration files must be readable by those users.
+After editing a file, validate it and restart its owning service.
+.SH FILES
+.TP
+.B /etc/creature/audio\-router.json
+Default service configuration; a Debian conffile preserved across upgrades.
+.TP
+.B /etc/creature/audio\-router/NAME.json
+Site configuration for a named instance.
+.TP
+.B /usr/share/doc/creature\-audio\-router/examples/audio\-router\-bass\-example.json
+Complete software bass configuration example.
+.TP
+.B /usr/share/doc/creature\-audio\-router/docs/audio\-router\-setup.md
+Installation, speaker assignment, calibration, and troubleshooting manual.
+.SH EXAMPLES
+Validate the default configuration:
+.PP
+.nf
+creature-audio-router --check-config
+.fi
+.PP
+Start the configured default service:
+.PP
+.nf
+sudo systemctl enable --now creature-audio-router.service
+journalctl -u creature-audio-router.service -f
+.fi
+.PP
+Validate and start a configured HDMI instance:
+.PP
+.nf
+creature-audio-router --check-config \e
+    --config /etc/creature/audio-router/hdmi0.json
+sudo systemctl enable --now creature-audio-router@hdmi0.service
+.fi
+.SH SIGNALS
+SIGINT and SIGTERM request orderly shutdown. Configuration changes require
+a restart; there is no live configuration reload.
+.SH EXIT STATUS
+0 indicates successful validation, informational output, or orderly shutdown.
+1 indicates invalid arguments/configuration or a startup/runtime failure.
+.SH SEE ALSO
+.BR creature-server (1),
+.BR speaker-test (1),
+.BR aplay (1),
+.BR systemctl (1),
+.BR journalctl (1)

@@ -10,18 +10,17 @@ and one motion frame.
 
 ## Clock requirement
 
-Every controller host must synchronize its system clock to the Creature Server
-through the LAN NTP service. RTCP maps the server's 48 kHz RTP timeline to NTP
+Every controller and router host must synchronize its system clock to the Creature Server
+through PTP (including synchronization of the system clock to the PTP clock). RTCP maps the server's 48 kHz RTP timeline to NTP
 wall time; it does not synchronize the host clock itself.
 
-At the beginning of an RTP SSRC generation, the controller waits briefly for
-fresh RTCP Sender Reports for both its dialog stream and the BGM stream. It
-uses RTCP only when:
-
-- each report matches the current RTP SSRC;
-- both reports contain the same SDES CNAME;
-- their NTP/RTP clock relationships agree;
-- the mapped deadline is consistent with the packet's LAN arrival time.
+At the beginning of a BGM RTP SSRC generation, the shared audio engine waits
+briefly for a fresh BGM Sender Report. It uses RTCP only when the report matches
+the current RTP SSRC, contains an SDES CNAME, and its mapped deadline is
+consistent with the packet's LAN arrival time. Each bird is independently
+qualified against BGM: its matching-SSRC report must have the same CNAME and
+agree with BGM's NTP/RTP relationship within 1 ms. Missing or incompatible
+birds stay silent; BGM keeps its selected timing.
 
 The last check rejects mappings more than 10 ms from the arrival-based
 estimate. The fallback warning includes a signed `mapping/arrival delta`; a
@@ -42,7 +41,8 @@ decoding, and enqueue scheduling. The controller places the first real frame
 behind that silence so the sample reaches the speaker at the RTCP presentation
 deadline. It does not restart the audio device for each sound.
 
-If a usable RTCP mapping is unavailable, the controller selects the existing
+The router defaults to requiring RTCP and remains silent without a usable BGM
+mapping. If a usable RTCP mapping is unavailable, the controller selects the existing
 arrival-time behavior for that complete SSRC generation. It never changes an
 active generation from fallback timing to RTCP timing because that would cause
 an audible timeline step.
@@ -71,8 +71,7 @@ reduces enqueue headroom; increase `commonPlayoutDelayMs` when necessary.
 At each stream generation, the controller reports:
 
 - selected timing mode (`rtcp` or `arrival_fallback`);
-- dialog and BGM SSRCs and the shared CNAME;
-- the selected NTP/RTP mapping;
+- BGM SSRC, RTP timestamp, and CNAME;
 - common delay and device compensation;
 - the mapping/arrival delta used to diagnose clock synchronization;
 - predicted first-sample lateness in microseconds.
