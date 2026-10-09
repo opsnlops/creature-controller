@@ -16,7 +16,8 @@ if ldd /usr/bin/creature-audio-router | grep -q 'not found'; then exit 1; fi
 [ ! -e /usr/bin/creature-controller ]
 [ -d /etc/creature/audio-router ]
 dpkg-query -W -f='${Conffiles}\n' creature-audio-router | grep -q '/etc/creature/audio-router.json'
-systemd-analyze verify /usr/lib/systemd/system/creature-audio-router.service /usr/lib/systemd/system/creature-audio-router@.service
+# The archive check above covers the manual excluded by the container's dpkg policy.
+systemd-analyze --man=no verify /usr/lib/systemd/system/creature-audio-router.service /usr/lib/systemd/system/creature-audio-router@.service
 printf '\n' >> /etc/creature/audio-router.json
 before=$(md5sum /etc/creature/audio-router.json)
 dpkg -i "$package"
