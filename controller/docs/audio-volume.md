@@ -21,6 +21,20 @@ compatibility. Names such as `plughw:CARD=S3,DEV=0` remain stable when ALSA
 enumeration order changes. If a configured name is unavailable, audio
 initialization fails instead of silently selecting another output.
 
+Device discovery does not require configuration files:
+
+```sh
+creature-controller --list-sound-devices
+creature-controller --list-network-devices
+```
+
+Controller device 0 is ALSA's `default` entry, not hardware card 0. On a Pi,
+`default` may resolve to HDMI even when playback should use an I²S or USB DAC.
+For example, Kenny's BossDAC uses `"audioDeviceName": "plughw:CARD=BossDAC,DEV=0"`.
+An ALSA open error of -524 means playback is unsupported by the selected device;
+an HDMI output without a connected audio-capable sink can produce this error.
+Use the discovery output to select the intended DAC explicitly.
+
 On CoreAudio, `audioDeviceName` matches the displayed device name and must
 identify exactly one device. When no name is configured, device 0 remains the
 platform's default output.

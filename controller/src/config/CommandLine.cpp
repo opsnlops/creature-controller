@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <iostream>
 #include <map>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -48,6 +49,15 @@ Result<std::shared_ptr<config::Configuration>> CommandLine::parseCommandLine(int
 
     try {
         program.parse_args(argc, argv);
+        const bool listingDevices =
+            program.get<bool>("--list-network-devices") || program.get<bool>("--list-sound-devices");
+        if (!listingDevices) {
+            for (const auto *argument : {"--config", "--creature-config"}) {
+                if (program.present<std::string>(argument).value_or("").empty()) {
+                    throw std::runtime_error(std::string(argument) + ": required unless listing devices");
+                }
+            }
+        }
     } catch (const std::exception &err) {
         logger->critical("Command line parsing error: {}", err.what());
         std::cerr << "\n" << program;
@@ -100,9 +110,11 @@ Result<std::shared_ptr<config::Configuration>> CommandLine::parseCommandLine(int
 }
 
 void CommandLine::setupCommandLineArguments(argparse::ArgumentParser &program) {
-    program.add_argument("--creature-config").help("JSON file for this creature").nargs(1).required();
+    program.add_argument("--creature-config")
+        .help("JSON file for this creature (required unless listing devices)")
+        .nargs(1);
 
-    program.add_argument("--config").help("Our configuration file").nargs(1).required();
+    program.add_argument("--config").help("Our configuration file (required unless listing devices)").nargs(1);
 
     program.add_argument("--list-network-devices")
         .help("List available network devices and exit")

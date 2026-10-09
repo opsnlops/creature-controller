@@ -104,7 +104,20 @@ class AlsaAudioOutput final : public AudioOutput {
 
         int result = snd_pcm_open(&pcm_, deviceName.c_str(), SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
         if (result < 0) {
-            log_->error("Unable to open configured ALSA output '{}': {}", deviceName, snd_strerror(result));
+            // Linux drivers can return ENOTSUPP (524), which libc/ALSA do not describe.
+            const char *reason =
+                result == -524 ? "Playback is not supported by the selected device" : snd_strerror(result);
+            log_->error("Unable to open configured ALSA output '{}' (error {}): {}", deviceName, result, reason);
+            if (deviceName == "default") {
+                log_->error("ALSA 'default' may select a different card than your DAC. Audio device 0 is the default "
+                            "entry, not hardware card 0; select the intended output by name.");
+            }
+            if (result == -524) {
+                log_->error("On Raspberry Pi, an HDMI output without a connected audio-capable display or AVR can "
+                            "return this error. For an I2S or USB DAC, select that DAC's named ALSA output.");
+            }
+            log_->error("Run --list-sound-devices to find output names. Set audioDeviceName in the controller config "
+                        "or output.deviceName in the audio router config (for example, plughw:CARD=<card>,DEV=0).");
             pcm_ = nullptr;
             return false;
         }

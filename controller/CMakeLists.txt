@@ -492,6 +492,9 @@ set_property(TARGET creature-controller-test PROPERTY FOLDER "tests")
 # Register the test with CTest
 include(GoogleTest)
 gtest_discover_tests(creature-controller-test)
+add_test(NAME CommandLineDeviceDiscovery
+         COMMAND ${CMAKE_COMMAND} -DCONTROLLER=$<TARGET_FILE:creature-controller>
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/config/CommandLineDeviceDiscovery.cmake)
 
 endif() # BUILD_TESTING
 endif() # CREATURE_BUILD_CONTROLLER
