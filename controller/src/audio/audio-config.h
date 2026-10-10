@@ -56,7 +56,19 @@ inline constexpr float DEFAULT_LIMITER_CEILING_DB = -1.0f;
 inline constexpr float MIN_GAIN_DB = -90.0f;
 inline constexpr float MAX_GAIN_DB = 12.0f;
 
-enum class SpeakerChannel { Mono, FrontLeft, FrontRight, Center, Lfe, RearLeft, RearRight, SideLeft, SideRight };
+enum class SpeakerChannel {
+    Mono,
+    FrontLeft,
+    FrontRight,
+    Center,
+    Lfe,
+    RearLeft,
+    RearRight,
+    SideLeft,
+    SideRight,
+    RearLeftCenter,
+    RearRightCenter
+};
 
 [[nodiscard]] const char *speakerChannelName(SpeakerChannel channel);
 [[nodiscard]] SpeakerChannel parseSpeakerChannel(const std::string &name);

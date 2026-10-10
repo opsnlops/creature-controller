@@ -195,7 +195,7 @@ if(ALSA_FOUND)
     target_compile_definitions(creature_audio PRIVATE CREATURE_HAS_ALSA=1)
 endif()
 
-set(CREATURE_AUDIO_ROUTER_VERSION "0.1.1")
+set(CREATURE_AUDIO_ROUTER_VERSION "0.1.2")
 add_library(creature_audio_router_config STATIC src/audio-router/RouterConfig.cpp)
 target_link_libraries(creature_audio_router_config PUBLIC creature::audio nlohmann_json::nlohmann_json)
 add_executable(creature-audio-router src/audio-router/main.cpp)

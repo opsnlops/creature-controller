@@ -334,6 +334,12 @@ class AlsaAudioOutput final : public AudioOutput {
             case SpeakerChannel::SideRight:
                 requested->pos[i] = SND_CHMAP_SR;
                 break;
+            case SpeakerChannel::RearLeftCenter:
+                requested->pos[i] = SND_CHMAP_RLC;
+                break;
+            case SpeakerChannel::RearRightCenter:
+                requested->pos[i] = SND_CHMAP_RRC;
+                break;
             case SpeakerChannel::Mono:
                 requested->pos[i] = SND_CHMAP_MONO;
                 break;
@@ -344,10 +350,34 @@ class AlsaAudioOutput final : public AudioOutput {
         auto *actual = snd_pcm_get_chmap(pcm_);
         const bool matches = actual != nullptr && actual->channels == requested->channels &&
                              std::equal(requested->pos, requested->pos + requested->channels, actual->pos);
-        std::free(actual);
-        if (!matches)
+        if (!matches) {
             log_->error("ALSA cannot verify the requested speaker map; refusing ambiguous routing");
+            log_->error("  requested: {}", formatChannelMap(requested));
+            log_->error("  reported:  {}", actual != nullptr ? formatChannelMap(actual) : "none (device has no map)");
+            logAvailableChannelMaps();
+        }
+        std::free(actual);
         return matches;
+    }
+
+    static std::string formatChannelMap(const snd_pcm_chmap_t *map) {
+        char buffer[256];
+        return snd_pcm_chmap_print(map, sizeof(buffer), buffer) >= 0 ? std::string(buffer) : std::string("unprintable");
+    }
+
+    void logAvailableChannelMaps() const {
+        snd_pcm_chmap_query_t **maps = snd_pcm_query_chmaps(pcm_);
+        if (maps == nullptr) {
+            log_->error("  available: none reported by the device");
+            return;
+        }
+        for (snd_pcm_chmap_query_t **map = maps; *map != nullptr; ++map) {
+            if ((*map)->map.channels == channels_) {
+                log_->error("  available ({}): {}", snd_pcm_chmap_type_name((*map)->type),
+                            formatChannelMap(&(*map)->map));
+            }
+        }
+        snd_pcm_free_chmaps(maps);
     }
 
     bool check(int result, const char *operation) const {

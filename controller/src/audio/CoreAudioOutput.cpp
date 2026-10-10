@@ -365,6 +365,12 @@ class CoreAudioOutput final : public AudioOutput {
             case SpeakerChannel::SideRight:
                 label = kAudioChannelLabel_RightSurround;
                 break;
+            case SpeakerChannel::RearLeftCenter:
+                label = kAudioChannelLabel_LeftSurroundDirect;
+                break;
+            case SpeakerChannel::RearRightCenter:
+                label = kAudioChannelLabel_RightSurroundDirect;
+                break;
             }
         }
         return check(AudioUnitSetProperty(audioUnit_, kAudioUnitProperty_AudioChannelLayout, kAudioUnitScope_Input, 0,

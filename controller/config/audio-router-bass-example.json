@@ -3,7 +3,7 @@
   "requireRtcp": true,
   "output": {
     "deviceName": "hdmi:CARD=vc4hdmi0,DEV=0",
-    "channels": ["front_left", "front_right", "rear_left", "rear_right", "center", "lfe", "side_left", "side_right"],
+    "channels": ["front_left", "front_right", "lfe", "center", "rear_left", "rear_right", "rear_left_center", "rear_right_center"],
     "commonPlayoutDelayMs": 20,
     "audioDeviceCompensationMs": 0,
     "limiterCeilingDb": -1.0

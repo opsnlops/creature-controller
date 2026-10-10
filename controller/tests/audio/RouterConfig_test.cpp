@@ -21,6 +21,14 @@ TEST(RouterConfigTest, UsesNamedRoutesAndDefaultsToRequiredRtcp) {
     EXPECT_EQ(config.engine.output.channels[2], SpeakerChannel::Lfe);
     EXPECT_EQ(config.engine.bass->sends.size(), 1);
 }
+TEST(RouterConfigTest, AcceptsPiHdmiSevenOneChannelOrder) {
+    auto json = configJson();
+    json["output"]["channels"] = {"front_left",       "front_right",      "lfe", "center", "rear_left", "rear_right",
+                                  "rear_left_center", "rear_right_center"};
+    const auto config = parseRouterConfig(json);
+    EXPECT_EQ(config.engine.output.channels[6], SpeakerChannel::RearLeftCenter);
+    EXPECT_EQ(config.engine.output.channels[7], SpeakerChannel::RearRightCenter);
+}
 TEST(RouterConfigTest, RejectsUnknownFieldsAndInvalidTypes) {
     auto json = configJson();
     json["outpt"] = 1;

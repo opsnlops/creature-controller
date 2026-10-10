@@ -59,7 +59,7 @@ It should report `arm64` for the supplied ARM64 build. Copy the `.deb` to the
 Pi, change into that directory, and install it:
 
 ```sh
-sudo apt install ./creature-audio-router_0.1.1_arm64.deb
+sudo apt install ./creature-audio-router_0.1.2_arm64.deb
 sudo apt install alsa-utils tcpdump
 creature-audio-router --version
 ```
@@ -138,27 +138,29 @@ speaker-test -D "$HDMI_DEVICE" -c 8 -r 48000 -t sine -f 60 -s 6
 ```
 
 The [Debian speaker-test manual](https://manpages.debian.org/trixie/alsa-utils/speaker-test.1.en.html)
-describes the channel numbering and test options. For the channel order used
-in our example configuration:
+describes the channel numbering and test options. The Pi's HDMI driver uses
+a fixed CEA-861 channel order, which the example configuration matches:
 
 | PCM channel | Router name | Expected Denon connection | Your bird or speaker |
 | --- | --- | --- | --- |
 | 1 | `front_left` | Front L | |
 | 2 | `front_right` | Front R | |
-| 3 | `rear_left` | Surround Back L | |
-| 4 | `rear_right` | Surround Back R | |
-| 5 | `center` | Center | |
-| 6 | `lfe` | Subwoofer | Shared bass |
-| 7 | `side_left` | Surround L | |
-| 8 | `side_right` | Surround R | |
+| 3 | `lfe` | Subwoofer | Shared bass |
+| 4 | `center` | Center | |
+| 5 | `rear_left` | Surround L | |
+| 6 | `rear_right` | Surround R | |
+| 7 | `rear_left_center` | Surround Back L | |
+| 8 | `rear_right_center` | Surround Back R | |
 
-Keep the router's `output.channels` array in this order initially. Changing
-route destinations changes where a bird plays; changing the channel array
-changes the requested PCM speaker map.
+Keep the router's `output.channels` array in exactly this order. The Pi's
+speaker map is read-only, so the router cannot request a different order; it
+verifies that the configured order matches the driver's map and refuses to
+start otherwise. Changing route destinations changes where a bird plays.
 
-The router sets or verifies the ALSA speaker map at startup. An ambiguous map
-causes startup to fail. After the tone tests, repeat the assignment check
-using actual bird streams through the router; that verifies the complete path.
+On a mismatch, the startup log lists the requested map, the map the driver
+reported, and the maps the device offers. After the tone tests, repeat the
+assignment check using actual bird streams through the router; that verifies
+the complete path.
 
 ## Configure two birds and BGM
 
@@ -180,8 +182,8 @@ HDMI device, and bird channel numbers with your assignments:
   "output": {
     "deviceName": "hdmi:CARD=vc4hdmi0,DEV=0",
     "channels": [
-      "front_left", "front_right", "rear_left", "rear_right",
-      "center", "lfe", "side_left", "side_right"
+      "front_left", "front_right", "lfe", "center",
+      "rear_left", "rear_right", "rear_left_center", "rear_right_center"
     ],
     "commonPlayoutDelayMs": 20,
     "audioDeviceCompensationMs": 0,
@@ -447,7 +449,7 @@ speaker routing.
 | Config check passes but startup fails | Check the exact device name, local interface address, permissions, and device capabilities in the startup log. Offline validation does not test these. |
 | HDMI device missing or only stereo available | Check power, input selection, cable, and direct Pi-to-AVR connection. Repeat device enumeration after the AVR is ready. |
 | Device busy | Stop speaker-test, other sound applications, and any other router instance using that same HDMI device. |
-| Ambiguous speaker map | Use a device exposing a verifiable eight-channel map. Do not bypass this by guessing channel positions. |
+| Ambiguous speaker map | Compare the requested and reported maps in the log, and set `output.channels` to the reported order. An empty or unknown reported map means the device cannot verify positions; check the HDMI connection and AVR power. |
 | Output pipeline exceeds headroom | Increase the common delay on all synchronized nodes; check positive compensation values. |
 | Silent output with BGM waiting for RTCP | Check BGM RTP and RTCP, the server timeline, matching reports, and PTP system-clock synchronization. |
 | BGM plays but one bird is silent | Check its server channel, subscription, route, matching RTCP SSRC/CNAME, and clock mapping. |

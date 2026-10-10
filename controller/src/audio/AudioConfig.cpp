@@ -27,14 +27,19 @@ const char *speakerChannelName(SpeakerChannel channel) {
         return "side_left";
     case SpeakerChannel::SideRight:
         return "side_right";
+    case SpeakerChannel::RearLeftCenter:
+        return "rear_left_center";
+    case SpeakerChannel::RearRightCenter:
+        return "rear_right_center";
     }
     throw std::invalid_argument("Invalid speaker channel");
 }
 
 SpeakerChannel parseSpeakerChannel(const std::string &name) {
-    for (auto channel : {SpeakerChannel::Mono, SpeakerChannel::FrontLeft, SpeakerChannel::FrontRight,
-                         SpeakerChannel::Center, SpeakerChannel::Lfe, SpeakerChannel::RearLeft,
-                         SpeakerChannel::RearRight, SpeakerChannel::SideLeft, SpeakerChannel::SideRight}) {
+    for (auto channel :
+         {SpeakerChannel::Mono, SpeakerChannel::FrontLeft, SpeakerChannel::FrontRight, SpeakerChannel::Center,
+          SpeakerChannel::Lfe, SpeakerChannel::RearLeft, SpeakerChannel::RearRight, SpeakerChannel::SideLeft,
+          SpeakerChannel::SideRight, SpeakerChannel::RearLeftCenter, SpeakerChannel::RearRightCenter}) {
         if (name == speakerChannelName(channel))
             return channel;
     }
