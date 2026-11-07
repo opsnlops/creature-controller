@@ -59,7 +59,7 @@ It should report `arm64` for the supplied ARM64 build. Copy the `.deb` to the
 Pi, change into that directory, and install it:
 
 ```sh
-sudo apt install ./creature-audio-router_0.1.2_arm64.deb
+sudo apt install ./creature-audio-router_0.1.4_arm64.deb
 sudo apt install alsa-utils tcpdump
 creature-audio-router --version
 ```

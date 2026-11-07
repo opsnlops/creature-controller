@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.18)
 
 project(creature-controller
-        VERSION "4.6.2"
+        VERSION "4.6.3"
         DESCRIPTION "April's Creature Workshop Controller"
         HOMEPAGE_URL https://github.com/opsnlops/creature-controller
         LANGUAGES C CXX)
@@ -207,7 +207,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_compile_definitions(creature_mdns PUBLIC CREATURE_HAS_AVAHI=1)
 endif()
 
-set(CREATURE_AUDIO_ROUTER_VERSION "0.1.2")
+set(CREATURE_AUDIO_ROUTER_VERSION "0.1.4")
 add_library(creature_audio_router_config STATIC src/audio-router/RouterConfig.cpp src/audio-router/RouterMdns.cpp)
 target_link_libraries(creature_audio_router_config PUBLIC creature::audio creature_mdns nlohmann_json::nlohmann_json)
 add_executable(creature-audio-router src/audio-router/main.cpp)
