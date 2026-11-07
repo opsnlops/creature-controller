@@ -1,0 +1,3 @@
+# Start the controller for whichever creature is plugged in. The USB product name
+# comes from the board's EEPROM and selects the creature's configuration.
+SUBSYSTEM=="tty", ENV{ID_BUS}=="usb", ENV{ID_VENDOR}=="April_s_Creature_Workshop", ENV{ID_USB_INTERFACE_NUM}=="00", SYMLINK+="creature/$env{ID_MODEL}", TAG+="systemd", ENV{SYSTEMD_WANTS}+="creature-controller@$env{ID_MODEL}.service"

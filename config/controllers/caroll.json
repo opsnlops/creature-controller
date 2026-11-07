@@ -1,0 +1,27 @@
+{
+  "creatureServer": {
+    "enabled": true,
+    "port": 8000,
+    "address": "10.19.63.5"
+  },
+  "logLevel": "debug",
+  "universe": 2,
+  "useRTPAudio": true,
+  "audioDeviceName": "plughw:CARD=BossDAC,DEV=0",
+  "dialogGainDb": 0.0,
+  "bgmGainDb": -3.0,
+  "limiterCeilingDb": -1.0,
+  "outputVolumePercent": 95,
+  "alsaMixerCard": "hw:BossDAC",
+  "alsaMixerElement": "Digital",
+  "networkInterface": "eth0",
+  "temperatureLimitDegrees": 165.0,
+  "temperatureWarningDegrees": 150.0,
+  "temperatureLimitSeconds": 10.0,
+  "dynamixelTemperatureLimitDegrees": 150.0,
+  "dynamixelTemperatureWarningDegrees": 140.0,
+  "dynamixelTemperatureLimitSeconds": 10.0,
+  "dynamixelLoadLimitPercent": 95.0,
+  "dynamixelLoadWarningPercent": 80.0,
+  "dynamixelLoadLimitSeconds": 5.0
+}

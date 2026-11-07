@@ -26,6 +26,7 @@ GoogleTest support is wired in but currently disabled. To enable tests, uncommen
 ```bash
 ./make_packages.sh  # Builds both Debian packages inside Docker
 ```
+The controller package ships every creature config from the repository's top-level `config/`, and each creature's controller config from `config/controllers/`. A udev rule in `packaging/controller/` starts `creature-controller@NAME.service` from the board's USB product name, and the lowercase name selects both `NAME.json` files.
 
 ### Code Formatting
 ```bash
@@ -78,7 +79,6 @@ Creature Server → DMX → Creature Controller (Linux host) → Pi Pico 2040 �
 **Device Abstraction** (`src/device/`)
 - `Servo`: Servo motor interface.
 - `Stepper`: Stepper motor control.
-- `GPIO`: General-purpose I/O helpers.
 
 ## Communication Protocol
 
@@ -115,7 +115,7 @@ Creature definitions are JSON files specifying:
 - UART devices for Pi Pico links
 - Motor assignments and safety limits
 - DMX universe/IP settings
-- Creature-specific parameters
+- Creature-specific parameters, including its required power limits
 
 Examples live in `config/`:
 - `controller-config.json` — primary controller setup
@@ -143,6 +143,8 @@ The shutdown path has been tightened recently:
 - Serial threads rely on timeout-based loops.
 - `std::exit()` replaced with recoverable errors.
 - Serial failures return `Result<bool>` instead of aborting.
+- A failed serial port, stalled write, or pong timeout makes `main` shut down and exit non-zero so the service manager restarts it.
+- After an emergency stop the firmware goes silent by design, so these failures are ignored and frames stop. Never restart past an ESTOP.
 
 **Message Passing**
 - `MessageProcessor` / `MessageRouter` use `pop_timeout(100ms)`.

@@ -34,7 +34,6 @@
 #include "controller/Controller.h"
 #include "controller/ServoModuleHandler.h"
 #include "controller/tasks/PingTask.h"
-#include "device/GPIO.h"
 #include "dmx/E131Client.h"
 #include "io/Message.h"
 #include "io/MessageProcessor.h"
@@ -413,11 +412,6 @@ int main(int argc, char **argv) {
         workerThreads.push_back(serverConnection);
     }
 
-    // Bring up the GPIO pins if enabled on the command line
-    auto gpio = std::make_shared<creatures::device::GPIO>(makeLogger("gpio"), config->getUseGPIO());
-    gpio->init();
-    gpio->toggleFirmwareReset();
-
     // Make the MessageRouter (it will be started later in the boot process)
     auto messageRouter = std::make_shared<creatures::io::MessageRouter>(makeLogger("message-router"));
 
@@ -425,6 +419,9 @@ int main(int argc, char **argv) {
     auto controller = std::make_shared<Controller>(makeLogger("controller"), creature, messageRouter);
     controller->start();
     workerThreads.push_back(controller);
+
+    // Kept so the main loop can notice when a module's link fails
+    std::vector<std::shared_ptr<ServoModuleHandler>> servoModuleHandlers;
 
     /**
      * Create and start the ServoModuleHandler for the UART devices that were found in the config file
@@ -451,6 +448,7 @@ int main(int argc, char **argv) {
         handler->start();
 
         workerThreads.push_back(handler);
+        servoModuleHandlers.push_back(handler);
     }
 
     // Now that the controller is running, we can start the creature
@@ -479,7 +477,7 @@ int main(int argc, char **argv) {
     if (!config->getWatchdogDisabled()) {
         logger->debug("starting the watchdog thread");
         auto watchdogThread = std::make_shared<creatures::watchdog::WatchdogThread>(
-            makeLogger("watchdog"), config, websocketOutgoingQueue, messageRouter);
+            makeLogger("watchdog"), config, creature, websocketOutgoingQueue, messageRouter);
         watchdogThread->start();
         workerThreads.push_back(watchdogThread);
     } else {
@@ -496,8 +494,21 @@ int main(int argc, char **argv) {
 
     // Main loop - run until shutdown is requested
     logger->info("All systems running! Press Ctrl+C to shutdown gracefully.");
+    int exitCode = EXIT_SUCCESS;
     while (!shutdown_requested.load()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+        // A module we can't reach can't be driven or stopped, so don't limp along
+        // without it. Exit with a failure and let the service manager restart us.
+        for (const auto &handler : servoModuleHandlers) {
+            if (auto failure = handler->getCommunicationFailure()) {
+                logger->critical("Lost communication with module {}: {}",
+                                 UARTDevice::moduleNameToString(handler->getModuleName()), *failure);
+                exitCode = EXIT_FAILURE;
+                shutdown_requested.store(true);
+                break;
+            }
+        }
     }
 
     // Graceful shutdown sequence
@@ -526,5 +537,5 @@ int main(int argc, char **argv) {
     }
 
     logger->info("Graceful shutdown complete.");
-    return EXIT_SUCCESS;
+    return exitCode;
 }

@@ -20,6 +20,9 @@ COPY CMakeLists.txt /build/creature-controller/
 COPY LICENSE /build/creature-controller/LICENSE
 COPY README.md /build/creature-controller/README.md
 
+# The creature configurations live outside this build context
+COPY --from=creature-configs . /build/config
+
 # Create the build directory and run the build
 WORKDIR /build/creature-controller
 RUN cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -B build -G Ninja
@@ -58,5 +61,12 @@ COPY --from=packages /package/creature-audio-router_*.deb /tmp/creature-audio-ro
 COPY packaging/audio-router/check-package.sh /tmp/check-package.sh
 RUN /tmp/check-package.sh /tmp/creature-audio-router.deb && touch /tmp/package-validated
 
+# Validate the controller the same way.
+FROM debian:trixie-slim AS controller-package-test
+COPY --from=packages /package/creature-controller_*.deb /tmp/creature-controller.deb
+COPY packaging/controller/check-package.sh /tmp/check-package.sh
+RUN /tmp/check-package.sh /tmp/creature-controller.deb && touch /tmp/package-validated
+
 FROM packages AS package
 COPY --from=audio-router-package-test /tmp/package-validated /package/.router-validated
+COPY --from=controller-package-test /tmp/package-validated /package/.controller-validated

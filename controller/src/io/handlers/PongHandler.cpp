@@ -22,6 +22,9 @@ void PongHandler::handle(std::shared_ptr<Logger> logger, const std::vector<std::
 
     (void)tokens; // Unused
 
+    // Let the handler know the firmware is alive
+    servoModuleHandler->pongReceived();
+
     // When did we receive this?
     auto pongTime = std::chrono::high_resolution_clock::now();
 

@@ -1,0 +1,28 @@
+[Unit]
+Description=Creature controller (%i)
+Documentation=file:/usr/share/doc/creature-controller/README.md
+# Started by 70-creature-controller.rules when this creature's board appears, and
+# stopped when it's unplugged. There's nothing to enable.
+BindsTo=dev-creature-%i.device
+After=dev-creature-%i.device network-online.target sound.target
+Wants=network-online.target
+# Allow a few minutes of retries, then stop in a failed state instead of flooding
+# the journal.
+StartLimitIntervalSec=10min
+StartLimitBurst=10
+
+[Service]
+Type=exec
+DynamicUser=yes
+SupplementaryGroups=dialout audio
+ExecStart=/usr/lib/creature-controller/start-creature %i
+Restart=on-failure
+RestartSec=30
+# Backstop against leaks. Only enforced if the kernel has the memory cgroup controller.
+MemoryMax=512M
+MemorySwapMax=0
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+# Keep /dev visible; PrivateDevices would hide the serial and ALSA devices.

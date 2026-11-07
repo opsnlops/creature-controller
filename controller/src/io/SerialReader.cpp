@@ -11,7 +11,7 @@
 #include "io/SerialReader.h"
 #include "util/thread_name.h"
 
-namespace creatures ::io {
+namespace creatures::io {
 
 using creatures::config::UARTDevice;
 using creatures::io::Message;
@@ -57,7 +57,8 @@ void SerialReader::run() {
             }
             std::string errorMessage = fmt::format("Serial port {} poll error: {}", this->deviceNode, strerror(errno));
             this->logger->error(errorMessage);
-            break; // Exit thread gracefully instead of calling std::exit
+            failed.store(!stop_requested.load());
+            break;
         } else if (ret == 0) {
             continue;
         }
@@ -68,7 +69,8 @@ void SerialReader::run() {
                 fmt::format("Serial port {} error detected (revents: {:#x}) - communication lost!", this->deviceNode,
                             fds[0].revents);
             this->logger->error(errorMessage);
-            break; // Exit thread gracefully instead of calling std::exit
+            failed.store(!stop_requested.load());
+            break;
         }
 
         if (fds[0].revents & POLLIN) {
@@ -84,12 +86,14 @@ void SerialReader::run() {
                 std::string errorMessage =
                     fmt::format("Serial port {} read error: {}", this->deviceNode, strerror(errno));
                 this->logger->error(errorMessage);
-                break; // Exit thread gracefully instead of calling std::exit
+                failed.store(!stop_requested.load());
+                break;
             } else if (numBytes == 0) {
                 std::string errorMessage =
                     fmt::format("Serial port {} disconnected (EOF) - device unplugged?", this->deviceNode);
                 this->logger->warn(errorMessage);
-                break; // Exit thread gracefully instead of calling std::exit
+                failed.store(!stop_requested.load());
+                break;
             }
 
             tempBuffer.append(readBuf, numBytes); // Append new data to tempBuffer
@@ -112,7 +116,11 @@ void SerialReader::run() {
         }
     }
 
-    this->logger->info("SerialReader for {} shutting down normally", this->deviceNode);
+    if (failed.load()) {
+        this->logger->error("SerialReader for {} stopped because the port failed", this->deviceNode);
+    } else {
+        this->logger->info("SerialReader for {} shutting down normally", this->deviceNode);
+    }
 }
 
 } // namespace creatures::io

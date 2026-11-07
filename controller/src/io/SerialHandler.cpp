@@ -73,6 +73,8 @@ SerialHandler::~SerialHandler() {
 
 UARTDevice::module_name SerialHandler::getModuleName() const { return this->moduleName; }
 
+bool SerialHandler::hasFailed() const { return (reader && reader->hasFailed()) || (writer && writer->hasFailed()); }
+
 // Access to our queues
 std::shared_ptr<MessageQueue<Message>> SerialHandler::getOutgoingQueue() { return this->outgoingQueue; }
 
@@ -88,7 +90,7 @@ Result<bool> SerialHandler::setupSerialPort() {
         std::string errorMessage =
             fmt::format("Cannot open serial port {}: {}", this->deviceNode.c_str(), strerror(errno));
         this->logger->error(errorMessage);
-        return Result<bool>{false};
+        return Result<bool>{ControllerError(ControllerError::IOError, errorMessage)};
     }
 
     struct termios tty{};
@@ -99,7 +101,7 @@ Result<bool> SerialHandler::setupSerialPort() {
         this->logger->error(errorMessage);
         close(this->fileDescriptor);
         this->fileDescriptor = -1;
-        return Result<bool>{false};
+        return Result<bool>{ControllerError(ControllerError::IOError, errorMessage)};
     }
 
     // Configure the port (same settings as before)
@@ -136,7 +138,7 @@ Result<bool> SerialHandler::setupSerialPort() {
         this->logger->error(errorMessage);
         close(this->fileDescriptor);
         this->fileDescriptor = -1;
-        return Result<bool>{false};
+        return Result<bool>{ControllerError(ControllerError::IOError, errorMessage)};
     }
 
     if (tcflush(this->fileDescriptor, TCIOFLUSH) != 0) {

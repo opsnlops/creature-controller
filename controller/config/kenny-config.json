@@ -1,6 +1,5 @@
 {
   "logLevel": "info",
-  "useGPIO": false,
   "UARTs":
     [
       {
@@ -18,9 +17,6 @@
   "universe": 2,
   "useRTPAudio": true,
   "audioDevice": 1,
-  "powerDrawLimitWatts": 50.0,
-  "powerDrawWarningWatts": 40.0,
-  "powerDrawResponseSeconds": 5.0,
   "temperatureLimitDegrees": 185.0,
   "temperatureWarningDegrees": 170.0,
   "temperatureLimitSeconds": 10.0,

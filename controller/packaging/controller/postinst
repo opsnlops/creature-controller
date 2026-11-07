@@ -1,0 +1,50 @@
+#!/bin/sh
+set -e
+
+# Raspberry Pi OS boots with cgroup_disable=memory, which leaves the service's
+# MemoryMax unenforced. Add cgroup_enable=memory to the kernel command line so it
+# takes effect on the next boot. Only ever add the flag, and leave anything that
+# doesn't look like a stock cmdline.txt alone.
+enable_memory_cgroup() {
+    cmdline=/boot/firmware/cmdline.txt
+    [ -f "$cmdline" ] || return 0
+
+    if grep -qE '(^|[[:space:]])cgroup_enable=memory([[:space:]]|$)' "$cmdline"; then
+        return 0
+    fi
+
+    if [ "$(grep -c . "$cmdline")" -ne 1 ]; then
+        echo "creature-controller: $cmdline is not a single line; add cgroup_enable=memory to it yourself." >&2
+        return 0
+    fi
+
+    backup="$cmdline.creature-controller.bak"
+    [ -e "$backup" ] || cp -p "$cmdline" "$backup"
+
+    line=$(grep . "$cmdline" | sed 's/[[:space:]]*$//')
+    printf '%s cgroup_enable=memory\n' "$line" > "$cmdline.new"
+    mv "$cmdline.new" "$cmdline"
+    sync
+
+    echo "creature-controller: added cgroup_enable=memory to $cmdline (backup in $backup). Reboot to enable memory limits."
+    touch /run/reboot-required 2>/dev/null || true
+    echo creature-controller >> /run/reboot-required.pkgs 2>/dev/null || true
+}
+
+if [ "$1" = configure ]; then
+    enable_memory_cgroup
+fi
+
+if [ "$1" = configure ] && [ -d /run/systemd/system ]; then
+    systemctl daemon-reload
+    udevadm control --reload-rules || true
+    # Never restart here. Instances are site-specific, and an upgrade should not
+    # move a creature or restart past an emergency stop.
+    if [ -n "${2:-}" ]; then
+        systemctl list-units --plain --no-legend --state=active 'creature-controller@*.service' |
+            while read -r unit remainder; do
+                echo "$unit is still running the old version; restart it when the creature is safe."
+            done
+    fi
+fi
+exit 0

@@ -1,0 +1,21 @@
+{
+  "creatureServer": {
+    "enabled": true,
+    "port": 8000,
+    "address": "10.19.63.5"
+  },
+  "universe": 2,
+  "useRTPAudio": true,
+  "audioDevice": 0,
+  "audioDeviceName": "plughw:CARD=BossDAC,DEV=0",
+  "networkInterface": "eth0",
+  "temperatureLimitDegrees": 165.0,
+  "temperatureWarningDegrees": 150.0,
+  "temperatureLimitSeconds": 10.0,
+  "dynamixelTemperatureLimitDegrees": 150.0,
+  "dynamixelTemperatureWarningDegrees": 140.0,
+  "dynamixelTemperatureLimitSeconds": 10.0,
+  "dynamixelLoadLimitPercent": 95.0,
+  "dynamixelLoadWarningPercent": 80.0,
+  "dynamixelLoadLimitSeconds": 5.0
+}

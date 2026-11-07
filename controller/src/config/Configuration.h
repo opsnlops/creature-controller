@@ -25,7 +25,6 @@ class Configuration {
     friend class CommandLine;
     friend class Configuration;
 
-    bool getUseGPIO() const;
     bool getUseAudioSubsystem() const;
     u8 getSoundDeviceNumber() const;
     [[nodiscard]] const audio::AudioConfig &getAudioConfig() const;
@@ -47,9 +46,6 @@ class Configuration {
 
     // Watchdog configuration getters
     [[nodiscard]] bool getWatchdogDisabled() const;
-    [[nodiscard]] double getPowerDrawLimitWatts() const;
-    [[nodiscard]] double getPowerDrawWarningWatts() const;
-    [[nodiscard]] double getPowerDrawResponseSeconds() const;
     [[nodiscard]] double getTemperatureLimitDegrees() const;
     [[nodiscard]] double getTemperatureWarningDegrees() const;
     [[nodiscard]] double getTemperatureLimitSeconds() const;
@@ -60,7 +56,6 @@ class Configuration {
     [[nodiscard]] double getDynamixelLoadWarningPercent() const;
     [[nodiscard]] double getDynamixelLoadLimitSeconds() const;
 
-    void setUseGPIO(bool _useGPIO);
     void setUseAudioSubsystem(bool _useAudioSubsystem);
     void setSoundDeviceNumber(u8 _soundDeviceNumber);
     void setSoundDeviceName(std::string deviceName);
@@ -75,6 +70,13 @@ class Configuration {
     void setNetworkDeviceName(const std::string &_deviceName);
     void setUniverse(u16 _universe);
     void addUARTDevice(UARTDevice _uartDevice);
+
+    /**
+     * Use a single board on module A in place of any configured UARTs
+     *
+     * @param deviceNode the board's serial device
+     */
+    void useSingleSerialDevice(const std::string &deviceNode);
     void setCreature(std::shared_ptr<creatures::creature::Creature> _creature);
     void setCreatureConfigFile(std::string _creatureConfigFile);
     void setUseServer(bool _useServer);
@@ -85,9 +87,6 @@ class Configuration {
 
     // Watchdog configuration setters
     void setWatchdogDisabled(bool _watchdogDisabled);
-    void setPowerDrawLimitWatts(double _powerDrawLimitWatts);
-    void setPowerDrawWarningWatts(double _powerDrawWarningWatts);
-    void setPowerDrawResponseSeconds(double _powerDrawResponseSeconds);
     void setTemperatureLimitDegrees(double _temperatureLimitDegrees);
     void setTemperatureWarningDegrees(double _temperatureWarningDegrees);
     void setTemperatureLimitSeconds(double _temperatureLimitSeconds);
@@ -104,9 +103,6 @@ class Configuration {
      * in the configuration.
      */
     void resolveNetworkInterfaceDetails();
-
-    // Should we use the GPIO pins?
-    bool useGPIO = false;
 
     // Do we use the audio subsystem?
     bool useAudioSubsystem = false;
@@ -141,9 +137,6 @@ class Configuration {
 
     // Watchdog configuration
     bool watchdogDisabled = false;
-    double powerDrawLimitWatts = 0.0;
-    double powerDrawWarningWatts = 0.0;
-    double powerDrawResponseSeconds = 0.0;
     double temperatureLimitDegrees = 0.0;
     double temperatureWarningDegrees = 0.0;
     double temperatureLimitSeconds = 0.0;

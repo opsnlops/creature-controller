@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <unordered_map>
 #include <vector>
 
@@ -11,7 +12,7 @@
 #include "util/Result.h"
 #include "util/StoppableThread.h"
 
-namespace creatures ::io {
+namespace creatures::io {
 
 enum MotorHandlerState { unknown, idle, awaitingConfiguration, configuring, ready, running, stopped };
 
@@ -76,6 +77,23 @@ class MessageRouter : public StoppableThread {
     bool allHandlersReady();
 
     /**
+     * Record that an emergency stop was sent to the firmware
+     *
+     * The firmware halts its message processor after ESTOP and only a power cycle
+     * recovers it. From here on no frames are sent, and silence from the firmware
+     * is expected rather than a failure. Restarting would risk resetting the
+     * firmware and clearing the stop, so this never clears.
+     */
+    void markEmergencyStopActive();
+
+    /**
+     * Has an emergency stop been sent to the firmware?
+     *
+     * @return true if an emergency stop is in effect
+     */
+    [[nodiscard]] bool isEmergencyStopActive() const;
+
+    /**
      * Set the state of a handler
      *
      * @param moduleName the name of the module to set the state for
@@ -108,6 +126,9 @@ class MessageRouter : public StoppableThread {
 
     // Map of module names to their message queues
     std::unordered_map<creatures::config::UARTDevice::module_name, HandlerQueues> servoHandlers;
+
+    // Set once an emergency stop goes out, and never cleared
+    std::atomic<bool> emergencyStopActive{false};
 
     // Track the state of each handler
     std::unordered_map<creatures::config::UARTDevice::module_name, MotorHandlerState> handlerStates;

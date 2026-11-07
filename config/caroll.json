@@ -1,0 +1,158 @@
+{
+  "name": "Caroll",
+  "id": "56665920-98f7-11f1-9c92-2ccf67b00612",
+  "version": "0.1.0",
+  "description": "Follow that bird!",
+  "channel_offset": 50,
+  "audio_channel": 5,
+  "universe": 2,
+  "mouth_slot": 4,
+  "position_min": 0,
+  "position_max": 1023,
+  "head_offset_max": 0.4,
+  "servo_frequency": 50,
+  "power_draw_limit_watts": 15.0,
+  "power_draw_warning_watts": 14.0,
+  "power_draw_response_seconds": 10.0,
+  "type": "parrot",
+  "voice": {
+      "voice_id": "ygoBNrnmTEdu5NtDTmAY",
+      "model_id": "eleven_turbo_v2_5",
+      "stability": 0.5,
+      "similarity_boost": 0.72
+  },
+  "speech_loop_animation_ids": [
+    "ccc7002f-dc8c-47ab-ba5b-f643411f2f6f",
+    "65c15a26-0f5a-45e8-80ff-43773cca2167"
+  ],
+  "idle_animation_ids": [
+      "e377571c-f0c6-4e64-8aa9-bfb550d2d6d8",
+      "d8eefb35-6664-41d5-9c59-f23053b5117c",
+      "996527b5-3d90-4af6-9fed-c7dcfff5dc8b"
+  ],
+  "gaze": {
+    "pan": {
+      "input": "neck_rotate",
+      "degrees_at_min": -55.0,
+      "degrees_at_max": 55.0
+    },
+    "elevation": {
+      "input": "head_height",
+      "degrees_at_min": -25.0,
+      "degrees_at_max": 25.0
+    },
+    "cock": {
+      "input": "head_tilt",
+      "degrees_at_min": -20.0,
+      "degrees_at_max": 20.0,
+      "listening_amount": 0.4
+    }
+  },
+  "motors": [
+    {
+      "type": "servo",
+      "id": "neck_left",
+      "name": "Neck Left",
+      "output_header": 0,
+      "output_module": "A",
+      "min_pulse_us": 800,
+      "max_pulse_us": 2250,
+      "smoothing_value": 0.90,
+      "inverted": true,
+      "default_position": "center"
+    },
+    {
+      "type": "servo",
+      "id": "neck_right",
+      "name": "Neck Right",
+      "output_header": 1,
+      "output_module": "A",
+      "min_pulse_us": 800,
+      "max_pulse_us": 2250,
+      "smoothing_value": 0.90,
+      "inverted": false,
+      "default_position": "center"
+    },
+    {
+      "type": "servo",
+      "id": "neck_rotate",
+      "name": "Neck Rotate",
+      "output_header": 2,
+      "output_module": "A",
+      "min_pulse_us": 650,
+      "max_pulse_us": 2500,
+      "smoothing_value": 0.80,
+      "inverted": true,
+      "default_position": "center"
+    },
+    {
+      "type": "servo",
+      "id": "body_lean",
+      "name": "Body Lean",
+      "output_header": 4,
+      "output_module": "A",
+      "min_pulse_us": 1200,
+      "max_pulse_us": 1800,
+      "smoothing_value": 0.96,
+      "inverted": true,
+      "default_position": "min"
+    },
+    {
+      "type": "servo",
+      "id": "beak",
+      "name": "Beak",
+      "output_module": "A",
+      "output_header": 3,
+      "min_pulse_us": 1900,
+      "max_pulse_us": 2700,
+      "smoothing_value": 0.4,
+      "inverted": false,
+      "default_position": "min"
+    }
+  ],
+  "inputs": [
+    {
+      "name": "head_tilt",
+      "slot": 2,
+      "width": 1,
+      "joystick_axis": 2
+    },
+    {
+      "name": "head_height",
+      "slot": 3,
+      "width": 1,
+      "joystick_axis": 3
+    },
+    {
+      "name": "neck_rotate",
+      "slot": 0,
+      "width": 1,
+      "joystick_axis": 0
+    },
+    {
+      "name": "stand_rotate",
+      "slot": 1,
+      "width": 1,
+      "joystick_axis": 1
+    },
+    {
+      "name": "body_lean",
+      "slot": 5,
+      "width": 1,
+      "joystick_axis": 5
+    },
+    {
+      "name": "beak",
+      "slot": 4,
+      "width": 1,
+      "joystick_axis": 4
+    },
+    {
+      "name": "chest",
+      "slot": 7,
+      "width": 1,
+      "joystick_axis": 7
+    }
+  ]
+}
+

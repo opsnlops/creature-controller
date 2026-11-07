@@ -6,6 +6,7 @@
 
 #include "config/Configuration.h"
 #include "controller/Controller.h"
+#include "creature/Creature.h"
 #include "io/MessageRouter.h"
 #include "logging/Logger.h"
 #include "server/ServerMessage.h"
@@ -21,6 +22,7 @@ namespace creatures::watchdog {
 class WatchdogThread : public StoppableThread {
   public:
     WatchdogThread(std::shared_ptr<Logger> logger, std::shared_ptr<creatures::config::Configuration> config,
+                   std::shared_ptr<creatures::creature::Creature> creature,
                    std::shared_ptr<MessageQueue<creatures::server::ServerMessage>> websocketOutgoingQueue,
                    std::shared_ptr<creatures::io::MessageRouter> messageRouter);
 
@@ -30,6 +32,7 @@ class WatchdogThread : public StoppableThread {
   private:
     std::shared_ptr<Logger> logger;
     std::shared_ptr<creatures::config::Configuration> config;
+    std::shared_ptr<creatures::creature::Creature> creature;
     std::shared_ptr<MessageQueue<creatures::server::ServerMessage>> websocketOutgoingQueue;
     std::shared_ptr<creatures::io::MessageRouter> messageRouter;
 
