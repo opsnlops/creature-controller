@@ -101,10 +101,12 @@ Package upgrades do not restart running instances, so that an upgrade never
 moves a creature on its own. Restart them when the creature is safe.
 
 `MemoryMax` is only enforced if the kernel has the memory cgroup controller.
-Check for `memory` in `/sys/fs/cgroup/cgroup.controllers`. Raspberry Pi OS boots
-with `cgroup_disable=memory`, which isn't in any file you can edit. To override
-it, add `cgroup_enable=memory` to the end of the single line in
-`/boot/firmware/cmdline.txt` (not `/boot/cmdline.txt`) and reboot.
+Raspberry Pi OS boots with `cgroup_disable=memory`, so on install the package
+adds `cgroup_enable=memory` to `/boot/firmware/cmdline.txt` and asks for a
+reboot. It keeps the original as `cmdline.txt.creature-controller.bak`, only
+ever adds the flag, and leaves the file alone if it isn't a single line.
+Removing the package leaves the flag in place. After the reboot, check for
+`memory` in `/sys/fs/cgroup/cgroup.controllers`.
 
 **Emergency stops:** the firmware holds an emergency stop until it's power
 cycled. Restarting the controller or the service doesn't clear it.
