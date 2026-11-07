@@ -16,6 +16,8 @@ for creature in caroll beaky mango kenny; do
     [ -f "/usr/share/creature-controller/controllers/$creature.json" ]
 done
 [ -d /etc/creature/controller ]
+# The service runs as a systemd dynamic user; libnss-systemd lets tools show its name
+grep -qE '^passwd:.*systemd' /etc/nsswitch.conf
 if /usr/lib/creature-controller/start-creature NoSuchCreature; then exit 1; fi
 # Debian container images exclude documentation during installation; inspect the archive too.
 dpkg-deb -x "$package" /tmp/controller-package-content
