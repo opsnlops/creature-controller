@@ -6,7 +6,7 @@
 #include "controller-config.h"
 #include "logging/Logger.h"
 
-namespace creatures ::config {
+namespace creatures::config {
 
 /**
  * UART Device Configuration
@@ -14,6 +14,8 @@ namespace creatures ::config {
  * This class represents one UART device, which is almost certainly
  * connected to a Pi Pico.
  */
+class Configuration;
+
 class UARTDevice {
   public:
     explicit UARTDevice(std::shared_ptr<Logger> logger);
@@ -23,6 +25,7 @@ class UARTDevice {
     UARTDevice(const UARTDevice &other);
 
     friend class ConfigurationBuilder;
+    friend class Configuration;
 
     enum module_name { A, B, C, D, E, F, invalid_module };
 

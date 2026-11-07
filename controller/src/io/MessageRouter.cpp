@@ -6,7 +6,7 @@
 #include "logging/Logger.h"
 #include "util/thread_name.h"
 
-namespace creatures ::io {
+namespace creatures::io {
 
 using creatures::config::UARTDevice;
 using creatures::io::Message;
@@ -37,7 +37,7 @@ Result<bool> MessageRouter::registerServoModuleHandler(creatures::config::UARTDe
     }
 
     this->servoHandlers[moduleName] = {incomingMessages, outgoingMessages};
-    this->handlerStates[moduleName] = MotorHandlerState::unknown;
+    this->handlerStates[moduleName] = MotorHandlerState::idle;
     this->logger->info("Registered module: {}", UARTDevice::moduleNameToString(moduleName));
     return Result<bool>{true};
 }
@@ -138,7 +138,16 @@ Result<bool> MessageRouter::setHandlerState(creatures::config::UARTDevice::modul
     return Result<bool>{true};
 }
 
+void MessageRouter::markEmergencyStopActive() { emergencyStopActive.store(true); }
+
+bool MessageRouter::isEmergencyStopActive() const { return emergencyStopActive.load(); }
+
 bool MessageRouter::allHandlersReady() {
+
+    // The firmware won't process anything else after an emergency stop
+    if (emergencyStopActive.load()) {
+        return false;
+    }
 
     // Look at all the handlerStates and return false if any of them are not ready
     for (const auto &pair : handlerStates) {

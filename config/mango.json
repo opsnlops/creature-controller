@@ -4,18 +4,50 @@
   "version": "0.2.0",
   "description": "The world's smallest MangoDB fan!",
   "channel_offset": 10,
-  "audio_channel": 2,
   "mouth_slot": 4,
+  "universe": 2,
+  "audio_channel": 2,
   "position_min": 0,
   "position_max": 1023,
   "head_offset_max": 0.4,
   "servo_frequency": 50,
+  "power_draw_limit_watts": 15.0,
+  "power_draw_warning_watts": 14.0,
+  "power_draw_response_seconds": 10.0,
   "type": "parrot",
   "voice": {
     "voice_id": "rEgA5sGDoUB0qgm6yQdR",
-    "model_id": "eleven_multilingual_v2",
+    "model_id": "eleven_flash_v2_5",
     "stability": 0.3,
     "similarity_boost": 0.46
+  },
+  "speech_loop_animation_ids": [
+    "bfd1d1b7-09b5-4a02-9a03-6532d14944ef",
+    "74a0ef2f-bbc9-48a5-b37f-8080d46fde8b",
+    "76e1258b-46d3-4d64-a1ff-7f9ce6c5a337"
+  ],
+  "idle_animation_ids": [
+    "2264e12b-a8b9-48ff-9709-dbf7dd2a2d07",
+    "3e5fc2b8-3b65-4a53-b410-242ef036f685",
+    "1ddcdf36-2b76-436c-bfa0-2d4dbeeb4c3f"
+  ],
+  "gaze": {
+    "pan": {
+      "input": "neck_rotate",
+      "degrees_at_min": -55.0,
+      "degrees_at_max": 55.0
+    },
+    "elevation": {
+      "input": "head_height",
+      "degrees_at_min": -25.0,
+      "degrees_at_max": 25.0
+    },
+    "cock": {
+      "input": "head_tilt",
+      "degrees_at_min": -20.0,
+      "degrees_at_max": 20.0,
+      "listening_amount": 0.4
+    }
   },
   "motors": [
     {
@@ -24,10 +56,10 @@
       "name": "Neck Left",
       "output_module": "A",
       "output_header": 0,
-      "min_pulse_us": 1250,
-      "max_pulse_us": 2250,
+      "min_pulse_us": 800,
+      "max_pulse_us": 2150,
       "smoothing_value": 0.90,
-      "inverted": false,
+      "inverted": true,
       "default_position": "center"
     },
     {
@@ -37,9 +69,9 @@
       "output_module": "A",
       "output_header": 1,
       "min_pulse_us": 800,
-      "max_pulse_us": 1800,
+      "max_pulse_us": 2350,
       "smoothing_value": 0.90,
-      "inverted": true,
+      "inverted": false,
       "default_position": "center"
     },
     {
@@ -47,10 +79,10 @@
       "id": "neck_rotate",
       "name": "Neck Rotate",
       "output_module": "A",
-      "output_header": 3,
-      "min_pulse_us": 1450,
-      "max_pulse_us": 1970,
-      "smoothing_value": 0.90,
+      "output_header": 2,
+      "min_pulse_us": 750,
+      "max_pulse_us": 2600,
+      "smoothing_value": 0.80,
       "inverted": true,
       "default_position": "center"
     },
@@ -59,62 +91,62 @@
       "id": "body_lean",
       "name": "Body Lean",
       "output_module": "A",
-      "output_header": 4,
-      "min_pulse_us": 1475,
-      "max_pulse_us": 1950,
+      "output_header": 5,
+      "min_pulse_us": 1200,
+      "max_pulse_us": 1800,
       "smoothing_value": 0.96,
       "inverted": true,
-      "default_position": "min"
+      "default_position":"min"
     },
     {
       "type": "servo",
       "id": "beak",
       "name": "Beak",
       "output_module": "A",
-      "output_header": 2,
-      "min_pulse_us": 1600,
-      "max_pulse_us": 2350,
+      "output_header": 3,
+      "min_pulse_us": 850,
+      "max_pulse_us": 1600,
       "smoothing_value": 0.4,
-      "inverted": true,
-      "default_position": "min"
+      "inverted":true,
+      "default_position": "max"
     }
   ],
   "inputs": [
     {
       "name": "head_tilt",
+      "slot": 2,
+      "width": 1,
+      "joystick_axis": 2
+    },
+    {
+      "name": "head_height",
       "slot": 3,
       "width": 1,
       "joystick_axis": 3
     },
     {
-      "name": "head_height",
-      "slot": 4,
-      "width": 1,
-      "joystick_axis": 4
-    },
-    {
       "name": "neck_rotate",
-      "slot": 5,
-      "width": 1,
-      "joystick_axis": 5
-    },
-    {
-      "name": "stand_rotate",
       "slot": 0,
       "width": 1,
       "joystick_axis": 0
     },
     {
-      "name": "body_lean",
-      "slot": 6,
+      "name": "stand_rotate",
+      "slot": 1,
       "width": 1,
-      "joystick_axis": 6
+      "joystick_axis": 1
+    },
+    {
+      "name": "body_lean",
+      "slot": 5,
+      "width": 1,
+      "joystick_axis": 5
     },
     {
       "name": "beak",
-      "slot": 2,
+      "slot": 4,
       "width": 1,
-      "joystick_axis": 2
+      "joystick_axis": 4
     },
     {
       "name": "chest",

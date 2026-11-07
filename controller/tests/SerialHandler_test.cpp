@@ -35,6 +35,20 @@ TEST(SerialOutput, CreateSerialOutput_DeviceDoesNotExist_IsNonFatal) {
     EXPECT_NO_THROW({ auto serialOutput = SerialHandler(logger, "", UARTDevice::A, outputQueue, inputQueue); });
 }
 
+// A Result holding false still counts as success, so a failed open must be a real error
+TEST(SerialOutput, Start_DeviceDoesNotExist_ReturnsErrorAndStartsNoThreads) {
+    auto logger = std::make_shared<NiceMockLogger>();
+    auto outputQueue = std::make_shared<MessageQueue<creatures::io::Message>>();
+    auto inputQueue = std::make_shared<MessageQueue<creatures::io::Message>>();
+
+    auto serialOutput = SerialHandler(logger, "/nonexistent/serial-device", UARTDevice::A, outputQueue, inputQueue);
+    auto result = serialOutput.start();
+
+    EXPECT_FALSE(result.isSuccess());
+    EXPECT_EQ(serialOutput.reader, nullptr);
+    EXPECT_EQ(serialOutput.writer, nullptr);
+}
+
 TEST(SerialOutput, CreateSerialOutput_DeviceNotCharacterDevice_IsNonFatal) {
     auto logger = std::make_shared<NiceMockLogger>();
     auto outputQueue = std::make_shared<MessageQueue<creatures::io::Message>>();

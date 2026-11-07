@@ -1,4 +1,8 @@
+#include <algorithm>
+#include <cerrno>
+#include <cstring>
 #include <iostream>
+#include <poll.h>
 #include <unistd.h>
 
 #include "io/Message.h"
@@ -6,15 +10,16 @@
 #include "logging/Logger.h"
 #include "util/thread_name.h"
 
-namespace creatures ::io {
+namespace creatures::io {
 
 using creatures::io::Message;
 
 SerialWriter::SerialWriter(const std::shared_ptr<Logger> &logger, std::string deviceNode,
                            UARTDevice::module_name moduleName, int fileDescriptor,
-                           const std::shared_ptr<MessageQueue<Message>> &outgoingQueue)
+                           const std::shared_ptr<MessageQueue<Message>> &outgoingQueue,
+                           std::chrono::milliseconds writeTimeout)
     : logger(logger), outgoingQueue(outgoingQueue), deviceNode(std::move(deviceNode)), moduleName(moduleName),
-      fileDescriptor(fileDescriptor) {
+      fileDescriptor(fileDescriptor), writeTimeout(writeTimeout) {
 
     this->logger->info("creating a new SerialWriter for device {} 🐰", this->deviceNode);
 }
@@ -30,6 +35,11 @@ void SerialWriter::run() {
     this->threadName = fmt::format("SerialWriter::run for {}", this->deviceNode);
     setThreadName(threadName);
 
+    // Report dropped messages periodically so a slow link doesn't flood the log
+    constexpr auto dropReportInterval = std::chrono::seconds(5);
+    auto lastDropReport = std::chrono::steady_clock::now();
+    u64 reportedDrops = 0;
+
     while (!stop_requested.load()) {
         // Use timeout-based pop to allow shutdown checking
         auto messageOpt = outgoingQueue->pop_timeout(std::chrono::milliseconds(100));
@@ -44,6 +54,17 @@ void SerialWriter::run() {
 
         Message outgoingMessage = messageOpt.value();
 
+        const auto now = std::chrono::steady_clock::now();
+        if (now - lastDropReport >= dropReportInterval) {
+            const u64 drops = outgoingQueue->droppedCount();
+            if (drops != reportedDrops) {
+                this->logger->warn("Serial port {} is falling behind: dropped {} queued messages", this->deviceNode,
+                                   drops - reportedDrops);
+                reportedDrops = drops;
+            }
+            lastDropReport = now;
+        }
+
         // Skip empty messages that might come from shutdown
         if (outgoingMessage.payload.empty()) {
             continue;
@@ -55,31 +76,82 @@ void SerialWriter::run() {
         // Append a newline character to the message
         outgoingMessage.payload += '\n';
 
-        ssize_t bytesWritten = -1;
-        do {
-            bytesWritten =
-                write(this->fileDescriptor, outgoingMessage.payload.c_str(), outgoingMessage.payload.length());
-        } while (bytesWritten < 0 && errno == EINTR && !stop_requested.load());
-
-        if (bytesWritten < 0) {
-            if (stop_requested.load()) {
-                break;
-            }
-            std::string errorMessage = fmt::format("Serial port {} write error: {}", this->deviceNode, strerror(errno));
-            this->logger->error(errorMessage);
-            break; // Exit thread gracefully instead of calling std::exit
-        } else if (bytesWritten != static_cast<ssize_t>(outgoingMessage.payload.length())) {
-            std::string errorMessage = fmt::format("Serial port {} partial write - expected {} bytes, wrote {} bytes",
-                                                   this->deviceNode, outgoingMessage.payload.length(), bytesWritten);
-            this->logger->warn(errorMessage);
-            break; // Exit thread gracefully instead of calling std::exit
+        if (!writeFully(outgoingMessage.payload)) {
+            break;
         }
 
-        this->logger->trace("Written {} bytes to module {} on {}", bytesWritten,
+        this->logger->trace("Written {} bytes to module {} on {}", outgoingMessage.payload.length(),
                             UARTDevice::moduleNameToString(outgoingMessage.module), deviceNode);
     }
 
-    this->logger->info("SerialWriter for {} shutting down normally", this->deviceNode);
+    if (failed.load()) {
+        this->logger->error("SerialWriter for {} stopped because the port failed", this->deviceNode);
+    } else {
+        this->logger->info("SerialWriter for {} shutting down normally", this->deviceNode);
+    }
+}
+
+bool SerialWriter::writeFully(const std::string &payload) {
+    using namespace std::chrono;
+
+    const auto deadline = steady_clock::now() + writeTimeout;
+    std::size_t written = 0;
+
+    while (written < payload.length()) {
+        if (stop_requested.load()) {
+            return false;
+        }
+
+        const ssize_t result = write(this->fileDescriptor, payload.data() + written, payload.length() - written);
+        if (result > 0) {
+            written += static_cast<std::size_t>(result);
+            continue;
+        }
+
+        if (result < 0 && errno == EINTR) {
+            continue;
+        }
+
+        if (result < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
+            markFailed(fmt::format("Serial port {} write error: {}", this->deviceNode, strerror(errno)));
+            return false;
+        }
+
+        // The buffer is full. Wait for room in short slices so a shutdown isn't held up.
+        const auto remaining = duration_cast<milliseconds>(deadline - steady_clock::now());
+        if (remaining <= milliseconds(0)) {
+            markFailed(fmt::format("Serial port {} stalled: wrote {} of {} bytes in {} ms", this->deviceNode, written,
+                                   payload.length(), writeTimeout.count()));
+            return false;
+        }
+
+        struct pollfd fds[1];
+        fds[0].fd = this->fileDescriptor;
+        fds[0].events = POLLOUT;
+        fds[0].revents = 0;
+
+        const int ret = poll(fds, 1, static_cast<int>(std::min<milliseconds::rep>(remaining.count(), 100)));
+        if (ret < 0 && errno != EINTR) {
+            markFailed(fmt::format("Serial port {} poll error: {}", this->deviceNode, strerror(errno)));
+            return false;
+        }
+
+        if (ret > 0 && (fds[0].revents & (POLLERR | POLLHUP | POLLNVAL))) {
+            markFailed(fmt::format("Serial port {} error detected (revents: {:#x}) - communication lost!",
+                                   this->deviceNode, fds[0].revents));
+            return false;
+        }
+    }
+
+    return true;
+}
+
+void SerialWriter::markFailed(const std::string &errorMessage) {
+    if (stop_requested.load()) {
+        return;
+    }
+    this->logger->error(errorMessage);
+    failed.store(true);
 }
 
 } // namespace creatures::io

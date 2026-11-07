@@ -146,6 +146,11 @@ class Creature {
 
     u16 getServoUpdateFrequencyHz() const;
 
+    // The creature's power limits, which the watchdog enforces
+    double getPowerDrawLimitWatts() const;
+    double getPowerDrawWarningWatts() const;
+    double getPowerDrawResponseSeconds() const;
+
     std::vector<creatures::Input> getInputs() const;
 
     std::shared_ptr<Servo> getServo(const std::string &servoName);
@@ -177,6 +182,8 @@ class Creature {
 
     void setServoUpdateFrequencyHz(u16 hertz);
 
+    void setPowerDrawLimits(double limitWatts, double warningWatts, double responseSeconds);
+
     void addInput(const creatures::Input &input);
 
     // Perform a pre-flight check to make sure everything is set up correctly
@@ -200,6 +207,10 @@ class Creature {
     u16 positionMax;
     u16 positionDefault;
     u16 servoUpdateFrequencyHz;
+
+    double powerDrawLimitWatts = 0.0;
+    double powerDrawWarningWatts = 0.0;
+    double powerDrawResponseSeconds = 0.0;
 
     u16 channelOffset;
     u8 audioChannel;

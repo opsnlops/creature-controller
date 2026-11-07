@@ -40,12 +40,6 @@ Configuration::Configuration(std::shared_ptr<Logger> logger)
 // Getter Methods
 //----------------------------------------------------------------------------
 
-/**
- * @brief Check if GPIO pins should be used
- * @return True if GPIO should be used, false otherwise
- */
-bool Configuration::getUseGPIO() const { return useGPIO; }
-
 bool Configuration::getUseAudioSubsystem() const { return useAudioSubsystem; }
 
 u8 Configuration::getSoundDeviceNumber() const { return audioConfig.deviceNumber; }
@@ -113,24 +107,6 @@ std::string Configuration::getLogLevel() const { return logLevel; }
 bool Configuration::getWatchdogDisabled() const { return watchdogDisabled; }
 
 /**
- * @brief Get the power draw limit in watts
- * @return The power draw limit in watts
- */
-double Configuration::getPowerDrawLimitWatts() const { return powerDrawLimitWatts; }
-
-/**
- * @brief Get the power draw warning threshold in watts
- * @return The power draw warning threshold in watts
- */
-double Configuration::getPowerDrawWarningWatts() const { return powerDrawWarningWatts; }
-
-/**
- * @brief Get the power draw response time in seconds
- * @return The power draw response time in seconds
- */
-double Configuration::getPowerDrawResponseSeconds() const { return powerDrawResponseSeconds; }
-
-/**
  * @brief Get the temperature limit in degrees
  * @return The temperature limit in degrees
  */
@@ -163,15 +139,6 @@ double Configuration::getDynamixelLoadLimitSeconds() const { return dynamixelLoa
 //----------------------------------------------------------------------------
 // Setter Methods
 //----------------------------------------------------------------------------
-
-/**
- * @brief Set whether to use GPIO pins
- * @param _useGPIO True if GPIO should be used, false otherwise
- */
-void Configuration::setUseGPIO(bool _useGPIO) {
-    this->useGPIO = _useGPIO;
-    logger->debug("Set useGPIO to {}", this->useGPIO);
-}
 
 void Configuration::setSoundDeviceNumber(u8 _soundDeviceNumber) {
     audioConfig.deviceNumber = _soundDeviceNumber;
@@ -264,6 +231,17 @@ void Configuration::setCreature(std::shared_ptr<creatures::creature::Creature> _
     logger->debug("Set creature");
 }
 
+void Configuration::useSingleSerialDevice(const std::string &deviceNode) {
+    UARTDevice uartDevice(logger);
+    uartDevice.setDeviceNode(deviceNode);
+    uartDevice.setModule(UARTDevice::A);
+    uartDevice.setEnabled(true);
+
+    uartDevices.clear();
+    uartDevices.push_back(std::move(uartDevice));
+    logger->debug("Using serial device {} for module A", deviceNode);
+}
+
 /**
  * @brief Set the path to the creature configuration file
  * @param _creatureConfigFile Path to the creature configuration file
@@ -312,33 +290,6 @@ void Configuration::setLogLevel(std::string _logLevel) {
 void Configuration::setWatchdogDisabled(bool _watchdogDisabled) {
     this->watchdogDisabled = _watchdogDisabled;
     logger->debug("Set watchdogDisabled to {}", this->watchdogDisabled);
-}
-
-/**
- * @brief Set the power draw limit in watts
- * @param _powerDrawLimitWatts The power draw limit in watts
- */
-void Configuration::setPowerDrawLimitWatts(double _powerDrawLimitWatts) {
-    this->powerDrawLimitWatts = _powerDrawLimitWatts;
-    logger->debug("Set power draw limit to {} watts", this->powerDrawLimitWatts);
-}
-
-/**
- * @brief Set the power draw warning threshold in watts
- * @param _powerDrawWarningWatts The power draw warning threshold in watts
- */
-void Configuration::setPowerDrawWarningWatts(double _powerDrawWarningWatts) {
-    this->powerDrawWarningWatts = _powerDrawWarningWatts;
-    logger->debug("Set power draw warning to {} watts", this->powerDrawWarningWatts);
-}
-
-/**
- * @brief Set the power draw response time in seconds
- * @param _powerDrawResponseSeconds The power draw response time in seconds
- */
-void Configuration::setPowerDrawResponseSeconds(double _powerDrawResponseSeconds) {
-    this->powerDrawResponseSeconds = _powerDrawResponseSeconds;
-    logger->debug("Set power draw response time to {} seconds", this->powerDrawResponseSeconds);
 }
 
 /**

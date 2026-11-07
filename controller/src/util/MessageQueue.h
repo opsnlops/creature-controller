@@ -1,11 +1,16 @@
 #pragma once
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
+#include <cstddef>
+#include <cstdint>
 #include <deque>
+#include <functional>
 #include <mutex>
 #include <optional>
+#include <utility>
 
 namespace creatures {
 
@@ -20,10 +25,30 @@ template <typename T> class MessageQueue {
   public:
     MessageQueue() : shutdown_requested(false) {}
 
+    /**
+     * Create a queue that sheds old messages instead of growing without limit
+     *
+     * When the queue is full, push() discards the oldest message that canDrop
+     * accepts. Messages canDrop rejects are never discarded, so the queue can
+     * exceed maxSize if it fills with nothing but those.
+     *
+     * @param maxSize the number of messages to hold before shedding
+     * @param canDrop decides if a queued message may be discarded
+     */
+    MessageQueue(std::size_t maxSize, std::function<bool(const T &)> canDrop)
+        : shutdown_requested(false), maxSize(maxSize), canDrop(std::move(canDrop)) {}
+
     void push(T message) {
         std::lock_guard<std::mutex> lock(mtx);
         if (shutdown_requested.load()) {
             return; // Don't accept new messages during shutdown
+        }
+        if (maxSize > 0 && queue.size() >= maxSize) {
+            auto oldest = std::find_if(queue.begin(), queue.end(), canDrop);
+            if (oldest != queue.end()) {
+                queue.erase(oldest);
+                dropped.fetch_add(1);
+            }
         }
         queue.push_back(std::move(message));
         cond.notify_one(); // Hop, hop! A new message is here!
@@ -101,10 +126,18 @@ template <typename T> class MessageQueue {
         return queue.size();
     }
 
+    /**
+     * The total number of messages discarded because the queue was full
+     */
+    std::uint64_t droppedCount() const { return dropped.load(); }
+
   private:
     mutable std::mutex mtx; // Made mutable so const methods can use it
     std::condition_variable cond;
     std::deque<T> queue;
     std::atomic<bool> shutdown_requested;
+    std::size_t maxSize = 0; // Zero means unbounded
+    std::function<bool(const T &)> canDrop;
+    std::atomic<std::uint64_t> dropped{0};
 };
 } // namespace creatures

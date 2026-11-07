@@ -24,18 +24,18 @@ using creatures::io::MessageRouter;
 ServoModuleHandler::ServoModuleHandler(
     std::shared_ptr<Logger> logger, std::shared_ptr<Controller> controller, UARTDevice::module_name moduleId,
     std::string deviceNode, std::shared_ptr<MessageRouter> messageRouter,
-    std::shared_ptr<MessageQueue<creatures::server::ServerMessage>> websocketOutgoingQueue)
-    : logger(logger), controller(controller), deviceNode(std::move(deviceNode)), moduleId(moduleId),
-      messageRouter(messageRouter), websocketOutgoingQueue(websocketOutgoingQueue) {
+    std::shared_ptr<MessageQueue<creatures::server::ServerMessage>> websocketOutgoingQueue,
+    std::chrono::milliseconds pongTimeout)
+    : pongTimeout(pongTimeout), logger(logger), controller(controller), deviceNode(std::move(deviceNode)),
+      moduleId(moduleId), messageRouter(messageRouter), websocketOutgoingQueue(websocketOutgoingQueue) {
 
     logger->info("creating a new ServoModuleHandler for module {} on node {}", UARTDevice::moduleNameToString(moduleId),
                  this->deviceNode);
 
     // Make our queues
-    this->outgoingQueue = std::make_shared<MessageQueue<Message>>();
+    this->outgoingQueue =
+        std::make_shared<MessageQueue<Message>>(SERIAL_OUTGOING_QUEUE_MAX_MESSAGES, creatures::io::isDroppableMessage);
     this->incomingQueue = std::make_shared<MessageQueue<Message>>();
-
-    this->messageRouter->setHandlerState(this->moduleId, creatures::io::MotorHandlerState::idle);
 
     this->threadName = fmt::format("ServoModuleHandler-{}", UARTDevice::moduleNameToString(this->moduleId));
 }
@@ -116,7 +116,12 @@ void ServoModuleHandler::start() {
     }
 
     if (this->serialHandler) {
-        this->serialHandler->start();
+        auto startResult = this->serialHandler->start();
+        if (!startResult.isSuccess()) {
+            logger->critical("Unable to start serial I/O for module {}: {}",
+                             UARTDevice::moduleNameToString(this->moduleId), startResult.getError()->getMessage());
+            serialStartFailed.store(true);
+        }
     }
 
     creatures::StoppableThread::start();
@@ -155,7 +160,8 @@ Result<bool> ServoModuleHandler::firmwareReadyForInitialization(u32 firmwareVer)
     // Go gather the configuration from the creature, gated to what this firmware
     // version can actually drive.
     auto creatureConfigCommand = creatures::commands::ServoModuleConfiguration(logger);
-    auto configResult = creatureConfigCommand.getServoConfigurations(controller, getModuleName(), this->firmwareVersion);
+    auto configResult =
+        creatureConfigCommand.getServoConfigurations(controller, getModuleName(), this->firmwareVersion);
     if (!configResult.isSuccess()) {
         const auto error = configResult.getError().value();
 
@@ -198,6 +204,7 @@ void ServoModuleHandler::firmwareReadyToOperate() {
     }
 
     logger->info("firmware is ready to operate");
+    pongReceived(); // Start the pong timeout from now
     this->ready.store(true);
     this->configured.store(true);
     this->messageRouter->setHandlerState(this->moduleId, creatures::io::MotorHandlerState::ready);
@@ -250,6 +257,36 @@ void ServoModuleHandler::run() {
 }
 
 creatures::config::UARTDevice::module_name ServoModuleHandler::getModuleName() const { return this->moduleId; }
+
+void ServoModuleHandler::pongReceived() {
+    lastPongTime.store(std::chrono::steady_clock::now().time_since_epoch().count());
+}
+
+std::optional<std::string> ServoModuleHandler::getCommunicationFailure() const {
+    if (messageRouter->isEmergencyStopActive()) {
+        return std::nullopt;
+    }
+
+    if (serialStartFailed.load()) {
+        return fmt::format("unable to open serial port {}", deviceNode);
+    }
+
+    if (serialHandler && serialHandler->hasFailed()) {
+        return fmt::format("serial port {} failed", deviceNode);
+    }
+
+    if (ready.load()) {
+        const std::chrono::steady_clock::duration sinceLastPong =
+            std::chrono::steady_clock::now().time_since_epoch() -
+            std::chrono::steady_clock::duration(lastPongTime.load());
+        if (sinceLastPong > pongTimeout) {
+            return fmt::format("no pong from the firmware on {} for {} ms", deviceNode,
+                               std::chrono::duration_cast<std::chrono::milliseconds>(sinceLastPong).count());
+        }
+    }
+
+    return std::nullopt;
+}
 
 bool ServoModuleHandler::isReady() const { return ready.load(); }
 

@@ -15,7 +15,7 @@ class TestableConfiguration : public Configuration {
     // Expose protected methods for testing
     using Configuration::addUARTDevice;
     using Configuration::setNetworkDeviceName;
-    using Configuration::setUseGPIO;
+    using Configuration::useSingleSerialDevice;
 };
 
 class ConfigurationTest : public ::testing::Test {
@@ -28,6 +28,17 @@ class ConfigurationTest : public ::testing::Test {
     void SetUp() override { config = std::make_unique<TestableConfiguration>(mockLogger); }
 };
 
+TEST_F(ConfigurationTest, SingleSerialDeviceReplacesConfiguredUARTs) {
+    config->useSingleSerialDevice("/dev/configured");
+    config->useSingleSerialDevice("/dev/creature/Caroll");
+
+    const auto devices = config->getUARTDevices();
+    ASSERT_EQ(devices.size(), 1);
+    EXPECT_EQ(devices[0].getDeviceNode(), "/dev/creature/Caroll");
+    EXPECT_EQ(devices[0].getModule(), UARTDevice::A);
+    EXPECT_TRUE(devices[0].getEnabled());
+}
+
 TEST_F(ConfigurationTest, SetAndGetCreatureConfigFile) {
     std::string fileName = "creature_config.json";
     config->setCreatureConfigFile(fileName);
@@ -35,14 +46,6 @@ TEST_F(ConfigurationTest, SetAndGetCreatureConfigFile) {
 }
 
 // Removed SetAndGetUsbDevice test since it doesn't match existing methods in Configuration
-
-TEST_F(ConfigurationTest, SetAndGetUseGPIO) {
-    config->setUseGPIO(true);
-    ASSERT_TRUE(config->getUseGPIO());
-
-    config->setUseGPIO(false);
-    ASSERT_FALSE(config->getUseGPIO());
-}
 
 TEST_F(ConfigurationTest, SetAndGetNetworkDeviceName) {
     std::string deviceName = "eth1";

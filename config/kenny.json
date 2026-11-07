@@ -10,7 +10,24 @@
   "position_max": 1023,
   "head_offset_max": 0.4,
   "servo_frequency": 50,
+  "power_draw_limit_watts": 15.0,
+  "power_draw_warning_watts": 14.0,
+  "power_draw_response_seconds": 10.0,
   "type": "parrot",
+  "voice": {
+    "voice_id": "k1fCGnhRbXzd6bzwlD2B",
+    "model_id": "eleven_flash_v2_5",
+    "stability": 0.3,
+    "similarity_boost": 0.46
+  },
+  "speech_loop_animation_ids": [
+    "1dc5269c-85a4-48d2-a3e8-0cd64a1f1740"
+  ],
+  "idle_animation_ids": [
+    "5f679a80-c3a1-4ac9-a2e2-96b6e8e91242",
+    "12bdb96e-1abe-4044-b8a5-45f40f0a03ee",
+    "4c9e3902-f43e-4d6e-b13f-2d3f6a0f813b"
+  ],
   "motors": [
     {
       "type": "servo",
@@ -18,18 +35,6 @@
       "name": "Neck Left",
       "output_module": "A",
       "output_header": 0,
-      "min_pulse_us": 1300,
-      "max_pulse_us": 2200,
-      "smoothing_value": 0.90,
-      "inverted": false,
-      "default_position": "center"
-    },
-    {
-      "type": "servo",
-      "id": "neck_right",
-      "name": "Neck Right",
-      "output_module": "A",
-      "output_header": 1,
       "min_pulse_us": 900,
       "max_pulse_us": 1950,
       "smoothing_value": 0.90,
@@ -38,14 +43,26 @@
     },
     {
       "type": "servo",
+      "id": "neck_right",
+      "name": "Neck Right",
+      "output_module": "A",
+      "output_header": 1,
+      "min_pulse_us": 1300,
+      "max_pulse_us": 2200,
+      "smoothing_value": 0.90,
+      "inverted": false,
+      "default_position": "center"
+    },
+    {
+      "type": "servo",
       "id": "neck_rotate",
       "name": "Neck Rotate",
       "output_module": "A",
-      "output_header": 3,
+      "output_header": 2,
       "min_pulse_us": 650,
       "max_pulse_us": 2500,
       "smoothing_value": 0.80,
-      "inverted": false,
+      "inverted": true,
       "default_position": "center"
     },
     {
@@ -53,7 +70,7 @@
       "id": "beak",
       "name": "Beak",
       "output_module": "A",
-      "output_header": 2,
+      "output_header": 3,
       "min_pulse_us": 1200,
       "max_pulse_us": 1800,
       "smoothing_value": 0.4,
@@ -68,47 +85,47 @@
       "output_header": 4,
       "min_pulse_us": 900,
       "max_pulse_us": 1750,
-      "smoothing_value": 0.9,
-      "inverted": false,
-      "default_position": "max"
+      "smoothing_value": 0.95,
+      "inverted": true,
+      "default_position": "min"
     }
   ],
   "inputs": [
     {
       "name": "head_tilt",
+      "slot": 2,
+      "width": 1,
+      "joystick_axis": 2
+    },
+    {
+      "name": "head_height",
       "slot": 3,
       "width": 1,
       "joystick_axis": 3
     },
     {
-      "name": "head_height",
-      "slot": 4,
-      "width": 1,
-      "joystick_axis": 4
-    },
-    {
       "name": "neck_rotate",
-      "slot": 5,
-      "width": 1,
-      "joystick_axis": 5
-    },
-    {
-      "name": "stand_rotate",
       "slot": 0,
       "width": 1,
       "joystick_axis": 0
     },
     {
-      "name": "body_lean",
-      "slot": 6,
+      "name": "stand_rotate",
+      "slot": 1,
       "width": 1,
-      "joystick_axis": 6
+      "joystick_axis": 1
+    },
+    {
+      "name": "body_lean",
+      "slot": 5,
+      "width": 1,
+      "joystick_axis": 5
     },
     {
       "name": "beak",
-      "slot": 2,
+      "slot": 4,
       "width": 1,
-      "joystick_axis": 2
+      "joystick_axis": 4
     },
     {
       "name": "chest",
@@ -118,3 +135,4 @@
     }
   ]
 }
+

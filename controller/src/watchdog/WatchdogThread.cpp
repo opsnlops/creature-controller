@@ -13,9 +13,11 @@ using json = nlohmann::json;
 namespace creatures::watchdog {
 
 WatchdogThread::WatchdogThread(std::shared_ptr<Logger> logger, std::shared_ptr<creatures::config::Configuration> config,
+                               std::shared_ptr<creatures::creature::Creature> creature,
                                std::shared_ptr<MessageQueue<creatures::server::ServerMessage>> websocketOutgoingQueue,
                                std::shared_ptr<creatures::io::MessageRouter> messageRouter)
-    : logger(logger), config(config), websocketOutgoingQueue(websocketOutgoingQueue), messageRouter(messageRouter) {
+    : logger(logger), config(config), creature(creature), websocketOutgoingQueue(websocketOutgoingQueue),
+      messageRouter(messageRouter) {
     threadName = "WatchdogThread";
     logger->info("WatchdogThread created");
 }
@@ -23,8 +25,8 @@ WatchdogThread::WatchdogThread(std::shared_ptr<Logger> logger, std::shared_ptr<c
 void WatchdogThread::run() {
     logger->info("WatchdogThread starting monitoring loop");
     logger->info("Configuration: PowerLimit={:.2f}W, PowerWarning={:.2f}W, PowerResponse={:.2f}s",
-                 config->getPowerDrawLimitWatts(), config->getPowerDrawWarningWatts(),
-                 config->getPowerDrawResponseSeconds());
+                 creature->getPowerDrawLimitWatts(), creature->getPowerDrawWarningWatts(),
+                 creature->getPowerDrawResponseSeconds());
     logger->info("Configuration: TempLimit={:.2f}F, TempWarning={:.2f}F, TempResponse={:.2f}s",
                  config->getTemperatureLimitDegrees(), config->getTemperatureWarningDegrees(),
                  config->getTemperatureLimitSeconds());
@@ -50,9 +52,9 @@ void WatchdogThread::run() {
 
 void WatchdogThread::checkPowerDraw() {
     double currentPower = WatchdogGlobals::getPowerDraw();
-    double powerLimit = config->getPowerDrawLimitWatts();
-    double powerWarning = config->getPowerDrawWarningWatts();
-    double responseTimeSeconds = config->getPowerDrawResponseSeconds();
+    double powerLimit = creature->getPowerDrawLimitWatts();
+    double powerWarning = creature->getPowerDrawWarningWatts();
+    double responseTimeSeconds = creature->getPowerDrawResponseSeconds();
 
     auto now = std::chrono::steady_clock::now();
 
@@ -242,6 +244,11 @@ void WatchdogThread::sendWarningToServer(const std::string &warningType, double 
 
 void WatchdogThread::triggerEmergencyStop(const std::string &reason) {
     logger->critical("EMERGENCY STOP TRIGGERED: {}", reason);
+
+    // Latch this first so no more frames queue up behind the ESTOP
+    if (messageRouter) {
+        messageRouter->markEmergencyStopActive();
+    }
 
     // Send ESTOP to server
     if (websocketOutgoingQueue) {

@@ -1,0 +1,25 @@
+#!/bin/sh
+# Run the controller for a creature, given the USB product name of its board.
+set -eu
+name=${1:?Usage: start-creature USB_PRODUCT_NAME}
+creature=$(printf '%s' "$name" | tr '[:upper:]' '[:lower:]')
+packaged=/usr/share/creature-controller
+
+creatureConfig=$packaged/creatures/$creature.json
+if [ ! -f "$creatureConfig" ]; then
+    echo "No creature configuration for USB device $name: $creatureConfig does not exist" >&2
+    exit 1
+fi
+
+# A file in /etc lets one host differ from the package without a rebuild
+controllerConfig=/etc/creature/controller/$creature.json
+if [ ! -f "$controllerConfig" ]; then
+    controllerConfig=$packaged/controllers/$creature.json
+fi
+if [ ! -f "$controllerConfig" ]; then
+    echo "No controller configuration for USB device $name: $controllerConfig does not exist" >&2
+    exit 1
+fi
+
+exec /usr/bin/creature-controller --config "$controllerConfig" \
+    --creature-config "$creatureConfig" --serial-device "/dev/creature/$name"

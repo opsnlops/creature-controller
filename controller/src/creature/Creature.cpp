@@ -175,6 +175,18 @@ u16 Creature::getServoUpdateFrequencyHz() const { return servoUpdateFrequencyHz;
 
 void Creature::setServoUpdateFrequencyHz(u16 hertz) { Creature::servoUpdateFrequencyHz = hertz; }
 
+double Creature::getPowerDrawLimitWatts() const { return powerDrawLimitWatts; }
+
+double Creature::getPowerDrawWarningWatts() const { return powerDrawWarningWatts; }
+
+double Creature::getPowerDrawResponseSeconds() const { return powerDrawResponseSeconds; }
+
+void Creature::setPowerDrawLimits(double limitWatts, double warningWatts, double responseSeconds) {
+    powerDrawLimitWatts = limitWatts;
+    powerDrawWarningWatts = warningWatts;
+    powerDrawResponseSeconds = responseSeconds;
+}
+
 u16 Creature::getChannelOffset() const { return channelOffset; }
 
 void Creature::setChannelOffset(u16 _channelOffset) { Creature::channelOffset = _channelOffset; }

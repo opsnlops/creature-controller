@@ -58,6 +58,57 @@ coding error. (Servos are strong and snapping PLA is easy!)
 
    curl -v -d @kenny.json https://server.prod.chirpchirp.dev/api/v1/creature
 
+# Running as a Service
+
+The `creature-controller` package contains every creature's configuration, and
+the board that's plugged in selects which one runs. There's nothing to enable.
+
+When a creature's board appears, a udev rule reads its USB product name, makes
+`/dev/creature/NAME`, and starts `creature-controller@NAME.service`. The product
+name comes from the board's EEPROM, and in lower case it's the creature's file
+name, so a board named `Caroll` uses
+`/usr/share/creature-controller/creatures/caroll.json`. Each creature has one
+board, which is module A. Unplugging the board stops the service.
+
+The board's name also selects the controller's settings, such as the network,
+audio, server, and temperature limits, from
+`/usr/share/creature-controller/controllers/caroll.json`. Every host can run the
+same package. To change one host without rebuilding, copy that file to
+`/etc/creature/controller/caroll.json` and edit it there; the file in `/etc`
+wins, and upgrades leave it alone.
+
+Power limits belong to the creature, so they're required in its configuration as
+`power_draw_limit_watts`, `power_draw_warning_watts`, and
+`power_draw_response_seconds`. A creature without them won't start.
+
+```bash
+systemctl list-units 'creature-controller@*'
+journalctl -u creature-controller@Caroll.service -f
+```
+
+The service runs as a dynamic user in the `dialout` and `audio` groups.
+
+If the link to a board fails while it's plugged in, the controller exits with an
+error and systemd restarts it every 30 seconds. After 10 starts in 10 minutes the
+instance stays `failed`. Once the problem is fixed, start it again:
+
+```bash
+sudo systemctl reset-failed creature-controller@Caroll.service
+sudo systemctl start creature-controller@Caroll.service
+```
+
+Package upgrades do not restart running instances, so that an upgrade never
+moves a creature on its own. Restart them when the creature is safe.
+
+`MemoryMax` is only enforced if the kernel has the memory cgroup controller.
+Check for `memory` in `/sys/fs/cgroup/cgroup.controllers`. Raspberry Pi OS boots
+with `cgroup_disable=memory`, which isn't in any file you can edit. To override
+it, add `cgroup_enable=memory` to the end of the single line in
+`/boot/firmware/cmdline.txt` (not `/boot/cmdline.txt`) and reboot.
+
+**Emergency stops:** the firmware holds an emergency stop until it's power
+cycled. Restarting the controller or the service doesn't clear it.
+
 ## Audio Levels
 
 Dialog and BGM gain are independently configurable in decibels. RTP playback

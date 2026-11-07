@@ -4,7 +4,8 @@ set -euo pipefail
 
 # Use the same package target and validation as GitHub Actions.
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
-docker build --pull --target package -f "$script_dir/Dockerfile" "$script_dir" -t creature-packages
+docker build --pull --target package --build-context creature-configs="$script_dir/../config" \
+    -f "$script_dir/Dockerfile" "$script_dir" -t creature-packages
 package_export=$(mktemp -d "${TMPDIR:-/tmp}/creature-packages.XXXXXX")
 trap 'rm -r "$package_export"' EXIT
 package_container=$(docker create creature-packages)

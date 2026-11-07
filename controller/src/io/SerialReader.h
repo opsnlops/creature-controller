@@ -4,53 +4,56 @@
 
 #pragma once
 
+#include <atomic>
 #include <string>
 #include <thread>
 
-#include "controller-config.h"
-#include "logging/Logger.h"
-#include "io/Message.h"
 #include "config/UARTDevice.h"
+#include "controller-config.h"
+#include "io/Message.h"
+#include "logging/Logger.h"
 #include "util/MessageQueue.h"
 #include "util/StoppableThread.h"
 
 namespace creatures::io {
 
-    using creatures::config::UARTDevice;
-    using creatures::io::Message;
+using creatures::config::UARTDevice;
+using creatures::io::Message;
+
+/**
+ * A thread that reads from a serial port and places the messages into a queue
+ *
+ * This class follows a fail-fast philosophy: if anything goes wrong with the
+ * serial port, it cleanly shuts down rather than trying to recover. Sometimes
+ * the best thing a rabbit can do is know when to hop away!
+ */
+class SerialReader : public StoppableThread {
+
+  public:
+    SerialReader(const std::shared_ptr<Logger> &logger, std::string deviceNode, UARTDevice::module_name moduleName,
+                 int fileDescriptor, const std::shared_ptr<MessageQueue<Message>> &incomingQueue);
+
+    ~SerialReader() override { this->logger->info("SerialReader destroyed"); }
+
+    void start() override;
 
     /**
-     * A thread that reads from a serial port and places the messages into a queue
+     * Did this thread stop because the serial port failed?
      *
-     * This class follows a fail-fast philosophy: if anything goes wrong with the
-     * serial port, it cleanly shuts down rather than trying to recover. Sometimes
-     * the best thing a rabbit can do is know when to hop away!
+     * @return true if the port failed, false if it's running or was asked to stop
      */
-    class SerialReader : public StoppableThread {
+    [[nodiscard]] bool hasFailed() const { return failed.load(); }
 
-    public:
+  protected:
+    void run() override;
 
-        SerialReader(const std::shared_ptr<Logger>& logger,
-                     std::string deviceNode,
-                     UARTDevice::module_name moduleName,
-                     int fileDescriptor,
-                     const std::shared_ptr<MessageQueue<Message>>& incomingQueue);
+  private:
+    std::shared_ptr<Logger> logger;
+    std::shared_ptr<MessageQueue<Message>> incomingQueue;
+    std::string deviceNode;
+    UARTDevice::module_name moduleName;
+    int fileDescriptor;
+    std::atomic<bool> failed{false};
+};
 
-        ~SerialReader() override {
-            this->logger->info("SerialReader destroyed");
-        }
-
-        void start() override;
-
-    protected:
-        void run() override;
-
-    private:
-        std::shared_ptr<Logger> logger;
-        std::shared_ptr<MessageQueue<Message>> incomingQueue;
-        std::string deviceNode;
-        UARTDevice::module_name moduleName;
-        int fileDescriptor;
-    };
-
-} // creatures::io
+} // namespace creatures::io

@@ -14,21 +14,16 @@ using json = nlohmann::json;
 #include "logging/Logger.h"
 #include "util/Result.h"
 
-namespace creatures ::config {
+namespace creatures::config {
 
 ConfigurationBuilder::ConfigurationBuilder(std::shared_ptr<Logger> logger, std::string configFileName)
     : BaseBuilder(logger, std::move(configFileName)) {
 
     // Define the required config file fields
     requiredTopLevelFields = {
-        "useGPIO",
         "useRTPAudio",
-        "UARTs",
         "networkInterface",
         "universe",
-        "powerDrawLimitWatts",
-        "powerDrawWarningWatts",
-        "powerDrawResponseSeconds",
         "temperatureLimitDegrees",
         "temperatureWarningDegrees",
         "temperatureLimitSeconds",
@@ -104,11 +99,14 @@ Result<std::shared_ptr<creatures::config::Configuration>> ConfigurationBuilder::
     auto config = std::make_shared<creatures::config::Configuration>(logger);
 
     // Fill in the easy ones
-    auto useGPIOResult = getBooleanField(j, "useGPIO");
-    if (!useGPIOResult.isSuccess()) {
-        return makeError(useGPIOResult.getError().value().getMessage());
+    if (j.contains("powerDrawLimitWatts") || j.contains("powerDrawWarningWatts") ||
+        j.contains("powerDrawResponseSeconds")) {
+        logger->warn("The powerDraw fields are ignored here; power limits now come from the creature config");
     }
-    config->setUseGPIO(useGPIOResult.getValue().value());
+
+    if (j.contains("useGPIO")) {
+        logger->warn("Field 'useGPIO' is deprecated and ignored; GPIO support has been removed");
+    }
 
     config->setUniverse(j["universe"]);
 
@@ -243,9 +241,6 @@ Result<std::shared_ptr<creatures::config::Configuration>> ConfigurationBuilder::
     config->setNetworkDeviceName(j["networkInterface"]);
 
     // Set watchdog configuration
-    config->setPowerDrawLimitWatts(j["powerDrawLimitWatts"]);
-    config->setPowerDrawWarningWatts(j["powerDrawWarningWatts"]);
-    config->setPowerDrawResponseSeconds(j["powerDrawResponseSeconds"]);
     config->setTemperatureLimitDegrees(j["temperatureLimitDegrees"]);
     config->setTemperatureWarningDegrees(j["temperatureWarningDegrees"]);
     config->setTemperatureLimitSeconds(j["temperatureLimitSeconds"]);
@@ -257,9 +252,8 @@ Result<std::shared_ptr<creatures::config::Configuration>> ConfigurationBuilder::
     config->setDynamixelLoadLimitSeconds(j["dynamixelLoadLimitSeconds"]);
 
     // Log that we've gotten this far
-    logger->info("successfully parsed the main config file! useGPIO: {}, "
-                 "networkInterface: {}, universe: {}",
-                 config->getUseGPIO(), config->getNetworkDeviceName(), config->getUniverse());
+    logger->info("successfully parsed the main config file! networkInterface: {}, universe: {}",
+                 config->getNetworkDeviceName(), config->getUniverse());
 
     // Now go look up the network information
     config->resolveNetworkInterfaceDetails();
@@ -267,7 +261,7 @@ Result<std::shared_ptr<creatures::config::Configuration>> ConfigurationBuilder::
                   config->getNetworkDeviceName(), config->getNetworkDeviceIPAddress(), config->getNetworkDeviceIndex());
 
     // Now let's handle the UARTs
-    for (auto &uart : j["UARTs"]) {
+    for (auto &uart : j.value("UARTs", json::array())) {
 
         // Validate the fields in this object
         for (const auto &fieldName : requiredUARTFields) {

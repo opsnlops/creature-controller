@@ -41,8 +41,21 @@ CreatureBuilder::CreatureBuilder(std::shared_ptr<Logger> logger, std::string con
     : BaseBuilder(std::move(logger), std::move(configFile)) {
     // Define the required config file fields
     requiredTopLevelFields = {
-        "id",           "type",         "name",        "version",       "channel_offset", "motors", "servo_frequency",
-        "position_min", "position_max", "description", "audio_channel", "mouth_slot",
+        "id",
+        "type",
+        "name",
+        "version",
+        "channel_offset",
+        "motors",
+        "servo_frequency",
+        "position_min",
+        "position_max",
+        "description",
+        "audio_channel",
+        "mouth_slot",
+        "power_draw_limit_watts",
+        "power_draw_warning_watts",
+        "power_draw_response_seconds",
     };
 
     requiredServoFields = {"type",          "id",
@@ -142,6 +155,27 @@ Result<std::shared_ptr<creatures::creature::Creature>> CreatureBuilder::build() 
             ControllerError(ControllerError::InvalidConfiguration, errorMessage)};
     }
 
+    // The watchdog can't protect a creature with nonsense limits, so refuse to run it
+    for (const auto *fieldName :
+         {"power_draw_limit_watts", "power_draw_warning_watts", "power_draw_response_seconds"}) {
+        if (!j[fieldName].is_number() || j[fieldName].get<double>() <= 0.0) {
+            auto errorMessage = fmt::format("Field '{}' must be a positive number", fieldName);
+            logger->critical(errorMessage);
+            return Result<std::shared_ptr<creatures::creature::Creature>>{
+                ControllerError(ControllerError::InvalidConfiguration, errorMessage)};
+        }
+    }
+
+    const double powerLimitWatts = j["power_draw_limit_watts"];
+    const double powerWarningWatts = j["power_draw_warning_watts"];
+    if (powerWarningWatts > powerLimitWatts) {
+        auto errorMessage =
+            fmt::format("Power warning of {} W is above the limit of {} W", powerWarningWatts, powerLimitWatts);
+        logger->critical(errorMessage);
+        return Result<std::shared_ptr<creatures::creature::Creature>>{
+            ControllerError(ControllerError::InvalidConfiguration, errorMessage)};
+    }
+
     // The servo frequency is shared across all servos for the creature
     u16 servo_frequency = j["servo_frequency"];
 
@@ -156,6 +190,7 @@ Result<std::shared_ptr<creatures::creature::Creature>> CreatureBuilder::build() 
     creature->setPositionMin(j["position_min"]);
     creature->setPositionMax(j["position_max"]);
     creature->setServoUpdateFrequencyHz(servo_frequency);
+    creature->setPowerDrawLimits(powerLimitWatts, powerWarningWatts, j["power_draw_response_seconds"]);
     creature->setType(type);
 
     // Let the creature subclass extract its own config parameters

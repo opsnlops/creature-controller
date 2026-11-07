@@ -106,6 +106,17 @@ Result<std::shared_ptr<config::Configuration>> CommandLine::parseCommandLine(int
         configResult.getValue().value()->setWatchdogDisabled(true);
     }
 
+    if (auto serialDevice = program.present("--serial-device")) {
+        configResult.getValue().value()->useSingleSerialDevice(*serialDevice);
+    }
+
+    if (configResult.getValue().value()->getUARTDevices().empty()) {
+        std::string errorMessage = "No serial devices configured: set UARTs in the config file or use --serial-device";
+        logger->critical(errorMessage);
+        return Result<std::shared_ptr<config::Configuration>>(
+            ControllerError(ControllerError::InvalidConfiguration, errorMessage));
+    }
+
     return configResult;
 }
 
@@ -115,6 +126,10 @@ void CommandLine::setupCommandLineArguments(argparse::ArgumentParser &program) {
         .nargs(1);
 
     program.add_argument("--config").help("Our configuration file (required unless listing devices)").nargs(1);
+
+    program.add_argument("--serial-device")
+        .help("Serial device of the creature's board, used as module A in place of any configured UARTs")
+        .nargs(1);
 
     program.add_argument("--list-network-devices")
         .help("List available network devices and exit")

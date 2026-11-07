@@ -1,6 +1,9 @@
 #pragma once
 
 #include <atomic>
+#include <chrono>
+#include <optional>
+#include <string>
 
 #include "config/UARTDevice.h"
 #include "controller/Controller.h"
@@ -14,7 +17,7 @@
 
 class Controller;
 
-namespace creatures ::io {
+namespace creatures::io {
 class MessageRouter;
 }
 
@@ -27,7 +30,8 @@ class ServoModuleHandler : public StoppableThread, public std::enable_shared_fro
     ServoModuleHandler(std::shared_ptr<Logger> logger, std::shared_ptr<Controller> controller,
                        UARTDevice::module_name moduleId, std::string deviceNode,
                        std::shared_ptr<creatures::io::MessageRouter> messageRouter,
-                       std::shared_ptr<MessageQueue<creatures::server::ServerMessage>> websocketOutgoingQueue);
+                       std::shared_ptr<MessageQueue<creatures::server::ServerMessage>> websocketOutgoingQueue,
+                       std::chrono::milliseconds pongTimeout = std::chrono::seconds(PONG_TIMEOUT_SECONDS));
 
     void init();
 
@@ -89,6 +93,21 @@ class ServoModuleHandler : public StoppableThread, public std::enable_shared_fro
     void firmwareReadyToOperate();
 
     /**
+     * Note that the firmware answered a ping
+     */
+    void pongReceived();
+
+    /**
+     * Check if the link to the module has failed
+     *
+     * After an emergency stop this never reports a failure. The firmware is
+     * expected to go silent, and exiting would risk clearing the stop on restart.
+     *
+     * @return a description of the failure, or nothing if the link is healthy
+     */
+    [[nodiscard]] std::optional<std::string> getCommunicationFailure() const;
+
+    /**
      * Get the module name of the module we're controlling
      *
      * @return the module name of the module we're controlling
@@ -122,6 +141,15 @@ class ServoModuleHandler : public StoppableThread, public std::enable_shared_fro
 
     std::atomic<bool> ready{false};
     std::atomic<bool> configured{false};
+
+    // Set if the serial port could not be opened at startup
+    std::atomic<bool> serialStartFailed{false};
+
+    // How long a ready module may go without answering a ping
+    std::chrono::milliseconds pongTimeout;
+
+    // When we last heard a pong, as steady_clock nanoseconds since its epoch
+    std::atomic<std::chrono::steady_clock::rep> lastPongTime{0};
 
     /**
      * Our logger

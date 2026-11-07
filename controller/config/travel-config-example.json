@@ -1,6 +1,5 @@
 {
   "logLevel": "info",
-  "useGPIO": false,
   "UARTs":
     [
       {
@@ -22,9 +21,6 @@
   "outputVolumePercent": 75,
   "alsaMixerCard": "default",
   "alsaMixerElement": "PCM",
-  "powerDrawLimitWatts": 40.0,
-  "powerDrawWarningWatts": 32.0,
-  "powerDrawResponseSeconds": 4.0,
   "temperatureLimitDegrees": 175.0,
   "temperatureWarningDegrees": 160.0,
   "temperatureLimitSeconds": 7.0,

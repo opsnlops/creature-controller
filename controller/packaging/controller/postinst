@@ -1,0 +1,15 @@
+#!/bin/sh
+set -e
+if [ "$1" = configure ] && [ -d /run/systemd/system ]; then
+    systemctl daemon-reload
+    udevadm control --reload-rules || true
+    # Never restart here. Instances are site-specific, and an upgrade should not
+    # move a creature or restart past an emergency stop.
+    if [ -n "${2:-}" ]; then
+        systemctl list-units --plain --no-legend --state=active 'creature-controller@*.service' |
+            while read -r unit remainder; do
+                echo "$unit is still running the old version; restart it when the creature is safe."
+            done
+    fi
+fi
+exit 0

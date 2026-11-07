@@ -1,22 +1,72 @@
 {
   "name": "Beaky",
-  "version": "2.0",
+  "id": "4754fc0e-1706-11ef-931d-bbb95a696e2e",
+  "version": "0.1.0",
   "description": "The lead at April's Creature Workshop!",
   "channel_offset": 1,
+  "audio_channel": 1,
+  "universe": 2,
   "mouth_slot": 4,
   "position_min": 0,
   "position_max": 1023,
   "head_offset_max": 0.4,
   "servo_frequency": 50,
+  "power_draw_limit_watts": 15.0,
+  "power_draw_warning_watts": 14.0,
+  "power_draw_response_seconds": 10.0,
   "type": "parrot",
+  "voice": {
+      "voice_id": "n7Wi4g1bhpw4Bs8HK5ph",
+      "model_id": "eleven_flash_v2_5",
+      "stability": 0.5,
+      "similarity_boost": 0.72
+  },
+  "speech_loop_animation_ids": [
+    "87450ac7-4947-4078-a049-13dd767708df",
+    "4ee4ea7a-029e-4015-ae8f-84247c92dee6"
+  ],
+  "idle_animation_ids": [
+      "0282df2c-ec7f-4869-8a09-43216e3bd715",
+      "ea849c1f-e81e-4877-ad4f-b3af827aedc6"
+  ],
+  "gaze": {
+    "pan": {
+      "input": "neck_rotate",
+      "degrees_at_min": -55.0,
+      "degrees_at_max": 55.0
+    },
+    "elevation": {
+      "input": "head_height",
+      "degrees_at_min": -25.0,
+      "degrees_at_max": 25.0
+    },
+    "cock": {
+      "input": "head_tilt",
+      "degrees_at_min": -20.0,
+      "degrees_at_max": 20.0,
+      "listening_amount": 0.4
+    }
+  },
   "motors": [
     {
       "type": "servo",
       "id": "neck_left",
       "name": "Neck Left",
-      "output_module": "A",
       "output_header": 0,
-      "min_pulse_us": 1250,
+      "output_module": "A",
+      "min_pulse_us": 800,
+      "max_pulse_us": 2250,
+      "smoothing_value": 0.90,
+      "inverted": true,
+      "default_position": "center"
+    },
+    {
+      "type": "servo",
+      "id": "neck_right",
+      "name": "Neck Right",
+      "output_header": 1,
+      "output_module": "A",
+      "min_pulse_us": 800,
       "max_pulse_us": 2250,
       "smoothing_value": 0.90,
       "inverted": false,
@@ -24,36 +74,24 @@
     },
     {
       "type": "servo",
-      "id": "neck_right",
-      "name": "Neck Right",
-      "output_module": "A",
-      "output_header": 1,
-      "min_pulse_us": 800,
-      "max_pulse_us": 1800,
-      "smoothing_value": 0.90,
-      "inverted": true,
-      "default_position": "center"
-    },
-    {
-      "type": "servo",
       "id": "neck_rotate",
       "name": "Neck Rotate",
+      "output_header": 2,
       "output_module": "A",
-      "output_header": 3,
-      "min_pulse_us": 1400,
-      "max_pulse_us": 1900,
-      "smoothing_value": 0.95,
-      "inverted": false,
+      "min_pulse_us": 650,
+      "max_pulse_us": 2500,
+      "smoothing_value": 0.80,
+      "inverted": true,
       "default_position": "center"
     },
     {
       "type": "servo",
       "id": "body_lean",
       "name": "Body Lean",
-      "output_module": "B",
-      "output_header": 0,
-      "min_pulse_us": 1475,
-      "max_pulse_us": 1950,
+      "output_header": 4,
+      "output_module": "A",
+      "min_pulse_us": 1200,
+      "max_pulse_us": 1800,
       "smoothing_value": 0.96,
       "inverted": true,
       "default_position": "min"
@@ -63,49 +101,56 @@
       "id": "beak",
       "name": "Beak",
       "output_module": "A",
-      "output_header": 2,
-      "min_pulse_us": 1600,
-      "max_pulse_us": 2350,
+      "output_header": 3,
+      "min_pulse_us": 1900,
+      "max_pulse_us": 2700,
       "smoothing_value": 0.4,
-      "inverted": true,
+      "inverted": false,
       "default_position": "min"
     }
   ],
   "inputs": [
     {
       "name": "head_tilt",
-      "slot": 0,
-      "width": 1
+      "slot": 2,
+      "width": 1,
+      "joystick_axis": 2
     },
     {
       "name": "head_height",
-      "slot": 1,
-      "width": 1
+      "slot": 3,
+      "width": 1,
+      "joystick_axis": 3
     },
     {
       "name": "neck_rotate",
-      "slot": 2,
-      "width": 1
+      "slot": 0,
+      "width": 1,
+      "joystick_axis": 0
     },
     {
       "name": "stand_rotate",
-      "slot": 3,
-      "width": 1
+      "slot": 1,
+      "width": 1,
+      "joystick_axis": 1
     },
     {
       "name": "body_lean",
-      "slot": 4,
-      "width": 1
+      "slot": 5,
+      "width": 1,
+      "joystick_axis": 5
     },
     {
       "name": "beak",
-      "slot": 5,
-      "width": 1
+      "slot": 4,
+      "width": 1,
+      "joystick_axis": 4
     },
     {
       "name": "chest",
-      "slot": 6,
-      "width": 1
+      "slot": 7,
+      "width": 1,
+      "joystick_axis": 7
     }
   ]
 }

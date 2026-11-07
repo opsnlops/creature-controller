@@ -48,6 +48,9 @@ class CreatureBuilderTest : public ::testing::Test {
       "head_offset_max": 0.4,
       "type": "parrot",
       "servo_frequency": 50,
+      "power_draw_limit_watts": 20.0,
+      "power_draw_warning_watts": 16.0,
+      "power_draw_response_seconds": 10.0,
       "motors": [
         {
           "type": "servo",
@@ -119,6 +122,9 @@ TEST_F(CreatureBuilderTest, BuildsCorrectlyWithValidData) {
     EXPECT_EQ(0, creature->getPositionMin());
     EXPECT_EQ(1023, creature->getPositionMax());
     EXPECT_EQ(50, creature->getServoUpdateFrequencyHz());
+    EXPECT_DOUBLE_EQ(20.0, creature->getPowerDrawLimitWatts());
+    EXPECT_DOUBLE_EQ(16.0, creature->getPowerDrawWarningWatts());
+    EXPECT_DOUBLE_EQ(10.0, creature->getPowerDrawResponseSeconds());
     EXPECT_EQ(1, creature->getNumberOfServos());
     EXPECT_EQ("neck_left", creature->getServo("neck_left")->getId());
     EXPECT_EQ("Neck Left", creature->getServo("neck_left")->getName());
@@ -129,6 +135,33 @@ TEST_F(CreatureBuilderTest, BuildsCorrectlyWithValidData) {
     EXPECT_FALSE(creature->getServo("neck_left")->isInverted());
     EXPECT_EQ(1250 + ((2250 - 1250) / 2), creature->getServo("neck_left")->getDefaultMicroseconds());
 }
+
+// Power limits are a safety setting, so a creature without usable ones must not run
+class CreatureBuilderPowerLimitTest : public ::testing::TestWithParam<std::string> {};
+
+TEST_P(CreatureBuilderPowerLimitTest, RefusesBadPowerLimits) {
+    const std::string jsonData = R"({"name": "Test", "id": "1", "type": "parrot", "version": "1", "description": "d",
+        "channel_offset": 1, "audio_channel": 1, "mouth_slot": 4, "position_min": 0, "position_max": 1023,
+        "servo_frequency": 50, "motors": [], )" +
+                                 GetParam() + "}";
+    auto fileName = CreateSecureTempFileWithContent(jsonData);
+
+    std::shared_ptr<creatures::Logger> logger = std::make_shared<creatures::NiceMockLogger>();
+    creatures::config::CreatureBuilder builder(logger, fileName);
+    EXPECT_FALSE(builder.build().isSuccess());
+
+    std::filesystem::remove(fileName);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    BadLimits, CreatureBuilderPowerLimitTest,
+    ::testing::Values(
+        R"("power_draw_warning_watts": 16.0, "power_draw_response_seconds": 10.0)",
+        R"("power_draw_limit_watts": 20.0, "power_draw_response_seconds": 10.0)",
+        R"("power_draw_limit_watts": 20.0, "power_draw_warning_watts": 16.0)",
+        R"("power_draw_limit_watts": "lots", "power_draw_warning_watts": 16.0, "power_draw_response_seconds": 10.0)",
+        R"("power_draw_limit_watts": 0, "power_draw_warning_watts": 0, "power_draw_response_seconds": 10.0)",
+        R"("power_draw_limit_watts": 16.0, "power_draw_warning_watts": 20.0, "power_draw_response_seconds": 10.0)"));
 
 TEST_F(CreatureBuilderTest, BuildsCorrectlyWithDynamixelServos) {
 
@@ -144,6 +177,9 @@ TEST_F(CreatureBuilderTest, BuildsCorrectlyWithDynamixelServos) {
       "position_max": 1023,
       "head_offset_max": 0.35,
       "servo_frequency": 50,
+      "power_draw_limit_watts": 20.0,
+      "power_draw_warning_watts": 16.0,
+      "power_draw_response_seconds": 10.0,
       "type": "crow",
       "motors": [
         {
@@ -232,6 +268,9 @@ TEST_F(CreatureBuilderTest, BuildsCorrectlyWithMixedMotorTypes) {
       "position_max": 1023,
       "head_offset_max": 0.35,
       "servo_frequency": 50,
+      "power_draw_limit_watts": 20.0,
+      "power_draw_warning_watts": 16.0,
+      "power_draw_response_seconds": 10.0,
       "type": "crow",
       "motors": [
         {

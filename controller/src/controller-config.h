@@ -25,6 +25,18 @@ using u64 = std::uint64_t;
 #define SERIAL_PORT_MAX_RECONNECT_ATTEMPTS 10 // Maximum number of reconnect attempts
 #define SERIAL_PORT_RECONNECT_DELAY_MS 2000   // Wait 2 seconds between reconnect attempts
 
+// How long a single message may stall on a full serial buffer before the link is
+// considered failed. The port is non-blocking, so short stalls are normal.
+#define SERIAL_WRITE_TIMEOUT_MS 2000
+
+// The most messages allowed to wait for a serial writer, about 2.5 seconds of
+// frames at 50Hz. Older position frames are worthless once a newer one exists.
+#define SERIAL_OUTGOING_QUEUE_MAX_MESSAGES 128
+
+// How long a ready module may go without answering a ping. Pings go out every
+// PING_SECONDS, so this allows for several missed replies.
+#define PONG_TIMEOUT_SECONDS 20
+
 // The most servos we can control
 #define MAX_NUMBER_OF_SERVOS 8
 
@@ -54,19 +66,6 @@ using u64 = std::uint64_t;
 // Dynamixel servo support was introduced in firmware version 4. A configuration
 // that contains Dynamixel motors cannot run on older (HW3) firmware.
 #define DYNAMIXEL_MIN_FIRMWARE_VERSION 4
-
-// GPIO
-#define GPIO_DEVICE "/dev/gpiomem"
-#define FIRMWARE_RESET_PIN 26
-
-// These are from the server. They aren't used here, but just to note
-// which ones are used over there.
-#define SERVER_RUNNING_GPIO_PIN 17
-#define PLAYING_ANIMATION_GPIO_PIN 27
-#define PLAYING_SOUND_GPIO_PIN 22
-#define RECEIVING_STREAM_FRAMES_GPIO_PIN 23
-#define SENDING_DMX_GPIO_PIN 24
-#define HEARTBEAT_GPIO_PIN 25
 
 // Stepper
 #define STEPPER_LOOP_PERIOD_IN_US 1000 // The A3967 wants 1us pluses at a min

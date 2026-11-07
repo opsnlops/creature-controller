@@ -288,10 +288,7 @@ add_library(creature_lib
         # Device Sources
         src/device/Servo.cpp
         src/device/Stepper.cpp
-        src/device/GPIO.cpp
-        src/device/GPIO.h
         src/device/ServoException.h
-        src/device/GPIOException.h
 
         # DMX Sources
         src/dmx/E131Client.cpp
@@ -430,6 +427,34 @@ install(TARGETS creature-controller
         LIBRARY DESTINATION "/lib"
         DESTINATION "/bin"
 )
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    install(DIRECTORY DESTINATION /etc/creature/controller COMPONENT creature-controller)
+    install(FILES packaging/controller/creature-controller@.service
+            DESTINATION lib/systemd/system COMPONENT creature-controller)
+    install(FILES packaging/controller/70-creature-controller.rules
+            DESTINATION lib/udev/rules.d COMPONENT creature-controller)
+    install(PROGRAMS packaging/controller/start-creature
+            DESTINATION lib/creature-controller COMPONENT creature-controller)
+
+    # Every creature ships in the package, and the USB board selects which one runs
+    set(CREATURE_CONFIG_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../config" CACHE PATH "Directory of creature configurations")
+    file(GLOB CREATURE_CONFIGS "${CREATURE_CONFIG_DIR}/*.json")
+    list(FILTER CREATURE_CONFIGS EXCLUDE REGEX "/(@[^/]*|upsert-test\\.json)$")
+    if(NOT CREATURE_CONFIGS)
+        message(FATAL_ERROR "No creature configurations found in ${CREATURE_CONFIG_DIR}")
+    endif()
+    install(FILES ${CREATURE_CONFIGS} DESTINATION share/creature-controller/creatures COMPONENT creature-controller)
+
+    # Each creature's host settings, chosen by the same board name
+    file(GLOB CONTROLLER_CONFIGS "${CREATURE_CONFIG_DIR}/controllers/*.json")
+    if(NOT CONTROLLER_CONFIGS)
+        message(FATAL_ERROR "No controller configurations found in ${CREATURE_CONFIG_DIR}/controllers")
+    endif()
+    install(FILES ${CONTROLLER_CONFIGS} DESTINATION share/creature-controller/controllers COMPONENT creature-controller)
+
+    install(FILES README.md DESTINATION share/doc/creature-controller COMPONENT creature-controller)
+    install(FILES LICENSE DESTINATION share/doc/creature-controller RENAME copyright COMPONENT creature-controller)
+endif()
 
 
 #
@@ -466,6 +491,8 @@ add_executable(creature-controller-test
         tests/config/UARTDevice_test.cpp
         tests/config/Configuation_test.cpp
         tests/io/Message_test.cpp
+        tests/io/SerialWriter_test.cpp
+        tests/controller/ServoModuleHandler_test.cpp
 )
 
 target_link_libraries(creature-controller-test
