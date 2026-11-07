@@ -4,6 +4,10 @@ set -eu
 package=${1:?Usage: check-package.sh controller.deb}
 [ "$(dpkg-deb -f "$package" Package)" = creature-controller ]
 apt-get update
+# A hand-made SSH advertisement like the ones on older hosts; install should retire it
+mkdir -p /etc/avahi/services
+printf '<service-group><name>%%h</name><service><type>_ssh._tcp</type><port>22</port></service></service-group>\n' \
+    > /etc/avahi/services/ssh.service
 apt-get install -y "$package" systemd udev
 creature-controller --version
 if ldd /usr/bin/creature-controller | grep -q 'not found'; then exit 1; fi
@@ -16,8 +20,15 @@ for creature in caroll beaky mango kenny; do
     [ -f "/usr/share/creature-controller/controllers/$creature.json" ]
 done
 [ -d /etc/creature/controller ]
-# The service runs as a systemd dynamic user; libnss-systemd lets tools show its name
-grep -qE '^passwd:.*systemd' /etc/nsswitch.conf
+dpkg -s avahi-daemon >/dev/null
+[ -f /etc/avahi/services/creature-controller-ssh.service ]
+[ ! -e /etc/avahi/services/ssh.service ]
+[ -f /etc/avahi/ssh.service.replaced-by-creature-controller ]
+dpkg-query -W -f='${Conffiles}\n' creature-controller | grep -q creature-controller-ssh.service
+# The service user exists, with access to the serial board and the sound card
+id -nG creature-controller | grep -qw dialout
+id -nG creature-controller | grep -qw audio
+[ "$(getent passwd creature-controller | cut -d: -f7)" = /usr/sbin/nologin ]
 if /usr/lib/creature-controller/start-creature NoSuchCreature; then exit 1; fi
 # Debian container images exclude documentation during installation; inspect the archive too.
 dpkg-deb -x "$package" /tmp/controller-package-content

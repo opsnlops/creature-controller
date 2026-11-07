@@ -4,7 +4,7 @@ Documentation=file:/usr/share/doc/creature-controller/README.md
 # Started by 70-creature-controller.rules when this creature's board appears, and
 # stopped when it's unplugged. There's nothing to enable.
 BindsTo=dev-creature-%i.device
-After=dev-creature-%i.device network-online.target sound.target
+After=dev-creature-%i.device network-online.target sound.target avahi-daemon.service
 Wants=network-online.target
 # Allow a few minutes of retries, then stop in a failed state instead of flooding
 # the journal.
@@ -13,8 +13,12 @@ StartLimitBurst=10
 
 [Service]
 Type=exec
-DynamicUser=yes
+# A fixed user rather than DynamicUser, which can't connect to D-Bus to reach Avahi
+User=creature-controller
+Group=creature-controller
 SupplementaryGroups=dialout audio
+RemoveIPC=yes
+RestrictSUIDSGID=yes
 ExecStart=/usr/lib/creature-controller/start-creature %i
 Restart=on-failure
 RestartSec=30

@@ -40,6 +40,10 @@
 #include "io/MessageRouter.h"
 #include "logging/Logger.h"
 #include "logging/SpdlogLogger.h"
+#include "network/MdnsRecords.h"
+#if CREATURE_HAS_AVAHI
+#include "network/AvahiPublisher.h"
+#endif
 #include "server/ServerConnection.h"
 #include "server/ServerMessage.h"
 #include "util/StoppableThread.h"
@@ -492,11 +496,41 @@ int main(int argc, char **argv) {
     pingTask->start();
     workerThreads.push_back(std::move(pingTask));
 
+    // Describe this creature and host for mDNS, so nobody has to remember its IP
+    creatures::network::ControllerDetails mdnsDetails;
+    mdnsDetails.controllerVersion = creatures::CommandLine::getVersion();
+    mdnsDetails.port = E131_DEFAULT_PORT;
+    mdnsDetails.universe = config->getUniverse();
+    mdnsDetails.networkInterface = config->getNetworkDeviceName();
+    mdnsDetails.serialDevice = config->getUARTDevices().empty() ? "" : config->getUARTDevices().front().getDeviceNode();
+    mdnsDetails.rtpAudio = config->getUseAudioSubsystem();
+    mdnsDetails.audioDevice =
+        config->getAudioConfig().deviceName.value_or(fmt::format("device {}", config->getAudioConfig().deviceNumber));
+    mdnsDetails.server =
+        config->isUsingServer() ? fmt::format("{}:{}", config->getServerAddress(), config->getServerPort()) : "off";
+    mdnsDetails.temperatureLimitF = config->getTemperatureLimitDegrees();
+#if CREATURE_HAS_AVAHI
+    auto mdnsPublisher = std::make_unique<creatures::network::AvahiPublisher>(
+        makeLogger("mdns"), creatures::network::makeCreatureService(*creature, mdnsDetails));
+    mdnsPublisher->start();
+#endif
+
     // Main loop - run until shutdown is requested
     logger->info("All systems running! Press Ctrl+C to shutdown gracefully.");
     int exitCode = EXIT_SUCCESS;
     while (!shutdown_requested.load()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+        // Add the firmware version to the advertisement once the board reports it
+        for (const auto &handler : servoModuleHandlers) {
+            const u32 firmwareVersion = handler->getFirmwareVersion();
+            if (firmwareVersion != 0 && firmwareVersion != mdnsDetails.firmwareVersion) {
+                mdnsDetails.firmwareVersion = firmwareVersion;
+#if CREATURE_HAS_AVAHI
+                mdnsPublisher->updateTxt(creatures::network::makeCreatureService(*creature, mdnsDetails).txt);
+#endif
+            }
+        }
 
         // A module we can't reach can't be driven or stopped, so don't limp along
         // without it. Exit with a failure and let the service manager restart us.
@@ -513,6 +547,11 @@ int main(int argc, char **argv) {
 
     // Graceful shutdown sequence
     logger->info("Shutdown requested, stopping all threads...");
+
+#if CREATURE_HAS_AVAHI
+    // Stop advertising first, since the creature is going away
+    mdnsPublisher->stop();
+#endif
 
     // Stop all threads in reverse order of creation
     for (auto it = workerThreads.rbegin(); it != workerThreads.rend(); ++it) {

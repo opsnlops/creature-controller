@@ -31,8 +31,26 @@ enable_memory_cgroup() {
     echo creature-controller >> /run/reboot-required.pkgs 2>/dev/null || true
 }
 
+# The package advertises SSH over mDNS. A hand-made ssh.service would advertise
+# it twice under the same name, so move one aside if no package owns it.
+retire_old_ssh_advertisement() {
+    old=/etc/avahi/services/ssh.service
+    [ -f "$old" ] || return 0
+    if dpkg -S "$old" >/dev/null 2>&1; then
+        return 0
+    fi
+    grep -q '_ssh\._tcp' "$old" || return 0
+
+    moved=/etc/avahi/ssh.service.replaced-by-creature-controller
+    mv "$old" "$moved"
+    echo "creature-controller: moved $old to $moved; the package now advertises SSH."
+}
+
 if [ "$1" = configure ]; then
+    # Create the service user before anything runs as it
+    systemd-sysusers creature-controller.conf
     enable_memory_cgroup
+    retire_old_ssh_advertisement
 fi
 
 if [ "$1" = configure ] && [ -d /run/systemd/system ]; then

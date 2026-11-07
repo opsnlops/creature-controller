@@ -1,0 +1,4 @@
+# The audio router's service user. It can reach the sound card and talk to
+# avahi-daemon over D-Bus, which a dynamic user can't.
+u creature-audio-router - "Creature audio router" /nonexistent /usr/sbin/nologin
+m creature-audio-router audio

@@ -1,4 +1,8 @@
 #include "audio-router/RouterConfig.h"
+#include "audio-router/RouterMdns.h"
+#if CREATURE_HAS_AVAHI
+#include "network/AvahiPublisher.h"
+#endif
 #include "audio/AudioEngine.h"
 #include <chrono>
 #include <csignal>
@@ -6,6 +10,7 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 #include <thread>
+#include <unistd.h>
 
 namespace {
 volatile std::sig_atomic_t stopRequested = 0;
@@ -44,6 +49,7 @@ void help() {
               << "Usage: creature-audio-router [--config PATH] [--check-config]\n"
               << "  --config PATH         Configuration (default /etc/creature/audio-router.json)\n"
               << "  --check-config        Validate configuration without opening audio or sockets\n"
+              << "  --name NAME           Name to advertise over mDNS (default: the host name)\n"
               << "  --list-sound-devices  List native audio outputs\n"
               << "  --version            Print product version\n"
               << "  --help               Show this help\n";
@@ -53,6 +59,7 @@ int main(int argc, char **argv) {
     try {
         std::string configPath = "/etc/creature/audio-router.json";
         bool check = false;
+        std::string name;
         for (int i = 1; i < argc; ++i) {
             const std::string arg = argv[i];
             if (arg == "--version") {
@@ -69,6 +76,10 @@ int main(int argc, char **argv) {
             }
             if (arg == "--check-config") {
                 check = true;
+                continue;
+            }
+            if (arg == "--name" && i + 1 < argc) {
+                name = argv[++i];
                 continue;
             }
             if (arg == "--config" && i + 1 < argc) {
@@ -88,9 +99,21 @@ int main(int argc, char **argv) {
         config.engine.interfaceIp = creatures::audio::router::resolveInterfaceAddress(config.networkInterface);
         std::signal(SIGINT, signalHandler);
         std::signal(SIGTERM, signalHandler);
+        if (name.empty()) {
+            char host[256] = {};
+            name = gethostname(host, sizeof(host) - 1) == 0 ? host : "audio-router";
+        }
+        const auto service = creatures::audio::router::makeRouterService(name, config, CREATURE_AUDIO_ROUTER_VERSION);
         creatures::audio::AudioEngine engine(logger, std::move(config.engine));
         if (!engine.start())
             return 1;
+#if CREATURE_HAS_AVAHI
+        // Advertise the router so nobody has to remember its IP
+        creatures::network::AvahiPublisher mdnsPublisher(logger, service);
+        mdnsPublisher.start();
+#else
+        (void)service;
+#endif
         auto nextSummary = std::chrono::steady_clock::now() + std::chrono::seconds(60);
         while (!stopRequested && engine.state() == creatures::audio::AudioEngine::State::Running) {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -99,6 +122,9 @@ int main(int argc, char **argv) {
                 nextSummary = std::chrono::steady_clock::now() + std::chrono::seconds(60);
             }
         }
+#if CREATURE_HAS_AVAHI
+        mdnsPublisher.stop();
+#endif
         engine.shutdown();
         return engine.state() == creatures::audio::AudioEngine::State::Failed ? 1 : 0;
     } catch (const std::exception &error) {

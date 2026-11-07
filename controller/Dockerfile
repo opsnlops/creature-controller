@@ -5,7 +5,7 @@ FROM debian:trixie AS build
 RUN apt update -y && apt upgrade -y && \
     apt install -y clang locales-all libssl-dev ninja-build cmake git \
                    dpkg-dev pkgconf libbson-dev libpthreadpool-dev libutf8proc-dev \
-                   file zlib1g-dev libasound2-dev libcurl4-openssl-dev && \
+                   file zlib1g-dev libasound2-dev libcurl4-openssl-dev libavahi-client-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy the source code into the build directory
@@ -39,7 +39,7 @@ FROM debian:trixie-slim AS runtime
 
 RUN apt update -y && apt upgrade -y && \
     apt install -y locales-all file zlib1g libsasl2-2 libicu76 libutf8proc3 libasound2t64 libuuid1 util-linux \
-                   libuv1 libcurl4 libprotobuf32t64 && \
+                   libuv1 libcurl4 libprotobuf32t64 libavahi-client3 && \
     rm -rf /var/lib/apt/lists
 
 WORKDIR /app

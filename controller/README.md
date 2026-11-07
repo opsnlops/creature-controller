@@ -86,7 +86,8 @@ systemctl list-units 'creature-controller@*'
 journalctl -u creature-controller@Caroll.service -f
 ```
 
-The service runs as a dynamic user in the `dialout` and `audio` groups.
+The service runs as the `creature-controller` system user, which the package
+creates in the `dialout` and `audio` groups.
 
 If the link to a board fails while it's plugged in, the controller exits with an
 error and systemd restarts it every 30 seconds. After 10 starts in 10 minutes the
@@ -107,6 +108,32 @@ reboot. It keeps the original as `cmdline.txt.creature-controller.bak`, only
 ever adds the flag, and leaves the file alone if it isn't a single line.
 Removing the package leaves the flag in place. After the reboot, check for
 `memory` in `/sys/fs/cgroup/cgroup.controllers`.
+
+**Finding creatures:** each running controller advertises its creature over
+mDNS as `_creature-controller._udp`, named after the creature in lower case. The
+TXT records describe:
+
+- **The creature:** id, name, type, version, description, channel offset, audio
+  channel, mouth slot, input count, motor count and ids, servo frequency,
+  position range, and power limits.
+- **The controller:** its version, the board's firmware version once the board
+  reports it, the universe, serial device, network interface, audio device and
+  whether RTP audio is on, the server, and the temperature limit.
+
+To list every creature and its address:
+
+```bash
+dns-sd -B _creature-controller._udp          # macOS
+avahi-browse -rt _creature-controller._udp   # Linux
+```
+
+The advertisement goes away when the controller stops or the board is unplugged.
+The package also advertises SSH under the host name, so `dns-sd -B _ssh._tcp`
+lists every creature host. If a host already had a hand-made
+`/etc/avahi/services/ssh.service` that no package owns, installing moves it to
+`/etc/avahi/ssh.service.replaced-by-creature-controller` so SSH isn't advertised
+twice.
+It's built on Linux only, through `avahi-daemon`; macOS builds leave it out.
 
 **Emergency stops:** the firmware holds an emergency stop until it's power
 cycled. Restarting the controller or the service doesn't clear it.
@@ -212,6 +239,20 @@ outputs remain silent. Add routes to distribute BGM to other speakers.
 PCM mix; provide mixing headroom with input/route gains to avoid clipping.
 HDMI volume normally belongs on the AVR; leave optional ALSA mixer settings
 unset if the HDMI device has no hardware volume control.
+
+### Finding routers
+
+Each running router advertises itself over mDNS as `_creature-audio-router._udp`,
+named after its host in lower case, or host and instance for a named service
+such as `server-hdmi0`. Its TXT records carry the router version, network
+interface, output device, speaker channels, input channels and their gains,
+routes, bass management, playout delay, device compensation, limiter ceiling, and
+whether RTCP is required:
+
+```bash
+dns-sd -B _creature-audio-router._udp          # macOS
+avahi-browse -rt _creature-audio-router._udp   # Linux
+```
 
 ### Synchronization
 

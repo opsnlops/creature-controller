@@ -87,6 +87,7 @@ class Creature {
     [[nodiscard]] u8 getNumberOfSteppers() const;
 
     static creature_type stringToCreatureType(const std::string &typeStr);
+    static std::string creatureTypeToString(creature_type type);
 
     static motor_type stringToMotorType(const std::string &typeStr);
 
@@ -154,6 +155,9 @@ class Creature {
     std::vector<creatures::Input> getInputs() const;
 
     std::shared_ptr<Servo> getServo(const std::string &servoName);
+
+    // The ids of every servo and stepper, sorted
+    [[nodiscard]] std::vector<std::string> getMotorIds() const;
 
     std::shared_ptr<Stepper> getStepper(std::string id);
 
