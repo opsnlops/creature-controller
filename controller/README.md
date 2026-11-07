@@ -108,6 +108,24 @@ ever adds the flag, and leaves the file alone if it isn't a single line.
 Removing the package leaves the flag in place. After the reboot, check for
 `memory` in `/sys/fs/cgroup/cgroup.controllers`.
 
+**Finding creatures:** each running controller advertises its creature over
+mDNS as `_creature-controller._udp`, named after the creature in lower case. The
+TXT records carry its id, name, type, version, universe, channel offset, audio
+channel, and the controller's version. To list every creature and its address:
+
+```bash
+dns-sd -B _creature-controller._udp          # macOS
+avahi-browse -rt _creature-controller._udp   # Linux
+```
+
+The advertisement goes away when the controller stops or the board is unplugged.
+The package also advertises SSH under the host name, so `dns-sd -B _ssh._tcp`
+lists every creature host. If a host already had a hand-made
+`/etc/avahi/services/ssh.service` that no package owns, installing moves it to
+`/etc/avahi/ssh.service.replaced-by-creature-controller` so SSH isn't advertised
+twice.
+It's built on Linux only, through `avahi-daemon`; macOS builds leave it out.
+
 **Emergency stops:** the firmware holds an emergency stop until it's power
 cycled. Restarting the controller or the service doesn't clear it.
 

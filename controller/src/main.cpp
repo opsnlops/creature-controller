@@ -40,6 +40,10 @@
 #include "io/MessageRouter.h"
 #include "logging/Logger.h"
 #include "logging/SpdlogLogger.h"
+#include "network/MdnsRecords.h"
+#if CREATURE_HAS_AVAHI
+#include "network/AvahiPublisher.h"
+#endif
 #include "server/ServerConnection.h"
 #include "server/ServerMessage.h"
 #include "util/StoppableThread.h"
@@ -492,6 +496,15 @@ int main(int argc, char **argv) {
     pingTask->start();
     workerThreads.push_back(std::move(pingTask));
 
+#if CREATURE_HAS_AVAHI
+    // Advertise which creature this is, so nobody has to remember its IP
+    auto mdnsPublisher = std::make_unique<creatures::network::AvahiPublisher>(
+        makeLogger("mdns"),
+        creatures::network::makeCreatureService(*creature, config->getUniverse(), creatures::CommandLine::getVersion(),
+                                                E131_DEFAULT_PORT));
+    mdnsPublisher->start();
+#endif
+
     // Main loop - run until shutdown is requested
     logger->info("All systems running! Press Ctrl+C to shutdown gracefully.");
     int exitCode = EXIT_SUCCESS;
@@ -513,6 +526,11 @@ int main(int argc, char **argv) {
 
     // Graceful shutdown sequence
     logger->info("Shutdown requested, stopping all threads...");
+
+#if CREATURE_HAS_AVAHI
+    // Stop advertising first, since the creature is going away
+    mdnsPublisher->stop();
+#endif
 
     // Stop all threads in reverse order of creation
     for (auto it = workerThreads.rbegin(); it != workerThreads.rend(); ++it) {

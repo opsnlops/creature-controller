@@ -72,6 +72,10 @@ Creature Server → DMX → Creature Controller (Linux host) → Pi Pico 2040 �
 - `SerialHandler`/`SerialReader`/`SerialWriter`: USB serial to Pi Pico.
 - Message handlers cover ping, stats, sensors, and more.
 
+**mDNS** (`src/network/`)
+- `MdnsRecords`: Builds the creature's `_creature-controller._udp` advertisement (portable, unit tested).
+- `AvahiPublisher`: Publishes it through `avahi-daemon`; Linux only, behind `CREATURE_HAS_AVAHI`.
+
 **Server Integration** (`src/server/`)
 - `ServerConnection`: WebSocket link to the Creature Server.
 - Publishes sensors; consumes remote commands.

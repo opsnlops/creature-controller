@@ -115,6 +115,17 @@ Creature::creature_type Creature::stringToCreatureType(const std::string &typeSt
     return creature_type::invalid_creature;
 }
 
+std::string Creature::creatureTypeToString(creature_type type) {
+    switch (type) {
+    case creature_type::parrot:
+        return "parrot";
+    case creature_type::crow:
+        return "crow";
+    default:
+        return "invalid";
+    }
+}
+
 Creature::motor_type Creature::stringToMotorType(const std::string &typeStr) {
     if (typeStr == "servo")
         return motor_type::servo;

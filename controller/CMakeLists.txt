@@ -379,6 +379,8 @@ add_library(creature_lib
         src/watchdog/WatchdogGlobals.cpp
         src/watchdog/WatchdogThread.h
         src/watchdog/WatchdogThread.cpp
+        src/network/MdnsRecords.cpp
+        src/network/MdnsRecords.h
 )
 
 target_include_directories(creature_lib PUBLIC
@@ -394,6 +396,14 @@ target_include_directories(creature_lib PUBLIC
 
 if(ALSA_FOUND)
     target_include_directories(creature_lib PUBLIC ${ALSA_INCLUDE_DIRS})
+endif()
+
+# mDNS advertising goes through avahi-daemon, so it's only built on Linux
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    pkg_check_modules(AVAHI_CLIENT REQUIRED IMPORTED_TARGET avahi-client)
+    target_sources(creature_lib PRIVATE src/network/AvahiPublisher.cpp src/network/AvahiPublisher.h)
+    target_link_libraries(creature_lib PUBLIC PkgConfig::AVAHI_CLIENT)
+    target_compile_definitions(creature_lib PUBLIC CREATURE_HAS_AVAHI=1)
 endif()
 
 target_link_libraries(creature_lib PUBLIC creature::audio)
@@ -433,6 +443,8 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
             DESTINATION lib/systemd/system COMPONENT creature-controller)
     install(FILES packaging/controller/70-creature-controller.rules
             DESTINATION lib/udev/rules.d COMPONENT creature-controller)
+    install(FILES packaging/controller/creature-controller-ssh.service
+            DESTINATION /etc/avahi/services COMPONENT creature-controller)
     install(PROGRAMS packaging/controller/start-creature
             DESTINATION lib/creature-controller COMPONENT creature-controller)
 
@@ -492,6 +504,7 @@ add_executable(creature-controller-test
         tests/config/Configuation_test.cpp
         tests/io/Message_test.cpp
         tests/io/SerialWriter_test.cpp
+        tests/network/MdnsRecords_test.cpp
         tests/controller/ServoModuleHandler_test.cpp
 )
 

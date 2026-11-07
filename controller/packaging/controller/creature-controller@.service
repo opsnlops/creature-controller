@@ -4,7 +4,7 @@ Documentation=file:/usr/share/doc/creature-controller/README.md
 # Started by 70-creature-controller.rules when this creature's board appears, and
 # stopped when it's unplugged. There's nothing to enable.
 BindsTo=dev-creature-%i.device
-After=dev-creature-%i.device network-online.target sound.target
+After=dev-creature-%i.device network-online.target sound.target avahi-daemon.service
 Wants=network-online.target
 # Allow a few minutes of retries, then stop in a failed state instead of flooding
 # the journal.

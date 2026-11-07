@@ -87,6 +87,7 @@ class Creature {
     [[nodiscard]] u8 getNumberOfSteppers() const;
 
     static creature_type stringToCreatureType(const std::string &typeStr);
+    static std::string creatureTypeToString(creature_type type);
 
     static motor_type stringToMotorType(const std::string &typeStr);
 
