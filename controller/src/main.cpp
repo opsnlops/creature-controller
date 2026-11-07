@@ -41,6 +41,7 @@
 #include "logging/Logger.h"
 #include "logging/SpdlogLogger.h"
 #include "network/MdnsRecords.h"
+#include "timesync/TimeSyncMonitor.h"
 #if CREATURE_HAS_AVAHI
 #include "network/AvahiPublisher.h"
 #endif
@@ -509,6 +510,11 @@ int main(int argc, char **argv) {
     mdnsDetails.server =
         config->isUsingServer() ? fmt::format("{}:{}", config->getServerAddress(), config->getServerPort()) : "off";
     mdnsDetails.temperatureLimitF = config->getTemperatureLimitDegrees();
+
+    // RTCP audio scheduling needs PTP sync. Warn when it's missing, but keep playing.
+    creatures::timesync::TimeSyncWatcher timeSyncWatcher(makeLogger("timesync"),
+                                                         std::make_unique<creatures::timesync::TimeSyncMonitor>());
+    mdnsDetails.timeSync = timeSyncWatcher.current();
 #if CREATURE_HAS_AVAHI
     auto mdnsPublisher = std::make_unique<creatures::network::AvahiPublisher>(
         makeLogger("mdns"), creatures::network::makeCreatureService(*creature, mdnsDetails));
@@ -521,16 +527,26 @@ int main(int argc, char **argv) {
     while (!shutdown_requested.load()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-        // Add the firmware version to the advertisement once the board reports it
+        // Keep the advertisement current with the firmware version and PTP sync
+        bool advertisementChanged = false;
         for (const auto &handler : servoModuleHandlers) {
             const u32 firmwareVersion = handler->getFirmwareVersion();
             if (firmwareVersion != 0 && firmwareVersion != mdnsDetails.firmwareVersion) {
                 mdnsDetails.firmwareVersion = firmwareVersion;
-#if CREATURE_HAS_AVAHI
-                mdnsPublisher->updateTxt(creatures::network::makeCreatureService(*creature, mdnsDetails).txt);
-#endif
+                advertisementChanged = true;
             }
         }
+        if (auto timeSync = timeSyncWatcher.poll()) {
+            mdnsDetails.timeSync = *timeSync;
+            advertisementChanged = true;
+        }
+#if CREATURE_HAS_AVAHI
+        if (advertisementChanged) {
+            mdnsPublisher->updateTxt(creatures::network::makeCreatureService(*creature, mdnsDetails).txt);
+        }
+#else
+        (void)advertisementChanged;
+#endif
 
         // A module we can't reach can't be driven or stopped, so don't limp along
         // without it. Exit with a failure and let the service manager restart us.

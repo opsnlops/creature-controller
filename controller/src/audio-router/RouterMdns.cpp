@@ -20,7 +20,7 @@ std::string inputChannel(const AudioEngineConfig &engine, size_t input) {
 } // namespace
 
 network::MdnsService makeRouterService(const std::string &name, const RouterConfig &config,
-                                       const std::string &routerVersion) {
+                                       const std::string &routerVersion, const timesync::TimeSyncStatus &timeSync) {
     const auto &engine = config.engine;
 
     std::string outputs;
@@ -71,6 +71,7 @@ network::MdnsService makeRouterService(const std::string &name, const RouterConf
         {"limiter_ceiling_db", fmt::format("{:g}", engine.output.limiterCeilingDb)},
         {"require_rtcp", engine.requireRtcp ? "yes" : "no"},
     };
+    timesync::appendTimeSyncTxt(service.txt, timeSync);
     return service;
 }
 

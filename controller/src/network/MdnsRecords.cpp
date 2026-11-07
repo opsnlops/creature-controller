@@ -52,6 +52,7 @@ MdnsService makeCreatureService(const creature::Creature &creature, const Contro
         {"audio_device", details.audioDevice},
         {"server", details.server},
     };
+    timesync::appendTimeSyncTxt(service.txt, details.timeSync);
     return service;
 }
 

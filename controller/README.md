@@ -135,6 +135,15 @@ lists every creature host. If a host already had a hand-made
 twice.
 It's built on Linux only, through `avahi-daemon`; macOS builds leave it out.
 
+**PTP sync:** the controller and the audio router check every few seconds that
+`ptp4l` is following a grandmaster within 50 µs, through its read-only socket at
+`/var/run/ptp4lro`, and that `phc2sys` is keeping the system clock synced. RTCP
+audio scheduling needs both. When either is missing, they log a warning (and
+again every minute while it lasts) but keep playing. The state is also in each
+mDNS record as `ptp`, `ptp_port`, `ptp_gm`, and `clock_synced`. The check needs
+`ptp4l.conf` to set `uds_ro_address` with `uds_ro_file_mode 0666`, so the service
+user can read it; without that, the check reports that `ptp4l` isn't answering.
+
 **Emergency stops:** the firmware holds an emergency stop until it's power
 cycled. Restarting the controller or the service doesn't clear it.
 

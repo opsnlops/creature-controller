@@ -1,5 +1,6 @@
 #include "audio-router/RouterConfig.h"
 #include "audio-router/RouterMdns.h"
+#include "timesync/TimeSyncMonitor.h"
 #if CREATURE_HAS_AVAHI
 #include "network/AvahiPublisher.h"
 #endif
@@ -103,7 +104,12 @@ int main(int argc, char **argv) {
             char host[256] = {};
             name = gethostname(host, sizeof(host) - 1) == 0 ? host : "audio-router";
         }
-        const auto service = creatures::audio::router::makeRouterService(name, config, CREATURE_AUDIO_ROUTER_VERSION);
+        // RTCP playout needs PTP sync. Warn when it's missing, but keep playing.
+        creatures::timesync::TimeSyncWatcher timeSyncWatcher(logger,
+                                                             std::make_unique<creatures::timesync::TimeSyncMonitor>());
+        const auto mdnsConfig = config; // The engine takes the original
+        const auto service = creatures::audio::router::makeRouterService(
+            name, mdnsConfig, CREATURE_AUDIO_ROUTER_VERSION, timeSyncWatcher.current());
         creatures::audio::AudioEngine engine(logger, std::move(config.engine));
         if (!engine.start())
             return 1;
@@ -117,6 +123,15 @@ int main(int argc, char **argv) {
         auto nextSummary = std::chrono::steady_clock::now() + std::chrono::seconds(60);
         while (!stopRequested && engine.state() == creatures::audio::AudioEngine::State::Running) {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            if (auto timeSync = timeSyncWatcher.poll()) {
+#if CREATURE_HAS_AVAHI
+                mdnsPublisher.updateTxt(creatures::audio::router::makeRouterService(
+                                            name, mdnsConfig, CREATURE_AUDIO_ROUTER_VERSION, *timeSync)
+                                            .txt);
+#else
+                (void)timeSync;
+#endif
+            }
             if (std::chrono::steady_clock::now() >= nextSummary) {
                 logger->info("Audio: {}", engine.getStats());
                 nextSummary = std::chrono::steady_clock::now() + std::chrono::seconds(60);
