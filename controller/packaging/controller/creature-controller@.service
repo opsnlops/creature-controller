@@ -13,8 +13,12 @@ StartLimitBurst=10
 
 [Service]
 Type=exec
-DynamicUser=yes
+# A fixed user rather than DynamicUser, which can't connect to D-Bus to reach Avahi
+User=creature-controller
+Group=creature-controller
 SupplementaryGroups=dialout audio
+RemoveIPC=yes
+RestrictSUIDSGID=yes
 ExecStart=/usr/lib/creature-controller/start-creature %i
 Restart=on-failure
 RestartSec=30

@@ -195,9 +195,21 @@ if(ALSA_FOUND)
     target_compile_definitions(creature_audio PRIVATE CREATURE_HAS_ALSA=1)
 endif()
 
+# mDNS advertising, shared by the controller and the audio router. Publishing goes
+# through avahi-daemon, so the publisher is only built on Linux.
+add_library(creature_mdns STATIC src/network/MdnsService.cpp src/network/MdnsService.h)
+target_include_directories(creature_mdns PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(creature_mdns PUBLIC fmt::fmt)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    pkg_check_modules(AVAHI_CLIENT REQUIRED IMPORTED_TARGET avahi-client)
+    target_sources(creature_mdns PRIVATE src/network/AvahiPublisher.cpp src/network/AvahiPublisher.h)
+    target_link_libraries(creature_mdns PUBLIC PkgConfig::AVAHI_CLIENT)
+    target_compile_definitions(creature_mdns PUBLIC CREATURE_HAS_AVAHI=1)
+endif()
+
 set(CREATURE_AUDIO_ROUTER_VERSION "0.1.2")
-add_library(creature_audio_router_config STATIC src/audio-router/RouterConfig.cpp)
-target_link_libraries(creature_audio_router_config PUBLIC creature::audio nlohmann_json::nlohmann_json)
+add_library(creature_audio_router_config STATIC src/audio-router/RouterConfig.cpp src/audio-router/RouterMdns.cpp)
+target_link_libraries(creature_audio_router_config PUBLIC creature::audio creature_mdns nlohmann_json::nlohmann_json)
 add_executable(creature-audio-router src/audio-router/main.cpp)
 target_link_libraries(creature-audio-router PRIVATE creature_audio_router_config spdlog::spdlog)
 target_compile_definitions(creature-audio-router PRIVATE CREATURE_AUDIO_ROUTER_VERSION="${CREATURE_AUDIO_ROUTER_VERSION}")
@@ -215,6 +227,8 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     install(DIRECTORY DESTINATION /etc/creature/audio-router COMPONENT creature-audio-router)
     install(FILES packaging/audio-router/creature-audio-router.service packaging/audio-router/creature-audio-router@.service
             DESTINATION lib/systemd/system COMPONENT creature-audio-router)
+    install(FILES packaging/audio-router/creature-audio-router.sysusers
+            DESTINATION lib/sysusers.d RENAME creature-audio-router.conf COMPONENT creature-audio-router)
     install(FILES README.md DESTINATION share/doc/creature-audio-router COMPONENT creature-audio-router)
     install(FILES LICENSE DESTINATION share/doc/creature-audio-router RENAME copyright COMPONENT creature-audio-router)
     install(FILES docs/audio-router-setup.md docs/audio-synchronization.md docs/audio-volume.md DESTINATION share/doc/creature-audio-router/docs COMPONENT creature-audio-router)
@@ -233,8 +247,9 @@ if(BUILD_TESTING)
         tests/audio/RtpJitterBuffer_test.cpp
         tests/audio/AudioEngine_test.cpp
         tests/audio/RouterConfig_test.cpp
+        tests/audio/RouterMdns_test.cpp
     )
-    target_link_libraries(creature-audio-test PRIVATE creature_audio_router_config gtest_main)
+    target_link_libraries(creature-audio-test PRIVATE creature_audio_router_config gtest_main gmock)
     include(GoogleTest)
     gtest_discover_tests(creature-audio-test)
 endif()
@@ -398,15 +413,7 @@ if(ALSA_FOUND)
     target_include_directories(creature_lib PUBLIC ${ALSA_INCLUDE_DIRS})
 endif()
 
-# mDNS advertising goes through avahi-daemon, so it's only built on Linux
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    pkg_check_modules(AVAHI_CLIENT REQUIRED IMPORTED_TARGET avahi-client)
-    target_sources(creature_lib PRIVATE src/network/AvahiPublisher.cpp src/network/AvahiPublisher.h)
-    target_link_libraries(creature_lib PUBLIC PkgConfig::AVAHI_CLIENT)
-    target_compile_definitions(creature_lib PUBLIC CREATURE_HAS_AVAHI=1)
-endif()
-
-target_link_libraries(creature_lib PUBLIC creature::audio)
+target_link_libraries(creature_lib PUBLIC creature::audio creature_mdns)
 
 add_executable(creature-controller
         src/main.cpp
@@ -441,6 +448,8 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     install(DIRECTORY DESTINATION /etc/creature/controller COMPONENT creature-controller)
     install(FILES packaging/controller/creature-controller@.service
             DESTINATION lib/systemd/system COMPONENT creature-controller)
+    install(FILES packaging/controller/creature-controller.sysusers
+            DESTINATION lib/sysusers.d RENAME creature-controller.conf COMPONENT creature-controller)
     install(FILES packaging/controller/70-creature-controller.rules
             DESTINATION lib/udev/rules.d COMPONENT creature-controller)
     install(FILES packaging/controller/creature-controller-ssh.service

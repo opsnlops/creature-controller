@@ -86,7 +86,8 @@ systemctl list-units 'creature-controller@*'
 journalctl -u creature-controller@Caroll.service -f
 ```
 
-The service runs as a dynamic user in the `dialout` and `audio` groups.
+The service runs as the `creature-controller` system user, which the package
+creates in the `dialout` and `audio` groups.
 
 If the link to a board fails while it's plugged in, the controller exits with an
 error and systemd restarts it every 30 seconds. After 10 starts in 10 minutes the
@@ -110,8 +111,16 @@ Removing the package leaves the flag in place. After the reboot, check for
 
 **Finding creatures:** each running controller advertises its creature over
 mDNS as `_creature-controller._udp`, named after the creature in lower case. The
-TXT records carry its id, name, type, version, universe, channel offset, audio
-channel, and the controller's version. To list every creature and its address:
+TXT records describe:
+
+- **The creature:** id, name, type, version, description, channel offset, audio
+  channel, mouth slot, input count, motor count and ids, servo frequency,
+  position range, and power limits.
+- **The controller:** its version, the board's firmware version once the board
+  reports it, the universe, serial device, network interface, audio device and
+  whether RTP audio is on, the server, and the temperature limit.
+
+To list every creature and its address:
 
 ```bash
 dns-sd -B _creature-controller._udp          # macOS
@@ -230,6 +239,20 @@ outputs remain silent. Add routes to distribute BGM to other speakers.
 PCM mix; provide mixing headroom with input/route gains to avoid clipping.
 HDMI volume normally belongs on the AVR; leave optional ALSA mixer settings
 unset if the HDMI device has no hardware volume control.
+
+### Finding routers
+
+Each running router advertises itself over mDNS as `_creature-audio-router._udp`,
+named after its host in lower case, or host and instance for a named service
+such as `server-hdmi0`. Its TXT records carry the router version, network
+interface, output device, speaker channels, input channels and their gains,
+routes, bass management, playout delay, device compensation, limiter ceiling, and
+whether RTCP is required:
+
+```bash
+dns-sd -B _creature-audio-router._udp          # macOS
+avahi-browse -rt _creature-audio-router._udp   # Linux
+```
 
 ### Synchronization
 

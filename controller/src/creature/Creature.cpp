@@ -1,3 +1,4 @@
+#include <algorithm>
 
 #include "controller-config.h"
 
@@ -113,6 +114,19 @@ Creature::creature_type Creature::stringToCreatureType(const std::string &typeSt
     if (typeStr == "crow")
         return creature_type::crow;
     return creature_type::invalid_creature;
+}
+
+std::vector<std::string> Creature::getMotorIds() const {
+    std::vector<std::string> ids;
+    ids.reserve(servos.size() + steppers.size());
+    for (const auto &[id, servo] : servos) {
+        ids.push_back(id);
+    }
+    for (const auto &[id, stepper] : steppers) {
+        ids.push_back(id);
+    }
+    std::sort(ids.begin(), ids.end());
+    return ids;
 }
 
 std::string Creature::creatureTypeToString(creature_type type) {

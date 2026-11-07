@@ -8,7 +8,7 @@
 #include <avahi-common/thread-watch.h>
 
 #include "logging/Logger.h"
-#include "network/MdnsRecords.h"
+#include "network/MdnsService.h"
 
 namespace creatures::network {
 
@@ -39,6 +39,14 @@ class AvahiPublisher {
      */
     void stop();
 
+    /**
+     * Replace the advertised TXT records, such as once the firmware reports its version
+     *
+     * The name, type, and port stay as they were. Safe to call from any thread
+     * except Avahi's own.
+     */
+    void updateTxt(std::vector<std::pair<std::string, std::string>> txt);
+
   private:
     static void clientCallback(AvahiClient *client, AvahiClientState state, void *userdata);
     static void groupCallback(AvahiEntryGroup *group, AvahiEntryGroupState state, void *userdata);
@@ -48,6 +56,8 @@ class AvahiPublisher {
     void onGroupState(AvahiEntryGroup *group, AvahiEntryGroupState state);
     void createService(AvahiClient *client);
     void chooseAlternativeName();
+    void fitRecord();
+    AvahiStringList *buildTxt() const;
     bool connect();
 
     std::shared_ptr<Logger> logger;
@@ -57,6 +67,7 @@ class AvahiPublisher {
     AvahiThreadedPoll *poll = nullptr;
     AvahiClient *client = nullptr;
     AvahiEntryGroup *group = nullptr;
+    bool established = false;
 };
 
 } // namespace creatures::network

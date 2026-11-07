@@ -12,6 +12,51 @@ namespace creatures::network {
 AvahiPublisher::AvahiPublisher(std::shared_ptr<Logger> logger, MdnsService service)
     : logger(std::move(logger)), service(std::move(service)) {
     currentName = this->service.name;
+    fitRecord();
+}
+
+void AvahiPublisher::fitRecord() {
+    const std::size_t bytes = fitTxtRecord(service);
+    if (bytes > MDNS_TXT_RECORD_TARGET_BYTES) {
+        logger->warn("mDNS: the TXT record for {} is {} bytes, more than the {} that fit in one packet", currentName,
+                     bytes, MDNS_TXT_RECORD_TARGET_BYTES);
+    }
+}
+
+AvahiStringList *AvahiPublisher::buildTxt() const {
+    // avahi_string_list_add_pair prepends, so walk backwards to keep our order
+    AvahiStringList *txt = nullptr;
+    for (auto it = service.txt.rbegin(); it != service.txt.rend(); ++it) {
+        txt = avahi_string_list_add_pair(txt, it->first.c_str(), it->second.c_str());
+    }
+    return txt;
+}
+
+void AvahiPublisher::updateTxt(std::vector<std::pair<std::string, std::string>> txt) {
+    if (poll) {
+        avahi_threaded_poll_lock(poll);
+    }
+
+    service.txt = std::move(txt);
+    fitRecord();
+
+    // Before the service is up, createService() picks up the new records itself
+    if (group && established) {
+        AvahiStringList *list = buildTxt();
+        const int result = avahi_entry_group_update_service_txt_strlst(
+            group, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC, static_cast<AvahiPublishFlags>(0), currentName.c_str(),
+            service.type.c_str(), nullptr, list);
+        avahi_string_list_free(list);
+        if (result < 0) {
+            logger->warn("mDNS: unable to update the TXT records for {}: {}", currentName, avahi_strerror(result));
+        } else {
+            logger->debug("mDNS: updated the TXT records for {}", currentName);
+        }
+    }
+
+    if (poll) {
+        avahi_threaded_poll_unlock(poll);
+    }
 }
 
 AvahiPublisher::~AvahiPublisher() { stop(); }
@@ -59,6 +104,7 @@ void AvahiPublisher::stop() {
         avahi_client_free(client);
         client = nullptr;
         group = nullptr;
+        established = false;
         logger->info("mDNS: stopped advertising {}", currentName);
     }
 
@@ -88,6 +134,7 @@ void AvahiPublisher::onClientState(AvahiClient *avahiClient, AvahiClientState st
         if (group) {
             avahi_entry_group_reset(group);
         }
+        established = false;
         break;
 
     case AVAHI_CLIENT_CONNECTING:
@@ -101,6 +148,7 @@ void AvahiPublisher::onClientState(AvahiClient *avahiClient, AvahiClientState st
             avahi_client_free(avahiClient);
             client = nullptr;
             group = nullptr;
+            established = false;
             connect();
         } else {
             logger->warn("mDNS: Avahi client failed: {}", avahi_strerror(avahi_client_errno(avahiClient)));
@@ -115,10 +163,12 @@ void AvahiPublisher::onClientState(AvahiClient *avahiClient, AvahiClientState st
 void AvahiPublisher::onGroupState(AvahiEntryGroup *entryGroup, AvahiEntryGroupState state) {
     switch (state) {
     case AVAHI_ENTRY_GROUP_ESTABLISHED:
+        established = true;
         logger->info("mDNS: advertising {} as {} on port {}", currentName, service.type, service.port);
         break;
 
     case AVAHI_ENTRY_GROUP_COLLISION:
+        established = false;
         chooseAlternativeName();
         avahi_entry_group_reset(entryGroup);
         createService(avahi_entry_group_get_client(entryGroup));
@@ -154,10 +204,7 @@ void AvahiPublisher::createService(AvahiClient *avahiClient) {
         return;
     }
 
-    AvahiStringList *txt = nullptr;
-    for (const auto &[key, value] : service.txt) {
-        txt = avahi_string_list_add_pair(txt, key.c_str(), value.c_str());
-    }
+    AvahiStringList *txt = buildTxt();
 
     int result = avahi_entry_group_add_service_strlst(group, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC,
                                                       static_cast<AvahiPublishFlags>(0), currentName.c_str(),

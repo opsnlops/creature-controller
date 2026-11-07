@@ -421,8 +421,9 @@ systemctl status creature-audio-router@hdmi1.service --no-pager
 journalctl -u creature-audio-router@hdmi0.service -u creature-audio-router@hdmi1.service -f
 ```
 
-The services use dynamic users with membership in `audio`. Keep configuration
-files readable by those users; the `644` modes above do that.
+The services run as the `creature-audio-router` system user, which the package
+creates in the `audio` group. Keep configuration files readable by that user;
+the `644` modes above do that.
 
 ## Troubleshoot startup and playback
 

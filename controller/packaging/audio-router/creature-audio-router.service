@@ -1,13 +1,17 @@
 [Unit]
 Description=Creature multichannel audio router
 Documentation=man:creature-audio-router(1)
-After=network-online.target sound.target
+After=network-online.target sound.target avahi-daemon.service
 Wants=network-online.target
 
 [Service]
 Type=exec
-DynamicUser=yes
+# A fixed user rather than DynamicUser, which can't connect to D-Bus to reach Avahi
+User=creature-audio-router
+Group=creature-audio-router
 SupplementaryGroups=audio
+RemoveIPC=yes
+RestrictSUIDSGID=yes
 ExecStart=/usr/bin/creature-audio-router --config /etc/creature/audio-router.json
 Restart=on-failure
 RestartSec=5

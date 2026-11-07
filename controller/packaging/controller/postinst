@@ -47,6 +47,8 @@ retire_old_ssh_advertisement() {
 }
 
 if [ "$1" = configure ]; then
+    # Create the service user before anything runs as it
+    systemd-sysusers creature-controller.conf
     enable_memory_cgroup
     retire_old_ssh_advertisement
 fi

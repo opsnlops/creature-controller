@@ -13,6 +13,11 @@ dpkg-deb -x "$package" /tmp/router-package-content
 gzip -t /tmp/router-package-content/usr/share/man/man1/creature-audio-router.1.gz
 creature-audio-router --check-config --config /tmp/router-package-content/usr/share/doc/creature-audio-router/examples/audio-router-bass-example.json
 if ldd /usr/bin/creature-audio-router | grep -q 'not found'; then exit 1; fi
+dpkg -s avahi-daemon >/dev/null
+# The service user exists, with access to the sound card
+id -nG creature-audio-router | grep -qw audio
+[ "$(getent passwd creature-audio-router | cut -d: -f7)" = /usr/sbin/nologin ]
+creature-audio-router --help | grep -q -- '--name'
 [ ! -e /usr/bin/creature-controller ]
 [ -d /etc/creature/audio-router ]
 dpkg-query -W -f='${Conffiles}\n' creature-audio-router | grep -q '/etc/creature/audio-router.json'

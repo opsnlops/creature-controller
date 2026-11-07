@@ -1,0 +1,5 @@
+# The controller's service user. It can reach the creature's serial board and the
+# sound card, and talk to avahi-daemon over D-Bus, which a dynamic user can't.
+u creature-controller - "Creature controller" /nonexistent /usr/sbin/nologin
+m creature-controller dialout
+m creature-controller audio

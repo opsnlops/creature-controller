@@ -15,23 +15,58 @@ namespace {
 using ::testing::Contains;
 using ::testing::Pair;
 
-TEST(MdnsRecords, InstanceNameIsLowerCase) {
+class MdnsRecordsTest : public ::testing::Test {
+  protected:
+    void SetUp() override {
+        creature.setName("Caroll");
+        creature.setId("56665920-98f7-11f1-9c92-2ccf67b00612");
+        creature.setType(creature::Creature::creature_type::parrot);
+        creature.setVersion("0.1.0");
+        creature.setDescription("A parrot");
+        creature.setChannelOffset(50);
+        creature.setAudioChannel(5);
+        creature.setMouthSlot(4);
+        creature.setServoUpdateFrequencyHz(50);
+        creature.setPositionMin(0);
+        creature.setPositionMax(1023);
+        creature.setPowerDrawLimits(15.0, 14.0, 10.0);
+
+        details.controllerVersion = "4.6.2";
+        details.port = 5568;
+        details.universe = 2;
+        details.networkInterface = "eth0";
+        details.serialDevice = "/dev/creature/Caroll";
+        details.rtpAudio = true;
+        details.audioDevice = "plughw:CARD=BossDAC,DEV=0";
+        details.server = "10.19.63.5:8000";
+        details.temperatureLimitF = 165.0;
+    }
+
+    std::shared_ptr<NiceMockLogger> logger = std::make_shared<NiceMockLogger>();
+    MockCreature creature{logger};
+    ControllerDetails details;
+};
+
+TEST(MdnsService, InstanceNameIsLowerCase) {
     EXPECT_EQ(mdnsInstanceName("Caroll"), "caroll");
     EXPECT_EQ(mdnsInstanceName("BEAKY"), "beaky");
     EXPECT_EQ(mdnsInstanceName("Light 1"), "light 1");
 }
 
-TEST(MdnsRecords, DescribesTheCreature) {
-    auto logger = std::make_shared<NiceMockLogger>();
-    MockCreature creature(logger);
-    creature.setName("Caroll");
-    creature.setId("56665920-98f7-11f1-9c92-2ccf67b00612");
-    creature.setType(creature::Creature::creature_type::parrot);
-    creature.setVersion("0.1.0");
-    creature.setChannelOffset(50);
-    creature.setAudioChannel(5);
+TEST(MdnsService, TrimsEntriesThatAreTooLong) {
+    MdnsService service;
+    service.txt = {{"short", "ok"}, {"long", std::string(400, 'x')}};
 
-    const auto service = makeCreatureService(creature, 2, "4.6.1", 5568);
+    const auto total = fitTxtRecord(service);
+
+    EXPECT_EQ(service.txt[0].second, "ok");
+    EXPECT_EQ(service.txt[1].first.size() + 1 + service.txt[1].second.size(), MDNS_TXT_ENTRY_MAX_BYTES);
+    EXPECT_TRUE(service.txt[1].second.ends_with("..."));
+    EXPECT_EQ(total, (1 + 8) + (1 + MDNS_TXT_ENTRY_MAX_BYTES));
+}
+
+TEST_F(MdnsRecordsTest, DescribesTheCreatureAndHost) {
+    const auto service = makeCreatureService(creature, details);
 
     EXPECT_EQ(service.name, "caroll");
     EXPECT_EQ(service.type, "_creature-controller._udp");
@@ -41,10 +76,35 @@ TEST(MdnsRecords, DescribesTheCreature) {
     EXPECT_THAT(service.txt, Contains(Pair("name", "Caroll")));
     EXPECT_THAT(service.txt, Contains(Pair("type", "parrot")));
     EXPECT_THAT(service.txt, Contains(Pair("version", "0.1.0")));
+    EXPECT_THAT(service.txt, Contains(Pair("description", "A parrot")));
+    EXPECT_THAT(service.txt, Contains(Pair("controller_version", "4.6.2")));
     EXPECT_THAT(service.txt, Contains(Pair("universe", "2")));
     EXPECT_THAT(service.txt, Contains(Pair("channel_offset", "50")));
     EXPECT_THAT(service.txt, Contains(Pair("audio_channel", "5")));
-    EXPECT_THAT(service.txt, Contains(Pair("controller_version", "4.6.1")));
+    EXPECT_THAT(service.txt, Contains(Pair("mouth_slot", "4")));
+    EXPECT_THAT(service.txt, Contains(Pair("servo_hz", "50")));
+    EXPECT_THAT(service.txt, Contains(Pair("position_max", "1023")));
+    EXPECT_THAT(service.txt, Contains(Pair("power_limit_w", "15")));
+    EXPECT_THAT(service.txt, Contains(Pair("power_warning_w", "14")));
+    EXPECT_THAT(service.txt, Contains(Pair("power_response_s", "10")));
+    EXPECT_THAT(service.txt, Contains(Pair("temp_limit_f", "165")));
+    EXPECT_THAT(service.txt, Contains(Pair("serial_device", "/dev/creature/Caroll")));
+    EXPECT_THAT(service.txt, Contains(Pair("interface", "eth0")));
+    EXPECT_THAT(service.txt, Contains(Pair("rtp_audio", "on")));
+    EXPECT_THAT(service.txt, Contains(Pair("audio_device", "plughw:CARD=BossDAC,DEV=0")));
+    EXPECT_THAT(service.txt, Contains(Pair("server", "10.19.63.5:8000")));
+}
+
+TEST_F(MdnsRecordsTest, FirmwareVersionAppearsOnceKnown) {
+    EXPECT_THAT(makeCreatureService(creature, details).txt, Contains(Pair("firmware_version", "unknown")));
+
+    details.firmwareVersion = 4;
+    EXPECT_THAT(makeCreatureService(creature, details).txt, Contains(Pair("firmware_version", "4")));
+}
+
+TEST_F(MdnsRecordsTest, FitsInOnePacket) {
+    auto service = makeCreatureService(creature, details);
+    EXPECT_LE(fitTxtRecord(service), MDNS_TXT_RECORD_TARGET_BYTES);
 }
 
 TEST(MdnsRecords, CreatureTypeRoundTrips) {

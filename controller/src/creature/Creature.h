@@ -156,6 +156,9 @@ class Creature {
 
     std::shared_ptr<Servo> getServo(const std::string &servoName);
 
+    // The ids of every servo and stepper, sorted
+    [[nodiscard]] std::vector<std::string> getMotorIds() const;
+
     std::shared_ptr<Stepper> getStepper(std::string id);
 
     // Setters for the things

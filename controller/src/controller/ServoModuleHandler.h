@@ -128,6 +128,11 @@ class ServoModuleHandler : public StoppableThread, public std::enable_shared_fro
      */
     bool isConfigured() const;
 
+    /**
+     * The firmware version the module reported, or zero before it has
+     */
+    [[nodiscard]] u32 getFirmwareVersion() const;
+
   protected:
     void run() override; // This is the method that will be called when the
                          // thread starts
@@ -137,7 +142,8 @@ class ServoModuleHandler : public StoppableThread, public std::enable_shared_fro
     std::atomic<bool> is_shutting_down{false};
 
     // The version of firmware our module is running
-    u32 firmwareVersion;
+    // Zero until the firmware reports in
+    std::atomic<u32> firmwareVersion{0};
 
     std::atomic<bool> ready{false};
     std::atomic<bool> configured{false};

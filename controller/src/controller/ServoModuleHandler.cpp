@@ -292,4 +292,6 @@ bool ServoModuleHandler::isReady() const { return ready.load(); }
 
 bool ServoModuleHandler::isConfigured() const { return configured.load(); }
 
+u32 ServoModuleHandler::getFirmwareVersion() const { return firmwareVersion.load(); }
+
 } // namespace creatures

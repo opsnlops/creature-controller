@@ -25,8 +25,10 @@ dpkg -s avahi-daemon >/dev/null
 [ ! -e /etc/avahi/services/ssh.service ]
 [ -f /etc/avahi/ssh.service.replaced-by-creature-controller ]
 dpkg-query -W -f='${Conffiles}\n' creature-controller | grep -q creature-controller-ssh.service
-# The service runs as a systemd dynamic user; libnss-systemd lets tools show its name
-grep -qE '^passwd:.*systemd' /etc/nsswitch.conf
+# The service user exists, with access to the serial board and the sound card
+id -nG creature-controller | grep -qw dialout
+id -nG creature-controller | grep -qw audio
+[ "$(getent passwd creature-controller | cut -d: -f7)" = /usr/sbin/nologin ]
 if /usr/lib/creature-controller/start-creature NoSuchCreature; then exit 1; fi
 # Debian container images exclude documentation during installation; inspect the archive too.
 dpkg-deb -x "$package" /tmp/controller-package-content

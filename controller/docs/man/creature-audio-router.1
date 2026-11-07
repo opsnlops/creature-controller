@@ -26,6 +26,10 @@ Read the JSON configuration from PATH. Default: /etc/creature/audio-router.json.
 .B \-\-check\-config
 Validate configuration and exit without opening audio devices or sockets. This does not verify interface availability, device capabilities, permissions, or clock synchronization.
 .TP
+.B \-\-name NAME
+Advertise the router over mDNS as NAME, in lower case. Default: the host name.
+Named service instances pass the host name and instance, such as server-hdmi0.
+.TP
 .B \-\-list\-sound\-devices
 List native audio outputs and exit. Use an exact output name in output.deviceName.
 .TP
@@ -110,13 +114,23 @@ With requireRtcp enabled, unusable BGM timing keeps the output silent.
 The audio device remains running through idle periods. Measure physical
 HDMI/AVR latency before setting compensation. RTCP aligns session starts;
 continuous correction of independent DAC clock drift is not implemented.
+.SH MDNS
+While running, the router advertises itself through avahi-daemon as
+_creature-audio-router._udp on its RTP port. Its TXT records carry the version,
+network interface, output device, speaker channels, input channels and gains,
+routes, bass management, playout delay, device compensation, limiter ceiling, and
+whether RTCP is required. Browse with
+.B avahi-browse -rt _creature-audio-router._udp
+or, on macOS,
+.BR "dns-sd -B _creature-audio-router._udp" .
 .SH SERVICES
 The default service uses /etc/creature/audio-router.json. A named instance
 creature-audio-router@NAME.service uses /etc/creature/audio-router/NAME.json.
 Use one owner per physical audio device.
 .PP
-Services are disabled on first installation. They run as dynamic users with
-membership in audio. Configuration files must be readable by those users.
+Services are disabled on first installation. They run as the
+creature-audio-router system user, which the package creates in the audio
+group. Configuration files must be readable by that user.
 After editing a file, validate it and restart its owning service.
 .SH FILES
 .TP
