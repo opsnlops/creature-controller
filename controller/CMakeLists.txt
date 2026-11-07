@@ -540,6 +540,11 @@ set_property(TARGET creature-controller-test PROPERTY FOLDER "tests")
 
 # Register the test with CTest
 include(GoogleTest)
+# The Avahi publisher only builds on Linux, and so does its test
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_sources(creature-controller-test PRIVATE tests/network/AvahiPublisher_test.cpp)
+endif()
+
 gtest_discover_tests(creature-controller-test)
 add_test(NAME CommandLineDeviceDiscovery
          COMMAND ${CMAKE_COMMAND} -DCONTROLLER=$<TARGET_FILE:creature-controller>

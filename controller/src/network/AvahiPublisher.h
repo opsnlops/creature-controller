@@ -13,6 +13,13 @@
 namespace creatures::network {
 
 /**
+ * Build an Avahi TXT list that publishes the entries in the service's order
+ *
+ * The caller owns the list and frees it with avahi_string_list_free().
+ */
+AvahiStringList *makeAvahiTxt(const MdnsService &service);
+
+/**
  * Advertises a service over mDNS through avahi-daemon for as long as it runs
  *
  * Advertising is a convenience, so nothing here stops the controller. If the daemon
@@ -57,7 +64,6 @@ class AvahiPublisher {
     void createService(AvahiClient *client);
     void chooseAlternativeName();
     void fitRecord();
-    AvahiStringList *buildTxt() const;
     bool connect();
 
     std::shared_ptr<Logger> logger;

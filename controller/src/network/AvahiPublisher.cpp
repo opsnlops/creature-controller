@@ -23,11 +23,12 @@ void AvahiPublisher::fitRecord() {
     }
 }
 
-AvahiStringList *AvahiPublisher::buildTxt() const {
-    // avahi_string_list_add_pair prepends, so walk backwards to keep our order
+AvahiStringList *makeAvahiTxt(const MdnsService &service) {
+    // Adding prepends and publishing walks the list from its tail, so adding in
+    // order publishes in order
     AvahiStringList *txt = nullptr;
-    for (auto it = service.txt.rbegin(); it != service.txt.rend(); ++it) {
-        txt = avahi_string_list_add_pair(txt, it->first.c_str(), it->second.c_str());
+    for (const auto &[key, value] : service.txt) {
+        txt = avahi_string_list_add_pair(txt, key.c_str(), value.c_str());
     }
     return txt;
 }
@@ -42,7 +43,7 @@ void AvahiPublisher::updateTxt(std::vector<std::pair<std::string, std::string>> 
 
     // Before the service is up, createService() picks up the new records itself
     if (group && established) {
-        AvahiStringList *list = buildTxt();
+        AvahiStringList *list = makeAvahiTxt(service);
         const int result = avahi_entry_group_update_service_txt_strlst(
             group, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC, static_cast<AvahiPublishFlags>(0), currentName.c_str(),
             service.type.c_str(), nullptr, list);
@@ -204,7 +205,7 @@ void AvahiPublisher::createService(AvahiClient *avahiClient) {
         return;
     }
 
-    AvahiStringList *txt = buildTxt();
+    AvahiStringList *txt = makeAvahiTxt(service);
 
     int result = avahi_entry_group_add_service_strlst(group, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC,
                                                       static_cast<AvahiPublishFlags>(0), currentName.c_str(),
