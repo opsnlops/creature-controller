@@ -5,6 +5,7 @@
 #include "controller-config.h"
 #include "creature/Creature.h"
 #include "network/MdnsService.h"
+#include "timesync/TimeSync.h"
 
 namespace creatures::network {
 
@@ -25,6 +26,7 @@ struct ControllerDetails {
     std::string server; // "address:port", or "off"
     double temperatureLimitF = 0.0;
     u32 firmwareVersion = 0; // Zero until the firmware reports in
+    timesync::TimeSyncStatus timeSync;
 };
 
 /**

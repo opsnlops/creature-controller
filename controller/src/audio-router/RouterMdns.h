@@ -4,6 +4,7 @@
 
 #include "audio-router/RouterConfig.h"
 #include "network/MdnsService.h"
+#include "timesync/TimeSync.h"
 
 namespace creatures::audio::router {
 
@@ -16,8 +17,9 @@ inline constexpr const char *AUDIO_ROUTER_SERVICE_TYPE = "_creature-audio-router
  * @param name the router's name, such as the host name or host-instance
  * @param config the configuration the router is running
  * @param routerVersion this router's version
+ * @param timeSync the host's PTP sync status
  */
 network::MdnsService makeRouterService(const std::string &name, const RouterConfig &config,
-                                       const std::string &routerVersion);
+                                       const std::string &routerVersion, const timesync::TimeSyncStatus &timeSync = {});
 
 } // namespace creatures::audio::router
