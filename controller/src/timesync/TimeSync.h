@@ -51,6 +51,12 @@ struct TimeSyncStatus {
 const char *syncStateName(SyncState state);
 
 /**
+ * Is phc2sys keeping the system clock in step: the kernel's synced flag is set and
+ * the clock was corrected recently?
+ */
+bool clockDisciplined(const ClockReading &clock);
+
+/**
  * Decide whether the host is synced: ptp4l following a grandmaster closely, and the
  * system clock kept in step by phc2sys. RTCP scheduling needs both.
  */

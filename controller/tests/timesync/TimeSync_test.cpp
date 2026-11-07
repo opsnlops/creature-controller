@@ -62,6 +62,15 @@ TEST(TimeSync, UnsyncedWhenTheOffsetIsTooLarge) {
     EXPECT_EQ(evaluateTimeSync(ptp, syncedClock()).state, SyncState::Synced);
 }
 
+TEST(TimeSync, ReasonsReadAsSentences) {
+    auto clock = syncedClock();
+    clock.synced = false;
+    EXPECT_FALSE(evaluateTimeSync(lockedPtp(), clock).reason.ends_with("?"));
+    clock = syncedClock();
+    clock.maxErrorUs = CLOCK_MAX_ERROR_US + 1;
+    EXPECT_FALSE(evaluateTimeSync(lockedPtp(), clock).reason.ends_with("?"));
+}
+
 TEST(TimeSync, UnsyncedWhenPhc2sysIsntDiscipliningTheClock) {
     auto clock = syncedClock();
     clock.synced = false;
@@ -86,6 +95,14 @@ TEST(TimeSync, AddsTheStateToTxtRecords) {
     EXPECT_THAT(txt, Contains(Pair("ptp_port", "SLAVE")));
     EXPECT_THAT(txt, Contains(Pair("ptp_gm", "380525.fffe.33ef92")));
     EXPECT_THAT(txt, Contains(Pair("clock_synced", "yes")));
+
+    // A clock phc2sys stopped correcting isn't synced, even before the kernel flags it
+    auto staleClock = syncedClock();
+    staleClock.maxErrorUs = CLOCK_MAX_ERROR_US + 1;
+    std::vector<std::pair<std::string, std::string>> stale;
+    appendTimeSyncTxt(stale, evaluateTimeSync(lockedPtp(), staleClock));
+    EXPECT_THAT(stale, Contains(Pair("ptp", "unsynced")));
+    EXPECT_THAT(stale, Contains(Pair("clock_synced", "no")));
 
     std::vector<std::pair<std::string, std::string>> unknown;
     appendTimeSyncTxt(unknown, unknownTimeSync("not Linux"));

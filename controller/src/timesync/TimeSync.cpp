@@ -17,6 +17,10 @@ const char *syncStateName(SyncState state) {
     }
 }
 
+bool clockDisciplined(const ClockReading &clock) {
+    return clock.available && clock.synced && clock.maxErrorUs <= CLOCK_MAX_ERROR_US;
+}
+
 TimeSyncStatus evaluateTimeSync(const PtpReading &ptp, const ClockReading &clock) {
     TimeSyncStatus status;
     status.ptp = ptp;
@@ -37,11 +41,11 @@ TimeSyncStatus evaluateTimeSync(const PtpReading &ptp, const ClockReading &clock
     } else if (!clock.available) {
         status.reason = "unable to read the kernel's clock status";
     } else if (!clock.synced) {
-        status.reason = "the system clock isn't synchronized; is phc2sys running?";
+        status.reason = "the system clock isn't synchronized, so phc2sys may not be running";
     } else if (clock.maxErrorUs > CLOCK_MAX_ERROR_US) {
-        status.reason = fmt::format("the system clock hasn't been disciplined recently (max error {} ms); is "
-                                    "phc2sys running?",
-                                    clock.maxErrorUs / 1000);
+        status.reason = fmt::format(
+            "the system clock hasn't been disciplined recently (max error {} ms), so phc2sys may not be running",
+            clock.maxErrorUs / 1000);
     } else {
         status.state = SyncState::Synced;
         status.reason = isGrandmaster ? "this host is the PTP grandmaster"
@@ -64,7 +68,7 @@ void appendTimeSyncTxt(std::vector<std::pair<std::string, std::string>> &txt, co
         txt.emplace_back("ptp_gm", status.ptp.gmIdentity);
     }
     if (status.clock.available) {
-        txt.emplace_back("clock_synced", status.clock.synced ? "yes" : "no");
+        txt.emplace_back("clock_synced", clockDisciplined(status.clock) ? "yes" : "no");
     }
 }
 
