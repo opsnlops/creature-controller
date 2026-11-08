@@ -11,8 +11,8 @@
   "position_max": 1023,
   "head_offset_max": 0.4,
   "servo_frequency": 50,
-  "power_draw_limit_watts": 15.0,
-  "power_draw_warning_watts": 14.0,
+  "power_draw_limit_watts": 22.5,
+  "power_draw_warning_watts": 19.0,
   "power_draw_response_seconds": 10.0,
   "type": "parrot",
   "voice": {
