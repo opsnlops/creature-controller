@@ -26,7 +26,7 @@ void PingTask::start() {
 void PingTask::run() {
 
     // Set thread name
-    setThreadName("creatures::tasks::PingTask");
+    setThreadName("PingTask");
     logger->info("hello from the ping task!");
 
     // How long should we wait between pings?

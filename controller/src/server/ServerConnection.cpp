@@ -47,7 +47,7 @@ void ServerConnection::run() {
     }
 
     // Set thread name
-    setThreadName("creatures::server::ServerConnection");
+    setThreadName("ServerConn");
     logger->info("hello from the Creature Server connection!");
 
     // How often should we see if we need to stop?

@@ -32,7 +32,7 @@ void WebsocketWriter::start() {
 
 void WebsocketWriter::run() {
 
-    this->threadName = fmt::format("WebsocketWriter::run");
+    this->threadName = "WebsocketWriter";
     setThreadName(threadName);
 
     this->logger->info("hello from the WebsocketWriter thread!");

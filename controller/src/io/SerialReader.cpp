@@ -34,7 +34,7 @@ void SerialReader::start() {
 void SerialReader::run() {
     this->logger->info("hello from the reader thread for {} 👓", this->deviceNode);
 
-    this->threadName = fmt::format("SerialReader::run for {}", this->deviceNode);
+    this->threadName = fmt::format("SerialReader-{}", UARTDevice::moduleNameToString(this->moduleName));
     setThreadName(threadName);
 
     struct pollfd fds[1];

@@ -137,7 +137,7 @@ Result<bool> MessageProcessor::processMessage(const Message &message) {
 }
 
 void MessageProcessor::run() {
-    this->threadName = fmt::format("MessageProcessor::{}", UARTDevice::moduleNameToString(this->moduleId));
+    this->threadName = fmt::format("MessageProc-{}", UARTDevice::moduleNameToString(this->moduleId));
     setThreadName(this->threadName);
 
     logger->debug("MessageProcessor thread started for module {}", UARTDevice::moduleNameToString(this->moduleId));

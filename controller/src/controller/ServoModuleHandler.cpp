@@ -37,7 +37,7 @@ ServoModuleHandler::ServoModuleHandler(
         std::make_shared<MessageQueue<Message>>(SERIAL_OUTGOING_QUEUE_MAX_MESSAGES, creatures::io::isDroppableMessage);
     this->incomingQueue = std::make_shared<MessageQueue<Message>>();
 
-    this->threadName = fmt::format("ServoModuleHandler-{}", UARTDevice::moduleNameToString(this->moduleId));
+    this->threadName = fmt::format("ServoModule-{}", UARTDevice::moduleNameToString(this->moduleId));
 }
 
 void ServoModuleHandler::init() {
