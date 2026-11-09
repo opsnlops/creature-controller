@@ -7,9 +7,9 @@
 #include <unistd.h>
 
 #include "config/UARTDevice.h"
+#include "creature/thread/ThreadName.h"
 #include "io/Message.h"
 #include "io/SerialReader.h"
-#include "util/thread_name.h"
 
 namespace creatures::io {
 

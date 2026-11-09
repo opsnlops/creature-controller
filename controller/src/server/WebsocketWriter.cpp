@@ -3,11 +3,11 @@
 #include <thread>
 
 #include "creature/logging/Logger.h"
+#include "creature/thread/ThreadName.h"
 #include "server/ServerMessage.h"
 #include "server/WebsocketWriter.h"
 #include "util/MessageQueue.h"
 #include "util/StoppableThread.h"
-#include "util/thread_name.h"
 
 #include "controller-config.h"
 

@@ -15,9 +15,9 @@
 
 #include "creature/Creature.h"
 #include "creature/logging/Logger.h"
+#include "creature/thread/ThreadName.h"
 #include "dmx/E131Client.h"
 #include "dmx/E131Exception.h"
-#include "util/thread_name.h"
 
 #include "controller-config.h"
 

@@ -45,11 +45,11 @@
 #if CREATURE_HAS_AVAHI
 #include "creature/network/AvahiPublisher.h"
 #endif
+#include "creature/thread/ThreadName.h"
 #include "server/ServerConnection.h"
 #include "server/ServerMessage.h"
 #include "util/StoppableThread.h"
 #include "util/http_utils.h"
-#include "util/thread_name.h"
 #include "watchdog/WatchdogThread.h"
 
 // Default to not shutting down

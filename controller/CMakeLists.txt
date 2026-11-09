@@ -53,13 +53,13 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(spdlog)
 
-# creature-common: the Logger interface, mDNS, and the RTP/RTCP wire contract shared
-# with creature-server.
+# creature-common: the Logger interface, mDNS, the RTP/RTCP wire contract, and thread
+# naming, shared with creature-server.
 # Declared after fmt so it uses ours rather than fetching a second copy.
 FetchContent_Declare(
         creature_common
         GIT_REPOSITORY https://github.com/opsnlops/creature-common.git
-        GIT_TAG        v0.2.0
+        GIT_TAG        v0.3.0
         EXCLUDE_FROM_ALL
 )
 FetchContent_MakeAvailable(creature_common)
@@ -194,12 +194,11 @@ add_library(creature_audio STATIC
         src/audio/RoutingMixer.cpp
         src/audio/RtcpTiming.cpp
         src/audio/RtpPacket.cpp
-        src/util/thread_name.cpp
         ${AUDIO_PLATFORM_SOURCES}
 )
 add_library(creature::audio ALIAS creature_audio)
 target_include_directories(creature_audio PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(creature_audio PUBLIC creature::logging creature::rtp fmt::fmt opus Threads::Threads PRIVATE ${AUDIO_PLATFORM_LIBRARIES})
+target_link_libraries(creature_audio PUBLIC creature::logging creature::rtp creature::thread fmt::fmt opus Threads::Threads PRIVATE ${AUDIO_PLATFORM_LIBRARIES})
 if(ALSA_FOUND)
     target_include_directories(creature_audio PRIVATE ${ALSA_INCLUDE_DIRS})
     target_compile_definitions(creature_audio PRIVATE CREATURE_HAS_ALSA=1)
@@ -421,7 +420,7 @@ if(ALSA_FOUND)
     target_include_directories(creature_lib PUBLIC ${ALSA_INCLUDE_DIRS})
 endif()
 
-target_link_libraries(creature_lib PUBLIC creature::audio creature::mdns creature_timesync)
+target_link_libraries(creature_lib PUBLIC creature::audio creature::mdns creature::thread creature_timesync)
 
 add_executable(creature-controller
         src/main.cpp

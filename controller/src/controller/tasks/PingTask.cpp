@@ -4,8 +4,8 @@
 #include "controller/commands/Ping.h"
 #include "controller/tasks/PingTask.h"
 #include "creature/logging/Logger.h"
+#include "creature/thread/ThreadName.h"
 #include "io/MessageRouter.h"
-#include "util/thread_name.h"
 
 // Keep track of the last time we sent a ping
 std::chrono::time_point<std::chrono::high_resolution_clock> lastPingSentAt = std::chrono::high_resolution_clock::now();

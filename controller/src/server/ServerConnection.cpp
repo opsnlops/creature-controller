@@ -5,7 +5,7 @@
 #include <ixwebsocket/IXWebSocket.h>
 
 #include "creature/logging/Logger.h"
-#include "util/thread_name.h"
+#include "creature/thread/ThreadName.h"
 
 #include "server/ServerConnection.h"
 

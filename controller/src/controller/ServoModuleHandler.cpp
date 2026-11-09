@@ -5,13 +5,13 @@
 #include "controller/ServoModuleHandler.h"
 #include "controller/commands/ServoModuleConfiguration.h"
 #include "creature/logging/Logger.h"
+#include "creature/thread/ThreadName.h"
 #include "io/Message.h"
 #include "io/MessageProcessor.h"
 #include "io/MessageRouter.h"
 #include "io/SerialHandler.h"
 #include "util/MessageQueue.h"
 #include "util/StoppableThread.h"
-#include "util/thread_name.h"
 
 namespace creatures {
 

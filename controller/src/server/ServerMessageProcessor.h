@@ -5,9 +5,9 @@
 using json = nlohmann::json;
 
 #include "creature/logging/Logger.h"
+#include "creature/thread/ThreadName.h"
 #include "util/Result.h"
 #include "util/StoppableThread.h"
-#include "util/thread_name.h"
 
 namespace creatures::server {
 
