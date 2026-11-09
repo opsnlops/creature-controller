@@ -35,13 +35,13 @@
 #include "controller/ServoModuleHandler.h"
 #include "controller/tasks/PingTask.h"
 #include "creature/logging/Logger.h"
+#include "creature/timesync/TimeSyncMonitor.h"
 #include "dmx/E131Client.h"
 #include "io/Message.h"
 #include "io/MessageProcessor.h"
 #include "io/MessageRouter.h"
 #include "logging/SpdlogLogger.h"
 #include "network/MdnsRecords.h"
-#include "timesync/TimeSyncMonitor.h"
 #if CREATURE_HAS_AVAHI
 #include "creature/network/AvahiPublisher.h"
 #endif

@@ -1,6 +1,6 @@
 #include "audio-router/RouterConfig.h"
 #include "audio-router/RouterMdns.h"
-#include "timesync/TimeSyncMonitor.h"
+#include "creature/timesync/TimeSyncMonitor.h"
 #if CREATURE_HAS_AVAHI
 #include "creature/network/AvahiPublisher.h"
 #endif
