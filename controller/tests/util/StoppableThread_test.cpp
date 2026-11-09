@@ -3,7 +3,12 @@
 #include <atomic>
 #include <chrono>
 #include <memory>
+#include <string>
 #include <thread>
+
+#if defined(__linux__) || defined(__APPLE__)
+#include <pthread.h>
+#endif
 
 #include "util/CountingThread.h"
 #include "util/StoppableThread.h"
@@ -211,3 +216,47 @@ TEST(StoppableThreadTest, WaitForStopWakesImmediatelyOnShutdown) {
     EXPECT_FALSE(thread.didShutdownTimeOut());
     EXPECT_EQ(thread.iterations.load(), 0);
 }
+
+#if defined(__linux__) || defined(__APPLE__)
+namespace {
+
+/**
+ * Names itself only in its constructor, like WatchdogThread, and records the
+ * name the operating system gave the thread
+ */
+class ConstructorNamedThread : public creatures::StoppableThread {
+  public:
+    ConstructorNamedThread() { threadName = "CtorNamed"; }
+    ~ConstructorNamedThread() override { stopThread(); }
+
+    std::atomic<bool> recorded{false};
+    std::string osName;
+
+  protected:
+    void run() override {
+        char buffer[64] = {};
+        pthread_getname_np(pthread_self(), buffer, sizeof(buffer));
+        osName = buffer;
+        recorded.store(true);
+        while (!stop_requested.load()) {
+            std::this_thread::sleep_for(5ms);
+        }
+    }
+};
+
+} // namespace
+
+// Without this, the thread keeps the name of whichever thread started it, which
+// on a creature host is the main thread
+TEST(StoppableThreadTest, NamesTheThreadBeforeRunning) {
+    ConstructorNamedThread thread;
+    thread.start();
+    const auto deadline = Clock::now() + 1s;
+    while (!thread.recorded.load() && Clock::now() < deadline) {
+        std::this_thread::sleep_for(1ms);
+    }
+    ASSERT_TRUE(thread.recorded.load());
+    thread.shutdown();
+    EXPECT_EQ(thread.osName, "CtorNamed");
+}
+#endif

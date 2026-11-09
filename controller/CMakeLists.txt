@@ -59,7 +59,7 @@ FetchContent_MakeAvailable(spdlog)
 FetchContent_Declare(
         creature_common
         GIT_REPOSITORY https://github.com/opsnlops/creature-common.git
-        GIT_TAG        v0.4.0
+        GIT_TAG        v0.4.1
         EXCLUDE_FROM_ALL
 )
 FetchContent_MakeAvailable(creature_common)
