@@ -4,11 +4,11 @@
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
-#include "logging/Logger.h"
+#include "creature/logging/Logger.h"
 #include "server/ServerMessage.h"
 #include "util/Result.h"
 
-namespace creatures ::server {
+namespace creatures::server {
 
 Result<std::string> ServerMessage::toWebSocketMessage(std::string creatureId) {
 
@@ -24,11 +24,9 @@ Result<std::string> ServerMessage::toWebSocketMessage(std::string creatureId) {
     try {
         return Result<std::string>{j.dump()};
     } catch (std::exception &e) {
-        auto errorMessage =
-            fmt::format("Error creating JSON message: {}", e.what());
+        auto errorMessage = fmt::format("Error creating JSON message: {}", e.what());
         logger->error(errorMessage);
-        return Result<std::string>{ControllerError(
-            ControllerError::UnprocessableMessage, errorMessage)};
+        return Result<std::string>{ControllerError(ControllerError::UnprocessableMessage, errorMessage)};
     }
 }
 

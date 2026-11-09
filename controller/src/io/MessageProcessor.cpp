@@ -8,13 +8,13 @@
 
 #include "config/UARTDevice.h"
 #include "controller/ServoModuleHandler.h"
+#include "creature/logging/Logger.h"
 #include "io/Message.h"
 #include "io/handlers/DynamixelSensorHandler.h"
 #include "io/handlers/InitHandler.h"
 #include "io/handlers/LogHandler.h"
 #include "io/handlers/PongHandler.h"
 #include "io/handlers/StatsHandler.h"
-#include "logging/Logger.h"
 #include "util/Result.h"
 #include "util/thread_name.h"
 

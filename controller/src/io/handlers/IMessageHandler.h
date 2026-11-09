@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "logging/Logger.h"
+#include "creature/logging/Logger.h"
 
 namespace creatures {
 

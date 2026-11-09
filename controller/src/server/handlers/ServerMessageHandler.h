@@ -6,10 +6,10 @@
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
-#include "logging/Logger.h"
+#include "creature/logging/Logger.h"
 #include "util/Result.h"
 
-namespace creatures ::server {
+namespace creatures::server {
 
 /**
  * Server Message Handler Interface
@@ -23,8 +23,7 @@ namespace creatures ::server {
 class ServerMessageHandler {
   public:
     virtual ~ServerMessageHandler() = default;
-    virtual Result<std::string> handle(std::shared_ptr<Logger> logger,
-                                       json message) = 0;
+    virtual Result<std::string> handle(std::shared_ptr<Logger> logger, json message) = 0;
 
     // This must be set by the implementing class
     std::string commandType;

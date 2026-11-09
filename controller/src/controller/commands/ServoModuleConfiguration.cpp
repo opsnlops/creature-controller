@@ -6,7 +6,7 @@
 #include "controller/Controller.h"
 #include "controller/commands/tokens/ServoConfig.h"
 #include "creature/MotorType.h"
-#include "logging/Logger.h"
+#include "creature/logging/Logger.h"
 #include "util/Result.h"
 
 #include "ServoModuleConfiguration.h"

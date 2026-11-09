@@ -3,8 +3,8 @@
 
 #include "controller/commands/Ping.h"
 #include "controller/tasks/PingTask.h"
+#include "creature/logging/Logger.h"
 #include "io/MessageRouter.h"
-#include "logging/Logger.h"
 #include "util/thread_name.h"
 
 // Keep track of the last time we sent a ping

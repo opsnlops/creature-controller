@@ -7,10 +7,10 @@
 
 #include "config/UARTDevice.h"
 #include "controller/Controller.h"
+#include "creature/logging/Logger.h"
 #include "io/Message.h"
 #include "io/MessageRouter.h"
 #include "io/SerialHandler.h"
-#include "logging/Logger.h"
 #include "server/ServerMessage.h"
 #include "util/MessageQueue.h"
 #include "util/StoppableThread.h"

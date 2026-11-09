@@ -14,9 +14,9 @@
 #include "e131.h"
 
 #include "creature/Creature.h"
+#include "creature/logging/Logger.h"
 #include "dmx/E131Client.h"
 #include "dmx/E131Exception.h"
-#include "logging/Logger.h"
 #include "util/thread_name.h"
 
 #include "controller-config.h"

@@ -6,8 +6,8 @@
 #if USE_STEPPERS
 
 #include "controller/Controller.h"
+#include "creature/logging/Logger.h"
 #include "device/Stepper.h"
-#include "logging/Logger.h"
 
 class StepperHandler {
 

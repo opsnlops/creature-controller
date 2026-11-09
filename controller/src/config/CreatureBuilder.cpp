@@ -22,9 +22,9 @@
 #include "creature/Creature.h"
 #include "creature/Crow.h"
 #include "creature/Parrot.h"
+#include "creature/logging/Logger.h"
 #include "device/Servo.h"
 #include "device/ServoSpecifier.h"
-#include "logging/Logger.h"
 #include "util/Result.h"
 
 // Use json as an alias for nlohmann::json for cleaner code

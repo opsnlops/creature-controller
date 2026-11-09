@@ -6,8 +6,8 @@
 
 #include "config/UARTDevice.h"
 #include "creature/MotorType.h"
+#include "creature/logging/Logger.h"
 #include "device/ServoSpecifier.h"
-#include "logging/Logger.h"
 #include "util/Result.h"
 
 /**

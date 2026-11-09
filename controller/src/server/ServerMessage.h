@@ -4,10 +4,10 @@
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
-#include "logging/Logger.h"
+#include "creature/logging/Logger.h"
 #include "util/Result.h"
 
-namespace creatures ::server {
+namespace creatures::server {
 
 class ServerMessage {
   public:

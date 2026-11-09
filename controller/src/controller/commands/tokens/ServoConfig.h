@@ -2,9 +2,9 @@
 
 #include <string>
 
+#include "creature/logging/Logger.h"
 #include "device/Servo.h"
 #include "device/ServoSpecifier.h"
-#include "logging/Logger.h"
 
 #include "controller-config.h"
 

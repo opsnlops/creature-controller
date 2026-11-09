@@ -6,7 +6,7 @@
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
-#include "logging/Logger.h"
+#include "creature/logging/Logger.h"
 #include "server/ServerMessage.h"
 
 namespace creatures::server {

@@ -11,7 +11,7 @@ using json = nlohmann::json;
 #include "config/Configuration.h"
 #include "config/ConfigurationBuilder.h"
 #include "config/UARTDevice.h"
-#include "logging/Logger.h"
+#include "creature/logging/Logger.h"
 #include "util/Result.h"
 
 namespace creatures::config {

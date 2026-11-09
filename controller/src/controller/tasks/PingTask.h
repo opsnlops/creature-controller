@@ -1,8 +1,8 @@
 
 #pragma once
 
+#include "creature/logging/Logger.h"
 #include "io/MessageRouter.h"
-#include "logging/Logger.h"
 #include "util/StoppableThread.h"
 
 #include "controller-config.h"

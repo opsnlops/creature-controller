@@ -17,7 +17,7 @@
 #include "config/UARTDevice.h"
 #include "controller-config.h" // For u16 type definition
 #include "creature/Creature.h"
-#include "logging/Logger.h"
+#include "creature/logging/Logger.h"
 
 namespace creatures::config {
 
