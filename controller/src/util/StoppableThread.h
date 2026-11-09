@@ -12,6 +12,8 @@
 #include <string>
 #include <thread>
 
+#include "creature/thread/ThreadName.h"
+
 namespace creatures {
 
 /**
@@ -153,6 +155,10 @@ class StoppableThread {
 
   private:
     void threadMain() {
+        // Name the thread now, so a subclass that only sets threadName in its
+        // constructor still shows up by name. Subclasses that build their name
+        // in run() set it again there.
+        setThreadName(threadName);
         run();
 
         // Notify while holding the lock. Once it's released, the thread waiting

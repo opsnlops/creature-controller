@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.25)
 
 project(creature-controller
-        VERSION "4.7.0"
+        VERSION "4.7.1"
         DESCRIPTION "April's Creature Workshop Controller"
         HOMEPAGE_URL https://github.com/opsnlops/creature-controller
         LANGUAGES C CXX)
@@ -59,7 +59,7 @@ FetchContent_MakeAvailable(spdlog)
 FetchContent_Declare(
         creature_common
         GIT_REPOSITORY https://github.com/opsnlops/creature-common.git
-        GIT_TAG        v0.4.0
+        GIT_TAG        v0.4.1
         EXCLUDE_FROM_ALL
 )
 FetchContent_MakeAvailable(creature_common)
@@ -210,7 +210,7 @@ if(ALSA_FOUND)
     target_compile_definitions(creature_audio PRIVATE CREATURE_HAS_ALSA=1)
 endif()
 
-set(CREATURE_AUDIO_ROUTER_VERSION "0.2.0")
+set(CREATURE_AUDIO_ROUTER_VERSION "0.2.1")
 add_library(creature_audio_router_config STATIC src/audio-router/RouterConfig.cpp src/audio-router/RouterMdns.cpp)
 target_link_libraries(creature_audio_router_config PUBLIC creature::audio creature::mdns creature::timesync nlohmann_json::nlohmann_json)
 add_executable(creature-audio-router src/audio-router/main.cpp)
