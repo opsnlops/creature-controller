@@ -133,7 +133,7 @@ class RtpJitterBuffer {
 
         return InitialPlayout{
             .timestamp = timestamp,
-            .startTime = frame->second->arrival + std::chrono::milliseconds(FRAME_MS),
+            .startTime = frame->second->arrival + std::chrono::milliseconds(rtp::FRAME_MS),
             .generation = generation_,
             .synchronizationSource = *synchronizationSource_,
             .arrival = frame->second->arrival,

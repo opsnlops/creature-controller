@@ -5,7 +5,7 @@
 #include <vector>
 
 namespace creatures::audio {
-using DecodedAudioFrame = std::array<int16_t, FRAMES_PER_CHUNK>;
+using DecodedAudioFrame = std::array<int16_t, rtp::SAMPLES_PER_FRAME>;
 
 // One mixer per output device; all buffers and filter states are allocated before playout.
 class RoutingMixer {

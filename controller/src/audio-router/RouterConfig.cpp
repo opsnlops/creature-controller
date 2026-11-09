@@ -59,7 +59,7 @@ RouterConfig parseRouterConfig(const Json &json) {
         throw std::invalid_argument("Invalid logLevel");
     auto &config = router.engine;
     config.interfaceIp = "0.0.0.0"; // Resolved at startup, so offline config checks do not depend on host interfaces.
-    config.port = static_cast<uint16_t>(integer(json, "rtpPort", 1, 65534, RTP_PORT));
+    config.port = static_cast<uint16_t>(integer(json, "rtpPort", 1, 65534, rtp::RTP_PORT));
     config.requireRtcp = json.value("requireRtcp", true);
     const auto &output = json.at("output");
     fields(output, {"deviceName", "channels", "commonPlayoutDelayMs", "audioDeviceCompensationMs", "limiterCeilingDb",
@@ -81,12 +81,12 @@ RouterConfig parseRouterConfig(const Json &json) {
     config.output.alsaMixerElement = output.value("alsaMixerElement", std::string{});
     for (const auto &input : array(json, "inputs")) {
         fields(input, {"channel", "gainDb"});
-        config.inputs.push_back(
-            {static_cast<uint8_t>(integer(input, "channel", 1, 17, 0)), input.value("gainDb", 0.0f)});
+        config.inputs.push_back({static_cast<uint8_t>(integer(input, "channel", rtp::MIN_CHANNEL, rtp::MAX_CHANNEL, 0)),
+                                 input.value("gainDb", 0.0f)});
     }
     for (const auto &route : array(json, "routes")) {
         fields(route, {"input", "output", "gainDb"});
-        config.routes.push_back({inputIndex(config, integer(route, "input", 1, 17, 0)),
+        config.routes.push_back({inputIndex(config, integer(route, "input", rtp::MIN_CHANNEL, rtp::MAX_CHANNEL, 0)),
                                  outputIndex(config, route.at("output").get<std::string>()),
                                  route.value("gainDb", 0.0f)});
     }
@@ -101,7 +101,8 @@ RouterConfig parseRouterConfig(const Json &json) {
         for (const auto &send : array(bass, "inputs")) {
             fields(send, {"channel", "gainDb"});
             bassConfig.sends.push_back(
-                {inputIndex(config, integer(send, "channel", 1, 17, 0)), send.value("gainDb", 0.0f)});
+                {inputIndex(config, integer(send, "channel", rtp::MIN_CHANNEL, rtp::MAX_CHANNEL, 0)),
+                 send.value("gainDb", 0.0f)});
         }
         if (bass.contains("highPassOutputs"))
             for (const auto &name : array(bass, "highPassOutputs"))

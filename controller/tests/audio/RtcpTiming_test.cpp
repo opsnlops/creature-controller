@@ -19,8 +19,8 @@ uint64_t makeNtp(int64_t unixSeconds, uint32_t fraction = 0) {
     return (static_cast<uint64_t>(unixSeconds + NTP_UNIX_EPOCH_OFFSET_SECONDS) << 32U) | fraction;
 }
 
-RtcpSenderReport makeReport(uint32_t synchronizationSource = 100, uint32_t rtpTimestamp = 10'000,
-                            int64_t unixSeconds = 1'000) {
+rtp::RtcpSenderReport makeReport(uint32_t synchronizationSource = 100, uint32_t rtpTimestamp = 10'000,
+                                 int64_t unixSeconds = 1'000) {
     return {
         .synchronizationSource = synchronizationSource,
         .ntpTimestamp = makeNtp(unixSeconds),
@@ -96,10 +96,10 @@ TEST(RtcpTimingTest, ClockPairConversionDoesNotReadWallClockAgain) {
 }
 
 TEST(RtcpTimingTest, ReservesIdleEnqueueHeadroomForTwentyMillisecondPlayout) {
-    EXPECT_EQ(rtcpIdleQueueFrames(20, 0), 15U * SAMPLE_RATE / 1000U);
-    EXPECT_EQ(rtcpIdleQueueFrames(20, 3), 12U * SAMPLE_RATE / 1000U);
-    EXPECT_EQ(rtcpIdleQueueFrames(20, -3), 15U * SAMPLE_RATE / 1000U);
-    EXPECT_EQ(rtcpIdleQueueFrames(50, 0), TARGET_PLAYOUT_FRAMES * FRAMES_PER_CHUNK);
+    EXPECT_EQ(rtcpIdleQueueFrames(20, 0), 15U * rtp::SAMPLE_RATE / 1000U);
+    EXPECT_EQ(rtcpIdleQueueFrames(20, 3), 12U * rtp::SAMPLE_RATE / 1000U);
+    EXPECT_EQ(rtcpIdleQueueFrames(20, -3), 15U * rtp::SAMPLE_RATE / 1000U);
+    EXPECT_EQ(rtcpIdleQueueFrames(50, 0), TARGET_PLAYOUT_FRAMES * rtp::SAMPLES_PER_FRAME);
 }
 
 TEST(RtcpTimingTest, IdenticalMappingProducesIdenticalDeadlineRegardlessOfArrival) {
@@ -111,8 +111,8 @@ TEST(RtcpTimingTest, IdenticalMappingProducesIdenticalDeadlineRegardlessOfArriva
     const RtcpPlayoutPlanner secondPlanner(clockPair, 20ms, 0ms);
     const auto report = makeReport();
 
-    const auto first = firstPlanner.plan(report, report.rtpTimestamp, FRAMES_PER_CHUNK * 2);
-    const auto second = secondPlanner.plan(report, report.rtpTimestamp, FRAMES_PER_CHUNK * 2);
+    const auto first = firstPlanner.plan(report, report.rtpTimestamp, rtp::SAMPLES_PER_FRAME * 2);
+    const auto second = secondPlanner.plan(report, report.rtpTimestamp, rtp::SAMPLES_PER_FRAME * 2);
 
     ASSERT_TRUE(first.has_value());
     ASSERT_TRUE(second.has_value());
@@ -130,7 +130,7 @@ TEST(RtcpTimingTest, PositiveDeviceCompensationSchedulesEarlier) {
     const RtcpPlayoutPlanner planner(clockPair, 20ms, 3ms);
     const auto report = makeReport();
 
-    const auto plan = planner.plan(report, report.rtpTimestamp, FRAMES_PER_CHUNK * 2);
+    const auto plan = planner.plan(report, report.rtpTimestamp, rtp::SAMPLES_PER_FRAME * 2);
 
     ASSERT_TRUE(plan.has_value());
     EXPECT_EQ(plan->presentationDeadline, RtcpSteadyClock::time_point{} + 20s + 20ms);
@@ -146,8 +146,8 @@ TEST(RtcpTimingTest, SelectsTheFirstFutureTimestampAfterALateJoin) {
     const auto report = makeReport();
     const auto now = RtcpSteadyClock::time_point{} + 20s + 3ms;
 
-    const auto current = planner.plan(report, report.rtpTimestamp, FRAMES_PER_CHUNK * 2);
-    const auto next = planner.plan(report, report.rtpTimestamp + FRAMES_PER_CHUNK, FRAMES_PER_CHUNK * 2);
+    const auto current = planner.plan(report, report.rtpTimestamp, rtp::SAMPLES_PER_FRAME * 2);
+    const auto next = planner.plan(report, report.rtpTimestamp + rtp::SAMPLES_PER_FRAME, rtp::SAMPLES_PER_FRAME * 2);
 
     ASSERT_TRUE(current.has_value());
     ASSERT_TRUE(next.has_value());

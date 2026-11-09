@@ -115,8 +115,8 @@ class CoreAudioOutput final : public AudioOutput {
         if (channels_ == 0 || channels_ > 8)
             return false;
         outputRing_.resize(std::max<size_t>(AUDIO_OUTPUT_RING_FRAMES,
-                                            static_cast<size_t>(config.commonPlayoutDelayMs) * SAMPLE_RATE / 1000 +
-                                                2 * FRAMES_PER_CHUNK) *
+                                            static_cast<size_t>(config.commonPlayoutDelayMs) * rtp::SAMPLE_RATE / 1000 +
+                                                2 * rtp::SAMPLES_PER_FRAME) *
                            channels_);
 
         const auto devices = enumerateDevices();
@@ -179,7 +179,7 @@ class CoreAudioOutput final : public AudioOutput {
         requestDevicePeriod();
 
         AudioStreamBasicDescription format{};
-        format.mSampleRate = SAMPLE_RATE;
+        format.mSampleRate = rtp::SAMPLE_RATE;
         format.mFormatID = kAudioFormatLinearPCM;
         format.mFormatFlags =
             kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked | kAudioFormatFlagsNativeEndian;
@@ -427,7 +427,7 @@ class CoreAudioOutput final : public AudioOutput {
             kAudioObjectPropertyElementMain,
         };
         readProperty(device_, safetyAddress, &safetyOffset, size);
-        Float64 deviceRate = SAMPLE_RATE;
+        Float64 deviceRate = rtp::SAMPLE_RATE;
         size = sizeof(deviceRate);
         AudioObjectPropertyAddress rateAddress{
             kAudioDevicePropertyNominalSampleRate,
@@ -436,12 +436,14 @@ class CoreAudioOutput final : public AudioOutput {
         };
         readProperty(device_, rateAddress, &deviceRate, size);
         if (!std::isfinite(deviceRate) || deviceRate <= 0)
-            deviceRate = SAMPLE_RATE;
+            deviceRate = rtp::SAMPLE_RATE;
         const double nativeFrames = static_cast<double>(latency) + safetyOffset + devicePeriodFrames_;
-        return static_cast<size_t>(std::ceil(nativeFrames * SAMPLE_RATE / deviceRate));
+        return static_cast<size_t>(std::ceil(nativeFrames * rtp::SAMPLE_RATE / deviceRate));
     }
 
-    static double framesToMilliseconds(size_t frames) { return static_cast<double>(frames) * 1000.0 / SAMPLE_RATE; }
+    static double framesToMilliseconds(size_t frames) {
+        return static_cast<double>(frames) * 1000.0 / rtp::SAMPLE_RATE;
+    }
 
     std::shared_ptr<creatures::Logger> log_;
     AudioUnit audioUnit_{nullptr};

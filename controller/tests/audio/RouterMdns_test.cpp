@@ -30,7 +30,7 @@ TEST(RouterMdns, DescribesTheRouter) {
 
     EXPECT_EQ(service.name, "server-hdmi0");
     EXPECT_EQ(service.type, "_creature-audio-router._udp");
-    EXPECT_EQ(service.port, RTP_PORT);
+    EXPECT_EQ(service.port, rtp::RTP_PORT);
     EXPECT_THAT(service.txt, Contains(Pair("txtvers", "1")));
     EXPECT_THAT(service.txt, Contains(Pair("version", "0.1.3")));
     EXPECT_THAT(service.txt, Contains(Pair("interface", "eth0")));

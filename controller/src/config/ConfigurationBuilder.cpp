@@ -231,7 +231,7 @@ Result<std::shared_ptr<creatures::config::Configuration>> ConfigurationBuilder::
 
     const auto &audioConfig = config->getAudioConfig();
     const int minimumDelayForCompensation =
-        audio::FRAME_MS + audio::RTCP_ENQUEUE_HEADROOM_MS + std::max<int>(0, audioConfig.audioDeviceCompensationMs);
+        rtp::FRAME_MS + audio::RTCP_ENQUEUE_HEADROOM_MS + std::max<int>(0, audioConfig.audioDeviceCompensationMs);
     if (audioConfig.commonPlayoutDelayMs < minimumDelayForCompensation) {
         return makeError(
             fmt::format("Field 'commonPlayoutDelayMs' must be at least {} when audioDeviceCompensationMs is {}",
