@@ -390,7 +390,8 @@ int main(int argc, char **argv) {
                                        config->getNetworkDeviceIPAddress(), // Network interface
                                        config->getAudioConfig())) {
 
-            logger->info("Audio subsystem initialized: dialog channel {}, BGM channel 17", creatureAudioChannel);
+            logger->info("Audio subsystem initialized: dialog channel {}, BGM channel {}", creatureAudioChannel,
+                         creatures::rtp::BGM_CHANNEL);
         } else {
             logger->error("Failed to initialize audio subsystem");
             audioSubsystem.reset();

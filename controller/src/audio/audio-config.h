@@ -8,24 +8,15 @@
 #include <string>
 #include <vector>
 
+#include "creature/rtp/Protocol.h"
+
 namespace creatures::audio {
 
 // Device
 inline constexpr uint8_t DEFAULT_SOUND_DEVICE_NUMBER = 0;
 
-// Network (match server)
-inline constexpr char DIALOG_GROUP_BASE[] = "239.19.63."; // +1...+16
-inline constexpr char BGM_GROUP[] = "239.19.63.17";
-inline constexpr uint16_t RTP_PORT = 5004;
-inline constexpr uint16_t RTCP_PORT = RTP_PORT + 1;
-inline constexpr uint8_t RTP_OPUS_PAYLOAD_TYPE = 96;
-inline constexpr size_t MAX_RTP_PACKET_SIZE = 2048;
-inline constexpr size_t MAX_RTCP_PACKET_SIZE = 2048;
-
-// Opus framing
-inline constexpr uint32_t SAMPLE_RATE = 48'000;
-inline constexpr uint16_t FRAME_MS = 10;
-inline constexpr uint16_t FRAMES_PER_CHUNK = SAMPLE_RATE * FRAME_MS / 1000;
+// Decoding. The wire contract (ports, groups, payload type, framing) is in
+// creature/rtp/Protocol.h, shared with creature-server.
 inline constexpr uint8_t OUTPUT_CH = 1;
 
 // Playout
@@ -42,7 +33,7 @@ inline constexpr uint16_t MIN_COMMON_PLAYOUT_DELAY_MS = 20;
 inline constexpr uint16_t MAX_COMMON_PLAYOUT_DELAY_MS = 500;
 inline constexpr int16_t MAX_ABSOLUTE_DEVICE_COMPENSATION_MS = 100;
 inline constexpr uint16_t RTCP_ENQUEUE_HEADROOM_MS = 5;
-inline constexpr uint16_t RTCP_STARTUP_WAIT_MS = FRAME_MS;
+inline constexpr uint16_t RTCP_STARTUP_WAIT_MS = rtp::FRAME_MS;
 inline constexpr uint16_t RTCP_MAX_REPORT_AGE_MS = 2500;
 inline constexpr uint16_t RTCP_CLOCK_COMPATIBILITY_US = 1000;
 inline constexpr uint16_t RTCP_START_LATE_TOLERANCE_US = 2000;
@@ -88,7 +79,7 @@ struct AudioConfig {
 };
 
 struct InputConfig {
-    uint8_t channel{1}; // Creature multicast channel 1-16, or BGM channel 17.
+    uint8_t channel{rtp::MIN_CHANNEL}; // rtp::MIN_CHANNEL..rtp::MAX_CHANNEL; BGM is rtp::BGM_CHANNEL
     float gainDb{0.0f};
 };
 
@@ -114,7 +105,7 @@ struct BassConfig {
 
 struct AudioEngineConfig {
     std::string interfaceIp;
-    uint16_t port{RTP_PORT};
+    uint16_t port{rtp::RTP_PORT};
     AudioConfig output;
     std::vector<InputConfig> inputs;
     std::vector<AudioRoute> routes;
@@ -125,7 +116,7 @@ struct AudioEngineConfig {
 
 void validateAudioEngineConfig(const AudioEngineConfig &config);
 [[nodiscard]] AudioEngineConfig creatureAudioConfig(uint8_t channel, const std::string &interfaceIp,
-                                                    const AudioConfig &output, uint16_t port = RTP_PORT);
+                                                    const AudioConfig &output, uint16_t port = rtp::RTP_PORT);
 
 // Monitoring
 inline constexpr int STATS_INTERVAL_SEC = 5;

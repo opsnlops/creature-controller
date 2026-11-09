@@ -4,6 +4,7 @@
 #include <gtest/gtest.h>
 #include <numbers>
 using namespace creatures::audio;
+namespace rtp = creatures::rtp;
 namespace {
 AudioEngineConfig stereo() {
     auto config = creatureAudioConfig(1, "127.0.0.1", {});
@@ -21,9 +22,9 @@ TEST(RoutingMixerTest, IsolatesBirdsAndFansOutBgm) {
     frames[0].fill(1000);
     frames[1].fill(2000);
     frames[2].fill(500);
-    std::vector<int16_t> output(FRAMES_PER_CHUNK * 2);
+    std::vector<int16_t> output(rtp::SAMPLES_PER_FRAME * 2);
     mixer.process(frames, std::array<float, 3>{1, 1, 1}, output);
-    for (size_t i = 0; i < FRAMES_PER_CHUNK; ++i) {
+    for (size_t i = 0; i < rtp::SAMPLES_PER_FRAME; ++i) {
         EXPECT_EQ(output[2 * i], 1500);
         EXPECT_EQ(output[2 * i + 1], 2500);
     }
@@ -35,7 +36,7 @@ TEST(RoutingMixerTest, MonoPreservesOriginalMixWithinPcmQuantization) {
     auto config = creatureAudioConfig(3, "127.0.0.1", output);
     RoutingMixer mixer(config);
     std::array<DecodedAudioFrame, 2> frames{};
-    for (size_t i = 0; i < FRAMES_PER_CHUNK; ++i) {
+    for (size_t i = 0; i < rtp::SAMPLES_PER_FRAME; ++i) {
         frames[0][i] = static_cast<int16_t>(static_cast<int>(i) * 131 - 31000);
         frames[1][i] = static_cast<int16_t>(31000 - static_cast<int>(i) * 131);
     }
@@ -55,11 +56,11 @@ TEST(RoutingMixerTest, GainChangesRampOnceBeforeFanout) {
     RoutingMixer mixer(config);
     std::vector<DecodedAudioFrame> frames(3);
     frames[0].fill(10000);
-    std::vector<int16_t> output(FRAMES_PER_CHUNK * 2);
+    std::vector<int16_t> output(rtp::SAMPLES_PER_FRAME * 2);
     mixer.process(frames, std::array<float, 3>{0, 1, 1}, output);
     EXPECT_GT(output[0], 9000);
     EXPECT_EQ(output[2 * 95], 0);
-    for (size_t i = 0; i < FRAMES_PER_CHUNK; ++i)
+    for (size_t i = 0; i < rtp::SAMPLES_PER_FRAME; ++i)
         EXPECT_EQ(output[2 * i], output[2 * i + 1]);
 }
 TEST(RoutingMixerTest, UnusedOutputsRemainSilent) {
@@ -69,9 +70,9 @@ TEST(RoutingMixerTest, UnusedOutputsRemainSilent) {
     std::vector<DecodedAudioFrame> frames(3);
     for (auto &frame : frames)
         frame.fill(10000);
-    std::vector<int16_t> output(FRAMES_PER_CHUNK * 3);
+    std::vector<int16_t> output(rtp::SAMPLES_PER_FRAME * 3);
     mixer.process(frames, std::array<float, 3>{1, 1, 1}, output);
-    for (size_t i = 0; i < FRAMES_PER_CHUNK; ++i)
+    for (size_t i = 0; i < rtp::SAMPLES_PER_FRAME; ++i)
         EXPECT_EQ(output[3 * i + 2], 0);
 }
 TEST(RoutingMixerTest, BassSendIsCountedOnceRegardlessOfBgmFanout) {
@@ -83,10 +84,10 @@ TEST(RoutingMixerTest, BassSendIsCountedOnceRegardlessOfBgmFanout) {
     RoutingMixer first(one), second(two);
     std::vector<DecodedAudioFrame> frames(3);
     frames[2].fill(1000);
-    std::vector<int16_t> a(FRAMES_PER_CHUNK * 3), b(a.size());
+    std::vector<int16_t> a(rtp::SAMPLES_PER_FRAME * 3), b(a.size());
     first.process(frames, std::array<float, 3>{1, 1, 1}, a);
     second.process(frames, std::array<float, 3>{1, 1, 1}, b);
-    for (size_t i = 0; i < FRAMES_PER_CHUNK; ++i)
+    for (size_t i = 0; i < rtp::SAMPLES_PER_FRAME; ++i)
         EXPECT_EQ(a[3 * i + 2], b[3 * i + 2]);
 }
 TEST(RoutingMixerTest, LinkwitzRileyHasHalfAmplitudeAtCrossoverAndRejectsHighFrequencies) {
@@ -97,16 +98,17 @@ TEST(RoutingMixerTest, LinkwitzRileyHasHalfAmplitudeAtCrossoverAndRejectsHighFre
         config.routes = {{2, 0, 0}};
         RoutingMixer mixer(config);
         std::vector<DecodedAudioFrame> frames(3);
-        std::vector<int16_t> output(FRAMES_PER_CHUNK * 3);
+        std::vector<int16_t> output(rtp::SAMPLES_PER_FRAME * 3);
         double bassEnergy = 0, mainEnergy = 0, inputEnergy = 0;
         for (size_t block = 0; block < 200; ++block) {
-            for (size_t i = 0; i < FRAMES_PER_CHUNK; ++i)
-                frames[2][i] = static_cast<int16_t>(
-                    10000 * std::sin(2 * std::numbers::pi * frequency * (block * FRAMES_PER_CHUNK + i) / SAMPLE_RATE));
+            for (size_t i = 0; i < rtp::SAMPLES_PER_FRAME; ++i)
+                frames[2][i] =
+                    static_cast<int16_t>(10000 * std::sin(2 * std::numbers::pi * frequency *
+                                                          (block * rtp::SAMPLES_PER_FRAME + i) / rtp::SAMPLE_RATE));
             mixer.process(frames, std::array<float, 3>{1, 1, 1}, output);
             if (block < 100)
                 continue;
-            for (size_t i = 0; i < FRAMES_PER_CHUNK; ++i) {
+            for (size_t i = 0; i < rtp::SAMPLES_PER_FRAME; ++i) {
                 bassEnergy += static_cast<double>(output[3 * i + 2]) * output[3 * i + 2];
                 mainEnergy += static_cast<double>(output[3 * i]) * output[3 * i];
                 inputEnergy += static_cast<double>(frames[2][i]) * frames[2][i];
@@ -138,7 +140,7 @@ TEST(RoutingMixerTest, NewSessionResetClearsCrossoverHistory) {
     std::vector<DecodedAudioFrame> frames(3);
     for (auto &frame : frames)
         frame.fill(1000);
-    std::vector<int16_t> output(FRAMES_PER_CHUNK * 3);
+    std::vector<int16_t> output(rtp::SAMPLES_PER_FRAME * 3);
     mixer.process(frames, std::array<float, 3>{1, 1, 1}, output);
     mixer.resetFilters();
     for (auto &frame : frames)

@@ -6,6 +6,8 @@
 #include <set>
 #include <stdexcept>
 
+#include <fmt/format.h>
+
 namespace creatures::audio {
 const char *speakerChannelName(SpeakerChannel channel) {
     switch (channel) {
@@ -74,19 +76,22 @@ void validateAudioEngineConfig(const AudioEngineConfig &config) {
         throw std::invalid_argument("Invalid limiter ceiling");
     if (output.outputVolumePercent && *output.outputVolumePercent > 100)
         throw std::invalid_argument("Invalid output volume");
-    const int minimumDelay = FRAME_MS + RTCP_ENQUEUE_HEADROOM_MS + std::max<int>(0, output.audioDeviceCompensationMs);
+    const int minimumDelay =
+        rtp::FRAME_MS + RTCP_ENQUEUE_HEADROOM_MS + std::max<int>(0, output.audioDeviceCompensationMs);
     if (output.commonPlayoutDelayMs < MIN_COMMON_PLAYOUT_DELAY_MS ||
         output.commonPlayoutDelayMs > MAX_COMMON_PLAYOUT_DELAY_MS || output.commonPlayoutDelayMs < minimumDelay ||
         std::abs(output.audioDeviceCompensationMs) > MAX_ABSOLUTE_DEVICE_COMPENSATION_MS)
         throw std::invalid_argument("Invalid playout delay or device compensation");
     std::set<uint8_t> inputs;
     for (const auto &input : config.inputs) {
-        if (input.channel < 1 || input.channel > 17 || !inputs.insert(input.channel).second)
-            throw std::invalid_argument("Input channels must be unique and between 1 and 17");
+        if (input.channel < rtp::MIN_CHANNEL || input.channel > rtp::MAX_CHANNEL ||
+            !inputs.insert(input.channel).second)
+            throw std::invalid_argument(
+                fmt::format("Input channels must be unique and between {} and {}", rtp::MIN_CHANNEL, rtp::MAX_CHANNEL));
         validateGain(input.gainDb);
     }
-    if (!inputs.contains(17))
-        throw std::invalid_argument("BGM channel 17 is required as the timing master");
+    if (!inputs.contains(rtp::BGM_CHANNEL))
+        throw std::invalid_argument(fmt::format("BGM channel {} is required as the timing master", rtp::BGM_CHANNEL));
     std::set<std::pair<size_t, size_t>> routes;
     for (const auto &route : config.routes) {
         if (route.input >= config.inputs.size() || route.output >= output.channels.size() ||
@@ -123,7 +128,7 @@ AudioEngineConfig creatureAudioConfig(uint8_t channel, const std::string &interf
     config.interfaceIp = interfaceIp;
     config.port = port;
     config.output = output;
-    config.inputs = {{channel, output.dialogGainDb}, {17, output.bgmGainDb}};
+    config.inputs = {{channel, output.dialogGainDb}, {rtp::BGM_CHANNEL, output.bgmGainDb}};
     config.routes = {{0, 0, 0}, {1, 0, 0}};
     validateAudioEngineConfig(config);
     return config;

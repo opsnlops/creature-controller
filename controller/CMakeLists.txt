@@ -53,12 +53,13 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(spdlog)
 
-# creature-common: the Logger interface and mDNS library shared with creature-server.
+# creature-common: the Logger interface, mDNS, and the RTP/RTCP wire contract shared
+# with creature-server.
 # Declared after fmt so it uses ours rather than fetching a second copy.
 FetchContent_Declare(
         creature_common
         GIT_REPOSITORY https://github.com/opsnlops/creature-common.git
-        GIT_TAG        v0.1.0
+        GIT_TAG        v0.2.0
         EXCLUDE_FROM_ALL
 )
 FetchContent_MakeAvailable(creature_common)
@@ -191,7 +192,6 @@ add_library(creature_audio STATIC
         src/audio/AlsaMixerControl.cpp
         src/audio/AudioOutputKeepalive.cpp
         src/audio/RoutingMixer.cpp
-        src/audio/RtcpPacket.cpp
         src/audio/RtcpTiming.cpp
         src/audio/RtpPacket.cpp
         src/util/thread_name.cpp
@@ -199,7 +199,7 @@ add_library(creature_audio STATIC
 )
 add_library(creature::audio ALIAS creature_audio)
 target_include_directories(creature_audio PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(creature_audio PUBLIC creature::logging fmt::fmt opus Threads::Threads PRIVATE ${AUDIO_PLATFORM_LIBRARIES})
+target_link_libraries(creature_audio PUBLIC creature::logging creature::rtp fmt::fmt opus Threads::Threads PRIVATE ${AUDIO_PLATFORM_LIBRARIES})
 if(ALSA_FOUND)
     target_include_directories(creature_audio PRIVATE ${ALSA_INCLUDE_DIRS})
     target_compile_definitions(creature_audio PRIVATE CREATURE_HAS_ALSA=1)
@@ -250,7 +250,6 @@ endif()
 if(BUILD_TESTING)
     add_executable(creature-audio-test
         tests/audio/AudioOutputKeepalive_test.cpp
-        tests/audio/RtcpPacket_test.cpp
         tests/audio/RtcpTiming_test.cpp
         tests/audio/RtpPacket_test.cpp
         tests/audio/RoutingMixer_test.cpp

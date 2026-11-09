@@ -15,15 +15,16 @@ constexpr uint64_t NTP_FRACTION_SCALE = uint64_t{1} << 32U;
 constexpr int64_t NANOSECONDS_PER_SECOND = 1'000'000'000LL;
 
 std::chrono::nanoseconds samplesToDuration(int32_t samples) {
-    const auto nanoseconds = static_cast<int64_t>(samples) * NANOSECONDS_PER_SECOND / static_cast<int64_t>(SAMPLE_RATE);
+    const auto nanoseconds =
+        static_cast<int64_t>(samples) * NANOSECONDS_PER_SECOND / static_cast<int64_t>(rtp::SAMPLE_RATE);
     return std::chrono::nanoseconds(nanoseconds);
 }
 
 std::chrono::nanoseconds framesToDuration(size_t frames) {
-    const uint64_t wholeSeconds = frames / SAMPLE_RATE;
-    const uint64_t remainingFrames = frames % SAMPLE_RATE;
+    const uint64_t wholeSeconds = frames / rtp::SAMPLE_RATE;
+    const uint64_t remainingFrames = frames % rtp::SAMPLE_RATE;
     const uint64_t nanoseconds = wholeSeconds * static_cast<uint64_t>(NANOSECONDS_PER_SECOND) +
-                                 remainingFrames * static_cast<uint64_t>(NANOSECONDS_PER_SECOND) / SAMPLE_RATE;
+                                 remainingFrames * static_cast<uint64_t>(NANOSECONDS_PER_SECOND) / rtp::SAMPLE_RATE;
     return std::chrono::nanoseconds(
         static_cast<int64_t>(std::min<uint64_t>(nanoseconds, std::numeric_limits<int64_t>::max())));
 }
@@ -42,7 +43,7 @@ void RtcpReportCache::clear() {
     insertionOrder_.clear();
 }
 
-bool RtcpReportCache::store(RtcpSenderReport report, RtcpSteadyClock::time_point receivedAt) {
+bool RtcpReportCache::store(rtp::RtcpSenderReport report, RtcpSteadyClock::time_point receivedAt) {
     std::lock_guard<std::mutex> lock(mutex_);
     const uint32_t synchronizationSource = report.synchronizationSource;
     auto existing = reports_.find(synchronizationSource);
@@ -96,10 +97,10 @@ size_t rtcpIdleQueueFrames(uint16_t commonPlayoutDelayMs, int16_t deviceCompensa
     const int positiveCompensation = std::max<int>(0, deviceCompensationMs);
     const int availableQueueMilliseconds =
         static_cast<int>(commonPlayoutDelayMs) - RTCP_ENQUEUE_HEADROOM_MS - positiveCompensation;
-    const int queueMilliseconds = std::max<int>(FRAME_MS, availableQueueMilliseconds);
-    const size_t configuredFrames = static_cast<size_t>(queueMilliseconds) * SAMPLE_RATE / 1000U;
-    const size_t targetFrames = std::max(TARGET_PLAYOUT_FRAMES * static_cast<size_t>(FRAMES_PER_CHUNK),
-                                         pipelineLatencyFrames + FRAMES_PER_CHUNK);
+    const int queueMilliseconds = std::max<int>(rtp::FRAME_MS, availableQueueMilliseconds);
+    const size_t configuredFrames = static_cast<size_t>(queueMilliseconds) * rtp::SAMPLE_RATE / 1000U;
+    const size_t targetFrames = std::max(TARGET_PLAYOUT_FRAMES * static_cast<size_t>(rtp::SAMPLES_PER_FRAME),
+                                         pipelineLatencyFrames + rtp::SAMPLES_PER_FRAME);
     return std::min(targetFrames, configuredFrames);
 }
 
@@ -107,7 +108,7 @@ RtcpPlayoutPlanner::RtcpPlayoutPlanner(RtcpClockPair clockPair, std::chrono::mil
                                        std::chrono::milliseconds deviceCompensation)
     : clockPair_(clockPair), commonPlayoutDelay_(commonPlayoutDelay), deviceCompensation_(deviceCompensation) {}
 
-std::optional<RtcpPlayoutPlan> RtcpPlayoutPlanner::plan(const RtcpSenderReport &report, uint32_t rtpTimestamp,
+std::optional<RtcpPlayoutPlan> RtcpPlayoutPlanner::plan(const rtp::RtcpSenderReport &report, uint32_t rtpTimestamp,
                                                         size_t queuedFrames) const {
     const auto mediaTime = rtpSystemTime(report, rtpTimestamp);
     if (!mediaTime.has_value()) {
@@ -148,7 +149,7 @@ int32_t signedRtpTimestampDifference(uint32_t timestamp, uint32_t reference) {
     return static_cast<int32_t>(static_cast<int64_t>(difference) - (int64_t{1} << 32U));
 }
 
-std::optional<RtcpSystemClock::time_point> rtpSystemTime(const RtcpSenderReport &report, uint32_t rtpTimestamp) {
+std::optional<RtcpSystemClock::time_point> rtpSystemTime(const rtp::RtcpSenderReport &report, uint32_t rtpTimestamp) {
     const auto reportTime = ntpToSystemTime(report.ntpTimestamp);
     if (!reportTime.has_value()) {
         return std::nullopt;
@@ -159,7 +160,7 @@ std::optional<RtcpSystemClock::time_point> rtpSystemTime(const RtcpSenderReport 
     return RtcpSystemClock::time_point(mediaTime);
 }
 
-bool rtcpClockMappingsCompatible(const RtcpSenderReport &first, const RtcpSenderReport &second,
+bool rtcpClockMappingsCompatible(const rtp::RtcpSenderReport &first, const rtp::RtcpSenderReport &second,
                                  std::chrono::microseconds tolerance) {
     if (first.canonicalName.empty() || first.canonicalName != second.canonicalName) {
         return false;

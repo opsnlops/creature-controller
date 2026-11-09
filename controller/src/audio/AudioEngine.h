@@ -93,7 +93,7 @@ class AudioEngine final {
     std::vector<DecodedAudioFrame> decoded_;
     std::vector<float> gains_;
     std::vector<uint64_t> decodedGenerations_;
-    std::optional<RtcpSenderReport> activeReport_;
+    std::optional<rtp::RtcpSenderReport> activeReport_;
     std::thread mainThread_, playoutThread_;
     std::mutex lifecycleMutex_;
     std::atomic<bool> stop_requested{false};
