@@ -5,13 +5,13 @@
 #include "controller/ServoModuleHandler.h"
 #include "controller/commands/ServoModuleConfiguration.h"
 #include "creature/logging/Logger.h"
+#include "creature/thread/ThreadName.h"
 #include "io/Message.h"
 #include "io/MessageProcessor.h"
 #include "io/MessageRouter.h"
 #include "io/SerialHandler.h"
 #include "util/MessageQueue.h"
 #include "util/StoppableThread.h"
-#include "util/thread_name.h"
 
 namespace creatures {
 
@@ -37,7 +37,7 @@ ServoModuleHandler::ServoModuleHandler(
         std::make_shared<MessageQueue<Message>>(SERIAL_OUTGOING_QUEUE_MAX_MESSAGES, creatures::io::isDroppableMessage);
     this->incomingQueue = std::make_shared<MessageQueue<Message>>();
 
-    this->threadName = fmt::format("ServoModuleHandler-{}", UARTDevice::moduleNameToString(this->moduleId));
+    this->threadName = fmt::format("ServoModule-{}", UARTDevice::moduleNameToString(this->moduleId));
 }
 
 void ServoModuleHandler::init() {

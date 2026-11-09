@@ -9,6 +9,7 @@
 #include "config/UARTDevice.h"
 #include "controller/ServoModuleHandler.h"
 #include "creature/logging/Logger.h"
+#include "creature/thread/ThreadName.h"
 #include "io/Message.h"
 #include "io/handlers/DynamixelSensorHandler.h"
 #include "io/handlers/InitHandler.h"
@@ -16,7 +17,6 @@
 #include "io/handlers/PongHandler.h"
 #include "io/handlers/StatsHandler.h"
 #include "util/Result.h"
-#include "util/thread_name.h"
 
 #include "MessageProcessor.h"
 #include "io/MessageProcessingException.h"
@@ -137,7 +137,7 @@ Result<bool> MessageProcessor::processMessage(const Message &message) {
 }
 
 void MessageProcessor::run() {
-    this->threadName = fmt::format("MessageProcessor::{}", UARTDevice::moduleNameToString(this->moduleId));
+    this->threadName = fmt::format("MessageProc-{}", UARTDevice::moduleNameToString(this->moduleId));
     setThreadName(this->threadName);
 
     logger->debug("MessageProcessor thread started for module {}", UARTDevice::moduleNameToString(this->moduleId));

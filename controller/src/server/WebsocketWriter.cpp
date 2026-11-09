@@ -3,11 +3,11 @@
 #include <thread>
 
 #include "creature/logging/Logger.h"
+#include "creature/thread/ThreadName.h"
 #include "server/ServerMessage.h"
 #include "server/WebsocketWriter.h"
 #include "util/MessageQueue.h"
 #include "util/StoppableThread.h"
-#include "util/thread_name.h"
 
 #include "controller-config.h"
 
@@ -32,7 +32,7 @@ void WebsocketWriter::start() {
 
 void WebsocketWriter::run() {
 
-    this->threadName = fmt::format("WebsocketWriter::run");
+    this->threadName = "WebsocketWriter";
     setThreadName(threadName);
 
     this->logger->info("hello from the WebsocketWriter thread!");

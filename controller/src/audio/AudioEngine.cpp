@@ -1,6 +1,6 @@
 #include "audio/AudioEngine.h"
 #include "audio/AlsaMixerControl.h"
-#include "util/thread_name.h"
+#include "creature/thread/ThreadName.h"
 #include <algorithm>
 #include <cmath>
 #include <fmt/format.h>

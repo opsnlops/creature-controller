@@ -2,9 +2,9 @@
 
 #include "config/UARTDevice.h"
 #include "creature/logging/Logger.h"
+#include "creature/thread/ThreadName.h"
 #include "io/Message.h"
 #include "io/MessageRouter.h"
-#include "util/thread_name.h"
 
 namespace creatures::io {
 
@@ -20,7 +20,7 @@ MessageRouter::MessageRouter(const std::shared_ptr<Logger> &logger) : logger(log
     this->servoHandlers = std::unordered_map<creatures::config::UARTDevice::module_name, HandlerQueues>();
     this->handlerStates = std::unordered_map<creatures::config::UARTDevice::module_name, MotorHandlerState>();
 
-    this->threadName = "MessageRouter::run";
+    this->threadName = "MessageRouter";
     this->logger->info("MessageRouter created - ready for message routing");
 }
 

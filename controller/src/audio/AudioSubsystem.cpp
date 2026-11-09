@@ -7,7 +7,7 @@
 
 #include <fmt/format.h>
 
-#include "util/thread_name.h"
+#include "creature/thread/ThreadName.h"
 
 #include "AudioSubsystem.h"
 

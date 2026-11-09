@@ -6,7 +6,7 @@
 #include "creature/Creature.h"
 #include "creature/CreatureException.h"
 #include "creature/logging/Logger.h"
-#include "util/thread_name.h"
+#include "creature/thread/ThreadName.h"
 
 namespace creatures::creature {
 

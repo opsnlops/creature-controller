@@ -6,9 +6,9 @@
 #include <unistd.h>
 
 #include "creature/logging/Logger.h"
+#include "creature/thread/ThreadName.h"
 #include "io/Message.h"
 #include "io/SerialWriter.h"
-#include "util/thread_name.h"
 
 namespace creatures::io {
 
@@ -32,7 +32,7 @@ void SerialWriter::start() {
 void SerialWriter::run() {
     this->logger->info("hello from the writer thread for {} 📝", this->deviceNode);
 
-    this->threadName = fmt::format("SerialWriter::run for {}", this->deviceNode);
+    this->threadName = fmt::format("SerialWriter-{}", UARTDevice::moduleNameToString(this->moduleName));
     setThreadName(threadName);
 
     // Report dropped messages periodically so a slow link doesn't flood the log
