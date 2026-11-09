@@ -13,7 +13,10 @@
 
 namespace creatures::server {
 
-ServerConnection::~ServerConnection() { logger->info("server connection destroyed"); }
+ServerConnection::~ServerConnection() {
+    stopThread();
+    logger->info("server connection destroyed");
+}
 
 void ServerConnection::start() {
 
@@ -70,7 +73,7 @@ void ServerConnection::run() {
             connectionEstablishedCallback();
         }
 
-        std::this_thread::sleep_for(interval);
+        waitForStop(interval);
     }
     logger->debug("ServerConnection thread stopping");
 

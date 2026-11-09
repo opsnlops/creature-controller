@@ -33,6 +33,8 @@ class ServoModuleHandler : public StoppableThread, public std::enable_shared_fro
                        std::shared_ptr<MessageQueue<creatures::server::ServerMessage>> websocketOutgoingQueue,
                        std::chrono::milliseconds pongTimeout = std::chrono::seconds(PONG_TIMEOUT_SECONDS));
 
+    ~ServoModuleHandler() override;
+
     void init();
 
     void start() override;

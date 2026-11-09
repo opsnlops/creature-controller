@@ -39,7 +39,7 @@ class MessageProcessor : public StoppableThread {
     MessageProcessor(std::shared_ptr<Logger> logger, UARTDevice::module_name moduleId,
                      std::shared_ptr<ServoModuleHandler> ServoModuleHandler,
                      std::shared_ptr<MessageQueue<creatures::server::ServerMessage>> websocketOutgoingQueue);
-    ~MessageProcessor() = default;
+    ~MessageProcessor() override { stopThread(); }
 
     void registerHandler(std::string messageType, std::shared_ptr<IMessageHandler> handler);
     void start() override;

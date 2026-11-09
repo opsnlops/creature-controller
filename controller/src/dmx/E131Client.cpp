@@ -7,6 +7,7 @@
 #include <cstring>      // For strerror
 #include <netinet/in.h> // For network structures
 #include <sys/socket.h> // For socket error constants
+#include <sys/time.h>   // For struct timeval
 #include <thread>
 #include <unordered_map>
 #include <utility>
@@ -29,7 +30,10 @@ E131Client::E131Client(const std::shared_ptr<Logger> &logger) : logger(logger) {
     this->logger->info("e1.31 client created");
 }
 
-E131Client::~E131Client() { this->logger->info("e1.31 client destroyed"); }
+E131Client::~E131Client() {
+    stopThread();
+    this->logger->info("e1.31 client destroyed");
+}
 
 void E131Client::init(const std::shared_ptr<creature::Creature> &_creature,
                       const std::shared_ptr<Controller> &_controller, u16 _universe, std::string _networkInterfaceName,
@@ -136,6 +140,17 @@ void E131Client::run() {
 
     logger->debug("E1.31 socket created (fd: {})", sockfd);
 
+    // Without a receive timeout, recv() blocks for as long as nobody is sending
+    // us DMX, and shutdown would never get past it. Wake up regularly to check
+    // stop_requested.
+    struct timeval receiveTimeout{};
+    receiveTimeout.tv_sec = 0;
+    receiveTimeout.tv_usec = E131_RECEIVE_TIMEOUT_MS * 1000;
+    if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &receiveTimeout, sizeof(receiveTimeout)) < 0) {
+        logger->warn("Unable to set a receive timeout on the E1.31 socket: {}",
+                     getDetailedSocketError("setsockopt SO_RCVTIMEO"));
+    }
+
     // Let several controllers on the same host (travel mode) share the port. Like the
     // audio client, deliberately NOT SO_REUSEPORT — it can cause packet duplication
     // with multicast.
@@ -214,6 +229,9 @@ void E131Client::run() {
 
     while (!stop_requested.load()) {
         if (e131_recv(sockfd, &packet) < 0) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
+                continue; // Nothing arrived in time; go see if we should stop
+            }
             logger->error("e131_recv() failed: {} (errno {})", getDetailedSocketError("e131_recv"), errno);
             continue;
         }

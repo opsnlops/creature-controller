@@ -15,6 +15,9 @@
 namespace creatures {
 
 class CountingThread : public StoppableThread {
+  public:
+    ~CountingThread() override { stopThread(); }
+
   protected:
     void run() override {
         while (!stop_requested.load()) {

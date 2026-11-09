@@ -27,7 +27,10 @@ class MessageRouter : public StoppableThread {
   public:
     explicit MessageRouter(const std::shared_ptr<Logger> &logger);
 
-    ~MessageRouter() override { this->logger->info("MessageRouter destroyed"); }
+    ~MessageRouter() override {
+        stopThread();
+        this->logger->info("MessageRouter destroyed");
+    }
 
     /**
      * Register a ServoModuleHandler with the message router

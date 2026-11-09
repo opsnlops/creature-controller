@@ -40,6 +40,8 @@ ServoModuleHandler::ServoModuleHandler(
     this->threadName = fmt::format("ServoModuleHandler-{}", UARTDevice::moduleNameToString(this->moduleId));
 }
 
+ServoModuleHandler::~ServoModuleHandler() { stopThread(); }
+
 void ServoModuleHandler::init() {
     // Don't initialize if we're shutting down
     if (is_shutting_down.load()) {

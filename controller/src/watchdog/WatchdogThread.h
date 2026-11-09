@@ -26,6 +26,8 @@ class WatchdogThread : public StoppableThread {
                    std::shared_ptr<MessageQueue<creatures::server::ServerMessage>> websocketOutgoingQueue,
                    std::shared_ptr<creatures::io::MessageRouter> messageRouter);
 
+    ~WatchdogThread() override { stopThread(); }
+
   protected:
     void run() override;
 

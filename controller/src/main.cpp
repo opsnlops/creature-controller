@@ -574,7 +574,12 @@ int main(int argc, char **argv) {
         if (*it) {
             logger->info("Stopping thread: {}", (*it)->getName());
             (*it)->shutdown();
-            logger->debug("Thread {} shutdown complete", (*it)->getName());
+            if ((*it)->didShutdownTimeOut()) {
+                logger->critical("Thread {} did not stop within {} ms and was abandoned", (*it)->getName(),
+                                 (*it)->getShutdownTimeout().count());
+            } else {
+                logger->debug("Thread {} shutdown complete", (*it)->getName());
+            }
         }
     }
 

@@ -33,7 +33,10 @@ class SerialReader : public StoppableThread {
     SerialReader(const std::shared_ptr<Logger> &logger, std::string deviceNode, UARTDevice::module_name moduleName,
                  int fileDescriptor, const std::shared_ptr<MessageQueue<Message>> &incomingQueue);
 
-    ~SerialReader() override { this->logger->info("SerialReader destroyed"); }
+    ~SerialReader() override {
+        stopThread();
+        this->logger->info("SerialReader destroyed");
+    }
 
     void start() override;
 

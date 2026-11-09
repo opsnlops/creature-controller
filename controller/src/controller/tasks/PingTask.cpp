@@ -16,7 +16,10 @@ namespace creatures::tasks {
 
 using creatures::io::MessageRouter;
 
-PingTask::~PingTask() { this->logger->info("ping task destroyed"); }
+PingTask::~PingTask() {
+    stopThread();
+    this->logger->info("ping task destroyed");
+}
 
 void PingTask::start() {
     logger->info("starting the ping task");
@@ -35,11 +38,10 @@ void PingTask::run() {
     // Don't start out at zero so we don't send a ping right away
     u64 totalMilliseconds = PING_LOOP_TIME;
 
-    while (!stop_requested.load()) {
-        std::this_thread::sleep_for(interval);
+    while (!waitForStop(interval)) {
 
-        // This cycles every interval so that it's responsive to a shutdown, but
-        // don't ping each time 😅
+        // This cycles every interval, and waitForStop() wakes up as soon as a
+        // shutdown is requested. Only ping every PING_SECONDS.
         if (totalMilliseconds % (PING_SECONDS * PING_LOOP_TIME) == 0) {
             auto pingCommand = creatures::commands::Ping(logger);
             messageRouter->broadcastMessageToAllModules(pingCommand.toMessageWithChecksum());

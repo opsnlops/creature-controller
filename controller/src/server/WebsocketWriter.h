@@ -25,13 +25,12 @@ namespace creatures::server {
 class WebsocketWriter : public StoppableThread {
 
   public:
-    WebsocketWriter(
-        const std::shared_ptr<Logger> &logger,
-        std::shared_ptr<ix::WebSocket> webSocket,
-        const std::shared_ptr<MessageQueue<ServerMessage>> &outgoingQueue,
-        std::string creatureId, bool enabled);
+    WebsocketWriter(const std::shared_ptr<Logger> &logger, std::shared_ptr<ix::WebSocket> webSocket,
+                    const std::shared_ptr<MessageQueue<ServerMessage>> &outgoingQueue, std::string creatureId,
+                    bool enabled);
 
     ~WebsocketWriter() override {
+        stopThread();
         this->logger->info("WebsocketWriter destroyed");
     }
 
