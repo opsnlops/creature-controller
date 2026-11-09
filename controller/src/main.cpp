@@ -34,16 +34,16 @@
 #include "controller/Controller.h"
 #include "controller/ServoModuleHandler.h"
 #include "controller/tasks/PingTask.h"
+#include "creature/logging/Logger.h"
 #include "dmx/E131Client.h"
 #include "io/Message.h"
 #include "io/MessageProcessor.h"
 #include "io/MessageRouter.h"
-#include "logging/Logger.h"
 #include "logging/SpdlogLogger.h"
 #include "network/MdnsRecords.h"
 #include "timesync/TimeSyncMonitor.h"
 #if CREATURE_HAS_AVAHI
-#include "network/AvahiPublisher.h"
+#include "creature/network/AvahiPublisher.h"
 #endif
 #include "server/ServerConnection.h"
 #include "server/ServerMessage.h"

@@ -10,10 +10,10 @@
 #include "controller-config.h"
 
 #include "config/UARTDevice.h"
+#include "creature/logging/Logger.h"
 #include "io/Message.h"
 #include "io/SerialReader.h"
 #include "io/SerialWriter.h"
-#include "logging/Logger.h"
 #include "util/MessageQueue.h"
 #include "util/Result.h"
 #include "util/StoppableThread.h"

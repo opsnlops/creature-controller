@@ -1,8 +1,8 @@
 
 #pragma once
 
+#include "creature/logging/Logger.h"
 #include "io/handlers/IMessageHandler.h"
-#include "logging/Logger.h"
 
 namespace creatures {
 

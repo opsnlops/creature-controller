@@ -74,7 +74,8 @@ Creature Server → DMX → Creature Controller (Linux host) → Pi Pico 2040 �
 
 **mDNS** (`src/network/`)
 - `MdnsRecords`: Builds the creature's `_creature-controller._udp` advertisement (portable, unit tested).
-- `AvahiPublisher`: Publishes it through `avahi-daemon`; Linux only, behind `CREATURE_HAS_AVAHI`.
+- `MdnsService` and `AvahiPublisher` come from [creature-common](https://github.com/opsnlops/creature-common) (`creature::mdns`), shared with creature-server. The publisher is Linux only, behind `CREATURE_HAS_AVAHI`.
+- `logging/Logger.h` also comes from creature-common (`creature::logging`), included as `creature/logging/Logger.h`; `SpdlogLogger` stays here. Changes to shared code go to creature-common as a new tag, never by moving an existing one.
 
 **Server Integration** (`src/server/`)
 - `ServerConnection`: WebSocket link to the Creature Server.

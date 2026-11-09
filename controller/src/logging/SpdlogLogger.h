@@ -10,7 +10,7 @@
 
 #include "controller-config.h"
 
-#include "logging/Logger.h"
+#include "creature/logging/Logger.h"
 #include "logging/LoggingException.h"
 
 namespace creatures {

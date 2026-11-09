@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.18)
+cmake_minimum_required(VERSION 3.25)
 
 project(creature-controller
         VERSION "4.6.7"
@@ -52,6 +52,16 @@ FetchContent_Declare(
         GIT_TAG v1.17.0
 )
 FetchContent_MakeAvailable(spdlog)
+
+# creature-common: the Logger interface and mDNS library shared with creature-server.
+# Declared after fmt so it uses ours rather than fetching a second copy.
+FetchContent_Declare(
+        creature_common
+        GIT_REPOSITORY https://github.com/opsnlops/creature-common.git
+        GIT_TAG        v0.1.0
+        EXCLUDE_FROM_ALL
+)
+FetchContent_MakeAvailable(creature_common)
 
 if(CREATURE_BUILD_CONTROLLER)
 # argparse
@@ -189,7 +199,7 @@ add_library(creature_audio STATIC
 )
 add_library(creature::audio ALIAS creature_audio)
 target_include_directories(creature_audio PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(creature_audio PUBLIC fmt::fmt opus Threads::Threads PRIVATE ${AUDIO_PLATFORM_LIBRARIES})
+target_link_libraries(creature_audio PUBLIC creature::logging fmt::fmt opus Threads::Threads PRIVATE ${AUDIO_PLATFORM_LIBRARIES})
 if(ALSA_FOUND)
     target_include_directories(creature_audio PRIVATE ${ALSA_INCLUDE_DIRS})
     target_compile_definitions(creature_audio PRIVATE CREATURE_HAS_ALSA=1)
@@ -205,23 +215,11 @@ add_library(creature_timesync STATIC
         src/timesync/TimeSyncMonitor.h
 )
 target_include_directories(creature_timesync PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(creature_timesync PUBLIC fmt::fmt)
-
-# mDNS advertising, shared by the controller and the audio router. Publishing goes
-# through avahi-daemon, so the publisher is only built on Linux.
-add_library(creature_mdns STATIC src/network/MdnsService.cpp src/network/MdnsService.h)
-target_include_directories(creature_mdns PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(creature_mdns PUBLIC fmt::fmt)
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    pkg_check_modules(AVAHI_CLIENT REQUIRED IMPORTED_TARGET avahi-client)
-    target_sources(creature_mdns PRIVATE src/network/AvahiPublisher.cpp src/network/AvahiPublisher.h)
-    target_link_libraries(creature_mdns PUBLIC PkgConfig::AVAHI_CLIENT)
-    target_compile_definitions(creature_mdns PUBLIC CREATURE_HAS_AVAHI=1)
-endif()
+target_link_libraries(creature_timesync PUBLIC creature::logging fmt::fmt)
 
 set(CREATURE_AUDIO_ROUTER_VERSION "0.1.7")
 add_library(creature_audio_router_config STATIC src/audio-router/RouterConfig.cpp src/audio-router/RouterMdns.cpp)
-target_link_libraries(creature_audio_router_config PUBLIC creature::audio creature_mdns creature_timesync nlohmann_json::nlohmann_json)
+target_link_libraries(creature_audio_router_config PUBLIC creature::audio creature::mdns creature_timesync nlohmann_json::nlohmann_json)
 add_executable(creature-audio-router src/audio-router/main.cpp)
 target_link_libraries(creature-audio-router PRIVATE creature_audio_router_config spdlog::spdlog)
 target_compile_definitions(creature-audio-router PRIVATE CREATURE_AUDIO_ROUTER_VERSION="${CREATURE_AUDIO_ROUTER_VERSION}")
@@ -342,7 +340,6 @@ add_library(creature_lib
         src/io/handlers/ReadyHandler.h
 
         # Logging Sources
-        src/logging/Logger.h
         src/logging/SpdlogLogger.h
         src/logging/LoggingException.h
 
@@ -425,7 +422,7 @@ if(ALSA_FOUND)
     target_include_directories(creature_lib PUBLIC ${ALSA_INCLUDE_DIRS})
 endif()
 
-target_link_libraries(creature_lib PUBLIC creature::audio creature_mdns creature_timesync)
+target_link_libraries(creature_lib PUBLIC creature::audio creature::mdns creature_timesync)
 
 add_executable(creature-controller
         src/main.cpp

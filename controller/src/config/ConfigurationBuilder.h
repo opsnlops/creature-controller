@@ -9,13 +9,13 @@ using json = nlohmann::json;
 #include "config/BaseBuilder.h"
 #include "config/CommandLine.h"
 #include "config/UARTDevice.h"
-#include "logging/Logger.h"
+#include "creature/logging/Logger.h"
 #include "util/Result.h"
 
 using namespace creatures;
 using namespace creatures::config;
 
-namespace creatures ::config {
+namespace creatures::config {
 
 class Configuration; // Forward declaration
 

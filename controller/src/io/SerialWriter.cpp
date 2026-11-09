@@ -5,9 +5,9 @@
 #include <poll.h>
 #include <unistd.h>
 
+#include "creature/logging/Logger.h"
 #include "io/Message.h"
 #include "io/SerialWriter.h"
-#include "logging/Logger.h"
 #include "util/thread_name.h"
 
 namespace creatures::io {

@@ -2,7 +2,7 @@
 #include <string>
 #include <thread>
 
-#include "logging/Logger.h"
+#include "creature/logging/Logger.h"
 #include "server/ServerMessage.h"
 #include "server/WebsocketWriter.h"
 #include "util/MessageQueue.h"

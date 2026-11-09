@@ -1,9 +1,9 @@
 #include <string>
 
 #include "config/UARTDevice.h"
+#include "creature/logging/Logger.h"
 #include "io/Message.h"
 #include "io/MessageRouter.h"
-#include "logging/Logger.h"
 #include "util/thread_name.h"
 
 namespace creatures::io {

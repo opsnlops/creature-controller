@@ -6,7 +6,7 @@
 
 #include <ixwebsocket/IXWebSocket.h>
 
-#include "logging/Logger.h"
+#include "creature/logging/Logger.h"
 #include "server/ServerMessage.h"
 #include "util/MessageQueue.h"
 #include "util/StoppableThread.h"
@@ -25,15 +25,11 @@ namespace creatures::server {
 class WebsocketWriter : public StoppableThread {
 
   public:
-    WebsocketWriter(
-        const std::shared_ptr<Logger> &logger,
-        std::shared_ptr<ix::WebSocket> webSocket,
-        const std::shared_ptr<MessageQueue<ServerMessage>> &outgoingQueue,
-        std::string creatureId, bool enabled);
+    WebsocketWriter(const std::shared_ptr<Logger> &logger, std::shared_ptr<ix::WebSocket> webSocket,
+                    const std::shared_ptr<MessageQueue<ServerMessage>> &outgoingQueue, std::string creatureId,
+                    bool enabled);
 
-    ~WebsocketWriter() override {
-        this->logger->info("WebsocketWriter destroyed");
-    }
+    ~WebsocketWriter() override { this->logger->info("WebsocketWriter destroyed"); }
 
     void start() override;
 

@@ -8,10 +8,10 @@
 using json = nlohmann::json;
 
 #include "config/BuilderException.h"
-#include "logging/Logger.h"
+#include "creature/logging/Logger.h"
 #include "util/Result.h"
 
-namespace creatures ::config {
+namespace creatures::config {
 
 /**
  * This class is a base class for all builders. It provides some common functionality

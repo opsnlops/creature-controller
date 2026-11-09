@@ -1,9 +1,9 @@
 
-#include "logging/Logger.h"
+#include "creature/logging/Logger.h"
 
 #include "config/UARTDevice.h"
 
-namespace creatures ::config {
+namespace creatures::config {
 
 UARTDevice::UARTDevice(std::shared_ptr<Logger> logger) : logger(logger) { logger->debug("creating a new UARTDevice"); }
 

@@ -5,7 +5,7 @@
 #include "config/UARTDevice.h"
 #include "creature/Creature.h"
 #include "creature/CreatureException.h"
-#include "logging/Logger.h"
+#include "creature/logging/Logger.h"
 #include "util/thread_name.h"
 
 namespace creatures::creature {

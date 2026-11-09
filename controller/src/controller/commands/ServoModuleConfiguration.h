@@ -7,7 +7,7 @@
 
 #include "controller/commands/ICommand.h"
 #include "controller/commands/tokens/ServoConfig.h"
-#include "logging/Logger.h"
+#include "creature/logging/Logger.h"
 #include "util/Result.h"
 
 // Forward declarations to avoid circular includes

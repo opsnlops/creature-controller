@@ -3,7 +3,7 @@
 
 #include "controller-config.h"
 
-#include "logging/Logger.h"
+#include "creature/logging/Logger.h"
 
 #if USE_STEPPERS
 

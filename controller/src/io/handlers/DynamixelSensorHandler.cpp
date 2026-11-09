@@ -6,8 +6,8 @@
 
 #include "controller-config.h"
 
+#include "creature/logging/Logger.h"
 #include "io/handlers/DynamixelSensorHandler.h"
-#include "logging/Logger.h"
 #include "server/DynamixelSensorReportMessage.h"
 #include "server/ServerMessage.h"
 #include "util/MessageQueue.h"

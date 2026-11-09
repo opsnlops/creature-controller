@@ -8,7 +8,7 @@
 
 #include "audio/audio-config.h"
 #include "controller-config.h"
-#include "logging/Logger.h"
+#include "creature/logging/Logger.h"
 
 using namespace creatures;
 using namespace creatures::config;

@@ -9,7 +9,7 @@
 #include "config/UARTDevice.h"
 #include "controller/commands/ICommand.h"
 #include "controller/commands/tokens/ServoPosition.h"
-#include "logging/Logger.h"
+#include "creature/logging/Logger.h"
 
 namespace creatures::commands {
 

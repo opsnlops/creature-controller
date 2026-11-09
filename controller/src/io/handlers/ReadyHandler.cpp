@@ -3,8 +3,8 @@
 #include <vector>
 
 #include "controller/ServoModuleHandler.h"
+#include "creature/logging/Logger.h"
 #include "io/handlers/ReadyHandler.h"
-#include "logging/Logger.h"
 
 namespace creatures {
 

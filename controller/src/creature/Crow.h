@@ -9,8 +9,8 @@
 #include "Creature.h"
 #include "creature/DifferentialHead.h"
 
+#include "creature/logging/Logger.h"
 #include "device/Servo.h"
-#include "logging/Logger.h"
 #include "util/Result.h"
 
 class Crow : public creatures::creature::Creature {

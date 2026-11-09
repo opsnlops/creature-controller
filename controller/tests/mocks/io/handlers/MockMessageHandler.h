@@ -2,15 +2,14 @@
 
 #pragma once
 
-#include "logging/Logger.h"
+#include "creature/logging/Logger.h"
 #include "io/handlers/IMessageHandler.h"
 
 namespace creatures {
 
-    class MockMessageHandler : public IMessageHandler {
-    public:
-        void handle(std::shared_ptr<Logger> logger, const std::vector<std::string>& tokens) override;
-    };
+class MockMessageHandler : public IMessageHandler {
+  public:
+    void handle(std::shared_ptr<Logger> logger, const std::vector<std::string> &tokens) override;
+};
 
-} // creatures
-
+} // namespace creatures

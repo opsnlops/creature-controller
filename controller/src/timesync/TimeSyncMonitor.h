@@ -5,7 +5,7 @@
 #include <optional>
 #include <string>
 
-#include "logging/Logger.h"
+#include "creature/logging/Logger.h"
 #include "timesync/TimeSync.h"
 
 namespace creatures::timesync {

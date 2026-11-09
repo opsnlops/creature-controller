@@ -5,7 +5,7 @@
 #include "io/handlers/InitHandler.h"
 
 #include "controller/ServoModuleHandler.h"
-#include "logging/Logger.h"
+#include "creature/logging/Logger.h"
 
 #include "util/string_utils.h"
 

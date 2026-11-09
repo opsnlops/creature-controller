@@ -20,10 +20,10 @@
 #include "controller/commands/tokens/ServoPosition.h"
 #include "creature/Creature.h"
 #include "creature/MotorType.h"
+#include "creature/logging/Logger.h"
 #include "device/Servo.h"
 #include "device/ServoSpecifier.h"
 #include "device/Stepper.h"
-#include "logging/Logger.h"
 #include "util/MessageQueue.h"
 
 class Controller;

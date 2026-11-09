@@ -11,7 +11,7 @@
 
 #include "audio/AudioEngine.h"
 #include "audio/audio-config.h"
-#include "logging/Logger.h"
+#include "creature/logging/Logger.h"
 #include "util/StoppableThread.h"
 
 namespace creatures::audio {

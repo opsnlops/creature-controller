@@ -23,7 +23,7 @@
 #include "Version.h"
 #include "audio/AudioOutput.h"
 #include "audio/audio-config.h"
-#include "logging/Logger.h"
+#include "creature/logging/Logger.h"
 #include "logging/SpdlogLogger.h"
 #include "util/Result.h"
 
