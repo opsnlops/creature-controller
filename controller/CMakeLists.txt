@@ -124,9 +124,15 @@ target_include_directories(libe131
 
 endif()
 
+# nlohmann/json, from git rather than the release tarball. GitHub's release
+# downloads failed with 504s for over half an hour while git kept working, and
+# every other dependency here already comes from git.
 FetchContent_Declare(
         json
-        URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz)
+        GIT_REPOSITORY https://github.com/nlohmann/json.git
+        GIT_TAG        v3.12.0
+        GIT_SHALLOW    TRUE
+)
 FetchContent_MakeAvailable(json)
 
 
