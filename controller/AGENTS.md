@@ -115,6 +115,13 @@ Systems inherit from the `StoppableThread` base class for coordinated shutdown:
 - Server connection
 - Message processing workers
 
+`StoppableThread::shutdown()` sets `stop_requested` and then waits for `run()` to return, joining the thread. It waits at most the shutdown timeout (2000 ms by default, `setShutdownTimeout()` to change it). A thread still running after that is logged and detached so a stuck thread can't hang the process; that is the only place a thread is detached, and it means that thread's `run()` loop has a bug. `didShutdownTimeOut()` reports it, and `main` logs it as critical.
+
+Rules for `run()` loops:
+- Check `stop_requested` at least every few hundred milliseconds. Never block without a timeout (use `poll()`, `pop_timeout()`, `SO_RCVTIMEO`, and so on).
+- For long waits between iterations, use `waitForStop(duration)` instead of `sleep_for()`; it wakes as soon as a stop is requested.
+- Every subclass calls `stopThread()` from its destructor. The base destructor also stops and joins as a last resort, but by then the subclass's members are gone and the object is no longer of the subclass's type, so a thread still running then races with destruction (ThreadSanitizer reports it).
+
 ## Configuration
 
 Creature definitions are JSON files specifying:
@@ -164,7 +171,9 @@ The shutdown path has been tightened recently:
 - Cleans up SDL, Opus, and network resources.
 
 **Shutdown Timeout Tweaks**
-- `StoppableThread::shutdown()` timeout increased from 200 ms to 2000 ms.
+- `StoppableThread::shutdown()` joins its thread, waiting up to 2000 ms before detaching it and logging.
+- `E131Client` uses a 200 ms receive timeout so it notices shutdown when no DMX is arriving.
+- `SerialHandler` leaves the port open if a serial thread had to be abandoned, so its descriptor can't be reused under it.
 - `ServoModuleHandler` now shuts down serial paths before message processors.
 - Enhanced logging for shutdown progress.
 - Fixed race conditions where processing continued post-shutdown request.

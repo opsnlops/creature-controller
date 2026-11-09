@@ -43,6 +43,8 @@ class Controller : public creatures::StoppableThread {
                         const std::shared_ptr<creatures::creature::Creature> &creature,
                         std::shared_ptr<creatures::io::MessageRouter> messageRouter);
 
+    ~Controller() override { stopThread(); }
+
     void start() override;
 
     /**

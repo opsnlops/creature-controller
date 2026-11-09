@@ -35,7 +35,10 @@ class SerialWriter : public StoppableThread {
                  int fileDescriptor, const std::shared_ptr<MessageQueue<Message>> &outgoingQueue,
                  std::chrono::milliseconds writeTimeout = std::chrono::milliseconds(SERIAL_WRITE_TIMEOUT_MS));
 
-    ~SerialWriter() override { this->logger->info("SerialWriter destroyed"); }
+    ~SerialWriter() override {
+        stopThread();
+        this->logger->info("SerialWriter destroyed");
+    }
 
     void start() override;
 

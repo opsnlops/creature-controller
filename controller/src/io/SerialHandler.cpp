@@ -207,6 +207,14 @@ Result<bool> SerialHandler::shutdown() {
         writer->shutdown();
     }
 
+    // A thread that would not stop may still be using the port. Closing it now
+    // would let the descriptor be reused out from under that thread, so leave it
+    // open; the process is on its way out.
+    if ((reader && reader->didShutdownTimeOut()) || (writer && writer->didShutdownTimeOut())) {
+        this->logger->critical("serial threads for {} did not stop in time; leaving the port open", deviceNode);
+        return Result<bool>{true};
+    }
+
     // Finally, close the serial port
     closeSerialPort();
     return Result<bool>{true};

@@ -37,6 +37,10 @@ using u64 = std::uint64_t;
 // PING_SECONDS, so this allows for several missed replies.
 #define PONG_TIMEOUT_SECONDS 20
 
+// How long the E1.31 client waits for a packet before checking whether it's been
+// asked to stop. Keeps shutdown quick when nobody is sending DMX.
+#define E131_RECEIVE_TIMEOUT_MS 200
+
 // The most servos we can control
 #define MAX_NUMBER_OF_SERVOS 8
 

@@ -29,7 +29,10 @@ class WebsocketWriter : public StoppableThread {
                     const std::shared_ptr<MessageQueue<ServerMessage>> &outgoingQueue, std::string creatureId,
                     bool enabled);
 
-    ~WebsocketWriter() override { this->logger->info("WebsocketWriter destroyed"); }
+    ~WebsocketWriter() override {
+        stopThread();
+        this->logger->info("WebsocketWriter destroyed");
+    }
 
     void start() override;
 
