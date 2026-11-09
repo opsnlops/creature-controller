@@ -4,7 +4,7 @@
 
 #include "audio-router/RouterConfig.h"
 #include "creature/network/MdnsService.h"
-#include "timesync/TimeSync.h"
+#include "creature/timesync/TimeSync.h"
 
 namespace creatures::audio::router {
 

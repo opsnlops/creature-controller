@@ -53,13 +53,13 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(spdlog)
 
-# creature-common: the Logger interface, mDNS, the RTP/RTCP wire contract, and thread
-# naming, shared with creature-server.
+# creature-common: the Logger interface, mDNS, the RTP/RTCP wire contract, thread
+# naming, and PTP/clock sync checks, shared with creature-server.
 # Declared after fmt so it uses ours rather than fetching a second copy.
 FetchContent_Declare(
         creature_common
         GIT_REPOSITORY https://github.com/opsnlops/creature-common.git
-        GIT_TAG        v0.3.0
+        GIT_TAG        v0.4.0
         EXCLUDE_FROM_ALL
 )
 FetchContent_MakeAvailable(creature_common)
@@ -204,21 +204,9 @@ if(ALSA_FOUND)
     target_compile_definitions(creature_audio PRIVATE CREATURE_HAS_ALSA=1)
 endif()
 
-# PTP and system clock sync checks, shared by the controller and the audio router
-add_library(creature_timesync STATIC
-        src/timesync/PtpManagement.cpp
-        src/timesync/PtpManagement.h
-        src/timesync/TimeSync.cpp
-        src/timesync/TimeSync.h
-        src/timesync/TimeSyncMonitor.cpp
-        src/timesync/TimeSyncMonitor.h
-)
-target_include_directories(creature_timesync PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(creature_timesync PUBLIC creature::logging fmt::fmt)
-
 set(CREATURE_AUDIO_ROUTER_VERSION "0.1.7")
 add_library(creature_audio_router_config STATIC src/audio-router/RouterConfig.cpp src/audio-router/RouterMdns.cpp)
-target_link_libraries(creature_audio_router_config PUBLIC creature::audio creature::mdns creature_timesync nlohmann_json::nlohmann_json)
+target_link_libraries(creature_audio_router_config PUBLIC creature::audio creature::mdns creature::timesync nlohmann_json::nlohmann_json)
 add_executable(creature-audio-router src/audio-router/main.cpp)
 target_link_libraries(creature-audio-router PRIVATE creature_audio_router_config spdlog::spdlog)
 target_compile_definitions(creature-audio-router PRIVATE CREATURE_AUDIO_ROUTER_VERSION="${CREATURE_AUDIO_ROUTER_VERSION}")
@@ -420,7 +408,7 @@ if(ALSA_FOUND)
     target_include_directories(creature_lib PUBLIC ${ALSA_INCLUDE_DIRS})
 endif()
 
-target_link_libraries(creature_lib PUBLIC creature::audio creature::mdns creature::thread creature_timesync)
+target_link_libraries(creature_lib PUBLIC creature::audio creature::mdns creature::thread creature::timesync)
 
 add_executable(creature-controller
         src/main.cpp
@@ -521,8 +509,6 @@ add_executable(creature-controller-test
         tests/io/Message_test.cpp
         tests/io/SerialWriter_test.cpp
         tests/network/MdnsRecords_test.cpp
-        tests/timesync/PtpManagement_test.cpp
-        tests/timesync/TimeSync_test.cpp
         tests/controller/ServoModuleHandler_test.cpp
 )
 

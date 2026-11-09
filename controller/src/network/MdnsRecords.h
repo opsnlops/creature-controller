@@ -5,7 +5,7 @@
 #include "controller-config.h"
 #include "creature/Creature.h"
 #include "creature/network/MdnsService.h"
-#include "timesync/TimeSync.h"
+#include "creature/timesync/TimeSync.h"
 
 namespace creatures::network {
 
