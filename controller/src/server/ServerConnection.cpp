@@ -4,8 +4,8 @@
 #include <ixwebsocket/IXUserAgent.h>
 #include <ixwebsocket/IXWebSocket.h>
 
-#include "logging/Logger.h"
-#include "util/thread_name.h"
+#include "creature/logging/Logger.h"
+#include "creature/thread/ThreadName.h"
 
 #include "server/ServerConnection.h"
 
@@ -50,7 +50,7 @@ void ServerConnection::run() {
     }
 
     // Set thread name
-    setThreadName("creatures::server::ServerConnection");
+    setThreadName("ServerConn");
     logger->info("hello from the Creature Server connection!");
 
     // How often should we see if we need to stop?

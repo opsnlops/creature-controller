@@ -135,14 +135,14 @@ class AlsaAudioOutput final : public AudioOutput {
             return false;
         }
 
-        unsigned int sampleRate = SAMPLE_RATE;
+        unsigned int sampleRate = rtp::SAMPLE_RATE;
         int direction = 0;
         if (!check(snd_pcm_hw_params_set_rate_near(pcm_, hardwareParameters, &sampleRate, &direction),
                    "set sample rate") ||
-            sampleRate != SAMPLE_RATE) {
-            if (sampleRate != SAMPLE_RATE) {
+            sampleRate != rtp::SAMPLE_RATE) {
+            if (sampleRate != rtp::SAMPLE_RATE) {
                 log_->error("ALSA output '{}' cannot provide the required {} Hz sample rate (received {})", deviceName,
-                            SAMPLE_RATE, sampleRate);
+                            rtp::SAMPLE_RATE, sampleRate);
             }
             close();
             return false;
@@ -156,9 +156,9 @@ class AlsaAudioOutput final : public AudioOutput {
             return false;
         }
 
-        snd_pcm_uframes_t requestedBuffer =
-            std::max<size_t>(TARGET_PLAYOUT_FRAMES * FRAMES_PER_CHUNK,
-                             static_cast<size_t>(config.commonPlayoutDelayMs) * SAMPLE_RATE / 1000 + FRAMES_PER_CHUNK);
+        snd_pcm_uframes_t requestedBuffer = std::max<size_t>(
+            TARGET_PLAYOUT_FRAMES * rtp::SAMPLES_PER_FRAME,
+            static_cast<size_t>(config.commonPlayoutDelayMs) * rtp::SAMPLE_RATE / 1000 + rtp::SAMPLES_PER_FRAME);
         if (!check(snd_pcm_hw_params_set_buffer_size_near(pcm_, hardwareParameters, &requestedBuffer),
                    "set buffer size") ||
             !check(snd_pcm_hw_params(pcm_, hardwareParameters), "apply hardware parameters")) {
@@ -389,7 +389,7 @@ class AlsaAudioOutput final : public AudioOutput {
     }
 
     static double framesToMilliseconds(snd_pcm_uframes_t frames) {
-        return static_cast<double>(frames) * 1000.0 / SAMPLE_RATE;
+        return static_cast<double>(frames) * 1000.0 / rtp::SAMPLE_RATE;
     }
 
     void logPcmPath() const {

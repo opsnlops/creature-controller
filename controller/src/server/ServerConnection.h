@@ -8,7 +8,7 @@
 #include <ixwebsocket/IXWebSocket.h>
 
 #include "creature/Creature.h"
-#include "logging/Logger.h"
+#include "creature/logging/Logger.h"
 #include "server/ServerMessage.h"
 #include "server/WebsocketWriter.h"
 #include "util/MessageQueue.h"
@@ -17,7 +17,7 @@
 
 #include "controller-config.h"
 
-namespace creatures ::server {
+namespace creatures::server {
 
 /**
  * A websocket connection to our server. This is optional, it doesn't need to be

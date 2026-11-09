@@ -5,8 +5,8 @@
 
 #include "controller-config.h"
 
+#include "creature/logging/Logger.h"
 #include "io/handlers/MotorSensorHandler.h"
-#include "logging/Logger.h"
 #include "server/MotorSensorReportMessage.h"
 #include "server/ServerMessage.h"
 #include "util/MessageQueue.h"

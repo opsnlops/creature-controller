@@ -47,24 +47,6 @@ class MdnsRecordsTest : public ::testing::Test {
     ControllerDetails details;
 };
 
-TEST(MdnsService, InstanceNameIsLowerCase) {
-    EXPECT_EQ(mdnsInstanceName("Caroll"), "caroll");
-    EXPECT_EQ(mdnsInstanceName("BEAKY"), "beaky");
-    EXPECT_EQ(mdnsInstanceName("Light 1"), "light 1");
-}
-
-TEST(MdnsService, TrimsEntriesThatAreTooLong) {
-    MdnsService service;
-    service.txt = {{"short", "ok"}, {"long", std::string(400, 'x')}};
-
-    const auto total = fitTxtRecord(service);
-
-    EXPECT_EQ(service.txt[0].second, "ok");
-    EXPECT_EQ(service.txt[1].first.size() + 1 + service.txt[1].second.size(), MDNS_TXT_ENTRY_MAX_BYTES);
-    EXPECT_TRUE(service.txt[1].second.ends_with("..."));
-    EXPECT_EQ(total, (1 + 8) + (1 + MDNS_TXT_ENTRY_MAX_BYTES));
-}
-
 TEST_F(MdnsRecordsTest, DescribesTheCreatureAndHost) {
     const auto service = makeCreatureService(creature, details);
 

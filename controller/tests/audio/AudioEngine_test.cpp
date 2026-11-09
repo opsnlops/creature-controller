@@ -1,4 +1,5 @@
 #include "audio/AudioEngine.h"
+#include "creature/rtp/RtcpPacket.h"
 #include <algorithm>
 #include <cmath>
 #include <condition_variable>
@@ -8,6 +9,7 @@
 #include <mutex>
 #include <numbers>
 using namespace creatures::audio;
+namespace rtp = creatures::rtp;
 namespace {
 class QuietLogger : public creatures::Logger {
   public:
@@ -59,7 +61,7 @@ class TestOutput : public AudioOutput {
         std::lock_guard lock(mutex);
         const auto now = std::chrono::steady_clock::now();
         if (started)
-            queued = std::max(0.0, queued - std::chrono::duration<double>(now - last).count() * SAMPLE_RATE);
+            queued = std::max(0.0, queued - std::chrono::duration<double>(now - last).count() * rtp::SAMPLE_RATE);
         last = now;
         return static_cast<size_t>(queued);
     }
@@ -79,6 +81,7 @@ class TestOutput : public AudioOutput {
 struct PacketHub {
     std::mutex mutex;
     std::map<std::pair<std::string, uint16_t>, std::deque<std::vector<uint8_t>>> queues;
+    std::vector<std::pair<std::string, uint16_t>> opened;
     bool openSucceeds{true};
     std::atomic<bool> failReceive{false};
 };
@@ -87,6 +90,10 @@ class TestReceiver : public PacketReceiver {
     explicit TestReceiver(std::shared_ptr<PacketHub> hub) : hub_(std::move(hub)) {}
     bool open(const std::string &group, const std::string &, uint16_t port) override {
         key_ = {group, port};
+        {
+            std::lock_guard lock(hub_->mutex);
+            hub_->opened.push_back(key_);
+        }
         return hub_->openSucceeds;
     }
     Result receive(std::vector<uint8_t> &packet, size_t) override {
@@ -117,50 +124,46 @@ void put32(std::vector<uint8_t> &bytes, uint32_t value) {
         bytes.push_back(static_cast<uint8_t>(value >> shift));
 }
 void seedBgm(const std::shared_ptr<PacketHub> &hub, bool withRtcp, uint32_t source = 100,
-             const std::string &group = BGM_GROUP, const std::string &cname = "workshop") {
-    std::vector<uint8_t> report{0x80, 200, 0, 6};
-    put32(report, source);
+             const std::string &group = rtp::bgmGroup(), const std::string &cname = "workshop") {
+    // Built with the server's own encoder, so this exercises what the server actually sends
     const auto epoch = std::chrono::system_clock::now().time_since_epoch();
     const auto seconds = std::chrono::duration_cast<std::chrono::seconds>(epoch);
     const auto nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(epoch - seconds).count();
-    put32(report, static_cast<uint32_t>(seconds.count() + 2208988800LL));
-    put32(report, static_cast<uint32_t>(static_cast<uint64_t>(nanos) * (uint64_t{1} << 32) / 1000000000));
-    put32(report, 0);
-    put32(report, 0);
-    put32(report, 0);
-    std::vector<uint8_t> sdes{0x81, 202, 0, 0};
-    put32(sdes, source);
-    sdes.push_back(1);
-    sdes.push_back(static_cast<uint8_t>(cname.size()));
-    sdes.insert(sdes.end(), cname.begin(), cname.end());
-    sdes.push_back(0);
-    while (sdes.size() % 4)
-        sdes.push_back(0);
-    sdes[3] = static_cast<uint8_t>(sdes.size() / 4 - 1);
-    report.insert(report.end(), sdes.begin(), sdes.end());
+    const uint64_t ntpTimestamp =
+        (static_cast<uint64_t>(seconds.count() + 2208988800LL) << 32U) |
+        static_cast<uint32_t>(static_cast<uint64_t>(nanos) * (uint64_t{1} << 32) / 1000000000);
+    const auto report = rtp::buildRtcpSenderReport({
+        .synchronizationSource = source,
+        .ntpTimestamp = ntpTimestamp,
+        .rtpTimestamp = 0,
+        .packetCount = 0,
+        .octetCount = 0,
+        .canonicalName = cname,
+    });
     int error;
-    OpusEncoder *encoder = opus_encoder_create(SAMPLE_RATE, 1, OPUS_APPLICATION_AUDIO, &error);
+    OpusEncoder *encoder = opus_encoder_create(rtp::SAMPLE_RATE, 1, OPUS_APPLICATION_AUDIO, &error);
     if (!encoder || error != OPUS_OK)
         throw std::runtime_error("Test encoder initialization failed");
     std::lock_guard lock(hub->mutex);
     if (withRtcp)
-        hub->queues[{group, RTCP_PORT}].push_back(report);
+        hub->queues[{group, rtp::RTCP_PORT}].push_back(report);
     for (uint16_t i = 0; i < 16; ++i) {
         DecodedAudioFrame samples;
         for (size_t j = 0; j < samples.size(); ++j)
             samples[j] = static_cast<int16_t>(
-                5000 * std::sin(2 * std::numbers::pi * 440 * (i * FRAMES_PER_CHUNK + j) / SAMPLE_RATE));
+                5000 * std::sin(2 * std::numbers::pi * 440 * (i * rtp::SAMPLES_PER_FRAME + j) / rtp::SAMPLE_RATE));
         std::array<uint8_t, 1024> payload{};
-        const int size = opus_encode(encoder, samples.data(), FRAMES_PER_CHUNK, payload.data(), payload.size());
+        const int size = opus_encode(encoder, samples.data(), rtp::SAMPLES_PER_FRAME, payload.data(), payload.size());
         if (size <= 0) {
             opus_encoder_destroy(encoder);
             throw std::runtime_error("Test Opus encode failed");
         }
-        std::vector<uint8_t> packet{0x80, RTP_OPUS_PAYLOAD_TYPE, static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i)};
-        put32(packet, i * FRAMES_PER_CHUNK);
+        std::vector<uint8_t> packet{0x80, rtp::OPUS_PAYLOAD_TYPE, static_cast<uint8_t>(i >> 8),
+                                    static_cast<uint8_t>(i)};
+        put32(packet, i * rtp::SAMPLES_PER_FRAME);
         put32(packet, source);
         packet.insert(packet.end(), payload.begin(), payload.begin() + size);
-        hub->queues[{group, RTP_PORT}].push_back(std::move(packet));
+        hub->queues[{group, rtp::RTP_PORT}].push_back(std::move(packet));
     }
     opus_encoder_destroy(encoder);
 }
@@ -195,6 +198,34 @@ TEST(AudioEngineTest, SocketFailureIsSynchronous) {
     AudioEngine engine(std::make_shared<QuietLogger>(), engineConfig(), std::make_unique<TestOutput>(), factory(hub));
     EXPECT_FALSE(engine.start());
     EXPECT_EQ(engine.state(), AudioEngine::State::Failed);
+}
+TEST(AudioEngineTest, JoinsTheMulticastGroupForEachChannel) {
+    // Spelled out rather than built from the prefix, so a wrong channel-to-group
+    // mapping (such as an off-by-one) can't agree with itself and pass
+    const std::vector<std::string> groups{
+        "239.19.63.1",  "239.19.63.2",  "239.19.63.3",  "239.19.63.4",  "239.19.63.5",  "239.19.63.6",
+        "239.19.63.7",  "239.19.63.8",  "239.19.63.9",  "239.19.63.10", "239.19.63.11", "239.19.63.12",
+        "239.19.63.13", "239.19.63.14", "239.19.63.15", "239.19.63.16", "239.19.63.17",
+    };
+    ASSERT_EQ(groups.size(), rtp::CHANNEL_COUNT);
+    for (uint8_t channel = rtp::MIN_CHANNEL; channel <= rtp::MAX_DIALOG_CHANNEL; ++channel) {
+        auto hub = std::make_shared<PacketHub>();
+        auto config = creatureAudioConfig(channel, "127.0.0.1", {});
+        config.requireRtcp = false;
+        AudioEngine engine(std::make_shared<QuietLogger>(), config, std::make_unique<TestOutput>(), factory(hub));
+        ASSERT_TRUE(engine.start()) << "channel " << int(channel);
+        engine.shutdown();
+
+        std::lock_guard lock(hub->mutex);
+        const auto joined = [&](const std::string &group, uint16_t port) {
+            return std::find(hub->opened.begin(), hub->opened.end(), std::pair{group, port}) != hub->opened.end();
+        };
+        for (const auto &group : {groups[channel - 1], groups[rtp::BGM_CHANNEL - 1]}) {
+            EXPECT_TRUE(joined(group, rtp::RTP_PORT)) << "channel " << int(channel) << " RTP " << group;
+            EXPECT_TRUE(joined(group, rtp::RTCP_PORT)) << "channel " << int(channel) << " RTCP " << group;
+        }
+        EXPECT_EQ(hub->opened.size(), 4U) << "channel " << int(channel);
+    }
 }
 TEST(AudioEngineTest, RequiredRtcpKeepsUnsynchronizedBgmSilent) {
     auto hub = std::make_shared<PacketHub>();
@@ -280,7 +311,7 @@ TEST(AudioEngineTest, CleanRestartDoesNotReuseOldPacketsOrTimingReports) {
 TEST(AudioEngineTest, ExcessiveDeviceLatencyFailsWithNoRunningWorkers) {
     auto output = std::make_unique<TestOutput>();
     auto *device = output.get();
-    device->pipeline = SAMPLE_RATE / 10;
+    device->pipeline = rtp::SAMPLE_RATE / 10;
     AudioEngine engine(std::make_shared<QuietLogger>(), engineConfig(), std::move(output),
                        factory(std::make_shared<PacketHub>()));
     EXPECT_FALSE(engine.start());

@@ -6,7 +6,7 @@
 
 #include "fmt/format.h"
 
-#include "logging/Logger.h"
+#include "creature/logging/Logger.h"
 
 namespace creatures {
 

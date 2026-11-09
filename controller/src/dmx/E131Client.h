@@ -5,7 +5,7 @@
 #include "controller-config.h"
 #include "controller/Controller.h"
 #include "creature/Creature.h"
-#include "logging/Logger.h"
+#include "creature/logging/Logger.h"
 #include "util/StoppableThread.h"
 
 #include "e131.h"

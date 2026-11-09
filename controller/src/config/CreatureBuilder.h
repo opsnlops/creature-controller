@@ -16,8 +16,8 @@
 // Project includes
 #include "config/BaseBuilder.h"
 #include "creature/Creature.h"
+#include "creature/logging/Logger.h"
 #include "device/Servo.h"
-#include "logging/Logger.h"
 #include "util/Result.h"
 
 namespace creatures::config {

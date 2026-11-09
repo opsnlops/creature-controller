@@ -2,7 +2,7 @@
 
 #include "controller-config.h"
 #include "controller/commands/ICommand.h"
-#include "logging/Logger.h"
+#include "creature/logging/Logger.h"
 
 namespace creatures::commands {
 

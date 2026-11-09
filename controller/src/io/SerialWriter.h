@@ -11,8 +11,8 @@
 
 #include "config/UARTDevice.h"
 #include "controller-config.h"
+#include "creature/logging/Logger.h"
 #include "io/Message.h"
-#include "logging/Logger.h"
 #include "util/MessageQueue.h"
 #include "util/StoppableThread.h"
 
@@ -69,7 +69,7 @@ class SerialWriter : public StoppableThread {
     std::shared_ptr<Logger> logger;
     std::shared_ptr<MessageQueue<Message>> outgoingQueue;
     std::string deviceNode;
-    [[maybe_unused]] UARTDevice::module_name moduleName;
+    UARTDevice::module_name moduleName;
     int fileDescriptor;
     std::chrono::milliseconds writeTimeout;
     std::atomic<bool> failed{false};

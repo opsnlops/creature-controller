@@ -11,7 +11,7 @@
 
 #include "audio/AudioEngine.h"
 #include "audio/audio-config.h"
-#include "logging/Logger.h"
+#include "creature/logging/Logger.h"
 #include "util/StoppableThread.h"
 
 namespace creatures::audio {
@@ -30,7 +30,7 @@ class AudioSubsystem : public StoppableThread {
      */
     bool initialize(uint8_t creatureChannel, // 1-16
                     const std::string &ifaceIp = "10.19.63.11", const AudioConfig &audioConfig = {},
-                    uint16_t port = RTP_PORT);
+                    uint16_t port = rtp::RTP_PORT);
 
     void setDialogGainDb(float gainDb);
     void setBgmGainDb(float gainDb);

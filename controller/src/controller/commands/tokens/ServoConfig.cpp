@@ -4,8 +4,8 @@
 
 #include "controller-config.h"
 #include "creature/MotorType.h"
+#include "creature/logging/Logger.h"
 #include "device/Servo.h"
-#include "logging/Logger.h"
 
 #include "ServoConfig.h"
 

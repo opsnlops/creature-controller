@@ -16,7 +16,7 @@
 
 // Project includes
 #include "Configuration.h"
-#include "logging/Logger.h"
+#include "creature/logging/Logger.h"
 #include "util/Result.h"
 
 namespace creatures {

@@ -1,8 +1,8 @@
 #include "audio-router/RouterConfig.h"
 #include "audio-router/RouterMdns.h"
-#include "timesync/TimeSyncMonitor.h"
+#include "creature/timesync/TimeSyncMonitor.h"
 #if CREATURE_HAS_AVAHI
-#include "network/AvahiPublisher.h"
+#include "creature/network/AvahiPublisher.h"
 #endif
 #include "audio/AudioEngine.h"
 #include <chrono>

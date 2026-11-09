@@ -34,22 +34,22 @@
 #include "controller/Controller.h"
 #include "controller/ServoModuleHandler.h"
 #include "controller/tasks/PingTask.h"
+#include "creature/logging/Logger.h"
+#include "creature/timesync/TimeSyncMonitor.h"
 #include "dmx/E131Client.h"
 #include "io/Message.h"
 #include "io/MessageProcessor.h"
 #include "io/MessageRouter.h"
-#include "logging/Logger.h"
 #include "logging/SpdlogLogger.h"
 #include "network/MdnsRecords.h"
-#include "timesync/TimeSyncMonitor.h"
 #if CREATURE_HAS_AVAHI
-#include "network/AvahiPublisher.h"
+#include "creature/network/AvahiPublisher.h"
 #endif
+#include "creature/thread/ThreadName.h"
 #include "server/ServerConnection.h"
 #include "server/ServerMessage.h"
 #include "util/StoppableThread.h"
 #include "util/http_utils.h"
-#include "util/thread_name.h"
 #include "watchdog/WatchdogThread.h"
 
 // Default to not shutting down
@@ -390,7 +390,8 @@ int main(int argc, char **argv) {
                                        config->getNetworkDeviceIPAddress(), // Network interface
                                        config->getAudioConfig())) {
 
-            logger->info("Audio subsystem initialized: dialog channel {}, BGM channel 17", creatureAudioChannel);
+            logger->info("Audio subsystem initialized: dialog channel {}, BGM channel {}", creatureAudioChannel,
+                         creatures::rtp::BGM_CHANNEL);
         } else {
             logger->error("Failed to initialize audio subsystem");
             audioSubsystem.reset();

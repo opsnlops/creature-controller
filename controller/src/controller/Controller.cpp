@@ -13,8 +13,8 @@
 #include "controller/commands/ServoModuleConfiguration.h"
 #include "controller/commands/SetServoPositions.h"
 #include "creature/Creature.h"
+#include "creature/thread/ThreadName.h"
 #include "io/Message.h"
-#include "util/thread_name.h"
 
 u64 number_of_moves = 0UL;
 
@@ -125,7 +125,7 @@ void Controller::run() {
     using namespace std::chrono;
 
     this->threadName = "Controller::run";
-    setThreadName(this->threadName);
+    creatures::setThreadName(this->threadName);
 
     logger->info("controller worker now running");
 

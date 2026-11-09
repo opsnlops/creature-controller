@@ -11,7 +11,7 @@ void RoutingMixer::GainRamp::setTarget(float gain) {
     if (gain == target)
         return;
     target = gain;
-    remaining = SAMPLE_RATE * GAIN_RAMP_MS / 1000;
+    remaining = rtp::SAMPLE_RATE * GAIN_RAMP_MS / 1000;
     step = (target - current) / static_cast<float>(remaining);
 }
 float RoutingMixer::GainRamp::next() {
@@ -24,7 +24,7 @@ float RoutingMixer::GainRamp::next() {
 }
 
 RoutingMixer::Crossover::Crossover(float frequency, bool highPass) {
-    const double omega = 2 * std::numbers::pi * frequency / SAMPLE_RATE;
+    const double omega = 2 * std::numbers::pi * frequency / rtp::SAMPLE_RATE;
     const double cosine = std::cos(omega);
     const double alpha = std::sin(omega) / std::sqrt(2.0);
     const double a0 = 1 + alpha;
@@ -92,11 +92,11 @@ void RoutingMixer::resetFilters() {
 void RoutingMixer::process(std::span<const DecodedAudioFrame> inputs, std::span<const float> gains,
                            std::span<int16_t> interleavedOutput) {
     if (inputs.size() != gains_.size() || gains.size() != gains_.size() ||
-        interleavedOutput.size() != FRAMES_PER_CHUNK * channels_)
+        interleavedOutput.size() != rtp::SAMPLES_PER_FRAME * channels_)
         throw std::invalid_argument("Audio mixer frame dimensions do not match its configuration");
     for (size_t input = 0; input < inputs.size(); ++input)
         gains_[input].setTarget(gains[input]);
-    for (size_t sample = 0; sample < FRAMES_PER_CHUNK; ++sample) {
+    for (size_t sample = 0; sample < rtp::SAMPLES_PER_FRAME; ++sample) {
         std::fill(outputSamples_.begin(), outputSamples_.end(), 0);
         for (size_t input = 0; input < inputs.size(); ++input)
             inputSamples_[input] = static_cast<float>(inputs[input][sample]) / 32768.0f * gains_[input].next();

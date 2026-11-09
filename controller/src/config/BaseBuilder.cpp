@@ -10,10 +10,10 @@ using json = nlohmann::json;
 
 #include "config/BaseBuilder.h"
 #include "config/BuilderException.h"
-#include "logging/Logger.h"
+#include "creature/logging/Logger.h"
 #include "util/Result.h"
 
-namespace creatures ::config {
+namespace creatures::config {
 
 BaseBuilder::BaseBuilder(std::shared_ptr<Logger> logger, std::string fileName)
     : fileName(std::move(fileName)), logger(logger) {}

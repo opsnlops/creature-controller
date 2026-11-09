@@ -7,7 +7,7 @@
 
 #include <fmt/format.h>
 
-#include "util/thread_name.h"
+#include "creature/thread/ThreadName.h"
 
 #include "AudioSubsystem.h"
 
@@ -50,7 +50,7 @@ void AudioSubsystem::setDialogGainDb(float gainDb) {
 
 void AudioSubsystem::setBgmGainDb(float gainDb) {
     if (audioEngine_) {
-        audioEngine_->setInputGainDb(17, gainDb);
+        audioEngine_->setInputGainDb(rtp::BGM_CHANNEL, gainDb);
     }
 }
 
@@ -107,9 +107,9 @@ std::string AudioSubsystem::getStats() const {
     }
 
     const double outputQueueMilliseconds =
-        static_cast<double>(audioEngine_->getOutputQueuedFrames()) * 1000.0 / SAMPLE_RATE;
+        static_cast<double>(audioEngine_->getOutputQueuedFrames()) * 1000.0 / rtp::SAMPLE_RATE;
     const double targetQueueMilliseconds =
-        static_cast<double>(TARGET_PLAYOUT_FRAMES * FRAMES_PER_CHUNK) * 1000.0 / SAMPLE_RATE;
+        static_cast<double>(TARGET_PLAYOUT_FRAMES * rtp::SAMPLES_PER_FRAME) * 1000.0 / rtp::SAMPLE_RATE;
     const auto packetAge = audioEngine_->getLastPacketAge();
     const std::string packetAgeText = packetAge.has_value() ? fmt::format("{} ms ago", packetAge->count()) : "never";
     const auto reportAge = audioEngine_->getLastRtcpReportAge();
@@ -120,8 +120,8 @@ std::string AudioSubsystem::getStats() const {
         "receiving={}, timing={}, RTCP reports={}/{} valid/invalid, report age={}, fallbacks={}, start lateness={:+d} "
         "us",
         audioEngine_->getPacketsReceived(), outputQueueMilliseconds, targetQueueMilliseconds,
-        audioEngine_->getBufferedFrames(dialogChannel_), audioEngine_->getBufferedFrames(17), packetAgeText,
-        audioEngine_->isReceiving() ? "yes" : "no", audioEngine_->getTimingModeName(),
+        audioEngine_->getBufferedFrames(dialogChannel_), audioEngine_->getBufferedFrames(rtp::BGM_CHANNEL),
+        packetAgeText, audioEngine_->isReceiving() ? "yes" : "no", audioEngine_->getTimingModeName(),
         audioEngine_->getRtcpReportsReceived(), audioEngine_->getRtcpInvalidReports(), reportAgeText,
         audioEngine_->getRtcpFallbacks(), audioEngine_->getLastStartLatenessMicroseconds());
 }
@@ -158,7 +158,7 @@ void AudioSubsystem::monitoringLoop() {
 
             if (bufferState != lastBufferState) {
                 const double queuedMilliseconds =
-                    static_cast<double>(audioEngine_->getOutputQueuedFrames()) * 1000.0 / SAMPLE_RATE;
+                    static_cast<double>(audioEngine_->getOutputQueuedFrames()) * 1000.0 / rtp::SAMPLE_RATE;
                 switch (bufferState) {
                 case BufferState::Low:
                     log_->warn("Audio output queue low: {:.1f} ms", queuedMilliseconds);

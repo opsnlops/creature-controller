@@ -4,8 +4,8 @@
 #include <vector>
 
 #include "controller/ServoModuleHandler.h"
+#include "creature/logging/Logger.h"
 #include "io/handlers/PongHandler.h"
-#include "logging/Logger.h"
 
 extern std::chrono::time_point<std::chrono::high_resolution_clock> lastPingSentAt;
 

@@ -4,12 +4,12 @@
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
-#include "logging/Logger.h"
+#include "creature/logging/Logger.h"
+#include "creature/thread/ThreadName.h"
 #include "util/Result.h"
 #include "util/StoppableThread.h"
-#include "util/thread_name.h"
 
-namespace creatures ::server {
+namespace creatures::server {
 
 class ServerMessageProcessor : public StoppableThread {};
 

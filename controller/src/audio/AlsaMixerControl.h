@@ -3,7 +3,7 @@
 #include <memory>
 
 #include "audio/audio-config.h"
-#include "logging/Logger.h"
+#include "creature/logging/Logger.h"
 
 namespace creatures::audio {
 

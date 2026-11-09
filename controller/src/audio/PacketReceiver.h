@@ -1,5 +1,5 @@
 #pragma once
-#include "logging/Logger.h"
+#include "creature/logging/Logger.h"
 #include <cstdint>
 #include <functional>
 #include <memory>

@@ -2,8 +2,8 @@
 #pragma once
 
 #include "controller-config.h"
+#include "creature/logging/Logger.h"
 #include "io/handlers/IMessageHandler.h"
-#include "logging/Logger.h"
 
 #define SENSOR_MESSAGE "SENSOR"
 

@@ -8,7 +8,7 @@
 #include <optional>
 #include <unordered_map>
 
-#include "audio/RtcpPacket.h"
+#include "creature/rtp/RtcpPacket.h"
 
 namespace creatures::audio {
 
@@ -16,7 +16,7 @@ using RtcpSteadyClock = std::chrono::steady_clock;
 using RtcpSystemClock = std::chrono::system_clock;
 
 struct TimedRtcpSenderReport {
-    RtcpSenderReport report;
+    rtp::RtcpSenderReport report;
     RtcpSteadyClock::time_point receivedAt;
 };
 
@@ -25,7 +25,7 @@ class RtcpReportCache {
     explicit RtcpReportCache(size_t capacity);
 
     void clear();
-    bool store(RtcpSenderReport report, RtcpSteadyClock::time_point receivedAt);
+    bool store(rtp::RtcpSenderReport report, RtcpSteadyClock::time_point receivedAt);
     [[nodiscard]] std::optional<TimedRtcpSenderReport> find(uint32_t synchronizationSource) const;
     [[nodiscard]] bool empty() const;
     [[nodiscard]] size_t size() const;
@@ -62,7 +62,7 @@ class RtcpPlayoutPlanner {
     RtcpPlayoutPlanner(RtcpClockPair clockPair, std::chrono::milliseconds commonPlayoutDelay,
                        std::chrono::milliseconds deviceCompensation);
 
-    [[nodiscard]] std::optional<RtcpPlayoutPlan> plan(const RtcpSenderReport &report, uint32_t rtpTimestamp,
+    [[nodiscard]] std::optional<RtcpPlayoutPlan> plan(const rtp::RtcpSenderReport &report, uint32_t rtpTimestamp,
                                                       size_t queuedFrames) const;
 
   private:
@@ -75,9 +75,9 @@ class RtcpPlayoutPlanner {
                                          size_t pipelineLatencyFrames = 0);
 [[nodiscard]] std::optional<RtcpSystemClock::time_point> ntpToSystemTime(uint64_t ntpTimestamp);
 [[nodiscard]] int32_t signedRtpTimestampDifference(uint32_t timestamp, uint32_t reference);
-[[nodiscard]] std::optional<RtcpSystemClock::time_point> rtpSystemTime(const RtcpSenderReport &report,
+[[nodiscard]] std::optional<RtcpSystemClock::time_point> rtpSystemTime(const rtp::RtcpSenderReport &report,
                                                                        uint32_t rtpTimestamp);
-[[nodiscard]] bool rtcpClockMappingsCompatible(const RtcpSenderReport &first, const RtcpSenderReport &second,
+[[nodiscard]] bool rtcpClockMappingsCompatible(const rtp::RtcpSenderReport &first, const rtp::RtcpSenderReport &second,
                                                std::chrono::microseconds tolerance);
 [[nodiscard]] bool rtcpPresentationDeadlinePlausible(const RtcpPlayoutPlan &plan,
                                                      RtcpSteadyClock::time_point packetArrival,

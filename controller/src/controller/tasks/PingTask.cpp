@@ -3,9 +3,9 @@
 
 #include "controller/commands/Ping.h"
 #include "controller/tasks/PingTask.h"
+#include "creature/logging/Logger.h"
+#include "creature/thread/ThreadName.h"
 #include "io/MessageRouter.h"
-#include "logging/Logger.h"
-#include "util/thread_name.h"
 
 // Keep track of the last time we sent a ping
 std::chrono::time_point<std::chrono::high_resolution_clock> lastPingSentAt = std::chrono::high_resolution_clock::now();
@@ -29,7 +29,7 @@ void PingTask::start() {
 void PingTask::run() {
 
     // Set thread name
-    setThreadName("creatures::tasks::PingTask");
+    setThreadName("PingTask");
     logger->info("hello from the ping task!");
 
     // How long should we wait between pings?

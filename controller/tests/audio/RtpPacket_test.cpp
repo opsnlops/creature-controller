@@ -10,7 +10,7 @@
 namespace creatures::audio {
 namespace {
 
-std::vector<uint8_t> makePacket(uint8_t firstByte = 0x80, uint8_t payloadType = RTP_OPUS_PAYLOAD_TYPE) {
+std::vector<uint8_t> makePacket(uint8_t firstByte = 0x80, uint8_t payloadType = rtp::OPUS_PAYLOAD_TYPE) {
     return {
         firstByte, payloadType, 0x12, 0x34, 0x01, 0x02, 0x03, 0x04, 0x10, 0x20, 0x30, 0x40, 0xAA, 0xBB,
     };
@@ -50,9 +50,9 @@ TEST(RtpPacketTest, RemovesRtpPadding) {
 }
 
 TEST(RtpPacketTest, RejectsMalformedOrUnexpectedPackets) {
-    EXPECT_FALSE(parseOpusRtpPacket(std::array<uint8_t, 3>{0x80, RTP_OPUS_PAYLOAD_TYPE, 0}).has_value());
+    EXPECT_FALSE(parseOpusRtpPacket(std::array<uint8_t, 3>{0x80, rtp::OPUS_PAYLOAD_TYPE, 0}).has_value());
     EXPECT_FALSE(parseOpusRtpPacket(makePacket(0x40)).has_value());
-    EXPECT_FALSE(parseOpusRtpPacket(makePacket(0x80, RTP_OPUS_PAYLOAD_TYPE + 1)).has_value());
+    EXPECT_FALSE(parseOpusRtpPacket(makePacket(0x80, rtp::OPUS_PAYLOAD_TYPE + 1)).has_value());
 
     auto invalidExtension = makePacket(0x90);
     EXPECT_FALSE(parseOpusRtpPacket(invalidExtension).has_value());

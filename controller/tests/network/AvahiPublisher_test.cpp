@@ -6,7 +6,7 @@
 
 #include <avahi-common/strlst.h>
 
-#include "network/AvahiPublisher.h"
+#include "creature/network/AvahiPublisher.h"
 
 namespace creatures::network {
 

@@ -55,13 +55,13 @@ class FakeAudioOutput final : public AudioOutput {
 
 TEST(AudioOutputKeepaliveTest, PrimesTargetQueueAndStartsOutputOnce) {
     FakeAudioOutput output;
-    AudioOutputKeepalive keepalive(output, 2 * FRAMES_PER_CHUNK);
+    AudioOutputKeepalive keepalive(output, 2 * rtp::SAMPLES_PER_FRAME);
 
     ASSERT_TRUE(keepalive.start());
     EXPECT_EQ(output.stopCalls, 1);
     EXPECT_EQ(output.startCalls, 1);
-    EXPECT_EQ(output.queued, 2 * FRAMES_PER_CHUNK);
-    EXPECT_EQ(output.writeSizes, (std::vector<size_t>{FRAMES_PER_CHUNK, FRAMES_PER_CHUNK}));
+    EXPECT_EQ(output.queued, 2 * rtp::SAMPLES_PER_FRAME);
+    EXPECT_EQ(output.writeSizes, (std::vector<size_t>{rtp::SAMPLES_PER_FRAME, rtp::SAMPLES_PER_FRAME}));
     EXPECT_TRUE(output.allSamplesWereSilent);
 
     ASSERT_TRUE(keepalive.start());
@@ -71,22 +71,22 @@ TEST(AudioOutputKeepaliveTest, PrimesTargetQueueAndStartsOutputOnce) {
 
 TEST(AudioOutputKeepaliveTest, RefillsOnlyFramesMissingFromTarget) {
     FakeAudioOutput output;
-    AudioOutputKeepalive keepalive(output, 2 * FRAMES_PER_CHUNK);
+    AudioOutputKeepalive keepalive(output, 2 * rtp::SAMPLES_PER_FRAME);
     ASSERT_TRUE(keepalive.start());
 
     output.writeSizes.clear();
-    output.queued = FRAMES_PER_CHUNK + 123;
+    output.queued = rtp::SAMPLES_PER_FRAME + 123;
 
     ASSERT_TRUE(keepalive.refillSilence());
-    EXPECT_EQ(output.queued, 2 * FRAMES_PER_CHUNK);
-    EXPECT_EQ(output.writeSizes, (std::vector<size_t>{FRAMES_PER_CHUNK - 123}));
+    EXPECT_EQ(output.queued, 2 * rtp::SAMPLES_PER_FRAME);
+    EXPECT_EQ(output.writeSizes, (std::vector<size_t>{rtp::SAMPLES_PER_FRAME - 123}));
     EXPECT_EQ(output.stopCalls, 1);
     EXPECT_EQ(output.startCalls, 1);
 }
 
 TEST(AudioOutputKeepaliveTest, DoesNotWriteWhenTargetQueueIsFull) {
     FakeAudioOutput output;
-    AudioOutputKeepalive keepalive(output, 2 * FRAMES_PER_CHUNK);
+    AudioOutputKeepalive keepalive(output, 2 * rtp::SAMPLES_PER_FRAME);
     ASSERT_TRUE(keepalive.start());
 
     output.writeSizes.clear();
@@ -99,13 +99,13 @@ TEST(AudioOutputKeepaliveTest, DoesNotWriteWhenTargetQueueIsFull) {
 
 TEST(AudioOutputKeepaliveTest, RepeatedIdleRefillsDoNotRestartOutput) {
     FakeAudioOutput output;
-    AudioOutputKeepalive keepalive(output, 2 * FRAMES_PER_CHUNK);
+    AudioOutputKeepalive keepalive(output, 2 * rtp::SAMPLES_PER_FRAME);
     ASSERT_TRUE(keepalive.start());
 
     for (size_t refill = 0; refill < 5; ++refill) {
-        output.queued = FRAMES_PER_CHUNK;
+        output.queued = rtp::SAMPLES_PER_FRAME;
         ASSERT_TRUE(keepalive.refillSilence());
-        EXPECT_EQ(output.queued, 2 * FRAMES_PER_CHUNK);
+        EXPECT_EQ(output.queued, 2 * rtp::SAMPLES_PER_FRAME);
     }
 
     EXPECT_EQ(output.stopCalls, 1);
@@ -115,7 +115,7 @@ TEST(AudioOutputKeepaliveTest, RepeatedIdleRefillsDoNotRestartOutput) {
 TEST(AudioOutputKeepaliveTest, ClearsPrimedFramesWhenStartFails) {
     FakeAudioOutput output;
     output.startSucceeds = false;
-    AudioOutputKeepalive keepalive(output, 2 * FRAMES_PER_CHUNK);
+    AudioOutputKeepalive keepalive(output, 2 * rtp::SAMPLES_PER_FRAME);
 
     EXPECT_FALSE(keepalive.start());
     EXPECT_EQ(output.stopCalls, 2);

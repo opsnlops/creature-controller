@@ -1,6 +1,6 @@
 #include "audio/AudioEngine.h"
 #include "audio/AlsaMixerControl.h"
-#include "util/thread_name.h"
+#include "creature/thread/ThreadName.h"
 #include <algorithm>
 #include <cmath>
 #include <fmt/format.h>
@@ -11,14 +11,14 @@ namespace {
 using Clock = std::chrono::steady_clock;
 Clock::duration framesToClockDuration(size_t frames) {
     return std::chrono::duration_cast<Clock::duration>(
-        std::chrono::duration<double>(static_cast<double>(frames) / SAMPLE_RATE));
+        std::chrono::duration<double>(static_cast<double>(frames) / rtp::SAMPLE_RATE));
 }
 } // namespace
 
 AudioEngine::InputStream::InputStream(InputConfig config, size_t bufferCapacity)
-    : channel(config.channel), name(config.channel == 17 ? "BGM" : fmt::format("Bird {}", config.channel)),
-      group(fmt::format("{}{}", DIALOG_GROUP_BASE, config.channel)), buffer(bufferCapacity),
-      gain(gainFromDecibels(config.gainDb)) {}
+    : channel(config.channel),
+      name(config.channel == rtp::BGM_CHANNEL ? "BGM" : fmt::format("Bird {}", config.channel)),
+      group(rtp::channelGroup(config.channel)), buffer(bufferCapacity), gain(gainFromDecibels(config.gainDb)) {}
 
 AudioEngine::AudioEngine(std::shared_ptr<Logger> log, AudioEngineConfig config, std::unique_ptr<AudioOutput> output,
                          PacketReceiverFactory receivers)
@@ -30,10 +30,10 @@ AudioEngine::AudioEngine(std::shared_ptr<Logger> log, AudioEngineConfig config, 
     if (!log_)
         throw std::invalid_argument("Audio engine requires a logger");
     for (const auto &input : config_.inputs) {
-        if (input.channel == 17)
+        if (input.channel == rtp::BGM_CHANNEL)
             masterIndex_ = streams_.size();
         streams_.push_back(std::make_unique<InputStream>(input, RTP_JITTER_BUFFER_FRAMES +
-                                                                    audioConfig_.commonPlayoutDelayMs / FRAME_MS));
+                                                                    audioConfig_.commonPlayoutDelayMs / rtp::FRAME_MS));
     }
 }
 AudioEngine::~AudioEngine() { shutdown(); }
@@ -134,7 +134,7 @@ void AudioEngine::run() {
         const size_t queued = audioOutput_->queuedFrames();
         outputQueuedFrames_.store(queued);
         bufferLevel_.store(
-            std::clamp(static_cast<float>(queued) / (TARGET_PLAYOUT_FRAMES * FRAMES_PER_CHUNK), 0.0f, 1.0f));
+            std::clamp(static_cast<float>(queued) / (TARGET_PLAYOUT_FRAMES * rtp::SAMPLES_PER_FRAME), 0.0f, 1.0f));
         uint64_t packets = 0;
         for (const auto &stream : streams_)
             packets += stream->stats.packetsReceived.load();
@@ -147,7 +147,7 @@ void AudioEngine::run() {
 bool AudioEngine::initializeDecoders() {
     for (auto &stream : streams_) {
         int error = OPUS_OK;
-        stream->decoder = opus_decoder_create(SAMPLE_RATE, OUTPUT_CH, &error);
+        stream->decoder = opus_decoder_create(rtp::SAMPLE_RATE, OUTPUT_CH, &error);
         if (!stream->decoder || error != OPUS_OK) {
             log_->error("Unable to create {} decoder: {}", stream->name, opus_strerror(error));
             return false;
@@ -167,7 +167,7 @@ bool AudioEngine::openSockets() {
                 stream->rtcpReceiverSource.reset();
         }
         if (!stream->rtcpReceiverSource) {
-            if (config_.requireRtcp && stream->channel == 17)
+            if (config_.requireRtcp && stream->channel == rtp::BGM_CHANNEL)
                 return false;
             log_->warn("{} RTCP unavailable", stream->name);
         }
@@ -204,9 +204,9 @@ void AudioEngine::releaseResources() {
 void AudioEngine::receiveStream(InputStream &stream) {
     setThreadName(fmt::format("rtp-rx-{}", stream.channel));
     try {
-        std::vector<uint8_t> packet(MAX_RTP_PACKET_SIZE + 1);
+        std::vector<uint8_t> packet(rtp::MAX_RTP_PACKET_SIZE + 1);
         while (!stop_requested.load()) {
-            const auto result = stream.receiverSource->receive(packet, MAX_RTP_PACKET_SIZE);
+            const auto result = stream.receiverSource->receive(packet, rtp::MAX_RTP_PACKET_SIZE);
             if (result == PacketReceiver::Result::Timeout)
                 continue;
             if (result == PacketReceiver::Result::Error)
@@ -235,14 +235,14 @@ void AudioEngine::receiveStream(InputStream &stream) {
 void AudioEngine::receiveRtcpStream(InputStream &stream) {
     setThreadName(fmt::format("rtcp-rx-{}", stream.channel));
     try {
-        std::vector<uint8_t> packet(MAX_RTCP_PACKET_SIZE + 1);
+        std::vector<uint8_t> packet(rtp::MAX_RTCP_PACKET_SIZE + 1);
         while (!stop_requested.load()) {
-            const auto result = stream.rtcpReceiverSource->receive(packet, MAX_RTCP_PACKET_SIZE);
+            const auto result = stream.rtcpReceiverSource->receive(packet, rtp::MAX_RTCP_PACKET_SIZE);
             if (result == PacketReceiver::Result::Timeout)
                 continue;
             if (result == PacketReceiver::Result::Error)
                 throw std::runtime_error("RTCP socket receive failed");
-            auto report = parseRtcpSenderReport(packet);
+            auto report = rtp::parseRtcpSenderReport(packet);
             if (!report) {
                 stream.rtcpStats.invalidReports.fetch_add(1);
                 continue;
@@ -274,19 +274,19 @@ bool AudioEngine::decodeTimestamp(InputStream &stream, uint32_t timestamp, uint6
     }
     int decoded = 0;
     if (auto packet = stream.buffer.take(timestamp, generation)) {
-        decoded =
-            opus_decode(stream.decoder, packet->packet.payload.data(),
-                        static_cast<opus_int32>(packet->packet.payload.size()), samples.data(), FRAMES_PER_CHUNK, 0);
+        decoded = opus_decode(stream.decoder, packet->packet.payload.data(),
+                              static_cast<opus_int32>(packet->packet.payload.size()), samples.data(),
+                              rtp::SAMPLES_PER_FRAME, 0);
         if (decoded >= 0)
             stream.stats.decodedFrames.fetch_add(1);
-    } else if (auto next = stream.buffer.peek(timestamp + FRAMES_PER_CHUNK, generation)) {
-        decoded =
-            opus_decode(stream.decoder, next->packet.payload.data(),
-                        static_cast<opus_int32>(next->packet.payload.size()), samples.data(), FRAMES_PER_CHUNK, 1);
+    } else if (auto next = stream.buffer.peek(timestamp + rtp::SAMPLES_PER_FRAME, generation)) {
+        decoded = opus_decode(stream.decoder, next->packet.payload.data(),
+                              static_cast<opus_int32>(next->packet.payload.size()), samples.data(),
+                              rtp::SAMPLES_PER_FRAME, 1);
         if (decoded >= 0)
             stream.stats.fecFrames.fetch_add(1);
     } else {
-        decoded = opus_decode(stream.decoder, nullptr, 0, samples.data(), FRAMES_PER_CHUNK, 0);
+        decoded = opus_decode(stream.decoder, nullptr, 0, samples.data(), rtp::SAMPLES_PER_FRAME, 0);
         if (decoded >= 0)
             stream.stats.concealedFrames.fetch_add(1);
     }
@@ -373,7 +373,7 @@ std::string AudioEngine::getStats() const {
     std::string stats = fmt::format(
         "packets={}, output queue={:.1f} ms, receiving={}, timing={}, RTCP reports={}/{} valid/invalid, fallbacks={}, "
         "start lateness={:+d} us, late starts dropped={}, deadline misses={}",
-        getPacketsReceived(), static_cast<double>(getOutputQueuedFrames()) * 1000 / SAMPLE_RATE, isReceiving(),
+        getPacketsReceived(), static_cast<double>(getOutputQueuedFrames()) * 1000 / rtp::SAMPLE_RATE, isReceiving(),
         getTimingModeName(), getRtcpReportsReceived(), getRtcpInvalidReports(), getRtcpFallbacks(),
         getLastStartLatenessMicroseconds(), rtcpLateFramesDropped_.load(), playoutDeadlineMisses_.load());
     for (const auto &stream : streams_)
@@ -390,10 +390,10 @@ void AudioEngine::audioPlayoutThread() {
     setThreadName("audio-playout");
     auto &master = *streams_[masterIndex_];
     auto &keepalive = *keepalive_;
-    const size_t targetQueue = std::max<size_t>(TARGET_PLAYOUT_FRAMES * FRAMES_PER_CHUNK,
-                                                audioOutput_->pipelineLatencyFrames() + FRAMES_PER_CHUNK);
+    const size_t targetQueue = std::max<size_t>(TARGET_PLAYOUT_FRAMES * rtp::SAMPLES_PER_FRAME,
+                                                audioOutput_->pipelineLatencyFrames() + rtp::SAMPLES_PER_FRAME);
     const auto idleTimeout = std::chrono::milliseconds(STREAM_IDLE_TIMEOUT_MS);
-    std::vector<int16_t> mixed(FRAMES_PER_CHUNK * audioConfig_.channels.size());
+    std::vector<int16_t> mixed(rtp::SAMPLES_PER_FRAME * audioConfig_.channels.size());
     uint64_t fallbackGeneration = 0;
     uint64_t waitingGeneration = 0;
     const auto fail = [](const char *message) { throw std::runtime_error(message); };
@@ -440,7 +440,7 @@ void AudioEngine::audioPlayoutThread() {
                            "mapping/arrival delta={:+d} us)",
                            initial->synchronizationSource, report.has_value(), fresh, mappingArrivalDelta);
             }
-            master.buffer.discardBefore(timestamp + FRAMES_PER_CHUNK, initial->generation);
+            master.buffer.discardBefore(timestamp + rtp::SAMPLES_PER_FRAME, initial->generation);
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
             continue;
         }
@@ -464,7 +464,7 @@ void AudioEngine::audioPlayoutThread() {
             }
             if (missed) {
                 rtcpLateFramesDropped_.fetch_add(1);
-                master.buffer.discardBefore(timestamp + FRAMES_PER_CHUNK, initial->generation);
+                master.buffer.discardBefore(timestamp + rtp::SAMPLES_PER_FRAME, initial->generation);
                 continue;
             }
         } else {
@@ -486,7 +486,7 @@ void AudioEngine::audioPlayoutThread() {
         if (master.buffer.generation() != initial->generation)
             continue;
         timingMode_.store(plan ? TimingMode::Rtcp : TimingMode::ArrivalFallback);
-        activeReport_ = plan ? std::optional<RtcpSenderReport>(report->report) : std::nullopt;
+        activeReport_ = plan ? std::optional<rtp::RtcpSenderReport>(report->report) : std::nullopt;
         for (auto &stream : streams_)
             stream->qualifiedGeneration = 0;
         mixer_.resetFilters();
@@ -508,14 +508,14 @@ void AudioEngine::audioPlayoutThread() {
         } else {
             lastStartLatenessMicroseconds_.store(0);
         }
-        uint32_t nextTimestamp = timestamp + FRAMES_PER_CHUNK;
+        uint32_t nextTimestamp = timestamp + rtp::SAMPLES_PER_FRAME;
         for (size_t index = 0; index < streams_.size(); ++index)
             streams_[index]->buffer.discardBefore(nextTimestamp, decodedGenerations_[index]);
         mixedFrames_.fetch_add(1);
         while (!stop_requested.load() && master.buffer.generation() == initial->generation &&
                !master.buffer.isIdleFor(idleTimeout)) {
             const size_t queued = audioOutput_->queuedFrames();
-            if (queued >= targetQueue || (!master.buffer.contains(nextTimestamp) && queued >= FRAMES_PER_CHUNK)) {
+            if (queued >= targetQueue || (!master.buffer.contains(nextTimestamp) && queued >= rtp::SAMPLES_PER_FRAME)) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 continue;
             }
@@ -528,7 +528,7 @@ void AudioEngine::audioPlayoutThread() {
             mixTimestamp(nextTimestamp, initial->generation, mixed);
             if (!audioOutput_->write(mixed))
                 fail("Unable to queue audio frame");
-            nextTimestamp += FRAMES_PER_CHUNK;
+            nextTimestamp += rtp::SAMPLES_PER_FRAME;
             for (size_t index = 0; index < streams_.size(); ++index)
                 streams_[index]->buffer.discardBefore(nextTimestamp, decodedGenerations_[index]);
             mixedFrames_.fetch_add(1);

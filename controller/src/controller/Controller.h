@@ -14,10 +14,10 @@
 #include "controller/commands/tokens/ServoConfig.h"
 #include "creature/Creature.h"
 
+#include "creature/logging/Logger.h"
 #include "device/Servo.h"
 #include "io/Message.h"
 #include "io/MessageRouter.h"
-#include "logging/Logger.h"
 #include "util/MessageQueue.h"
 #include "util/Result.h"
 #include "util/StoppableThread.h"

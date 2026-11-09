@@ -28,7 +28,7 @@ std::optional<RtpPacket> parseOpusRtpPacket(std::span<const uint8_t> packet) {
     const bool hasExtension = (packet[0] & 0x10U) != 0;
     const size_t csrcCount = packet[0] & 0x0FU;
     const uint8_t payloadType = packet[1] & 0x7FU;
-    if (payloadType != RTP_OPUS_PAYLOAD_TYPE) {
+    if (payloadType != rtp::OPUS_PAYLOAD_TYPE) {
         return std::nullopt;
     }
 
