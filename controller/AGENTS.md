@@ -20,7 +20,11 @@ make
 ```
 
 ### Testing
-GoogleTest support is wired in but currently disabled. To enable tests, uncomment lines 316-369 in `CMakeLists.txt`.
+Tests build by default (`include(CTest)`, so `BUILD_TESTING` is on) as two GoogleTest executables: `creature-controller-test` and `creature-audio-test`. Run them from the build directory:
+```bash
+ctest --output-on-failure
+```
+The Debian package build runs the same suite, excluding `SerialOutput` (see `Dockerfile`). `AvahiPublisher_test` is Linux only.
 
 ### Packaging
 ```bash
@@ -94,17 +98,25 @@ The Linux controller talks to Pi Pico 2040 boards using a G-code-inspired USB CD
 
 ## Dependencies
 
-Fetched via CMake `FetchContent` unless noted otherwise:
-- `spdlog` (1.11.0) — logging
-- `fmt` (9.1.0) — formatting
-- `nlohmann/json` (3.11.3) — JSON parsing
-- `argparse` — CLI parsing
-- `IXWebSocket` (11.4.5) — WebSocket client
-- `uvgRTP` (3.1.6) — RTP audio
+Fetched via CMake `FetchContent` (versions as pinned in `CMakeLists.txt`; check there before relying on these):
+- `fmt` (12.1.0) — formatting
+- `spdlog` (1.17.0) — logging
+- `creature-common` (v0.4.1) — shared logging, mDNS, RTP, thread naming, and time sync; declared after `fmt` so it uses ours
+- `argparse` (3.2) — CLI parsing
+- `nlohmann/json` (3.12.0) — JSON parsing, fetched by git rather than release tarball
+- `IXWebSocket` (11.4.6) — WebSocket client (controller only)
 - `Opus` (1.5.2) — audio codec
-- `GoogleTest` (1.14.0) — unit tests
-- `SDL2` / `SDL2_mixer` — audio playback
-- `libe131` (local) — E1.31 DMX
+- `GoogleTest` (1.17.0) — unit tests, only when `BUILD_TESTING` is on
+
+From the system:
+- ALSA on Linux, or the AudioUnit, CoreAudio, and CoreFoundation frameworks on macOS — native audio output (`AlsaAudioOutput` / `CoreAudioOutput`); no other platform is supported
+- Avahi (`avahi-client`, via creature-common) — mDNS publishing, Linux only
+- libcurl — HTTP to the creature server (controller only)
+
+In the repository:
+- `libe131` — E1.31 DMX, a git submodule at `lib/libe131` from opsnlops/libe131, compiled directly from `lib/libe131/src/e131.c`
+
+RTP is handled in-tree (`audio/RtpPacket`, `audio/PacketReceiver`), not by a library, and there is no SDL dependency.
 
 ## Threading Model
 
