@@ -31,7 +31,9 @@ set(CPACK_DEBIAN_PACKAGE_MAINTAINER "April White <april@opsnlops.io>")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
 set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
 
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "locales-all, zlib1g, libsasl2-2, libicu76, libasound2t64, libutf8proc3, libuuid1, libcurl4, libprotobuf32t64, init-system-helpers, udev, avahi-daemon, systemd")
+# shlibdeps adds the linked libraries. locales-all provides the en_US.UTF-8 locale
+# that SpdlogLogger sets at startup, which shlibdeps can't see.
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "locales-all, libasound2t64, libcurl4, init-system-helpers, udev, avahi-daemon, systemd")
 
 # Build independently installable products from the same shared implementation.
 set(CPACK_DEB_COMPONENT_INSTALL ON)
