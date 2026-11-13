@@ -4,7 +4,7 @@ FROM debian:trixie AS build
 # layer as installation so a cached Debian base never uses stale indexes.
 RUN apt update -y && apt upgrade -y && \
     apt install -y clang locales-all libssl-dev ninja-build cmake git \
-                   dpkg-dev pkgconf libbson-dev libpthreadpool-dev libutf8proc-dev \
+                   dpkg-dev pkgconf \
                    file zlib1g-dev libasound2-dev libcurl4-openssl-dev libavahi-client-dev && \
     rm -rf /var/lib/apt/lists/*
 
@@ -38,8 +38,7 @@ RUN cd /build/creature-controller/build && ctest --output-on-failure -E SerialOu
 FROM debian:trixie-slim AS runtime
 
 RUN apt update -y && apt upgrade -y && \
-    apt install -y locales-all file zlib1g libsasl2-2 libicu76 libutf8proc3 libasound2t64 libuuid1 util-linux \
-                   libuv1 libcurl4 libprotobuf32t64 libavahi-client3 && \
+    apt install -y locales-all file zlib1g libasound2t64 util-linux libcurl4 libavahi-client3 && \
     rm -rf /var/lib/apt/lists
 
 WORKDIR /app
