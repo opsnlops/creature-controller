@@ -4,7 +4,7 @@ FROM debian:trixie AS build
 # layer as installation so a cached Debian base never uses stale indexes.
 RUN apt update -y && apt upgrade -y && \
     apt install -y clang locales-all libssl-dev ninja-build cmake git \
-                   dpkg-dev pkgconf \
+                   dpkg-dev pkgconf help2man \
                    file zlib1g-dev libasound2-dev libcurl4-openssl-dev libavahi-client-dev && \
     rm -rf /var/lib/apt/lists/*
 

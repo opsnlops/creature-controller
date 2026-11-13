@@ -39,6 +39,10 @@ jobs:
             dpkg-deb --info "${packages[0]}"
           done
 
+      - name: Report lintian findings
+        # Report-only for now: findings are printed but don't fail the build.
+        run: ./report_lintian.sh || echo "::warning::lintian reported findings (report-only)"
+
       - name: Upload creature-controller package
         uses: actions/upload-artifact@v7
         with:

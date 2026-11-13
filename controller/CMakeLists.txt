@@ -220,7 +220,7 @@ install(TARGETS creature-audio-router RUNTIME DESTINATION bin COMPONENT creature
 # Install a reproducible compressed section-1 manual.
 configure_file(docs/man/creature-audio-router.1 ${CMAKE_CURRENT_BINARY_DIR}/creature-audio-router.1 COPYONLY)
 find_program(CREATURE_MAN_GZIP gzip REQUIRED)
-execute_process(COMMAND "${CREATURE_MAN_GZIP}" -n -c "${CMAKE_CURRENT_BINARY_DIR}/creature-audio-router.1"
+execute_process(COMMAND "${CREATURE_MAN_GZIP}" -9 -n -c "${CMAKE_CURRENT_BINARY_DIR}/creature-audio-router.1"
                 OUTPUT_FILE "${CMAKE_CURRENT_BINARY_DIR}/creature-audio-router.1.gz"
                 COMMAND_ERROR_IS_FATAL ANY)
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/creature-audio-router.1.gz"
@@ -439,13 +439,28 @@ if(ALSA_FOUND)
     target_compile_definitions(creature-controller PRIVATE CREATURE_HAS_ALSA=1)
 endif()
 
-install(TARGETS creature-controller
-        COMPONENT creature-controller
-        RUNTIME DESTINATION "/bin"
-        LIBRARY DESTINATION "/lib"
-        DESTINATION "/bin"
-)
+# Relative, so it lands under the /usr prefix. Debian Policy 10.1 forbids shipping to /bin.
+install(TARGETS creature-controller RUNTIME DESTINATION bin COMPONENT creature-controller)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    # Section-8 manual: help2man takes the options from --help so they can't drift from
+    # the binary, and the include file adds the service, configuration, and file layout.
+    find_program(CREATURE_HELP2MAN help2man REQUIRED)
+    set(CREATURE_CONTROLLER_MAN "${CMAKE_CURRENT_BINARY_DIR}/creature-controller.8")
+    set(CREATURE_CONTROLLER_MAN_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/docs/man/creature-controller.h2m")
+    add_custom_command(
+        OUTPUT "${CREATURE_CONTROLLER_MAN}.gz"
+        COMMAND "${CREATURE_HELP2MAN}" --section=8 --no-info
+                "--version-string=${PROJECT_VERSION}" "--include=${CREATURE_CONTROLLER_MAN_INCLUDE}"
+                "--output=${CREATURE_CONTROLLER_MAN}" "$<TARGET_FILE:creature-controller>"
+        # argparse heads its list "Optional arguments:", which help2man doesn't recognize as OPTIONS
+        COMMAND sed -i "s/^\\.SS \"Optional arguments:\"$/.SH OPTIONS/" "${CREATURE_CONTROLLER_MAN}"
+        COMMAND "${CREATURE_MAN_GZIP}" -9 -n -f "${CREATURE_CONTROLLER_MAN}"
+        DEPENDS creature-controller "${CREATURE_CONTROLLER_MAN_INCLUDE}"
+        COMMENT "Generating the creature-controller manual"
+        VERBATIM)
+    add_custom_target(creature-controller-manual ALL DEPENDS "${CREATURE_CONTROLLER_MAN}.gz")
+    install(FILES "${CREATURE_CONTROLLER_MAN}.gz" DESTINATION share/man/man8 COMPONENT creature-controller)
+
     install(DIRECTORY DESTINATION /etc/creature/controller COMPONENT creature-controller)
     install(FILES packaging/controller/creature-controller@.service
             DESTINATION lib/systemd/system COMPONENT creature-controller)

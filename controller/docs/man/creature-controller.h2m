@@ -1,0 +1,172 @@
+[NAME]
+creature-controller \- drive an animatronic creature from DMX and stream its audio
+
+[DESCRIPTION]
+.B creature-controller
+receives DMX frames for one creature (E1.31 over UDP, or RS\-485), turns them into
+motor positions, and streams them over USB serial to the creature's Raspberry Pi
+Pico board. It also plays the creature's voice and background music from the
+Creature Server's Opus/RTP multicast streams, in time with the motion, and
+advertises the creature over mDNS.
+.PP
+On a creature host it is not started by hand. A udev rule starts one instance
+per plugged\-in board, as described under
+.BR SERVICE .
+The command\-line options below are for running it manually and for discovery.
+
+[SERVICE]
+The package installs the udev rule
+.I /usr/lib/udev/rules.d/70\-creature\-controller.rules
+and the template unit
+.IR creature\-controller@.service .
+When a board from April's Creature Workshop appears, the rule reads its USB
+product name
+.RI ( NAME ,
+from the board's EEPROM), creates
+.IR /dev/creature/NAME ,
+and starts
+.BR creature\-controller@NAME.service .
+Unplugging the board stops the instance. There is nothing to enable.
+.PP
+The unit runs
+.I /usr/lib/creature\-controller/start\-creature NAME
+as the
+.B creature\-controller
+system user, which belongs to the
+.B dialout
+and
+.B audio
+groups. That script lower\-cases
+.IR NAME ,
+selects the creature and controller configuration files listed under
+.BR FILES ,
+and runs
+.B creature\-controller
+with
+.BR \-\-config ,
+.B \-\-creature\-config
+and
+.BR "\-\-serial\-device /dev/creature/NAME" .
+.PP
+If the link to the board fails, the controller exits non\-zero and systemd
+restarts it after 30 seconds, up to 10 starts in 10 minutes. Package upgrades
+never restart a running instance, so an upgrade cannot move a creature or clear
+an emergency stop; restart it when the creature is safe.
+
+[CONFIGURATION]
+Two JSON files configure a running controller, both selected by the board's
+name in lower case.
+.TP
+.B Creature configuration
+.RB ( \-\-creature\-config )
+describes the creature itself: its motors, inputs, channel offset, audio channel
+and its required power limits
+.RB ( power_draw_limit_watts ,
+.BR power_draw_warning_watts ,
+.BR power_draw_response_seconds ).
+A creature without its power limits will not start. These files come only from
+the package.
+.TP
+.B Controller configuration
+.RB ( \-\-config )
+describes this host: the Creature Server
+.RB ( creatureServer ),
+the network interface and E1.31 universe, RTP audio and the sound device
+.RB ( useRTPAudio ,
+.BR audioDeviceName ,
+gains, limiter and ALSA mixer control), playout timing
+.RB ( commonPlayoutDelayMs ,
+.BR audioDeviceCompensationMs ),
+the serial boards
+.RB ( UARTs ,
+unless
+.B \-\-serial\-device
+is given), temperature and load limits, and
+.BR logLevel .
+.PP
+To change one host without rebuilding the package, copy its controller file from
+.I /usr/share/creature\-controller/controllers/
+to
+.I /etc/creature/controller/
+and edit it there. The file in
+.I /etc
+takes precedence, and upgrades leave it alone. The full description of every
+field is in
+.IR /usr/share/doc/creature\-controller/README.md .
+
+[FILES]
+.TP
+.I /usr/share/creature\-controller/creatures/NAME.json
+Creature configuration, one per creature, shipped by the package.
+.TP
+.I /usr/share/creature\-controller/controllers/NAME.json
+Default controller configuration for the host that runs each creature.
+.TP
+.I /etc/creature/controller/NAME.json
+Optional per\-host override of the controller configuration. Used instead of the
+packaged file when present.
+.TP
+.I /dev/creature/NAME
+Serial device for the creature's board, created by the udev rule.
+.TP
+.I /usr/lib/creature\-controller/start\-creature
+Wrapper the service runs; selects the configuration files for a board name.
+.TP
+.I /usr/lib/systemd/system/creature\-controller@.service
+Template unit, one instance per board. Override it with a drop\-in under
+.IR /etc/systemd/system/creature\-controller@.service.d/ .
+.TP
+.I /usr/lib/udev/rules.d/70\-creature\-controller.rules
+Starts and stops instances as boards come and go.
+.TP
+.I /usr/lib/sysusers.d/creature\-controller.conf
+Declares the
+.B creature\-controller
+system user.
+.TP
+.I /etc/avahi/services/creature\-controller\-ssh.service
+Advertises SSH on the host over mDNS.
+.TP
+.I /var/run/ptp4lro
+ptp4l's read\-only management socket, used to check PTP clock sync.
+
+[EXAMPLES]
+List the sound and network devices this host can use:
+.PP
+.RS
+.nf
+creature\-controller \-\-list\-sound\-devices
+creature\-controller \-\-list\-network\-devices
+.fi
+.RE
+.PP
+Watch a running creature:
+.PP
+.RS
+.nf
+systemctl list\-units 'creature\-controller@*'
+journalctl \-u creature\-controller@Caroll.service \-f
+.fi
+.RE
+.PP
+Start a creature again after its instance has failed:
+.PP
+.RS
+.nf
+sudo systemctl reset\-failed creature\-controller@Caroll.service
+sudo systemctl start creature\-controller@Caroll.service
+.fi
+.RE
+.PP
+Find every running creature on the network:
+.PP
+.RS
+.nf
+avahi\-browse \-rt _creature\-controller._udp
+.fi
+.RE
+
+[SEE ALSO]
+.BR creature\-audio\-router (1),
+.BR systemd.unit (5),
+.BR udev (7)
