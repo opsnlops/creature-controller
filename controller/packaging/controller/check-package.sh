@@ -42,8 +42,11 @@ manual=/tmp/controller-package-content/usr/share/man/man8/creature-controller.8.
 gzip -t "$manual"
 gzip -dc "$manual" | sed 's/\\-/-/g' > /tmp/creature-controller.8
 grep -q '^\.TH CREATURE-CONTROLLER "8"' /tmp/creature-controller.8
+# Search only the OPTIONS section; the SYNOPSIS lists every option too and would hide a gap.
+awk '/^\.SH OPTIONS/ { found = 1; next } found && /^\.SH / { exit } found' /tmp/creature-controller.8 \
+    > /tmp/creature-controller.options
 for option in $(creature-controller --help | grep -o -- '--[a-z-]*' | sort -u); do
-    grep -qF -- "$option" /tmp/creature-controller.8
+    grep -qF -- "$option" /tmp/creature-controller.options
 done
 grep -q '^\.SH OPTIONS' /tmp/creature-controller.8
 grep -q '^\.SH FILES' /tmp/creature-controller.8

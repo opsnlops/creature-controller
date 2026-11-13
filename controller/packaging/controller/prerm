@@ -1,9 +1,7 @@
 #!/bin/sh
 set -e
 if [ "$1" = remove ] && [ -d /run/systemd/system ]; then
-    systemctl list-units --plain --no-legend --state=active 'creature-controller@*.service' |
-        while read -r unit remainder; do
-            deb-systemd-invoke stop "$unit" || true
-        done
+    # The pattern matches every loaded instance, so all of them stop
+    deb-systemd-invoke stop 'creature-controller@*.service' || true
 fi
 exit 0
