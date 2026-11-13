@@ -8,13 +8,9 @@ if [ "$1" = configure ] && [ -d /run/systemd/system ]; then
     systemctl daemon-reload
     # Services stay disabled on first installation; device and routes are site-specific.
     if [ -n "${2:-}" ]; then
-        if systemctl is-active --quiet creature-audio-router.service; then
-            deb-systemd-invoke restart creature-audio-router.service || true
-        fi
-        systemctl list-units --plain --no-legend --state=active 'creature-audio-router@*.service' |
-            while read -r unit remainder; do
-                deb-systemd-invoke restart "$unit" || true
-            done
+        # try-restart restarts only units that are running, the same action
+        # debhelper's generated postinst uses.
+        deb-systemd-invoke try-restart creature-audio-router.service 'creature-audio-router@*.service' || true
     fi
 fi
 exit 0

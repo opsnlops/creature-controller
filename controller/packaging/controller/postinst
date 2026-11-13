@@ -59,10 +59,9 @@ if [ "$1" = configure ] && [ -d /run/systemd/system ]; then
     # Never restart here. Instances are site-specific, and an upgrade should not
     # move a creature or restart past an emergency stop.
     if [ -n "${2:-}" ]; then
-        systemctl list-units --plain --no-legend --state=active 'creature-controller@*.service' |
-            while read -r unit remainder; do
-                echo "$unit is still running the old version; restart it when the creature is safe."
-            done
+        if systemctl --quiet is-active 'creature-controller@*.service'; then
+            echo "Running creature-controller instances still use the old version; restart each when its creature is safe."
+        fi
     fi
 fi
 exit 0

@@ -19,6 +19,21 @@ add_compile_options(-Wall)
 add_compile_options(-Wextra)
 add_compile_options(-Wpedantic)
 
+# Full RELRO: resolve every symbol at load so the GOT can be read-only (Debian hardening).
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    add_link_options(LINKER:-z,relro LINKER:-z,now)
+endif()
+
+# Strip an installed binary the way dh_strip does (Debian Policy 10.1). CPACK_STRIP_FILES
+# runs plain strip, which leaves the .comment section lintian reports.
+function(creature_strip_installed_binary target component)
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        install(CODE "execute_process(COMMAND \"${CMAKE_STRIP}\" --remove-section=.comment --remove-section=.note
+                \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/bin/${target}\" COMMAND_ERROR_IS_FATAL ANY)"
+                COMPONENT ${component})
+    endif()
+endfunction()
+
 if(APPLE AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     add_compile_options(-fexperimental-library)
 endif()
@@ -217,6 +232,7 @@ add_executable(creature-audio-router src/audio-router/main.cpp)
 target_link_libraries(creature-audio-router PRIVATE creature_audio_router_config spdlog::spdlog)
 target_compile_definitions(creature-audio-router PRIVATE CREATURE_AUDIO_ROUTER_VERSION="${CREATURE_AUDIO_ROUTER_VERSION}")
 install(TARGETS creature-audio-router RUNTIME DESTINATION bin COMPONENT creature-audio-router)
+creature_strip_installed_binary(creature-audio-router creature-audio-router)
 # Install a reproducible compressed section-1 manual.
 configure_file(docs/man/creature-audio-router.1 ${CMAKE_CURRENT_BINARY_DIR}/creature-audio-router.1 COPYONLY)
 find_program(CREATURE_MAN_GZIP gzip REQUIRED)
@@ -441,6 +457,7 @@ endif()
 
 # Relative, so it lands under the /usr prefix. Debian Policy 10.1 forbids shipping to /bin.
 install(TARGETS creature-controller RUNTIME DESTINATION bin COMPONENT creature-controller)
+creature_strip_installed_binary(creature-controller creature-controller)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     # Section-8 manual: help2man takes the options from --help so they can't drift from
     # the binary, and the include file adds the service, configuration, and file layout.

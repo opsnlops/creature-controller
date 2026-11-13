@@ -14,4 +14,4 @@ fi
 
 docker run --rm -v "$script_dir/package:/package:ro" debian:trixie sh -c \
     'apt-get update -qq && apt-get install -y -qq --no-install-recommends lintian >/dev/null &&
-     lintian --version && lintian --info --display-info --no-tag-display-limit /package/*.deb'
+     lintian --version && runuser -u nobody -- lintian --info --display-info --tag-display-limit 0 /package/*.deb'
