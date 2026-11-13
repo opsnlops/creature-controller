@@ -28,8 +28,11 @@ The Debian package build runs the same suite, excluding `SerialOutput` (see `Doc
 
 ### Packaging
 ```bash
-./make_packages.sh  # Builds both Debian packages inside Docker
+./make_packages.sh   # Builds both Debian packages inside Docker
+./report_lintian.sh  # Runs lintian on them inside Debian (CI reports findings without failing)
 ```
+Each package ships a man page. The controller's is generated at build time by `help2man` from `--help`, with the service, configuration, and file layout added from `docs/man/creature-controller.h2m`; keep `--help` output limited to help text. The router's is hand-written in `docs/man/creature-audio-router.1`.
+
 The controller package ships every creature config from the repository's top-level `config/`, and each creature's controller config from `config/controllers/`. A udev rule in `packaging/controller/` starts `creature-controller@NAME.service` from the board's USB product name, and the lowercase name selects both `NAME.json` files.
 
 ### Code Formatting
@@ -112,6 +115,7 @@ From the system:
 - ALSA on Linux, or the AudioUnit, CoreAudio, and CoreFoundation frameworks on macOS — native audio output (`AlsaAudioOutput` / `CoreAudioOutput`); no other platform is supported
 - Avahi (`avahi-client`, via creature-common) — mDNS publishing, Linux only
 - libcurl — HTTP to the creature server (controller only)
+- help2man — builds the controller's man page (Linux only)
 
 In the repository:
 - `libe131` — E1.31 DMX, a git submodule at `lib/libe131` from opsnlops/libe131, compiled directly from `lib/libe131/src/e131.c`

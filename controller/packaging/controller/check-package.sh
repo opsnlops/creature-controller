@@ -33,6 +33,20 @@ if /usr/lib/creature-controller/start-creature NoSuchCreature; then exit 1; fi
 # Debian container images exclude documentation during installation; inspect the archive too.
 dpkg-deb -x "$package" /tmp/controller-package-content
 [ -f /tmp/controller-package-content/usr/share/doc/creature-controller/README.md ]
+# Debian Policy 10.1: nothing ships under an aliased top-level directory such as /bin. The
+# usr-merge symlinks hide that on an installed system, so check the archive's own paths.
+if dpkg-deb -c "$package" | awk '{print $6}' | grep -E '^\./(bin|sbin|lib[^/]*)/'; then exit 1; fi
+[ -f /tmp/controller-package-content/usr/bin/creature-controller ]
+# The manual is generated from --help, so it must list every long option.
+manual=/tmp/controller-package-content/usr/share/man/man8/creature-controller.8.gz
+gzip -t "$manual"
+gzip -dc "$manual" | sed 's/\\-/-/g' > /tmp/creature-controller.8
+grep -q '^\.TH CREATURE-CONTROLLER "8"' /tmp/creature-controller.8
+for option in $(creature-controller --help | grep -o -- '--[a-z-]*' | sort -u); do
+    grep -qF -- "$option" /tmp/creature-controller.8
+done
+grep -q '^\.SH OPTIONS' /tmp/creature-controller.8
+grep -q '^\.SH FILES' /tmp/creature-controller.8
 apt-get remove -y creature-controller
 [ ! -e /usr/lib/systemd/system/creature-controller@.service ]
 printf 'Controller package installation and removal passed.\n'

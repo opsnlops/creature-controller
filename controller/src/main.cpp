@@ -291,14 +291,6 @@ int main(int argc, char **argv) {
     // Get the logger up and running ASAP
     std::shared_ptr<creatures::Logger> logger = makeLogger("main");
 
-    // Print to the console as we start
-    std::cout << fmt::format("Welcome to the Creature Controller! v{}", version) << std::endl << std::endl;
-
-    // Leave some version info to be found
-    logger->debug("spdlog version {}.{}.{}", SPDLOG_VER_MAJOR, SPDLOG_VER_MINOR, SPDLOG_VER_PATCH);
-    logger->debug("fmt version {}", FMT_VERSION);
-    logger->debug("opus version {}", opus_get_version_string());
-
     // Parse out the command line options
     auto commandLine = std::make_unique<creatures::CommandLine>(logger);
     auto configResult = commandLine->parseCommandLine(argc, argv);
@@ -309,6 +301,15 @@ int main(int argc, char **argv) {
         std::cerr << errorMessage << std::endl;
         std::exit(EXIT_FAILURE);
     }
+
+    // Print to the console as we start. This comes after parsing so that --help and
+    // --version print only what they're asked for; help2man builds the man page from them.
+    std::cout << fmt::format("Welcome to the Creature Controller! v{}", version) << std::endl << std::endl;
+
+    // Leave some version info to be found
+    logger->debug("spdlog version {}.{}.{}", SPDLOG_VER_MAJOR, SPDLOG_VER_MINOR, SPDLOG_VER_PATCH);
+    logger->debug("fmt version {}", FMT_VERSION);
+    logger->debug("opus version {}", opus_get_version_string());
 
     // Yay, we have a valid config
     auto config = configResult.getValue().value();
