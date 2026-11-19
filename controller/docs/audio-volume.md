@@ -72,3 +72,67 @@ uses the first active playback-volume element.
 Some USB audio devices expose no hardware playback volume. The controller
 logs a warning and continues playing audio when no suitable element exists.
 Dialog and BGM software gain remain available in that case.
+
+`outputVolumePercent` maps linearly onto the element's raw steps, not onto
+decibels: the controller sets `round(max × percent / 100)`. On a control
+measured in dB, such as the PCM5122's, the percentage therefore says little
+about the actual level, so check the table for your device.
+
+## PCM5122 (Creature CM5 carrier)
+
+The Creature CM5 carrier has a TI PCM5122 DAC on the board itself, driving the
+red (right) and white (left) RCA jacks at line level. The `creature-cm5-audio`
+overlay names the ALSA card `CreatureAnalog`. The controller's mono output is
+copied to both channels, so either jack carries the full signal.
+
+```json
+{
+  "audioDeviceName": "plughw:CreatureAnalog",
+  "outputVolumePercent": 81,
+  "alsaMixerCard": "hw:CreatureAnalog",
+  "alsaMixerElement": "Digital"
+}
+```
+
+The PCM5122 has two playback-volume elements:
+
+- `Digital` is the main volume. It runs from raw 0 to 255 in 0.5 dB steps,
+  with raw 207 at 0 dB and raw 255 at +24 dB.
+- `Analogue` has only two settings: raw 0 is −6 dB and raw 1 is 0 dB.
+  `Analogue Playback Boost` adds a small extra gain and should stay off.
+
+Always set `alsaMixerElement` to `Digital`. With `Analogue`, every percentage
+from 50 to 100 gives the same 0 dB, and `Digital` stays wherever it was last
+set. ALSA restores the mixer state at boot, so that can be a large gain left
+over from an earlier configuration. Omitting the element doesn't work either:
+the PCM5122 has no `Master`, `PCM`, or `Speaker` element, so the controller
+falls back to the first one it finds, which is `Analogue`.
+
+`outputVolumePercent` values for `Digital`, where each percent is about 1.3 dB:
+
+| `outputVolumePercent` | raw | level |
+|---:|---:|---:|
+| 100 | 255 | +24.0 dB |
+| 95 | 242 | +17.5 dB |
+| 90 | 230 | +11.5 dB |
+| 85 | 217 | +5.0 dB |
+| **81** | **207** | **0.0 dB** |
+| 80 | 204 | −1.5 dB |
+| 78 | 199 | −4.0 dB |
+| 75 | 191 | −8.0 dB |
+| 70 | 179 | −14.0 dB |
+| 60 | 153 | −27.0 dB |
+| 50 | 128 | −39.5 dB |
+
+Use **81** (0 dB) with powered speakers and set the listening level on the
+speaker. At 0 dB the DAC passes the controller's output unchanged, so
+`limiterCeilingDb` still protects against clipping and the RCA jacks deliver
+full line level. Anything above 81 adds gain after the limiter, so loud
+passages clip in the DAC. Values below 81 work, but lowering the level in the
+DAC only reduces the signal-to-noise ratio.
+
+To check the current level on a running system:
+
+```sh
+amixer -c CreatureAnalog sget Digital
+```
