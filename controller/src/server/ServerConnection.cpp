@@ -22,9 +22,7 @@ void ServerConnection::start() {
 
     // We always need to make the writer, even if we're not enabled so that
     // messages that get sent don't just sit in the queue forever and leak
-    // memory.
-    websocketWriter =
-        std::make_unique<WebsocketWriter>(logger, webSocket, outgoingMessagesQueue, creature->getId(), enabled);
+    // memory. The constructor already made it.
     websocketWriter->start();
 
     if (!enabled) {
@@ -85,7 +83,12 @@ void ServerConnection::run() {
 
     // Close and stop the websocket - this can block, but we need to clean it up
     logger->debug("Closing websocket connection");
-    webSocket->setOnMessageCallback(nullptr);
+    // Swap in a no-op rather than clearing the callback. IXWebSocket invokes
+    // the message callback unconditionally (close() fires a Close event through
+    // it), so an empty std::function here throws std::bad_function_call and
+    // aborts the process on shutdown. The no-op also keeps the websocket thread
+    // from calling back into this object while we tear down.
+    webSocket->setOnMessageCallback([](const ix::WebSocketMessagePtr &) {});
     webSocket->close();
     webSocket->stop();
     logger->info("Creature Server connection shut down");
