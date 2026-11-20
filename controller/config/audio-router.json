@@ -3,7 +3,7 @@
   "logLevel": "info",
   "requireRtcp": true,
   "output": {
-    "deviceName": "hdmi:CARD=vc4hdmi0,DEV=0",
+    "deviceName": "hdmi:CARD=CreatureDigital,DEV=0",
     "channels": ["front_left", "front_right", "lfe", "center", "rear_left", "rear_right", "rear_left_center", "rear_right_center"],
     "commonPlayoutDelayMs": 20,
     "audioDeviceCompensationMs": 0,

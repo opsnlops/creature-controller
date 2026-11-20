@@ -252,7 +252,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     install(FILES LICENSE DESTINATION share/doc/creature-audio-router RENAME copyright COMPONENT creature-audio-router)
     install(FILES docs/audio-router-setup.md docs/audio-synchronization.md docs/audio-volume.md DESTINATION share/doc/creature-audio-router/docs COMPONENT creature-audio-router)
     install(FILES config/audio-router.json DESTINATION share/doc/creature-audio-router/config COMPONENT creature-audio-router)
-    install(FILES config/audio-router-bass-example.json DESTINATION share/doc/creature-audio-router/examples COMPONENT creature-audio-router)
+    install(FILES config/audio-router-bass-example.json config/audio-router-pi5.json DESTINATION share/doc/creature-audio-router/examples COMPONENT creature-audio-router)
 endif()
 
 
