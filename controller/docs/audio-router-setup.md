@@ -106,6 +106,31 @@ This name is an example, not a guarantee of the Pi's port assignment. Check
 both HDMI outputs and record which device name reaches each AVR. Prefer
 named cards over numeric card indices.
 
+### Creature CM5 carrier
+
+The Creature CM5 carrier has one full-size HDMI connector, wired to the CM5's
+HDMI0. The `creature-cm5-audio` package renames that card from `vc4hdmi0` to
+`CreatureDigital`, so the Pi 5 device name doesn't exist on the carrier. Use:
+
+```text
+hdmi:CARD=CreatureDigital,DEV=0
+```
+
+Keep the `hdmi:` prefix. It selects the vc4 HDMI driver's ALSA
+configuration, which the router needs for multichannel PCM. The carrier's
+second card, `vc4hdmi1`, still appears, but no connector is wired to it, so
+the [two-output setup](#use-both-pi-hdmi-outputs) doesn't apply.
+
+The default `/etc/creature/audio-router.json` already uses this device. On a
+Raspberry Pi 5, start from the Pi 5 example instead:
+
+```sh
+sudo install -m 644 /usr/share/doc/creature-audio-router/examples/audio-router-pi5.json /etc/creature/audio-router.json
+```
+
+Use `HDMI_DEVICE='hdmi:CARD=CreatureDigital,DEV=0'` in the speaker tests
+below.
+
 The router requires 48 kHz signed 16-bit PCM. The eight-channel configuration
 also requires an HDMI connection advertising eight-channel PCM. If eight
 channels are unavailable, confirm that the AVR is powered on, the correct
@@ -171,7 +196,8 @@ sudoedit /etc/creature/audio-router.json
 ```
 
 Use this complete starting configuration, replacing the network interface,
-HDMI device, and bird channel numbers with your assignments:
+HDMI device, and bird channel numbers with your assignments. It uses the
+Creature CM5 carrier's device; on a Pi 5, use `hdmi:CARD=vc4hdmi0,DEV=0`:
 
 ```json
 {
@@ -180,7 +206,7 @@ HDMI device, and bird channel numbers with your assignments:
   "rtpPort": 5004,
   "requireRtcp": true,
   "output": {
-    "deviceName": "hdmi:CARD=vc4hdmi0,DEV=0",
+    "deviceName": "hdmi:CARD=CreatureDigital,DEV=0",
     "channels": [
       "front_left", "front_right", "lfe", "center",
       "rear_left", "rear_right", "rear_left_center", "rear_right_center"
