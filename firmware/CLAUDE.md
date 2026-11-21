@@ -113,7 +113,7 @@ This is a **deterministic real-time embedded system** built on FreeRTOS for cont
 - **Logging** (`src/logging/`): Structured logging system with configurable levels
 
 ### Dynamixel Servo Subsystem (`src/dynamixel/`)
-Three-layer architecture for communicating with Dynamixel XC430-series servos over a half-duplex UART bus:
+Three-layer architecture for communicating with Dynamixel XC330-series servos over a half-duplex UART bus:
 
 - **Protocol** (`dynamixel_protocol.c`): Packet construction/parsing, CRC16 calculation, and error code translation. Pure logic with no hardware dependencies — fully unit-testable on the host.
 - **HAL** (`dynamixel_hal.c`): Hardware abstraction using PIO-based half-duplex UART with DMA. Handles TX/RX timing, direction switching, and multi-response collection. The multi-response RX path (`dxl_hal_txrx_multi`) uses a hardware alarm + FreeRTOS binary semaphore to yield during the receive window instead of busy-waiting.
