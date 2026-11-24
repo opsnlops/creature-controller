@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.25)
 
 project(creature-controller
-        VERSION "4.7.2"
+        VERSION "4.8.0"
         DESCRIPTION "April's Creature Workshop Controller"
         HOMEPAGE_URL https://github.com/opsnlops/creature-controller
         LANGUAGES C CXX)
@@ -520,6 +520,7 @@ if(BUILD_TESTING)
 add_executable(creature-controller-test
         tests/config/CreatureBuilder_test.cpp
         tests/creature_test.cpp
+        tests/creature/Crow_test.cpp
         tests/creature/DifferentialHead_test.cpp
         tests/servo_test.cpp
         tests/MessageQueue_test.cpp

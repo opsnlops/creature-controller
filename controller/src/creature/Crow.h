@@ -1,18 +1,18 @@
-
 #pragma once
 
 #include <memory>
-#include <optional>
 
 #include "controller-config.h"
 
 #include "Creature.h"
-#include "creature/DifferentialHead.h"
 
 #include "creature/logging/Logger.h"
-#include "device/Servo.h"
 #include "util/Result.h"
 
+/**
+ * A crow. Every joint is its own Dynamixel, so each input goes straight to the motor with the same name. There's no
+ * differential head, so no math is needed.
+ */
 class Crow : public creatures::creature::Creature {
 
   public:
@@ -21,10 +21,5 @@ class Crow : public creatures::creature::Creature {
 
     creatures::Result<std::string> performPreFlightCheck() override;
 
-    void applyConfig(const nlohmann::json &config) override;
-
     void mapInputsToServos(const std::unordered_map<std::string, creatures::Input> &inputs) override;
-
-  private:
-    std::optional<creatures::creature::DifferentialHead> head;
 };

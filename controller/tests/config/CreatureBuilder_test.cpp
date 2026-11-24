@@ -175,7 +175,6 @@ TEST_F(CreatureBuilderTest, BuildsCorrectlyWithDynamixelServos) {
       "mouth_slot": 4,
       "position_min": 0,
       "position_max": 1023,
-      "head_offset_max": 0.35,
       "servo_frequency": 50,
       "power_draw_limit_watts": 20.0,
       "power_draw_warning_watts": 16.0,
@@ -257,10 +256,10 @@ TEST_F(CreatureBuilderTest, BuildsCorrectlyWithDynamixelServos) {
 TEST_F(CreatureBuilderTest, BuildsCorrectlyWithMixedMotorTypes) {
 
     const std::string jsonData = R"({
-      "name": "Mixed Crow",
+      "name": "Mixed Parrot",
       "id": "b1234567-0000-0000-0000-000000000002",
       "version": "0.1.0",
-      "description": "A crow with Dynamixel head and PWM body servos",
+      "description": "A parrot with Dynamixel head and PWM body servos",
       "channel_offset": 1,
       "audio_channel": 1,
       "mouth_slot": 4,
@@ -271,7 +270,7 @@ TEST_F(CreatureBuilderTest, BuildsCorrectlyWithMixedMotorTypes) {
       "power_draw_limit_watts": 20.0,
       "power_draw_warning_watts": 16.0,
       "power_draw_response_seconds": 10.0,
-      "type": "crow",
+      "type": "parrot",
       "motors": [
         {
           "type": "dynamixel",
@@ -339,7 +338,7 @@ TEST_F(CreatureBuilderTest, BuildsCorrectlyWithMixedMotorTypes) {
     auto creature = creatureResult.getValue().value();
     float tolerance = 0.0001f;
 
-    EXPECT_EQ("Mixed Crow", creature->getName());
+    EXPECT_EQ("Mixed Parrot", creature->getName());
     EXPECT_EQ(4, creature->getNumberOfServos());
 
     // Dynamixel servos

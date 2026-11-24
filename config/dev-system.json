@@ -5,60 +5,26 @@
   "description": "Caw caw!",
   "channel_offset": 100,
   "audio_channel": 4,
-  "mouth_slot": 4,
+  "mouth_slot": 1,
   "position_min": 0,
   "position_max": 1023,
-  "head_offset_max": 0.35,
+  "power_draw_limit_watts": 15.0,
+  "power_draw_warning_watts": 14.0,
+  "power_draw_response_seconds": 10.0,
   "servo_frequency": 50,
   "type": "crow",
   "motors": [
     {
       "type": "dynamixel",
-      "id": "neck_left",
-      "name": "Neck Left",
+      "id": "lean",
+      "name": "Lean",
       "output_module": "A",
-      "dxl_id": 3,
-      "min_position": 1024,
-      "max_position": 3072,
-      "smoothing_value": 0.30,
+      "dxl_id": 1,
+      "min_position": 1792,
+      "max_position": 2304,
+      "smoothing_value": 0.3,
       "inverted": false,
       "default_position": "center"
-    },
-    {
-      "type": "dynamixel",
-      "id": "neck_right",
-      "name": "Neck Right",
-      "output_module": "A",
-      "dxl_id": 4,
-      "min_position": 1024,
-      "max_position": 3072,
-      "smoothing_value": 0.30,
-      "inverted": true,
-      "default_position": "center"
-    },
-    {
-      "type": "servo",
-      "id": "neck_rotate",
-      "name": "Neck Rotate",
-      "output_module": "A",
-      "output_header": 0,
-      "min_pulse_us": 1400,
-      "max_pulse_us": 1900,
-      "smoothing_value": 0.95,
-      "inverted": false,
-      "default_position": "center"
-    },
-    {
-      "type": "servo",
-      "id": "body_lean",
-      "name": "Body Lean",
-      "output_module": "A",
-      "output_header": 1,
-      "min_pulse_us": 1475,
-      "max_pulse_us": 1950,
-      "smoothing_value": 0.96,
-      "inverted": true,
-      "default_position": "min"
     },
     {
       "type": "dynamixel",
@@ -71,50 +37,92 @@
       "smoothing_value": 0.4,
       "inverted": true,
       "default_position": "min"
+    },
+    {
+      "type": "dynamixel",
+      "id": "neck_twist",
+      "name": "Neck Twist",
+      "output_module": "A",
+      "dxl_id": 3,
+      "min_position": 1792,
+      "max_position": 2304,
+      "smoothing_value": 0.3,
+      "inverted": false,
+      "default_position": "center"
+    },
+    {
+      "type": "dynamixel",
+      "id": "head_twist",
+      "name": "Head Twist",
+      "output_module": "A",
+      "dxl_id": 4,
+      "min_position": 1792,
+      "max_position": 2304,
+      "smoothing_value": 0.3,
+      "inverted": false,
+      "default_position": "center"
+    },
+    {
+      "type": "dynamixel",
+      "id": "neck_lean",
+      "name": "Neck Lean",
+      "output_module": "A",
+      "dxl_id": 5,
+      "min_position": 1792,
+      "max_position": 2304,
+      "smoothing_value": 0.3,
+      "inverted": false,
+      "default_position": "center"
+    },
+    {
+      "type": "dynamixel",
+      "id": "wings",
+      "name": "Wings",
+      "output_module": "A",
+      "dxl_id": 6,
+      "min_position": 1792,
+      "max_position": 2304,
+      "smoothing_value": 0.3,
+      "inverted": false,
+      "default_position": "center"
     }
   ],
   "inputs": [
     {
-      "name": "head_tilt",
+      "name": "lean",
       "slot": 0,
       "width": 1,
       "joystick_axis": 0
     },
     {
-      "name": "head_height",
+      "name": "beak",
       "slot": 1,
       "width": 1,
       "joystick_axis": 1
     },
     {
-      "name": "neck_rotate",
+      "name": "neck_twist",
       "slot": 2,
       "width": 1,
       "joystick_axis": 2
     },
     {
-      "name": "stand_rotate",
+      "name": "head_twist",
       "slot": 3,
       "width": 1,
       "joystick_axis": 3
     },
     {
-      "name": "body_lean",
+      "name": "neck_lean",
       "slot": 4,
       "width": 1,
       "joystick_axis": 4
     },
     {
-      "name": "beak",
+      "name": "wings",
       "slot": 5,
       "width": 1,
       "joystick_axis": 5
-    },
-    {
-      "name": "chest",
-      "slot": 6,
-      "width": 1,
-      "joystick_axis": 6
     }
   ]
 }

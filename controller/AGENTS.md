@@ -72,6 +72,7 @@ Creature Server → DMX → Creature Controller (Linux host) → Pi Pico 2040 �
 **Creature Abstraction** (`src/creature/`)
 - `Creature`: Base class for creature implementations.
 - `Parrot`: Example concrete creature.
+- `Crow`: All-Dynamixel creature. Passes each of its six inputs straight through to the motor with the same name.
 - Supports servo and stepper motion.
 
 **I/O System** (`src/io/`)
