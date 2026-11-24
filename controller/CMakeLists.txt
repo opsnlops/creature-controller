@@ -520,6 +520,7 @@ if(BUILD_TESTING)
 add_executable(creature-controller-test
         tests/config/CreatureBuilder_test.cpp
         tests/creature_test.cpp
+        tests/creature/Crow_test.cpp
         tests/creature/DifferentialHead_test.cpp
         tests/servo_test.cpp
         tests/MessageQueue_test.cpp
